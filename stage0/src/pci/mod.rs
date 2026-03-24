@@ -318,6 +318,8 @@ fn init_machine<P: Platform, M: Machine>(
 
     log::info!("PCI: using windows {:?}", pci_windows);
 
+    M::init_acpi_io(config_access.lock().as_mut())?;
+
     root_bus.init(&pci_windows, config_access)?;
 
     // Find out if there are any extra roots.

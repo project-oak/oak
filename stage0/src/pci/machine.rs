@@ -19,6 +19,7 @@ use core::{ffi::CStr, ops::Range};
 use x86_64::align_down;
 use zerocopy::IntoBytes;
 
+use super::{config_access::ConfigAccess, device::Bdf};
 use crate::{Platform, ZeroPage, fw_cfg::Firmware};
 
 const PCI_MMIO32_HOLE_BASE_FILE_NAME: &CStr = c"etc/pci-mmio32-hole-base";
@@ -52,6 +53,10 @@ pub trait Machine {
         firmware: &mut dyn Firmware,
         zero_page: &ZeroPage,
     ) -> Result<Range<u64>, &'static str>;
+
+    fn init_acpi_io(_access: &mut dyn ConfigAccess) -> Result<(), &'static str> {
+        Ok(())
+    }
 }
 
 // How much memory to reserve for the 64-bit PCI hole. When GPUs come into play,
@@ -263,6 +268,19 @@ impl Machine for Q35 {
     ) -> Result<Range<u64>, &'static str> {
         // No special treatment here.
         I440fx::mmio64_hole::<P>(firmware, zero_page)
+    }
+
+    fn init_acpi_io(access: &mut dyn ConfigAccess) -> Result<(), &'static str> {
+        // Program the ICH9 LPC (D31:F0) PMBASE register so that ACPI I/O
+        // decoding is enabled before we build ACPI tables. Without this the
+        // guest kernel cannot reach the PM1a control block and `shutdown -h`
+        // (or ACPI S5) silently fails.
+        let lpc = Bdf::new(0, 0x1f, 0)?;
+        // offset 0x40 (PMBASE): set I/O base to 0x600, mark as I/O space
+        access.write(lpc, 0x10, 0x601)?;
+        // offset 0x44 (ACPI_CNTL): set ACPI_EN bit
+        access.write(lpc, 0x11, 0x80)?;
+        Ok(())
     }
 }
 
