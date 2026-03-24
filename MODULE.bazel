@@ -1359,7 +1359,7 @@ crate.spec(
 crate.spec(
     default_features = False,
     package = "rs_merkle",
-    repositories = ALL_STD,
+    repositories = ALL_REPOSITORIES,
     version = "1.5.0",
 )
 crate.spec(

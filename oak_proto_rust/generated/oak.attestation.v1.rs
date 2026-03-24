@@ -971,9 +971,22 @@ pub mod verifying_key_reference_value {
         Verify(super::VerifyingKeySet),
     }
 }
-/// TBD - no contents here yet.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct C2sptLogProofReferenceValue {}
+/// Reference value for verifying a C2SP tlog-proof.
+/// See: <https://c2sp.org/tlog-proof>
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct C2sptLogProofReferenceValue {
+    /// The log's verifying key in C2SP vkey format.
+    /// e.g. "log.name.com+609b8245+Ae74Nku..."
+    /// See: <https://c2sp.org/signed-note#verifier-keys>
+    #[prost(string, tag = "1")]
+    pub log_verifying_key: ::prost::alloc::string::String,
+    /// The witness quorum policy in sigsum policy format. If empty, no witness
+    /// verification is performed (equivalent to "quorum none").
+    /// See:
+    /// <https://git.glasklar.is/sigsum/core/sigsum-go/-/blob/main/doc/policy.md>
+    #[prost(string, tag = "2")]
+    pub witness_policy: ::prost::alloc::string::String,
+}
 /// TBD - no contents here yet.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PesReferenceValue {}

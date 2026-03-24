@@ -199,7 +199,7 @@ impl TLogProof {
             if line.is_empty() {
                 break;
             }
-            let bytes = B64.decode(line).map_err(|e| TLogProofError::Format(Box::new(e)))?;
+            let bytes = B64.decode(line).map_err(|_| TLogProofError::MalformedProof)?;
             proof_hashes.push(Sha256::from(
                 <[u8; 32]>::try_from(bytes).map_err(|_| TLogProofError::MalformedProof)?,
             ));

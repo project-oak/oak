@@ -27,6 +27,7 @@ rust_library(
     deps = [
         "//oak_proto_rust",
         "//oak_time",
+        "//tr/c2sp",
         "//tr/intoto",
         "//tr/key_util",
         "//tr/rekor",
@@ -38,4 +39,8 @@ rust_library(
 rust_test(
     name = "verify_endorsement_tests",
     crate = ":verify_endorsement",
+    deps = [
+        "@oak_crates_index//:base64",
+        "@oak_crates_index//:sha2",
+    ],
 )

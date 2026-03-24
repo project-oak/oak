@@ -95,8 +95,20 @@ message VerifyingKeyReferenceValue {
   }
 }
 
-// TBD - no contents here yet.
-message C2SPTLogProofReferenceValue {}
+// Reference value for verifying a C2SP tlog-proof.
+// See: https://c2sp.org/tlog-proof
+message C2SPTLogProofReferenceValue {
+  // The log's verifying key in C2SP vkey format.
+  // e.g. "log.name.com+609b8245+Ae74Nku..."
+  // See: https://c2sp.org/signed-note#verifier-keys
+  string log_verifying_key = 1;
+
+  // The witness quorum policy in sigsum policy format. If empty, no witness
+  // verification is performed (equivalent to "quorum none").
+  // See:
+  // https://git.glasklar.is/sigsum/core/sigsum-go/-/blob/main/doc/policy.md
+  string witness_policy = 2;
+}
 
 // TBD - no contents here yet.
 message PesReferenceValue {}

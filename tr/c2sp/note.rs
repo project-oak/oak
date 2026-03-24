@@ -23,7 +23,6 @@
 //! [signed-note specification](https://c2sp.org/signed-note#signature-types).
 
 use alloc::{
-    boxed::Box,
     format,
     string::{String, ToString},
     vec::Vec,
@@ -50,8 +49,6 @@ pub enum NoteError {
     MalformedVerifyingKey,
     #[error("signature verification failed")]
     SignatureVerificationFailed,
-    #[error("malformed data")]
-    Format(#[from] Box<dyn core::error::Error + Send + Sync>),
 }
 
 /// Signature type identifier as defined by the
@@ -263,7 +260,7 @@ impl NoteSignature {
     pub fn parse(serialized: &str) -> Result<NoteSignature, NoteError> {
         let strip = serialized.strip_prefix("— ").ok_or(NoteError::MalformedSignature)?;
         let (origin, encoded) = strip.split_once(' ').ok_or(NoteError::MalformedSignature)?;
-        let b = B64.decode(encoded).map_err(|e| NoteError::Format(Box::new(e)))?;
+        let b = B64.decode(encoded).map_err(|_| NoteError::MalformedSignature)?;
         if b.len() < 4 {
             return Err(NoteError::MalformedSignature);
         }
@@ -304,7 +301,10 @@ mod tests {
 
     #[test]
     fn test_parse_signature_invalid_base64() {
-        assert!(matches!(NoteSignature::parse("— origin @@@@"), Err(NoteError::Format(_))));
+        assert!(matches!(
+            NoteSignature::parse("— origin @@@@"),
+            Err(NoteError::MalformedSignature)
+        ));
     }
 
     #[test]
