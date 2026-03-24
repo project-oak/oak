@@ -70,46 +70,16 @@ oak_app_config = rule(
     doc = "Generates a based Oak Containers-compatible config.json file.",
 )
 
-def app_bundle(
+def _app_bundle_impl(
         name,
         binary,
-        base_image = None,
-        args = None,
-        env = None,
-        entrypoint_path = "/usr/local/bin/",
-        root_path = "rootfs",
+        base_image,
+        args,
+        env,
+        entrypoint_path,
+        root_path,
         **kwargs):
-    """Generates an OCI-like bundle tarball for an application.
-
-    The tarball contains:
-    - config.json at the root.
-    - Contents of @app_base and the binary, all prefixed with /{root_path}.
-    - The binary is at {entrypoint_path}{binary_name}.
-
-    Args:
-        name: The name of the target.
-        binary: The label of the binary target to include.
-        base_image: The label of the base image target to use. If not provided,
-            it will default to //oak_containers/app_base:flat, a Debian 12 image with
-            only the base-files package installed.
-        args: Optional list of arguments to pass to the application. The first argument
-            will always be the path to the binary.
-        env: Optional dictionary of environment variables. Standard variables like
-            PATH and HOME have defaults but can be overridden.
-        entrypoint_path: The directory in the rootfs where the binary will be placed.
-            Defaults to /usr/local/bin/.
-        root_path: The directory name in the bundle containing the filesystem.
-            Defaults to "rootfs".
-        **kwargs: Additional arguments to pass to the final flatten rule.
-    """
-
-    # Use Label() to resolve the default base_image relative to this macro's package,
-    # not the caller's package. This is necessary for cross-module usage.
-    if base_image == None:
-        base_image = Label("//oak_containers/app_base:flat")
-
-    binary_label = native.package_relative_label(binary)
-    binary_name = paths.basename(binary_label.name)
+    binary_name = paths.basename(binary.name)
 
     # Ensure entrypoint_path ends with a slash
     if not entrypoint_path.endswith("/"):
@@ -126,7 +96,7 @@ def app_bundle(
     oak_app_config(
         name = config_target,
         args = actual_args,
-        env = env if env != None else {},
+        env = env,
         root_path = root_path,
     )
 
@@ -164,3 +134,46 @@ def app_bundle(
         ],
         **kwargs
     )
+
+app_bundle = macro(
+    doc = """Generates an OCI-like bundle tarball for an application.
+
+The tarball contains:
+- config.json at the root.
+- Contents of @app_base and the binary, all prefixed with /{root_path}.
+- The binary is at {entrypoint_path}{binary_name}.
+""",
+    implementation = _app_bundle_impl,
+    inherit_attrs = flatten,
+    attrs = {
+        "binary": attr.label(
+            doc = "The label of the binary target to include.",
+            configurable = False,
+            mandatory = True,
+        ),
+        "base_image": attr.label(
+            doc = "The label of the base image target to use. If not provided, it will default to a Debian 12 image with only the base-files package installed.",
+            default = "@oak_containers_app_base//:flat",
+            configurable = False,
+        ),
+        "args": attr.string_list(
+            doc = "List of arguments to pass to the application. The first argument will always be the path to the binary.",
+            configurable = False,
+        ),
+        "env": attr.string_dict(
+            doc = "Dictionary of environment variables. Standard variables like PATH and HOME have defaults but can be overridden.",
+            configurable = False,
+        ),
+        "entrypoint_path": attr.string(
+            doc = "The directory in the rootfs where the binary will be placed.",
+            default = "/usr/local/bin",
+            configurable = False,
+        ),
+        "root_path": attr.string(
+            doc = "The directory name in the bundle containing the filesystem.",
+            default = "rootfs",
+            configurable = False,
+        ),
+        "tars": None,
+    },
+)
