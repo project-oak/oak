@@ -24,6 +24,9 @@ bazel_dep(name = "grpc-java", version = "1.71.0", repo_name = "io_grpc_grpc_java
 # https://github.com/bazelbuild/platforms
 bazel_dep(name = "platforms", version = "1.0.0")
 
+# https://github.com/bazelbuild/rules_cc
+bazel_dep(name = "rules_cc", version = "0.2.14")
+
 # https://github.com/bazel-contrib/toolchains_llvm
 bazel_dep(name = "toolchains_llvm", version = "1.6.0")
 bazel_dep(name = "bazel_features", version = "1.39.0")
