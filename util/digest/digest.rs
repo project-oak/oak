@@ -56,6 +56,44 @@ pub enum DigestError {
     InvalidDigestLength { expected: usize, actual: usize },
 }
 
+pub trait TypedDigest: AsRef<[u8]> {
+    /// Returns the algorithm name of this digest.
+    fn r#type(&self) -> &'static str;
+
+    /// Returns the hex-encoded string representation of this digest.
+    fn to_hex(&self) -> String {
+        hex::encode(self.as_ref())
+    }
+
+    /// Returns a prefixed typed hash of this digest (e.g. `sha2-256:<hex>`).
+    fn to_typed_hash(&self) -> String {
+        format!("{}:{}", self.r#type(), self.to_hex())
+    }
+}
+
+/// Derives inherent methods of `TypedDigest` as a workaround which allows
+/// callers to invoke `.to_hex()` and `.to_typed_hash()` on the digest types
+/// without needing to import the `TypedDigest` trait.
+macro_rules! derive_inherent_named_digest {
+    ($($t:ty),*) => {
+        $(
+            impl $t {
+                pub fn to_hex(&self) -> String {
+                    <Self as crate::TypedDigest>::to_hex(self)
+                }
+
+                pub fn to_typed_hash(&self) -> String {
+                    <Self as crate::TypedDigest>::to_typed_hash(self)
+                }
+            }
+        )*
+    };
+}
+
+derive_inherent_named_digest!(
+    Psha2, Sha1, Sha256, Sha384, Sha512, Sha3_224, Sha3_256, Sha3_384, Sha3_512, Digest
+);
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Psha2(Vec<u8>);
 
@@ -63,18 +101,20 @@ impl Psha2 {
     pub fn from_contents(_input: &[u8]) -> Self {
         todo!("unimplemented")
     }
+}
 
-    pub fn to_typed_hash(&self) -> String {
-        format!("psha2:{}", hex::encode(&self.0))
+impl TypedDigest for Psha2 {
+    fn r#type(&self) -> &'static str {
+        "psha2"
     }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Sha1([u8; 20]);
 
-impl Sha1 {
-    pub fn to_typed_hash(&self) -> String {
-        format!("sha1:{}", hex::encode(self.0))
+impl TypedDigest for Sha1 {
+    fn r#type(&self) -> &'static str {
+        "sha1"
     }
 }
 
@@ -87,9 +127,11 @@ impl Sha256 {
         hasher.update(input);
         Self(hasher.finalize().into())
     }
+}
 
-    pub fn to_typed_hash(&self) -> String {
-        format!("sha2-256:{}", hex::encode(self.0))
+impl TypedDigest for Sha256 {
+    fn r#type(&self) -> &'static str {
+        "sha2-256"
     }
 }
 
@@ -102,9 +144,11 @@ impl Sha384 {
         hasher.update(input);
         Self(hasher.finalize().into())
     }
+}
 
-    pub fn to_typed_hash(&self) -> String {
-        format!("sha2-384:{}", hex::encode(self.0))
+impl TypedDigest for Sha384 {
+    fn r#type(&self) -> &'static str {
+        "sha2-384"
     }
 }
 
@@ -117,45 +161,47 @@ impl Sha512 {
         hasher.update(input);
         Self(hasher.finalize().into())
     }
+}
 
-    pub fn to_typed_hash(&self) -> String {
-        format!("sha2-512:{}", hex::encode(self.0))
+impl TypedDigest for Sha512 {
+    fn r#type(&self) -> &'static str {
+        "sha2-512"
     }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Sha3_224([u8; 28]);
 
-impl Sha3_224 {
-    pub fn to_typed_hash(&self) -> String {
-        format!("sha3-224:{}", hex::encode(self.0))
+impl TypedDigest for Sha3_224 {
+    fn r#type(&self) -> &'static str {
+        "sha3-224"
     }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Sha3_256([u8; 32]);
 
-impl Sha3_256 {
-    pub fn to_typed_hash(&self) -> String {
-        format!("sha3-256:{}", hex::encode(self.0))
+impl TypedDigest for Sha3_256 {
+    fn r#type(&self) -> &'static str {
+        "sha3-256"
     }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Sha3_384([u8; 48]);
 
-impl Sha3_384 {
-    pub fn to_typed_hash(&self) -> String {
-        format!("sha3-384:{}", hex::encode(self.0))
+impl TypedDigest for Sha3_384 {
+    fn r#type(&self) -> &'static str {
+        "sha3-384"
     }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Sha3_512([u8; 64]);
 
-impl Sha3_512 {
-    pub fn to_typed_hash(&self) -> String {
-        format!("sha3-512:{}", hex::encode(self.0))
+impl TypedDigest for Sha3_512 {
+    fn r#type(&self) -> &'static str {
+        "sha3-512"
     }
 }
 
@@ -449,18 +495,36 @@ impl Digest {
             _ => Err(DigestError::UnknownKey(alg.to_string())),
         }
     }
+}
 
-    pub fn to_typed_hash(&self) -> String {
+impl AsRef<[u8]> for Digest {
+    fn as_ref(&self) -> &[u8] {
         match self {
-            Digest::Psha2(h) => h.to_typed_hash(),
-            Digest::Sha1(h) => h.to_typed_hash(),
-            Digest::Sha256(h) => h.to_typed_hash(),
-            Digest::Sha384(h) => h.to_typed_hash(),
-            Digest::Sha512(h) => h.to_typed_hash(),
-            Digest::Sha3_224(h) => h.to_typed_hash(),
-            Digest::Sha3_256(h) => h.to_typed_hash(),
-            Digest::Sha3_384(h) => h.to_typed_hash(),
-            Digest::Sha3_512(h) => h.to_typed_hash(),
+            Digest::Psha2(h) => h.as_ref(),
+            Digest::Sha1(h) => h.as_ref(),
+            Digest::Sha256(h) => h.as_ref(),
+            Digest::Sha384(h) => h.as_ref(),
+            Digest::Sha512(h) => h.as_ref(),
+            Digest::Sha3_224(h) => h.as_ref(),
+            Digest::Sha3_256(h) => h.as_ref(),
+            Digest::Sha3_384(h) => h.as_ref(),
+            Digest::Sha3_512(h) => h.as_ref(),
+        }
+    }
+}
+
+impl TypedDigest for Digest {
+    fn r#type(&self) -> &'static str {
+        match self {
+            Digest::Psha2(h) => h.r#type(),
+            Digest::Sha1(h) => h.r#type(),
+            Digest::Sha256(h) => h.r#type(),
+            Digest::Sha384(h) => h.r#type(),
+            Digest::Sha512(h) => h.r#type(),
+            Digest::Sha3_224(h) => h.r#type(),
+            Digest::Sha3_256(h) => h.r#type(),
+            Digest::Sha3_384(h) => h.r#type(),
+            Digest::Sha3_512(h) => h.r#type(),
         }
     }
 }
@@ -555,43 +619,39 @@ impl From<Digest> for HexDigest {
 mod tests {
     use super::*;
 
-    const HASH1: Sha256 = Sha256([
-        0xe2, 0x7c, 0x68, 0x23, 0x57, 0x58, 0x9a, 0xc6, 0x6b, 0xf0, 0x65, 0x73, 0xda, 0x90, 0x84,
-        0x69, 0xae, 0xae, 0xae, 0x5e, 0x73, 0xe4, 0xec, 0xc5, 0x25, 0xac, 0x5d, 0x4b, 0x88, 0x88,
-        0x22, 0xe7,
-    ]);
-    const HASH2: Sha256 = Sha256([
-        0x56, 0x49, 0xa7, 0x88, 0x2a, 0x83, 0xa8, 0xc1, 0xc3, 0x33, 0xdb, 0x04, 0x6f, 0xd0, 0xa6,
-        0x0e, 0x9b, 0xac, 0xed, 0xb3, 0xca, 0xab, 0x3c, 0x91, 0x57, 0x8a, 0x7e, 0x21, 0xb1, 0xda,
-        0x89, 0xe3,
-    ]);
+    const EXAMPLE_SHA256_HEX: &str =
+        "e27c682357589ac66bf06573da908469aeaeae5e73e4ecc525ac5d4b888822e7";
+
+    fn example_sha256() -> Sha256 {
+        Sha256(hex::decode(EXAMPLE_SHA256_HEX).unwrap().try_into().unwrap())
+    }
 
     #[test]
     fn test_digest_to_raw_digest_conversion() {
-        let digest = Digest::Sha256(HASH2);
+        let digest = Digest::Sha256(example_sha256());
         let raw_digest: RawDigest = digest.into();
-        assert_eq!(raw_digest.sha2_256, HASH2.as_ref());
+        assert_eq!(raw_digest.sha2_256, example_sha256().as_ref());
     }
 
     #[test]
     fn test_digest_to_hex_digest_conversion() {
-        let digest = Digest::Sha256(HASH1);
+        let digest = Digest::Sha256(example_sha256());
         let hex_digest: HexDigest = digest.into();
-        assert_eq!(
-            hex_digest.sha2_256,
-            "e27c682357589ac66bf06573da908469aeaeae5e73e4ecc525ac5d4b888822e7"
-        );
+        assert_eq!(hex_digest.sha2_256, EXAMPLE_SHA256_HEX);
     }
 
     #[test]
     fn test_digest_to_typed_hash_conversion() {
-        let digest = Digest::Sha256(HASH1);
+        let digest = Digest::Sha256(example_sha256());
         let typed_hash = digest.to_typed_hash();
-        assert_eq!(
-            typed_hash,
-            "sha2-256:e27c682357589ac66bf06573da908469aeaeae5e73e4ecc525ac5d4b888822e7"
-        );
+        assert_eq!(typed_hash, format!("sha2-256:{}", EXAMPLE_SHA256_HEX));
         let back_again = Digest::from_typed_hash(&typed_hash).expect("conversion failed");
         assert_eq!(digest, back_again);
+    }
+
+    #[test]
+    fn test_digest_to_hex_conversion() {
+        let digest = Digest::Sha256(example_sha256());
+        assert_eq!(digest.to_hex(), EXAMPLE_SHA256_HEX);
     }
 }

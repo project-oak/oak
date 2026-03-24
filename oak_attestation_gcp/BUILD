@@ -41,7 +41,6 @@ rust_library(
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:base64",
         "@oak_crates_index//:const-oid",
-        "@oak_crates_index//:hex",
         "@oak_crates_index//:http",
         "@oak_crates_index//:jwt",
         "@oak_crates_index//:oci-spec",

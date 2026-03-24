@@ -290,7 +290,7 @@ fn verify_rekor_body(body: &Body, artifact_bytes: &[u8]) -> anyhow::Result<()> {
         "unsupported hashing algorithm: {}",
         body.spec.data.hash.algorithm
     );
-    let artfifact_hash = hex::encode(Sha256::from_contents(artifact_bytes));
+    let artfifact_hash = Sha256::from_contents(artifact_bytes).to_hex();
     ensure!(
         artfifact_hash == body.spec.data.hash.value,
         "hash of artifact ({:?}) does not match hash in Rekor log entry ({:?})",

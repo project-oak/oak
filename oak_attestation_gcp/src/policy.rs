@@ -265,7 +265,7 @@ fn verify_claims_public_key(
     claims: &Claims,
     expected_public_key: &[u8],
 ) -> Result<(), ConfidentialSpaceVerificationError> {
-    let public_key_hash = hex::encode(Sha256::from_contents(expected_public_key));
+    let public_key_hash = Sha256::from_contents(expected_public_key).to_hex();
     if claims.eat_nonce != public_key_hash {
         return Err(ConfidentialSpaceVerificationError::TokenClaimPublicKeyMismatch {
             expected: public_key_hash,

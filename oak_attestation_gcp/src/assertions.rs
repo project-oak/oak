@@ -52,8 +52,7 @@ impl GcpAssertionGenerator {
 }
 
 fn generate_nonce_from_asserted_data(data: &[u8]) -> String {
-    let digest = Sha256::from_contents(data);
-    hex::encode(digest)
+    Sha256::from_contents(data).to_hex()
 }
 
 impl AssertionGenerator for GcpAssertionGenerator {
