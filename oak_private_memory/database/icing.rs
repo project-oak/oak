@@ -142,6 +142,7 @@ const EXPIRATION_TIMESTAMP_NAME: &str = "expirationTimestamp";
 
 const LLM_VIEW_SCHEMA_NAME: &str = "LlmView";
 const VIEW_ID_NAME: &str = "viewId";
+const VIEW_TYPE_NAME: &str = "viewType";
 
 /// A representation of a mutation operation.
 /// These are used to track changes that have been applied to the local
@@ -238,6 +239,7 @@ impl PendingLlmViewMetadata {
     pub fn new(memory: &Memory, view: &LlmView, blob_id: &BlobId) -> anyhow::Result<Option<Self>> {
         let memory_id = &memory.id;
         let view_id = &view.id;
+        let view_type: &String = &view.r#type;
         let name = &memory.name;
         let tags: Vec<&[u8]> = memory.tags.iter().map(|x| x.as_bytes()).collect();
         let embedding = if let Some(e) = view.embedding.as_ref() {
@@ -254,6 +256,7 @@ impl PendingLlmViewMetadata {
             .add_string_property(TAG_NAME.as_bytes(), &tags)
             .add_string_property(MEMORY_ID_NAME.as_bytes(), &[memory_id.as_bytes()])
             .add_string_property(VIEW_ID_NAME.as_bytes(), &[view_id.as_bytes()])
+            .add_string_property(VIEW_TYPE_NAME.as_bytes(), &[view_type.as_bytes()])
             .add_string_property(BLOB_ID_NAME.as_bytes(), &[blob_id.as_bytes()])
             .add_vector_property(EMBEDDING_NAME.as_bytes(), &embeddings);
 
@@ -460,6 +463,17 @@ impl IcingMetaDatabase {
             .add_property(
                 icing::create_property_config_builder()
                     .set_name(VIEW_ID_NAME.as_bytes())
+                    .set_data_type_string(
+                        icing::term_match_type::Code::ExactOnly.into(),
+                        icing::string_indexing_config::tokenizer_type::Code::Plain.into(),
+                    )
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Optional.into(),
+                    ),
+            )
+            .add_property(
+                icing::create_property_config_builder()
+                    .set_name(VIEW_TYPE_NAME.as_bytes())
                     .set_data_type_string(
                         icing::term_match_type::Code::ExactOnly.into(),
                         icing::string_indexing_config::tokenizer_type::Code::Plain.into(),
@@ -1495,6 +1509,7 @@ impl IcingMetaDatabase {
             Value::ExpirationTimestampFilter(f) => {
                 self.build_time_filter_spec(EXPIRATION_TIMESTAMP_NAME, f, schema_name)
             }
+            Value::EmbeddingFilter(f) => self.build_embedding_filter_spec(f),
             Value::AndOperator(filters) => {
                 self.build_composite_filter(&filters.filters, "AND", schema_name)
             }
@@ -1507,7 +1522,6 @@ impl IcingMetaDatabase {
                 child.query = Some(format!("NOT ({child_query})"));
                 Ok(child)
             }
-            _ => bail!("unsupported filter type in SearchMemoriesFilter"),
         }
     }
 
@@ -1575,6 +1589,41 @@ impl IcingMetaDatabase {
         if !schema_name.is_empty() {
             search_spec.schema_type_filters.push(schema_name.to_string());
         }
+        Ok(search_spec)
+    }
+
+    /// Build an Icing `SearchSpecProto` for an embedding filter.
+    fn build_embedding_filter_spec(
+        &self,
+        filter: &EmbeddingFilter,
+    ) -> anyhow::Result<icing::SearchSpecProto> {
+        let embedding: &Embedding =
+            filter.embedding.as_ref().context("EmbeddingFilter.embedding is required")?;
+        let minimum_score: f32 = filter.minimum_score;
+        let view_type: &str = &filter.view_type;
+
+        // Search the first embedding property, specified by `EMBEDDING_NAME`.
+        // Since we have only one embedding property, this is the one to go.
+        let mut query_string =
+            format!("semanticSearch(getEmbeddingParameter(0), {minimum_score}, 1)");
+        if !view_type.is_empty() {
+            query_string = format!("({}:{}) AND {}", VIEW_TYPE_NAME, view_type, query_string);
+        }
+
+        let search_spec = icing::SearchSpecProto {
+            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+            embedding_query_metric_type: Some(
+                icing::search_spec_proto::embedding_query_metric_type::Code::DotProduct.into(),
+            ),
+            embedding_query_vectors: vec![icing::create_vector_proto(
+                embedding.model_signature.as_str(),
+                &embedding.values,
+            )],
+            query: Some(query_string),
+            enabled_features: vec![icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string()],
+            schema_type_filters: vec![LLM_VIEW_SCHEMA_NAME.to_string()],
+            ..Default::default()
+        };
         Ok(search_spec)
     }
 

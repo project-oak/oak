@@ -1013,3 +1013,277 @@ fn test_search_memories_v2_sort_event_timestamp_tiebreaker() -> anyhow::Result<(
     );
     Ok(())
 }
+
+#[gtest]
+fn test_search_memories_v2_embedding_filter_with_type() -> anyhow::Result<()> {
+    use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
+    let mut icing_database =
+        IcingMetaDatabase::new(IcingTempDir::new("v2-embedding-filter-type-test"))?;
+
+    let model_signature = "test_model".to_string();
+
+    let memory1 = Memory {
+        id: "m1".to_string(),
+        views: Some(LlmViews {
+            llm_views: vec![LlmView {
+                id: "view1".to_string(),
+                r#type: "wrong_type".to_string(),
+                embedding: Some(Embedding {
+                    model_signature: model_signature.clone(),
+                    values: vec![1.0, 0.0, 0.0],
+                }),
+                ..Default::default()
+            }],
+        }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    let memory2 = Memory {
+        id: "m2".to_string(),
+        views: Some(LlmViews {
+            llm_views: vec![LlmView {
+                id: "view2".to_string(),
+                r#type: "correct_type".to_string(),
+                embedding: Some(Embedding {
+                    model_signature: model_signature.clone(),
+                    values: vec![1.0, 0.0, 0.0],
+                }),
+                ..Default::default()
+            }],
+        }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(Value::EmbeddingFilter(EmbeddingFilter {
+                embedding: Some(Embedding {
+                    model_signature: model_signature.clone(),
+                    values: vec![0.9, 0.1, 0.1],
+                }),
+                minimum_score: 0.5,
+                view_type: "correct_type".to_string(),
+            })),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+
+    assert_that!(blob_ids, unordered_elements_are![eq("blob2")]);
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_embedding_filter() -> anyhow::Result<()> {
+    let _ = env_logger::builder().filter(None, log::LevelFilter::Trace).try_init();
+
+    use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-embedding-filter-test"))?;
+
+    let model_signature = "test_model".to_string();
+
+    let memory1 = Memory {
+        id: "m1".to_string(),
+        views: Some(LlmViews {
+            llm_views: vec![LlmView {
+                id: "view1".to_string(),
+                embedding: Some(Embedding {
+                    model_signature: model_signature.clone(),
+                    values: vec![1.0, 0.0, 0.0],
+                }),
+                ..Default::default()
+            }],
+        }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    let memory2 = Memory {
+        id: "m2".to_string(),
+        views: Some(LlmViews {
+            llm_views: vec![LlmView {
+                id: "view2".to_string(),
+                embedding: Some(Embedding {
+                    model_signature: model_signature.clone(),
+                    values: vec![0.0, 1.0, 0.0],
+                }),
+                ..Default::default()
+            }],
+        }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(Value::EmbeddingFilter(EmbeddingFilter {
+                embedding: Some(Embedding {
+                    model_signature: model_signature.clone(),
+                    values: vec![0.9, 0.1, 0.1],
+                }),
+                minimum_score: 0.5,
+                view_type: "".to_string(),
+            })),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+
+    assert_that!(blob_ids, unordered_elements_are![eq("blob1")]);
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_embedding_filter_multiple_view_types() -> anyhow::Result<()> {
+    use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
+    let mut icing_database =
+        IcingMetaDatabase::new(IcingTempDir::new("v2-embedding-filter-type-test"))?;
+
+    let model_signature = "test_model".to_string();
+
+    // This memory has two views, both of the wrong type, so should be filtered out.
+    let memory1 = Memory {
+        id: "m1".to_string(),
+        views: Some(LlmViews {
+            llm_views: vec![
+                LlmView {
+                    id: "view1".to_string(),
+                    r#type: "wrong_type".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: vec![1.0, 0.0, 0.0],
+                    }),
+                    ..Default::default()
+                },
+                LlmView {
+                    id: "view2".to_string(),
+                    r#type: "wrong_type".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: vec![1.0, 0.0, 0.0],
+                    }),
+                    ..Default::default()
+                },
+            ],
+        }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    // This memory has two views, the first one is wrong, the second one is right.
+    let memory2 = Memory {
+        id: "m2".to_string(),
+        views: Some(LlmViews {
+            llm_views: vec![
+                LlmView {
+                    id: "view3".to_string(),
+                    r#type: "wrong_type".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: vec![1.0, 0.0, 0.0],
+                    }),
+                    ..Default::default()
+                },
+                LlmView {
+                    id: "view4".to_string(),
+                    r#type: "correct_type".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: vec![1.0, 0.0, 0.0],
+                    }),
+                    ..Default::default()
+                },
+            ],
+        }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    // This memory has two views, the first one is right, the second one is wrong.
+    let memory3 = Memory {
+        id: "m3".to_string(),
+        views: Some(LlmViews {
+            llm_views: vec![
+                LlmView {
+                    id: "view5".to_string(),
+                    r#type: "correct_type".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: vec![1.0, 0.0, 0.0],
+                    }),
+                    ..Default::default()
+                },
+                LlmView {
+                    id: "view6".to_string(),
+                    r#type: "wrong_type".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: vec![1.0, 0.0, 0.0],
+                    }),
+                    ..Default::default()
+                },
+            ],
+        }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory3, "blob3".to_string())?;
+
+    // This memory has two views, the both right type, but only the second one
+    // passes distance.
+    let memory4 = Memory {
+        id: "m4".to_string(),
+        views: Some(LlmViews {
+            llm_views: vec![
+                LlmView {
+                    id: "view7".to_string(),
+                    r#type: "correct_type".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: vec![0.0, 0.0, 1.0],
+                    }),
+                    ..Default::default()
+                },
+                LlmView {
+                    id: "view8".to_string(),
+                    r#type: "correct_type".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: vec![1.0, 0.0, 0.0],
+                    }),
+                    ..Default::default()
+                },
+            ],
+        }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory4, "blob4".to_string())?;
+
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(Value::EmbeddingFilter(EmbeddingFilter {
+                embedding: Some(Embedding {
+                    model_signature: model_signature.clone(),
+                    values: vec![0.9, 0.1, 0.1],
+                }),
+                minimum_score: 0.5,
+                view_type: "correct_type".to_string(),
+            })),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+
+    assert_that!(blob_ids, unordered_elements_are![eq("blob2"), eq("blob3"), eq("blob4")]);
+
+    Ok(())
+}

@@ -365,7 +365,9 @@ rust_test(
         "//database",
         "//proto:sealed_memory_rust_proto",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:env_logger",
         "@oak_crates_index//:googletest",
+        "@oak_crates_index//:log",
         "@oak_crates_index//:prost-types",
     ],
 )
