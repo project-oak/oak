@@ -135,3 +135,5 @@ impl_packing!(Request => GetMemoriesByIdRequest);
 impl_packing!(Response => GetMemoriesByIdResponse);
 impl_packing!(Request => SearchMemoriesRequest);
 impl_packing!(Response => SearchMemoriesResponse);
+impl_packing!(Request => GetDatabaseMetricsRequest);
+impl_packing!(Response => GetDatabaseMetricsResponse);

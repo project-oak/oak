@@ -84,6 +84,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.EmbeddingFilter",
         "oak.private_memory.TimeSort",
         "oak.private_memory.EmbeddingSort",
+        // Database Metrics types
+        "oak.private_memory.GetDatabaseMetricsRequest",
+        "oak.private_memory.GetDatabaseMetricsResponse",
+        "oak.private_memory.GetDatabaseMetricsResponse.MemoryInfo",
+        "oak.private_memory.GetDatabaseMetricsResponse.StorageInfo",
     ];
 
     let oneof_field_names = [

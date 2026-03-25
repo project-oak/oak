@@ -577,6 +577,24 @@ message DeleteMemoryResponse {
   string error_message = 2;
 }
 
+message GetDatabaseMetricsRequest {
+  // Empty for now, but allows future filtering (e.g., by view_type or tags)
+}
+
+message GetDatabaseMetricsResponse {
+  message MemoryInfo {
+    int64 memory_count = 1;
+    int64 llm_view_count = 2;
+  }
+
+  message StorageInfo {
+    int64 total_storage_bytes = 1;
+  }
+
+  MemoryInfo memory_info = 1;
+  StorageInfo storage_info = 2;
+}
+
 message SealedMemoryRequest {
   oneof request {
     KeySyncRequest key_sync_request = 6;
@@ -595,6 +613,8 @@ message SealedMemoryRequest {
 
     // Caution: this deletes all of the user's memories, across all products.
     ResetMemoryRequest reset_memory_request = 3;
+
+    GetDatabaseMetricsRequest get_database_metrics_request = 13;
 
     // Use SearchMemoryRequest.
     GetMemoriesRequest get_memories_request = 2 [deprecated = true];
@@ -625,6 +645,8 @@ message SealedMemoryResponse {
     SearchMemoriesResponse search_memories_response = 12;
     // Note: to be deprecated once SearchMemoriesRequest is implemented.
     SearchMemoryResponse search_memory_response = 7;
+
+    GetDatabaseMetricsResponse get_database_metrics_response = 13;
 
     GetMemoriesResponse get_memories_response = 2 [deprecated = true];
 

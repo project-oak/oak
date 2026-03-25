@@ -317,6 +317,19 @@ impl DatabaseWithCache {
         Ok(num_cleaned_memories)
     }
 
+    pub fn get_database_metrics(&self) -> anyhow::Result<GetDatabaseMetricsResponse> {
+        let (memory_count, llm_view_count) = self.database.get_document_counts()?;
+        Ok(GetDatabaseMetricsResponse {
+            memory_info: Some(get_database_metrics_response::MemoryInfo {
+                memory_count,
+                llm_view_count,
+            }),
+            storage_info: Some(get_database_metrics_response::StorageInfo {
+                total_storage_bytes: self.current_size as i64,
+            }),
+        })
+    }
+
     pub async fn delete_memories(&mut self, ids: Vec<MemoryId>) -> anyhow::Result<()> {
         // First, look up the BlobIds for each MemoryId before deleting from meta_db.
         // The cache is keyed by BlobId, not MemoryId.

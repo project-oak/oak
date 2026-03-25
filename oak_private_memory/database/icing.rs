@@ -1822,6 +1822,65 @@ impl IcingMetaDatabase {
         Ok(new_db)
     }
 
+    /// Returns (memory_count, llm_view_count) across all documents in the
+    /// database, including expired ones.
+    pub fn get_document_counts(&self) -> anyhow::Result<(i64, i64)> {
+        let memory_count = self.count_documents_by_schema(SCHEMA_NAME)? as i64;
+        let llm_view_count = self.count_documents_by_schema(LLM_VIEW_SCHEMA_NAME)? as i64;
+        Ok((memory_count, llm_view_count))
+    }
+
+    fn count_documents_by_schema(&self, schema_name: &str) -> anyhow::Result<usize> {
+        let mut count: usize = 0;
+        let mut page_token = PageToken::Start;
+        loop {
+            let search_spec = icing::SearchSpecProto {
+                query: Some(format!("hasProperty(\"{}\")", BLOB_ID_NAME)),
+                enabled_features: vec![
+                    icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string(),
+                    icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
+                ],
+                term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+                schema_type_filters: vec![schema_name.to_string()],
+                ..Default::default()
+            };
+            // Use an empty projection — we only need the count, not the data.
+            let result_spec = icing::ResultSpecProto {
+                num_per_page: Some(1000),
+                type_property_masks: vec![icing::TypePropertyMask {
+                    schema_type: Some(schema_name.to_string()),
+                    paths: vec![],
+                }],
+                ..Default::default()
+            };
+            let search_result: icing::SearchResultProto = match page_token {
+                PageToken::Start => self.icing_search_engine.search(
+                    &search_spec,
+                    &icing::get_default_scoring_spec(),
+                    &result_spec,
+                )?,
+                PageToken::Token(token) => self.icing_search_engine.get_next_page(token)?,
+                PageToken::Invalid => bail!("Invalid page token"),
+            };
+
+            if search_result.status.clone().context("no status")?.code
+                != Some(icing::status_proto::Code::Ok.into())
+            {
+                bail!("Icing count failed: {:?}", search_result.status);
+            }
+
+            count += search_result.results.len();
+
+            let next_page_token =
+                search_result.next_page_token.map(PageToken::from).unwrap_or(PageToken::Start);
+            if next_page_token == PageToken::Start {
+                break;
+            }
+            page_token = next_page_token;
+        }
+        Ok(count)
+    }
+
     pub fn export(&self) -> anyhow::Result<icing::IcingGroundTruthFiles> {
         let result_proto =
             self.icing_search_engine.persist_to_disk(icing::persist_type::Code::Full.into());
@@ -2672,6 +2731,131 @@ mod tests {
 
         let (results, _) = db.get_memories_by_tag("", 10, PageToken::Start)?;
         assert_that!(results, unordered_elements_are![eq("blob1"), eq("blob2")]);
+        Ok(())
+    }
+
+    // =========================================================================
+    // GetDatabaseMetrics / get_document_counts tests
+    // =========================================================================
+
+    #[gtest]
+    fn get_document_counts_empty_db_test() -> anyhow::Result<()> {
+        let db = IcingMetaDatabase::new(tempdir())?;
+        let (memory_count, llm_view_count) = db.get_document_counts()?;
+        expect_that!(memory_count, eq(0));
+        expect_that!(llm_view_count, eq(0));
+        Ok(())
+    }
+
+    #[gtest]
+    fn get_document_counts_memories_only_test() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(tempdir())?;
+        add_test_memory(&mut db, "1");
+        add_test_memory(&mut db, "2");
+        add_test_memory(&mut db, "3");
+
+        let (memory_count, llm_view_count) = db.get_document_counts()?;
+        expect_that!(memory_count, eq(3));
+        expect_that!(llm_view_count, eq(0));
+        Ok(())
+    }
+
+    #[gtest]
+    fn get_document_counts_with_views_test() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(tempdir())?;
+
+        // Memory with 2 views.
+        let views = vec![llm_view("view1", &[1.0, 0.0, 0.0]), llm_view("view2", &[0.0, 1.0, 0.0])];
+        db.add_memory(&mem_with_views("mem1", &["tag"], views), "blob1".into())?;
+
+        // Memory with 1 view.
+        db.add_memory(&mem_with_view("mem2", &["tag"], "view3", &[0.0, 0.0, 1.0]), "blob2".into())?;
+
+        // Memory with no views.
+        add_test_memory(&mut db, "3");
+
+        let (memory_count, llm_view_count) = db.get_document_counts()?;
+        expect_that!(memory_count, eq(3));
+        expect_that!(llm_view_count, eq(3));
+        Ok(())
+    }
+
+    #[gtest]
+    fn get_document_counts_after_delete_test() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(tempdir())?;
+
+        db.add_memory(&mem_with_view("mem1", &["tag"], "view1", &[1.0, 0.0, 0.0]), "blob1".into())?;
+        db.add_memory(&mem_with_view("mem2", &["tag"], "view2", &[0.0, 1.0, 0.0]), "blob2".into())?;
+
+        let (memory_count, llm_view_count) = db.get_document_counts()?;
+        expect_that!(memory_count, eq(2));
+        expect_that!(llm_view_count, eq(2));
+
+        // Delete one memory (and its view).
+        db.delete_memories(&["mem1".to_string()])?;
+
+        let (memory_count, llm_view_count) = db.get_document_counts()?;
+        expect_that!(memory_count, eq(1));
+        expect_that!(llm_view_count, eq(1));
+        Ok(())
+    }
+
+    #[gtest]
+    fn get_document_counts_after_reset_test() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(tempdir())?;
+        add_test_memory(&mut db, "1");
+        add_test_memory(&mut db, "2");
+
+        let (memory_count, _) = db.get_document_counts()?;
+        expect_that!(memory_count, eq(2));
+
+        db.reset()?;
+
+        let (memory_count, llm_view_count) = db.get_document_counts()?;
+        expect_that!(memory_count, eq(0));
+        expect_that!(llm_view_count, eq(0));
+        Ok(())
+    }
+
+    // =========================================================================
+    // Storage size tests (exported encoded_len)
+    // =========================================================================
+
+    #[gtest]
+    fn export_size_grows_with_data_test() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let empty_size = db.export()?.encoded_len();
+        assert_that!(empty_size, gt(0));
+
+        // Add a memory without views.
+        add_test_memory(&mut db, "1");
+        let size_after_one = db.export()?.encoded_len();
+        assert_that!(size_after_one, gt(empty_size));
+
+        // Add a memory with views — should grow further.
+        db.add_memory(&mem_with_view("mem_v", &["tag"], "v1", &[1.0, 0.0, 0.0]), "blob_v".into())?;
+        let size_after_two = db.export()?.encoded_len();
+        assert_that!(size_after_two, gt(size_after_one));
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn export_size_shrinks_after_reset_test() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let empty_size = db.export()?.encoded_len();
+
+        add_test_memory(&mut db, "1");
+        add_test_memory(&mut db, "2");
+        db.add_memory(&mem_with_view("mem_v", &["tag"], "v1", &[1.0, 0.0, 0.0]), "blob_v".into())?;
+        let size_with_data = db.export()?.encoded_len();
+        assert_that!(size_with_data, gt(empty_size));
+
+        db.reset()?;
+        let size_after_reset = db.export()?.encoded_len();
+        // After reset the DB should be back to roughly its empty size.
+        assert_that!(size_after_reset, lt(size_with_data));
+
         Ok(())
     }
 }

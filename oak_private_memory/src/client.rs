@@ -334,4 +334,14 @@ impl PrivateMemoryClient {
             self.invoke(sealed_memory_request::Request::GetMemoriesByIdRequest(request)).await?;
         expect_response_type!(response, sealed_memory_response::Response::GetMemoriesByIdResponse)
     }
+
+    pub async fn get_database_metrics(&mut self) -> Result<GetDatabaseMetricsResponse> {
+        let request = GetDatabaseMetricsRequest::default();
+        let response =
+            self.invoke(sealed_memory_request::Request::GetDatabaseMetricsRequest(request)).await?;
+        expect_response_type!(
+            response,
+            sealed_memory_response::Response::GetDatabaseMetricsResponse
+        )
+    }
 }

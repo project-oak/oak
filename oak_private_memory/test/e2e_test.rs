@@ -557,3 +557,119 @@ async fn test_add_memory_duplicate_name_same_id_okay() {
 
     ctx.teardown().await;
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_get_database_metrics() {
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
+    let pm_uid = "test_metrics_user";
+
+    let mut client = PrivateMemoryClient::create_with_start_session(
+        url,
+        pm_uid,
+        TEST_EK,
+        SerializationFormat::BinaryProto,
+    )
+    .await
+    .unwrap();
+
+    // ── Empty database ──────────────────────────────────────────────────
+    let metrics = client.get_database_metrics().await.unwrap();
+    let memory_info = metrics.memory_info.unwrap();
+    assert_eq!(memory_info.memory_count, 0);
+    assert_eq!(memory_info.llm_view_count, 0);
+
+    // Even an empty DB has an underlying Icing structure, so storage should be
+    // reported and non-negative.
+    let storage_info = metrics.storage_info.unwrap();
+    let empty_storage = storage_info.total_storage_bytes;
+    assert!(empty_storage >= 0, "empty DB storage should be non-negative");
+
+    // ── Add a memory without views ──────────────────────────────────────
+    client
+        .add_memory(Memory { tags: vec!["tag1".to_string()], ..Default::default() })
+        .await
+        .unwrap();
+
+    let metrics = client.get_database_metrics().await.unwrap();
+    let memory_info = metrics.memory_info.unwrap();
+    assert_eq!(memory_info.memory_count, 1);
+    assert_eq!(memory_info.llm_view_count, 0);
+
+    let storage_after_one_memory = metrics.storage_info.unwrap().total_storage_bytes;
+    assert!(
+        storage_after_one_memory > empty_storage,
+        "storage should grow after adding a memory: {} vs {}",
+        storage_after_one_memory,
+        empty_storage
+    );
+
+    // ── Add a memory with 2 LLM views ──────────────────────────────────
+    let add_resp = client
+        .add_memory(Memory {
+            tags: vec!["tag2".to_string()],
+            views: Some(LlmViews {
+                llm_views: vec![
+                    LlmView {
+                        id: "view1".to_string(),
+                        embedding: Some(Embedding {
+                            model_signature: "test_model".to_string(),
+                            values: vec![1.0, 0.0, 0.0],
+                        }),
+                        ..Default::default()
+                    },
+                    LlmView {
+                        id: "view2".to_string(),
+                        embedding: Some(Embedding {
+                            model_signature: "test_model".to_string(),
+                            values: vec![0.0, 1.0, 0.0],
+                        }),
+                        ..Default::default()
+                    },
+                ],
+            }),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+
+    let metrics = client.get_database_metrics().await.unwrap();
+    let memory_info = metrics.memory_info.unwrap();
+    assert_eq!(memory_info.memory_count, 2);
+    assert_eq!(memory_info.llm_view_count, 2);
+
+    let storage_after_two_memories = metrics.storage_info.unwrap().total_storage_bytes;
+    assert!(
+        storage_after_two_memories > storage_after_one_memory,
+        "storage should grow after adding another memory with views: {} vs {}",
+        storage_after_two_memories,
+        storage_after_one_memory
+    );
+
+    // ── Delete the second memory ────────────────────────────────────────
+    client.delete_memory(vec![add_resp.id]).await.unwrap();
+
+    let metrics = client.get_database_metrics().await.unwrap();
+    let memory_info = metrics.memory_info.unwrap();
+    assert_eq!(memory_info.memory_count, 1);
+    assert_eq!(memory_info.llm_view_count, 0);
+
+    // Storage should still be reported as positive after deletion.
+    let storage_after_delete = metrics.storage_info.unwrap().total_storage_bytes;
+    assert!(storage_after_delete > 0, "storage should still be positive after deletion");
+
+    // ── Reset all memory ────────────────────────────────────────────────
+    client.reset_memory().await.unwrap();
+
+    let metrics = client.get_database_metrics().await.unwrap();
+    let memory_info = metrics.memory_info.unwrap();
+    assert_eq!(memory_info.memory_count, 0);
+    assert_eq!(memory_info.llm_view_count, 0);
+
+    // After reset, storage should still be reported and positive (Icing
+    // schema + empty structures still occupy space).
+    let storage_after_reset = metrics.storage_info.unwrap().total_storage_bytes;
+    assert!(storage_after_reset > 0, "storage should be positive even after reset");
+
+    ctx.teardown().await;
+}

@@ -497,6 +497,17 @@ impl SealedMemorySessionHandler {
             ..Default::default()
         })
     }
+
+    pub async fn get_database_metrics_handler(
+        &self,
+        _request: GetDatabaseMetricsRequest,
+    ) -> tonic::Result<GetDatabaseMetricsResponse> {
+        let mutex_guard = self.session_context().await;
+        let database =
+            &mutex_guard.as_ref().into_failed_precondition("call key sync first")?.database;
+
+        database.get_database_metrics().into_internal_error("failed to get database metrics")
+    }
 }
 
 impl SealedMemorySessionHandler {
@@ -557,6 +568,9 @@ impl SealedMemorySessionHandler {
             }
             sealed_memory_request::Request::SearchMemoriesRequest(request) => {
                 self.search_memories_handler(request).await?.into_response()
+            }
+            sealed_memory_request::Request::GetDatabaseMetricsRequest(request) => {
+                self.get_database_metrics_handler(request).await?.into_response()
             }
         };
         let elapsed_time = start_time.elapsed().as_millis() as u64;
