@@ -298,6 +298,16 @@ impl TLogProof {
     }
 }
 
+impl TryFrom<&Vec<u8>> for TLogProof {
+    type Error = TLogProofError;
+
+    fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
+        let s = core::str::from_utf8(bytes.as_slice())
+            .map_err(|e| TLogProofError::Format(Box::new(e)))?;
+        Self::parse(s)
+    }
+}
+
 /// A C2SP/RFC 6962 compatible hasher for rs_merkle.
 #[derive(Clone)]
 struct C2spHasher;

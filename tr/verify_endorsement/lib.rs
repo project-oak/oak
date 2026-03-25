@@ -210,25 +210,14 @@ pub fn verify_endorsement(
 
 /// Verifies a C2SP tlog-proof bundle against the given endorsement and
 /// reference value.
-// TODO: b/485180287 - move some of this into the c2sp crate.
 fn verify_c2sp_tlog_proof(
     signed_endorsement: &SignedEndorsement,
     endorsement: &Endorsement,
     c2sp_ref: &C2sptLogProofReferenceValue,
 ) -> anyhow::Result<()> {
-    let proof_bytes = &signed_endorsement.c2sp_tlog_proof;
-    if proof_bytes.is_empty() {
-        anyhow::bail!("C2SP tlog proof unavailable but verification was requested");
-    }
-    let proof_text =
-        core::str::from_utf8(proof_bytes).context("C2SP tlog proof is not valid UTF-8")?;
-    let policy =
-        Policy::parse(&c2sp_ref.policy).map_err(|e| anyhow::anyhow!("parsing policy: {e}"))?;
-    let proof = TLogProof::parse(proof_text)
-        .map_err(|e| anyhow::anyhow!("parsing C2SP tlog proof: {e}"))?;
-    proof
-        .verify(&policy, &endorsement.serialized)
-        .map_err(|e| anyhow::anyhow!("verifying C2SP tlog proof: {e}"))?;
+    let proof = TLogProof::try_from(&signed_endorsement.c2sp_tlog_proof)?;
+    let policy = Policy::try_from(c2sp_ref)?;
+    proof.verify(&policy, &endorsement.serialized)?;
     Ok(())
 }
 
@@ -331,7 +320,7 @@ mod tests {
         let result = verify_c2sp_tlog_proof(&signed_endorsement, &endorsement, &c2sp_ref);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
-        assert!(err.contains("unavailable"), "unexpected error: {err}");
+        assert!(err.contains("invalid proof header"), "unexpected error: {err}");
     }
 
     #[test]
@@ -350,7 +339,7 @@ mod tests {
         let result = verify_c2sp_tlog_proof(&signed_endorsement, &endorsement, &c2sp_ref);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
-        assert!(err.contains("parsing C2SP tlog proof"), "unexpected error: {err}");
+        assert!(err.contains("invalid proof header"), "unexpected error: {err}");
     }
 
     #[test]
@@ -372,7 +361,7 @@ mod tests {
         let result = verify_c2sp_tlog_proof(&signed_endorsement, &endorsement, &c2sp_ref);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
-        assert!(err.contains("verifying C2SP tlog proof"), "unexpected error: {err}");
+        assert!(err.contains("root hash mismatch"), "unexpected error: {err}");
     }
 
     #[test]
@@ -463,6 +452,6 @@ mod tests {
         let result = verify_c2sp_tlog_proof(&signed_endorsement, &endorsement, &c2sp_ref);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
-        assert!(err.contains("verifying C2SP tlog proof"), "unexpected error: {err}");
+        assert!(err.contains("witness quorum not satisfied"), "unexpected error: {err}");
     }
 }

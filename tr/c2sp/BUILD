@@ -25,6 +25,7 @@ rust_library(
     name = "c2sp",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "//oak_proto_rust",
         "//oak_time",
         "//util/digest:oak_digest",
         "@oak_crates_index//:base64",

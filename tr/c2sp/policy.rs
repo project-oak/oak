@@ -38,6 +38,7 @@
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use core::fmt;
 
+use oak_proto_rust::oak::attestation::v1::C2sptLogProofReferenceValue;
 use thiserror::Error;
 
 use crate::note::{NoteVerifyingKey, SignatureType};
@@ -347,6 +348,14 @@ impl Policy {
                     >= *k
             }
         }
+    }
+}
+
+impl TryFrom<&C2sptLogProofReferenceValue> for Policy {
+    type Error = PolicyError;
+
+    fn try_from(ref_value: &C2sptLogProofReferenceValue) -> Result<Self, Self::Error> {
+        Self::parse(&ref_value.policy)
     }
 }
 
