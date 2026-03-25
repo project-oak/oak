@@ -24,7 +24,7 @@ extern crate alloc;
 use alloc::{string::String, vec, vec::Vec};
 
 use anyhow::Context;
-use c2sp::{NoteVerifyingKey, TLogProof, policy::WitnessPolicy};
+use c2sp::{Policy, TLogProof};
 use intoto::statement::{DefaultStatement, parse_statement};
 use key_util::{convert_pem_to_raw, verify_signature};
 use oak_proto_rust::oak::attestation::v1::{
@@ -222,18 +222,12 @@ fn verify_c2sp_tlog_proof(
     }
     let proof_text =
         core::str::from_utf8(proof_bytes).context("C2SP tlog proof is not valid UTF-8")?;
-    let log_key = NoteVerifyingKey::parse(&c2sp_ref.log_verifying_key)
-        .map_err(|e| anyhow::anyhow!("parsing log verifying key: {e}"))?;
-    let witness_policy = if c2sp_ref.witness_policy.is_empty() {
-        WitnessPolicy::empty()
-    } else {
-        WitnessPolicy::parse(&c2sp_ref.witness_policy)
-            .map_err(|e| anyhow::anyhow!("parsing witness policy: {e}"))?
-    };
+    let policy =
+        Policy::parse(&c2sp_ref.policy).map_err(|e| anyhow::anyhow!("parsing policy: {e}"))?;
     let proof = TLogProof::parse(proof_text)
         .map_err(|e| anyhow::anyhow!("parsing C2SP tlog proof: {e}"))?;
     proof
-        .verify(&log_key, &witness_policy, &endorsement.serialized)
+        .verify(&policy, &endorsement.serialized)
         .map_err(|e| anyhow::anyhow!("verifying C2SP tlog proof: {e}"))?;
     Ok(())
 }
@@ -303,6 +297,11 @@ mod tests {
         (proof.serialize(), vkey)
     }
 
+    /// Builds a policy string with a log key and `quorum none`.
+    fn make_log_policy(vkey: &str) -> String {
+        alloc::format!("log {vkey}\nquorum none\n")
+    }
+
     #[test]
     fn verify_c2sp_tlog_proof_succeeds() {
         let entry = b"test endorsement data";
@@ -314,8 +313,7 @@ mod tests {
         let signed_endorsement =
             SignedEndorsement { c2sp_tlog_proof: proof_text.into_bytes(), ..Default::default() };
         let endorsement = Endorsement { serialized: entry.to_vec(), ..Default::default() };
-        let c2sp_ref =
-            C2sptLogProofReferenceValue { log_verifying_key: vkey, ..Default::default() };
+        let c2sp_ref = C2sptLogProofReferenceValue { policy: make_log_policy(&vkey) };
 
         let result = verify_c2sp_tlog_proof(&signed_endorsement, &endorsement, &c2sp_ref);
         assert!(result.is_ok(), "expected success, got: {:?}", result.err());
@@ -323,10 +321,10 @@ mod tests {
 
     #[test]
     fn verify_c2sp_tlog_proof_fails_when_proof_missing() {
-        let c2sp_ref = C2sptLogProofReferenceValue {
-            log_verifying_key: "whatever+00000000+AAAA".into(),
-            witness_policy: String::new(),
-        };
+        let origin = "test.log.example.com/log";
+        let log_key = NoteSigningKey::from_parts(origin, SignatureType::Ed25519, [42u8; 32]);
+        let vkey = log_key.verifying_key.to_vkey_string();
+        let c2sp_ref = C2sptLogProofReferenceValue { policy: make_log_policy(&vkey) };
         let signed_endorsement = SignedEndorsement::default();
         let endorsement = Endorsement::default();
 
@@ -347,8 +345,7 @@ mod tests {
             ..Default::default()
         };
         let endorsement = Endorsement::default();
-        let c2sp_ref =
-            C2sptLogProofReferenceValue { log_verifying_key: vkey, ..Default::default() };
+        let c2sp_ref = C2sptLogProofReferenceValue { policy: make_log_policy(&vkey) };
 
         let result = verify_c2sp_tlog_proof(&signed_endorsement, &endorsement, &c2sp_ref);
         assert!(result.is_err());
@@ -370,8 +367,7 @@ mod tests {
             SignedEndorsement { c2sp_tlog_proof: proof_text.into_bytes(), ..Default::default() };
         // But pass the wrong entry as endorsement.serialized.
         let endorsement = Endorsement { serialized: wrong_entry.to_vec(), ..Default::default() };
-        let c2sp_ref =
-            C2sptLogProofReferenceValue { log_verifying_key: vkey, ..Default::default() };
+        let c2sp_ref = C2sptLogProofReferenceValue { policy: make_log_policy(&vkey) };
 
         let result = verify_c2sp_tlog_proof(&signed_endorsement, &endorsement, &c2sp_ref);
         assert!(result.is_err());
@@ -395,8 +391,7 @@ mod tests {
         let signed_endorsement =
             SignedEndorsement { c2sp_tlog_proof: proof_text.into_bytes(), ..Default::default() };
         let endorsement = Endorsement { serialized: entry.to_vec(), ..Default::default() };
-        let c2sp_ref =
-            C2sptLogProofReferenceValue { log_verifying_key: wrong_vkey, ..Default::default() };
+        let c2sp_ref = C2sptLogProofReferenceValue { policy: make_log_policy(&wrong_vkey) };
 
         let result = verify_c2sp_tlog_proof(&signed_endorsement, &endorsement, &c2sp_ref);
         assert!(result.is_err());
@@ -430,18 +425,15 @@ mod tests {
         let proof = TLogProof { index: 0, proof_hashes: vec![], checkpoint };
         let proof_text = proof.serialize();
 
-        // Build a witness policy requiring this witness.
+        // Build a policy requiring this witness, including the log key.
         let log_vkey = log_key.verifying_key.to_vkey_string();
         let witness_vkey = witness_key.verifying_key.to_vkey_string();
-        let policy_text = alloc::format!("witness w1 {witness_vkey}\nquorum w1\n");
+        let policy_text = alloc::format!("log {log_vkey}\nwitness w1 {witness_vkey}\nquorum w1\n");
 
         let signed_endorsement =
             SignedEndorsement { c2sp_tlog_proof: proof_text.into_bytes(), ..Default::default() };
         let endorsement = Endorsement { serialized: entry.to_vec(), ..Default::default() };
-        let c2sp_ref = C2sptLogProofReferenceValue {
-            log_verifying_key: log_vkey,
-            witness_policy: policy_text,
-        };
+        let c2sp_ref = C2sptLogProofReferenceValue { policy: policy_text };
 
         let result = verify_c2sp_tlog_proof(&signed_endorsement, &endorsement, &c2sp_ref);
         assert!(result.is_ok(), "expected success, got: {:?}", result.err());
@@ -461,15 +453,12 @@ mod tests {
 
         // But the policy requires a witness.
         let witness_vkey = witness_key.verifying_key.to_vkey_string();
-        let policy_text = alloc::format!("witness w1 {witness_vkey}\nquorum w1\n");
+        let policy_text = alloc::format!("log {log_vkey}\nwitness w1 {witness_vkey}\nquorum w1\n");
 
         let signed_endorsement =
             SignedEndorsement { c2sp_tlog_proof: proof_text.into_bytes(), ..Default::default() };
         let endorsement = Endorsement { serialized: entry.to_vec(), ..Default::default() };
-        let c2sp_ref = C2sptLogProofReferenceValue {
-            log_verifying_key: log_vkey,
-            witness_policy: policy_text,
-        };
+        let c2sp_ref = C2sptLogProofReferenceValue { policy: policy_text };
 
         let result = verify_c2sp_tlog_proof(&signed_endorsement, &endorsement, &c2sp_ref);
         assert!(result.is_err());

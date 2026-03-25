@@ -975,17 +975,12 @@ pub mod verifying_key_reference_value {
 /// See: <https://c2sp.org/tlog-proof>
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct C2sptLogProofReferenceValue {
-    /// The log's verifying key in C2SP vkey format.
-    /// e.g. "log.name.com+609b8245+Ae74Nku..."
-    /// See: <https://c2sp.org/signed-note#verifier-keys>
-    #[prost(string, tag = "1")]
-    pub log_verifying_key: ::prost::alloc::string::String,
-    /// The witness quorum policy in sigsum policy format. If empty, no witness
-    /// verification is performed (equivalent to "quorum none").
+    /// The sigsum policy specifying trusted log keys and witness quorum.
+    /// Must contain at least one `log` line and a `quorum` line.
     /// See:
     /// <https://git.glasklar.is/sigsum/core/sigsum-go/-/blob/main/doc/policy.md>
     #[prost(string, tag = "2")]
-    pub witness_policy: ::prost::alloc::string::String,
+    pub policy: ::prost::alloc::string::String,
 }
 /// TBD - no contents here yet.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
