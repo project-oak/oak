@@ -14,19 +14,21 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_shared_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("//cleanroom:wasi_binary.bzl", "wasi_binary")
 
 package(
     default_visibility = ["//:internal"],
     licenses = ["notice"],
 )
 
-# Compiles to wasm32-unknown-unknown. The resulting .wasm file can be fed
-# directly to the `cleanroom` binary.
-rust_shared_library(
-    name = "to_uppercase_wasm",
+rust_binary(
+    name = "to_uppercase_bin",
     srcs = ["wasm.rs"],
     crate_name = "to_uppercase",
-    platform = "//:wasm32-unknown-unknown",
-    deps = ["//cleanroom/sdk:cleanroom_sdk"],
+)
+
+wasi_binary(
+    name = "to_uppercase_wasm",
+    binary = ":to_uppercase_bin",
 )

@@ -247,6 +247,6 @@ history. Always ask the user for confirmation before running them.
 
 ### Commits
 
-- When writing commit messages, any backticks
-  (`) must be escaped with a backslash (\`) to ensure they are correctly
-  written.
+- When writing commit messages from the CLI using double quotes, any special
+  characters (such as \`, \$, \!, etc.) must be escaped with a backslash to
+  prevent shell expansion.

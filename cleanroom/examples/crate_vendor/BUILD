@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
-load(":wasi_binary.bzl", "wasi_binary")
+load("//cleanroom:wasi_binary.bzl", "wasi_binary")
 
 package(
     default_visibility = ["//:internal"],

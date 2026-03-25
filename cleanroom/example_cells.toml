@@ -1,0 +1,15 @@
+# Cell store for the cleanroom environment.
+#
+# Each [[cell]] defines a named data cell with an IFC label. When a
+# Wasm module reads a cell via `get-cell`, its computation label is
+# automatically tainted with the cell's label.
+
+[[cell]]
+name  = "user_location"
+value = "rome"
+label = ["user_location"]
+
+[[cell]]
+name  = "secret_api_key"
+value = "top-secret-42"
+label = ["secret_category"]

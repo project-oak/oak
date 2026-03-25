@@ -12,13 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Integration tests for the `cleanroom` runner.
+//! End-to-end integration tests for the cleanroom system.
 //!
-//! Each test builds an example Wasm module with Bazel (via `data` + `env`
-//! attributes in the BUILD), runs the `cleanroom` binary with that module,
-//! and verifies the output.
+//! These tests exercise the full pipeline:
 //!
-//! Run via:
+//! 1. **Direct mode** (`cleanroom run`): runs modules via the cleanroom binary
+//!    with the Oak Functions ABI.
+//! 2. **Server/client mode**: starts a cleanroom server on a Unix socket,
+//!    communicates via the RPC protocol, and verifies IFC label tracking.
+//!
+//! # Running
+//!
 //! ```text
 //! bazel test //cleanroom:cleanroom_integration_test
 //! ```
@@ -26,6 +30,8 @@
 use std::{
     env,
     io::Write,
+    os::unix::net::UnixStream,
+    path::PathBuf,
     process::{Command, Stdio},
 };
 
@@ -37,13 +43,18 @@ fn env_path(var: &str) -> String {
     format!("{runfiles}/_main/{relative}")
 }
 
-/// Runs the cleanroom binary with the given Wasm module and stdin bytes.
-/// Returns `(stdout_bytes, stderr_string, exit_status_success)`.
+// ══════════════════════════════════════════════════════════════════
+// Direct mode tests (`cleanroom run`)
+// ══════════════════════════════════════════════════════════════════
+
+/// Runs the cleanroom binary in direct mode with the given Wasm module
+/// and stdin bytes.  Returns `(stdout_bytes, stderr_string, success)`.
 fn run_cleanroom(wasm_module: &str, stdin_bytes: &[u8]) -> (Vec<u8>, String, bool) {
     let bin = env_path("CLEANROOM_BIN");
 
     let mut child = Command::new(&bin)
-        .arg(format!("--wasm-module-file={wasm_module}"))
+        .arg("run-local")
+        .arg(wasm_module)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -62,8 +73,8 @@ fn run_cleanroom(wasm_module: &str, stdin_bytes: &[u8]) -> (Vec<u8>, String, boo
 #[test]
 fn to_uppercase_basic() {
     let wasm = env_path("TO_UPPERCASE_WASM");
-    let (out, _err, ok) = run_cleanroom(&wasm, b"hello world\n");
-    assert!(ok, "cleanroom exited with failure");
+    let (out, err, ok) = run_cleanroom(&wasm, b"hello world\n");
+    assert!(ok, "cleanroom exited with failure: {}", err);
     assert_eq!(out, b"HELLO WORLD\n");
 }
 
@@ -135,4 +146,256 @@ fn word_count_empty() {
     let (out, _err, ok) = run_cleanroom(&wasm, b"");
     assert!(ok, "cleanroom exited with failure");
     assert_eq!(out, b"0 0 0\n");
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Server/client protocol tests
+// ══════════════════════════════════════════════════════════════════
+//
+// These tests start a cleanroom server on a temporary Unix socket,
+// install a test module in a temporary store, and exercise the RPC
+// protocol.
+
+/// Test harness that manages a cleanroom server process and module
+/// store for integration testing.
+#[allow(dead_code)]
+struct ServerHarness {
+    /// Temporary directory holding the module store.
+    store_dir: tempfile::TempDir,
+    /// Temporary directory holding the socket and policy file.
+    socket_dir: tempfile::TempDir,
+    /// The running server process.
+    server_process: std::process::Child,
+    /// Path to the Unix socket.
+    socket_path: PathBuf,
+}
+
+impl ServerHarness {
+    /// Creates a new server harness with the given policy and modules.
+    ///
+    /// `modules` is a list of `(name, wasm_env_var)` pairs where
+    /// `wasm_env_var` is the Bazel env var pointing to the `.wasm`
+    /// file.
+    fn start(policy_toml: &str, modules: &[(&str, &str)]) -> Self {
+        let store_dir = tempfile::tempdir().expect("creating store dir");
+        let socket_dir = tempfile::tempdir().expect("creating socket dir");
+
+        // Create the sha256/ subdirectory in the store.
+        std::fs::create_dir_all(store_dir.path().join("sha256")).expect("creating sha256 dir");
+
+        // Install modules into the content-addressed store and build
+        // the manifest.
+        let mut manifest_lines = vec!["[modules]".to_string()];
+        for (name, env_var) in modules {
+            let wasm_path = env_path(env_var);
+            let wasm_bytes =
+                std::fs::read(&wasm_path).unwrap_or_else(|e| panic!("reading {wasm_path}: {e}"));
+
+            // Compute SHA-256 digest.
+            use sha2::{Digest, Sha256};
+            let hash = Sha256::digest(&wasm_bytes);
+            let hex_hash = hex::encode(hash);
+            let digest = format!("sha256:{hex_hash}");
+
+            // Copy to store.
+            let dest = store_dir.path().join("sha256").join(&hex_hash);
+            std::fs::write(&dest, &wasm_bytes).expect("writing module to store");
+
+            manifest_lines.push(format!("{name} = \"{digest}\""));
+        }
+
+        // Write manifest.
+        let manifest_path = store_dir.path().join("manifest.toml");
+        std::fs::write(&manifest_path, manifest_lines.join("\n")).expect("writing manifest");
+
+        // Write policy.
+        let policy_path = socket_dir.path().join("policy.toml");
+        std::fs::write(&policy_path, policy_toml).expect("writing policy");
+
+        // Socket path.
+        let socket_path = socket_dir.path().join("cleanroom.sock");
+
+        // Start the server.
+        let bin = env_path("CLEANROOM_BIN");
+        let mut server_process = Command::new(&bin)
+            .arg("server")
+            .arg(format!("--policy-file={}", policy_path.display()))
+            .arg(format!("--socket={}", socket_path.display()))
+            .arg(format!("--module-store={}", store_dir.path().display()))
+            .env("RUST_LOG", "info")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .expect("starting server");
+
+        let mut socket_created = false;
+        for _ in 0..50 {
+            if socket_path.exists() {
+                socket_created = true;
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+
+        if !socket_created {
+            let mut server_err = String::new();
+            use std::io::Read;
+            if let Some(mut err) = server_process.stderr.take() {
+                err.read_to_string(&mut server_err).unwrap();
+            }
+            panic!(
+                "server did not create socket within 5 seconds.\nServer stderr:\n{}",
+                server_err
+            );
+        }
+
+        Self { store_dir, socket_dir, server_process, socket_path }
+    }
+
+    /// Connects to the server and sends a message from client to server,
+    /// returning the message from server to client.
+    fn send_request(
+        &self,
+        request: &cleanroom_protocol::ClientToServer,
+    ) -> cleanroom_protocol::ServerToClient {
+        let mut stream = UnixStream::connect(&self.socket_path).expect("connecting to server");
+        cleanroom_protocol::write_message(&mut stream, request).expect("sending message");
+        cleanroom_protocol::read_message(&mut stream).expect("reading response")
+    }
+}
+
+impl Drop for ServerHarness {
+    fn drop(&mut self) {
+        let _ = self.server_process.kill();
+        let _ = self.server_process.wait();
+    }
+}
+
+// The protocol types are imported from the cleanroom_lib crate.
+pub use cleanroom_lib::protocol as cleanroom_protocol;
+
+/// A minimal policy for server tests.
+const SERVER_TEST_POLICY: &str = r#"
+"#;
+
+#[test]
+fn server_list_modules_returns_installed_modules() {
+    let harness = ServerHarness::start(
+        SERVER_TEST_POLICY,
+        &[("to_uppercase", "TO_UPPERCASE_WASM"), ("reverse", "REVERSE_WASM")],
+    );
+
+    let response = harness.send_request(&cleanroom_protocol::ClientToServer::ListModules);
+
+    match response {
+        cleanroom_protocol::ServerToClient::ModuleList { modules } => {
+            let names: Vec<&str> = modules.iter().map(|m| m.name.as_str()).collect();
+            assert!(
+                names.contains(&"to_uppercase"),
+                "expected to_uppercase in list, got: {names:?}"
+            );
+            assert!(names.contains(&"reverse"), "expected reverse in list, got: {names:?}");
+        }
+        other => panic!("expected ModuleList, got: {other:?}"),
+    }
+}
+
+#[test]
+fn server_runs_unlisted_module_in_pure_sandbox() {
+    // Modules not listed in the policy run in the legacy Oak Functions
+    // ABI sandbox — stdin → wasm → stdout, no IFC.
+    let harness =
+        ServerHarness::start(SERVER_TEST_POLICY, &[("to_uppercase", "TO_UPPERCASE_WASM")]);
+
+    // Look up the digest for to_uppercase.
+    let list_resp = harness.send_request(&cleanroom_protocol::ClientToServer::ListModules);
+    let digest = match list_resp {
+        cleanroom_protocol::ServerToClient::ModuleList { modules } => {
+            modules.iter().find(|m| m.name == "to_uppercase").unwrap().digest.clone()
+        }
+        other => panic!("expected ModuleList, got: {other:?}"),
+    };
+
+    // Run the module (not listed in policy → pure sandbox).
+    let response = harness.send_request(&cleanroom_protocol::ClientToServer::Run {
+        digest,
+        stdin: b"hello server".to_vec(),
+    });
+
+    match response {
+        cleanroom_protocol::ServerToClient::RunResult { status, stdout, .. } => {
+            assert_eq!(status, cleanroom_protocol::RunStatus::Ok);
+            assert_eq!(stdout, b"HELLO SERVER");
+        }
+        other => panic!("expected RunResult, got: {other:?}"),
+    }
+}
+
+#[test]
+fn server_rejects_unknown_digest() {
+    let harness = ServerHarness::start(SERVER_TEST_POLICY, &[]);
+
+    let response = harness.send_request(&cleanroom_protocol::ClientToServer::Run {
+        digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+            .to_string(),
+        stdin: Vec::new(),
+    });
+
+    match response {
+        cleanroom_protocol::ServerToClient::Error { message } => {
+            assert!(message.contains("not found"), "expected 'not found' error, got: {message}");
+        }
+        other => panic!("expected Error, got: {other:?}"),
+    }
+}
+
+const CAT_FILE_POLICY: &str = r#"
+"#;
+
+#[test]
+fn server_runs_cat_file_via_proxy() {
+    let mut harness = ServerHarness::start(CAT_FILE_POLICY, &[("cat_file", "CAT_FILE_WASM")]);
+
+    let absolute_cwd = std::env::current_dir().unwrap();
+    let temp_dir = tempfile::tempdir_in(&absolute_cwd).expect("creating temp dir");
+    let test_file = temp_dir.path().join("test.txt");
+    println!("Test current_dir: {:?}", std::env::current_dir().unwrap());
+    println!("Test test_file: {:?}", test_file);
+    std::fs::write(&test_file, "Hello from proxy!").expect("writing test file");
+
+    let bin = env_path("CLEANROOM_BIN");
+
+    let mut child = Command::new(&bin)
+        .arg("run")
+        .arg("cat_file")
+        .arg(format!("--socket={}", harness.socket_path.display()))
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("spawning client");
+
+    let guest_path = if let Ok(rel) = test_file.strip_prefix(std::env::current_dir().unwrap()) {
+        rel.to_str().unwrap().to_string() // No prepended slash
+    } else {
+        test_file.to_str().unwrap().to_string()
+    };
+    child.stdin.take().unwrap().write_all(guest_path.as_bytes()).expect("writing stdin");
+
+    let output = child.wait_with_output().expect("waiting for client");
+
+    if !output.status.success() {
+        let mut server_err = String::new();
+        if let Some(mut err) = harness.server_process.stderr.take() {
+            use std::io::Read;
+            err.read_to_string(&mut server_err).unwrap();
+        }
+        panic!(
+            "client failed: {}\nServer stderr:\n{}",
+            String::from_utf8_lossy(&output.stderr),
+            server_err
+        );
+    }
+    assert_eq!(output.stdout, b"Hello from proxy!");
 }

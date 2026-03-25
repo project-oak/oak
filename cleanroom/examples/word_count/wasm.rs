@@ -13,21 +13,17 @@
 // limitations under the License.
 
 //! Cleanroom example: count lines, words, and bytes in the input (like `wc`).
-//!
-//! Outputs a single line: `{lines} {words} {bytes}\n`
-//!
-//! Run via cleanroom:
-//! ```text
-//! echo "hello world" | cleanroom --wasm-module-file=word_count.wasm
-//! # → 1 2 12
-//! ```
+//! Uses standard Rust `std::io` and WASI.
 
-#[unsafe(no_mangle)]
-pub extern "C" fn main() {
-    cleanroom_sdk::run_with(|input: &[u8]| -> Vec<u8> {
-        let bytes = input.len();
-        let lines = input.iter().filter(|&&b| b == b'\n').count();
-        let words = input.split(|b| b.is_ascii_whitespace()).filter(|s| !s.is_empty()).count();
-        format!("{lines} {words} {bytes}\n").into_bytes()
-    });
+use std::io::{Read, Write};
+
+fn main() {
+    let mut buf = Vec::new();
+    if std::io::stdin().read_to_end(&mut buf).is_ok() {
+        let bytes = buf.len();
+        let lines = buf.iter().filter(|&&b| b == b'\n').count();
+        let words = buf.split(|b| b.is_ascii_whitespace()).filter(|s| !s.is_empty()).count();
+        let out = format!("{lines} {words} {bytes}\n");
+        let _ = std::io::stdout().write_all(out.as_bytes());
+    }
 }

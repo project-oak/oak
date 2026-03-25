@@ -14,69 +14,93 @@
 
 //! # Cleanroom SDK
 //!
-//! Helpers for writing WebAssembly modules that run inside the
-//! [cleanroom](../README.md) sandboxed runner.
+//! Ergonomic wrappers for writing WebAssembly modules that run inside
+//! the [cleanroom](../README.md) sandboxed runner.
 //!
-//! Cleanroom modules use the [Oak Functions ABI] — the same ABI used by Oak
-//! Functions and Oak Verity. This crate is a thin wrapper around
-//! [`oak_functions_sdk`] that adds a convenient [`run_with`] helper so module
-//! authors don't need to call `read_request` / `write_response` manually.
+//! This crate generates the WIT bindings for the `oak:cleanroom/ifc`
+//! interface and re-exports them as idiomatic Rust functions.  Module
+//! authors depend on this crate instead of calling `wit_bindgen`
+//! directly.
 //!
 //! ## Usage
 //!
 //! ```ignore
-//! #![no_std]
-//! extern crate alloc;
-//! use alloc::vec::Vec;
+//! use std::io;
 //!
-//! #[unsafe(no_mangle)]
-//! pub extern "C" fn main() {
-//!     cleanroom_sdk::run_with(|input| {
-//!         input.iter().map(|b| b.to_ascii_uppercase()).collect()
-//!     });
+//! fn main() -> io::Result<()> {
+//!     let secret = cleanroom_sdk::get_cell("api_key")
+//!         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "missing cell"))?;
+//!
+//!     let redacted = format!("{}****", &secret[..4]);
+//!
+//!     cleanroom_sdk::declassify(&["secret_category"]);
+//!     println!("{redacted}");
+//!     Ok(())
 //! }
 //! ```
-//!
-//! The `alloc` export required by the Oak Functions ABI is provided
-//! automatically by `oak_functions_sdk`, so you do not need to supply it.
-//!
-//! [Oak Functions ABI]: https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md
 
-#![no_std]
+// Generate the WIT bindings once, here in the SDK crate.
+wit_bindgen::generate!({
+    path: "../../cleanroom/wit",
+    world: "runner",
+});
 
-extern crate alloc;
-
-use alloc::vec::Vec;
-
-// Re-export the low-level primitives so module authors can use them directly
-// if they need finer-grained control.
-pub use oak_functions_sdk::{read_request, write_response};
-
-/// Reads all input bytes from the host (stdin), applies `f` to them,
-/// and writes the resulting bytes back to the host (stdout).
+/// Reads a named cell from the host cell store.
 ///
-/// This is the primary entry point for cleanroom modules. Call it inside
-/// the exported `main` function:
+/// If the cell exists, the module's computation label is
+/// automatically tainted with the cell's IFC label.  Returns `None`
+/// if the cell is not defined.
+pub fn get_cell(name: &str) -> Option<String> {
+    oak::cleanroom::ifc::get_cell(name)
+}
+
+/// Returns the current IFC label of the module's computation.
 ///
-/// ```ignore
-/// #[unsafe(no_mangle)]
-/// pub extern "C" fn main() {
-///     cleanroom_sdk::run_with(|input| {
-///         input.iter().copied().rev().collect()
-///     });
-/// }
-/// ```
+/// Each entry in the returned list is a category name (e.g.
+/// `"secret_category"`).  An empty list means the computation is
+/// public (fully declassified).
+pub fn get_label() -> Vec<String> {
+    oak::cleanroom::ifc::get_label()
+}
+
+/// Explicitly declassifies the given categories.
 ///
-/// # Panics
+/// Returns `true` if the module has sufficient privilege to
+/// declassify all requested categories.  On failure, the
+/// computation label is unchanged.
 ///
-/// Panics (causing a Wasm trap) if reading from the host or writing to the
-/// host fails. This is the correct behaviour: a trap is surfaced as an error
-/// by the cleanroom runner and printed to stderr.
-pub fn run_with<F>(f: F)
-where
-    F: FnOnce(&[u8]) -> Vec<u8>,
-{
-    let input = read_request().expect("cleanroom_sdk: failed to read request from host");
-    let output = f(&input);
-    write_response(&output).expect("cleanroom_sdk: failed to write response to host");
+/// Category names should match the labels defined in the policy
+/// (e.g. `"secret_category"`, `"user_location"`).
+pub fn declassify(categories: &[&str]) -> bool {
+    let owned: Vec<String> = categories.iter().map(|s| s.to_string()).collect();
+    oak::cleanroom::ifc::declassify(&owned)
+}
+
+/// Reads a file from the host filesystem using the custom ABI.
+///
+/// This does NOT use standard WASI filesystem calls.
+pub fn read_file(path: &str) -> std::result::Result<Vec<u8>, String> {
+    oak::cleanroom::fs::read_file(path)
+}
+
+/// Writes a file to the host filesystem using the custom ABI.
+///
+/// This does NOT use standard WASI filesystem calls.
+pub fn write_file(path: &str, data: &[u8]) -> std::result::Result<(), String> {
+    oak::cleanroom::fs::write_file(path, data)
+}
+
+/// Deletes a file from the host filesystem using the custom ABI.
+///
+/// This does NOT use standard WASI filesystem calls.
+pub fn delete_file(path: &str) -> std::result::Result<(), String> {
+    oak::cleanroom::fs::delete_file(path)
+}
+
+/// Lists directory contents on the host filesystem using the custom ABI.
+///
+/// This does NOT use standard WASI filesystem calls. Returns a list of file
+/// names.
+pub fn list_directory(path: &str) -> std::result::Result<Vec<String>, String> {
+    oak::cleanroom::fs::list_directory(path)
 }

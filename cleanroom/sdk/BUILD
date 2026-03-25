@@ -21,11 +21,16 @@ package(
     licenses = ["notice"],
 )
 
-# A thin no_std wrapper around oak_functions_sdk for cleanroom module authors.
-# Provides the run_with helper and re-exports read_request / write_response.
+# SDK for cleanroom Wasm module authors.
+#
+# Generates the WIT bindings for oak:cleanroom/ifc and exposes
+# idiomatic Rust wrappers (get_cell, get_label, declassify).
 rust_library(
     name = "cleanroom_sdk",
     srcs = ["lib.rs"],
+    compile_data = ["//cleanroom:wit_files"],
     crate_name = "cleanroom_sdk",
-    deps = ["//oak_functions_sdk"],
+    deps = [
+        "@oak_crates_index//:wit-bindgen",
+    ],
 )

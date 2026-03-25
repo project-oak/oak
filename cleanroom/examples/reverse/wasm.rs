@@ -13,14 +13,14 @@
 // limitations under the License.
 
 //! Cleanroom example: reverse the bytes of the input.
-//!
-//! Run via cleanroom:
-//! ```text
-//! echo -n "hello" | cleanroom --wasm-module-file=reverse.wasm
-//! # → olleh
-//! ```
+//! Uses standard Rust `std::io` and WASI.
 
-#[unsafe(no_mangle)]
-pub extern "C" fn main() {
-    cleanroom_sdk::run_with(|input: &[u8]| -> Vec<u8> { input.iter().copied().rev().collect() });
+use std::io::{Read, Write};
+
+fn main() {
+    let mut buf = Vec::new();
+    if std::io::stdin().read_to_end(&mut buf).is_ok() {
+        buf.reverse();
+        let _ = std::io::stdout().write_all(&buf);
+    }
 }

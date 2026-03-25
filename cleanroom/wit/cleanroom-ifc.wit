@@ -1,0 +1,24 @@
+package oak:cleanroom;
+
+interface ifc {
+    /// Returns the current computation label of the module.
+    get-label: func() -> list<string>;
+
+    /// Declassifies data with the given category. Returns true if successful.
+    declassify: func(category: list<string>) -> bool;
+
+    /// Reads a named cell value (taints computation with the cell's label).
+    get-cell: func(name: string) -> option<string>;
+}
+
+interface fs {
+    read-file: func(path: string) -> result<list<u8>, string>;
+    write-file: func(path: string, contents: list<u8>) -> result<_, string>;
+    delete-file: func(path: string) -> result<_, string>;
+    list-directory: func(path: string) -> result<list<string>, string>;
+}
+
+world runner {
+    import ifc;
+    import fs;
+}

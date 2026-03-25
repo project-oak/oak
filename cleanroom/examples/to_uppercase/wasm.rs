@@ -13,16 +13,14 @@
 // limitations under the License.
 
 //! Cleanroom example: convert all ASCII letters in the input to uppercase.
-//!
-//! Run via cleanroom:
-//! ```text
-//! echo "hello world" | cleanroom --wasm-module-file=to_uppercase.wasm
-//! # → HELLO WORLD
-//! ```
+//! Uses standard Rust `std::io` and WASI.
 
-#[unsafe(no_mangle)]
-pub extern "C" fn main() {
-    cleanroom_sdk::run_with(|input: &[u8]| -> Vec<u8> {
-        input.iter().map(|b| b.to_ascii_uppercase()).collect()
-    });
+use std::io::{Read, Write};
+
+fn main() {
+    let mut buf = Vec::new();
+    if std::io::stdin().read_to_end(&mut buf).is_ok() {
+        let out: Vec<u8> = buf.iter().map(|b| b.to_ascii_uppercase()).collect();
+        let _ = std::io::stdout().write_all(&out);
+    }
 }

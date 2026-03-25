@@ -14,17 +14,21 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_shared_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("//cleanroom:wasi_binary.bzl", "wasi_binary")
 
 package(
     default_visibility = ["//:internal"],
     licenses = ["notice"],
 )
 
-rust_shared_library(
-    name = "word_count_wasm",
+rust_binary(
+    name = "word_count_bin",
     srcs = ["wasm.rs"],
     crate_name = "word_count",
-    platform = "//:wasm32-unknown-unknown",
-    deps = ["//cleanroom/sdk:cleanroom_sdk"],
+)
+
+wasi_binary(
+    name = "word_count_wasm",
+    binary = ":word_count_bin",
 )

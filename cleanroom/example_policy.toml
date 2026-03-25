@@ -1,0 +1,15 @@
+[[module]]
+name           = "to_uppercase_wasm"
+digest         = "sha256:5f5c42624ba56f1fe3e052e3db87bfe9571ac67cb939e0cfe96532c8369daa37"
+can_declassify = ["local_repo"]
+
+[[module]]
+name           = "redact_secret_wasm"
+digest         = "sha256:3ff922a3fe0a4bf9e168aa02d7f7fbe53e5cd3682fba64828e5f2b61f4c1985b"
+can_declassify = ["secret_category"]
+
+[[module]]
+name           = "weather_wasm"
+digest         = "sha256:5b609471b9cd844a652382f18b66d5d9f07b7b2e40aecc9cc47e1d821be3bad3"
+can_declassify = ["user_location"]
+
