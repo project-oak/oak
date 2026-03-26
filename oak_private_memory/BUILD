@@ -134,6 +134,18 @@ rust_library(
 )
 
 rust_library(
+    name = "session",
+    srcs = ["src/session.rs"],
+    deps = [
+        "@oak//oak_proto_rust",
+        "@oak//oak_session",
+        "@oak//oak_session/tls/rust:oak_session_tls",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:prost",
+    ],
+)
+
+rust_library(
     name = "session_binder",
     srcs = ["src/session_binder.rs"],
     proc_macro_deps = [
@@ -164,6 +176,7 @@ rust_library(
         ":external_db_client",
         ":log",
         ":metrics",
+        ":session",
         ":session_binder",
         "//app",
         "//database",
@@ -182,6 +195,7 @@ rust_library(
         "//proto/grpc:sealed_memory_grpc_proto",
         "@oak//oak_proto_rust",
         "@oak//oak_session",
+        "@oak//oak_session/tls/rust:oak_session_tls",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:futures",
         "@oak_crates_index//:prost",
@@ -225,6 +239,7 @@ rust_library(
         ":private_memory_test_database_server_lib",
         "//database",
         "@oak//oak_containers/launcher:lib",
+        "@oak//oak_session/tls/rust:oak_session_tls",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:prost-types",
@@ -369,6 +384,23 @@ rust_test(
         "@oak_crates_index//:googletest",
         "@oak_crates_index//:log",
         "@oak_crates_index//:prost-types",
+    ],
+)
+
+rust_test(
+    name = "tls_client_test",
+    srcs = ["test/tls_client_test.rs"],
+    data = ["@oak//oak_session/tls/testing:test_keys"],
+    deps = [
+        ":client",
+        ":private_memory_server_lib",
+        ":private_memory_test_utils",
+        "//proto:sealed_memory_rust_proto",
+        "@oak//oak_session/tls/rust:oak_session_tls",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:rustls-pki-types",
+        "@oak_crates_index//:tokio",
+        "@rules_rust//tools/runfiles",
     ],
 )
 

@@ -28,6 +28,7 @@ use std::{
 use anyhow::Result;
 use oak_containers_launcher::{Args, Launcher, QemuParams, QemuVmType, TrustedApplicationAddress};
 pub use oak_private_memory_database::clock::{Clock, SystemClock, system_time_to_timestamp};
+use oak_session_tls::OakSessionTlsServerContext;
 use private_memory_server_lib::{
     app,
     app::{ApplicationConfig, run_persistence_service},
@@ -102,7 +103,50 @@ pub async fn start_server_with_clock(
             metrics,
             persistence_tx,
             std::sync::Arc::new(attestation_testing::dummy_server_session_config),
+            None, // TLS not configured in tests
             clock,
+        )),
+        db_handle,
+        persistence_join_handle,
+    ))
+}
+
+/// Starts the Private Memory server in host mode with optional TLS context.
+///
+/// If a TLS server context is provided, the server will accept both Noise
+/// and TLS sessions. If `None`, TLS sessions will return `UNIMPLEMENTED`.
+pub async fn start_server_with_tls(
+    tls_server_context: Option<Arc<OakSessionTlsServerContext>>,
+) -> Result<(
+    SocketAddr,
+    tokio::task::JoinHandle<Result<()>>,
+    tokio::task::JoinHandle<Result<()>>,
+    tokio::task::JoinHandle<()>,
+)> {
+    init_logging();
+
+    let (db_addr, db_handle) = start_test_database().await?;
+
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
+    let listener = TcpListener::bind(addr).await?;
+    let addr = listener.local_addr()?;
+
+    let application_config = ApplicationConfig { database_service_host: db_addr };
+
+    let metrics = private_memory_server_lib::metrics::get_global_metrics();
+    let (persistence_tx, persistence_rx) = tokio::sync::mpsc::unbounded_channel();
+    let persistence_join_handle = tokio::spawn(run_persistence_service(persistence_rx));
+
+    Ok((
+        addr,
+        tokio::spawn(app::service::create(
+            listener,
+            application_config,
+            metrics,
+            persistence_tx,
+            std::sync::Arc::new(attestation_testing::dummy_server_session_config),
+            tls_server_context,
+            Arc::new(SystemClock),
         )),
         db_handle,
         persistence_join_handle,

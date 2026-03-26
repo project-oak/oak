@@ -18,4 +18,5 @@ pub use encryption;
 pub use external_db_client;
 pub use log;
 pub use metrics;
+pub use session;
 pub use session_binder;

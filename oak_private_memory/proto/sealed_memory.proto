@@ -682,10 +682,24 @@ message SealedMemorySessionResponse {
   .oak.session.v1.SessionResponse session_response = 1;
 }
 
+// A frame for TLS-based sessions. During the handshake phase, each frame
+// carries a raw TLS record. After the handshake completes, each frame carries
+// TLS-encrypted application data (the ciphertext of a serialized
+// SealedMemoryRequest or SealedMemoryResponse).
+message TlsSessionFrame {
+  bytes tls_frame = 1;
+}
+
 service SealedMemoryService {
   rpc Invoke(stream oak.session.v1.SessionRequest)
       returns (stream oak.session.v1.SessionResponse) {}
 
   rpc StartSession(stream SealedMemorySessionRequest)
       returns (stream SealedMemorySessionResponse) {}
+
+  // Establishes an end-to-end encrypted session using TLS instead of Noise.
+  // The stream carries TLS frames: initial messages form the TLS handshake,
+  // followed by TLS-encrypted application payloads.
+  rpc StartTlsSession(stream TlsSessionFrame) returns (stream TlsSessionFrame) {
+  }
 }

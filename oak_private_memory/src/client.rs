@@ -13,9 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+use std::sync::Arc;
+
 use anyhow::{Context, Result, anyhow};
 use async_trait::async_trait;
-use futures::{SinkExt, StreamExt, channel::mpsc};
+use futures::{SinkExt, StreamExt, channel::mpsc, lock::Mutex};
 use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
 use oak_session::{
     Session,
@@ -24,10 +26,13 @@ use oak_session::{
     config::SessionConfig,
     handshake::HandshakeType,
 };
+use oak_session_tls::{OakSessionTls, OakSessionTlsClientContext};
 use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_client::SealedMemoryServiceClient;
 use sealed_memory_rust_proto::{
-    oak::private_memory::{SealedMemorySessionRequest, SealedMemorySessionResponse},
+    oak::private_memory::{
+        SealedMemorySessionRequest, SealedMemorySessionResponse, TlsSessionFrame,
+    },
     prelude::v1::*,
 };
 use tonic::transport::Channel;
@@ -322,6 +327,257 @@ impl PrivateMemoryClient {
         let response =
             self.invoke(sealed_memory_request::Request::ResetMemoryRequest(request)).await?;
         expect_response_type!(response, sealed_memory_response::Response::ResetMemoryResponse)
+    }
+
+    pub async fn get_memories_by_id(
+        &mut self,
+        ids: Vec<String>,
+        result_mask: Option<ResultMask>,
+    ) -> Result<GetMemoriesByIdResponse> {
+        let request = GetMemoriesByIdRequest { ids, result_mask };
+        let response =
+            self.invoke(sealed_memory_request::Request::GetMemoriesByIdRequest(request)).await?;
+        expect_response_type!(response, sealed_memory_response::Response::GetMemoriesByIdResponse)
+    }
+
+    pub async fn get_database_metrics(&mut self) -> Result<GetDatabaseMetricsResponse> {
+        let request = GetDatabaseMetricsRequest::default();
+        let response =
+            self.invoke(sealed_memory_request::Request::GetDatabaseMetricsRequest(request)).await?;
+        expect_response_type!(
+            response,
+            sealed_memory_response::Response::GetDatabaseMetricsResponse
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// TLS Client Support
+// ---------------------------------------------------------------------------
+
+/// A transport layer for TLS sessions over gRPC `TlsSessionFrame` streams.
+///
+/// After the TLS handshake completes, this transport exchanges raw TLS-
+/// encrypted bytes wrapped in `TlsSessionFrame` messages.
+struct TlsFrameTransport {
+    tx: mpsc::Sender<TlsSessionFrame>,
+    rx: tonic::Streaming<TlsSessionFrame>,
+}
+
+impl TlsFrameTransport {
+    async fn send_frame(&mut self, tls_frame: Vec<u8>) -> Result<()> {
+        self.tx.send(TlsSessionFrame { tls_frame }).await.map_err(|e| anyhow!(e))
+    }
+
+    async fn receive_frame(&mut self) -> Result<Vec<u8>> {
+        let frame = self
+            .rx
+            .next()
+            .await
+            .ok_or(anyhow!("did not receive a TLS frame"))?
+            .map_err(|e: tonic::Status| anyhow!(e))?;
+        Ok(frame.tls_frame)
+    }
+}
+
+/// A Private Memory client that uses TLS instead of Noise for session
+/// encryption.
+///
+/// This client performs the TLS handshake over the `StartTlsSession` gRPC
+/// stream, then exchanges encrypted application data using `OakSessionTls`.
+///
+/// It exposes the same high-level API as [`PrivateMemoryClient`].
+pub struct PrivateMemoryTlsClient {
+    tls_session: OakSessionTls,
+    transport: TlsFrameTransport,
+    format: SerializationFormat,
+}
+
+impl PrivateMemoryTlsClient {
+    /// Creates a new TLS-based client connected to the given server address.
+    ///
+    /// Performs the TLS handshake over the `StartTlsSession` gRPC stream,
+    /// then registers and key-syncs the user.
+    pub async fn create(
+        server_addr: &str,
+        pm_uid: &str,
+        kek: &[u8],
+        format: SerializationFormat,
+        tls_client_context: &OakSessionTlsClientContext,
+    ) -> Result<Self> {
+        let channel = Channel::from_shared(server_addr.to_string())
+            .context("failed to create shared channel")?
+            .connect()
+            .await
+            .context("failed to connect to server")?;
+        let mut grpc_client = SealedMemoryServiceClient::new(channel);
+        let (tx, rx_stream) = mpsc::channel(10);
+        let rx = grpc_client
+            .start_tls_session(rx_stream)
+            .await
+            .context("failed to start TLS session")?
+            .into_inner();
+
+        let transport = TlsFrameTransport { tx, rx };
+
+        // Wrap transport temporarily to resolve lifetime issues with async closures.
+        let shared_transport = Arc::new(Mutex::new(transport));
+
+        // Let the oak_session_tls helper handle the entire handshake.
+        let (tls_session, mut _initial_data) = tls_client_context
+            .new_initialized_session(
+                |frame| {
+                    let t = shared_transport.clone();
+                    async move { t.lock().await.send_frame(frame).await }
+                },
+                {
+                    let t = shared_transport.clone();
+                    move || {
+                        let t = t.clone();
+                        async move { t.lock().await.receive_frame().await.map(Some) }
+                    }
+                },
+            )
+            .await
+            .map_err(|e| anyhow!("TLS handshake completion: {e}"))?;
+
+        log::info!("TLS handshake completed");
+
+        // Recover exclusive ownership of the transport to continue app data logic.
+        let transport =
+            Arc::into_inner(shared_transport).expect("transport has multiple owners").into_inner();
+
+        let mut client = Self { tls_session, transport, format };
+
+        client.register_user(pm_uid, kek).await?;
+        match client.key_sync(pm_uid, kek).await {
+            Ok(key_sync_response::Status::Success) => Ok(client),
+            Ok(s) => Err(anyhow!("key sync failed with status: {:?}", s)),
+            Err(e) => Err(e),
+        }
+    }
+
+    async fn invoke(
+        &mut self,
+        request: sealed_memory_request::Request,
+    ) -> Result<sealed_memory_response::Response> {
+        let sealed_memory_request =
+            SealedMemoryRequest { request: Some(request), ..Default::default() };
+
+        let payload = match self.format {
+            SerializationFormat::BinaryProto => sealed_memory_request.encode_to_vec(),
+            SerializationFormat::Json => {
+                serde_json::to_vec(&sealed_memory_request).context("failed to serialize request")?
+            }
+        };
+
+        let encrypted =
+            self.tls_session.encrypt(&payload).map_err(|e| anyhow!("TLS encrypt: {e}"))?;
+        self.transport.send_frame(encrypted).await.context("failed to send TLS frame")?;
+
+        let mut decrypted = Vec::new();
+        while decrypted.is_empty() {
+            let response_frame =
+                self.transport.receive_frame().await.context("failed to receive TLS frame")?;
+            decrypted = self
+                .tls_session
+                .decrypt(&response_frame)
+                .map_err(|e| anyhow!("TLS decrypt: {e}"))?;
+        }
+
+        let sealed_memory_response = match self.format {
+            SerializationFormat::BinaryProto => SealedMemoryResponse::decode(decrypted.as_ref())
+                .context("failed to decode response")?,
+            SerializationFormat::Json => {
+                serde_json::from_slice(&decrypted).context("failed to deserialize response")?
+            }
+        };
+
+        sealed_memory_response.response.ok_or_else(|| anyhow!("empty response"))
+    }
+
+    pub async fn register_user(
+        &mut self,
+        pm_uid: &str,
+        kek: &[u8],
+    ) -> Result<user_registration_response::Status> {
+        let request = UserRegistrationRequest {
+            pm_uid: pm_uid.to_string(),
+            key_encryption_key: kek.to_vec(),
+            boot_strap_info: Some(KeyDerivationInfo::default()),
+        };
+        let response =
+            self.invoke(sealed_memory_request::Request::UserRegistrationRequest(request)).await?;
+        match response {
+            sealed_memory_response::Response::UserRegistrationResponse(resp) => Ok(resp.status()),
+            _ => Err(anyhow!("unexpected response type for user registration")),
+        }
+    }
+
+    pub async fn key_sync(
+        &mut self,
+        pm_uid: &str,
+        kek: &[u8],
+    ) -> Result<key_sync_response::Status> {
+        let request =
+            KeySyncRequest { pm_uid: pm_uid.to_string(), key_encryption_key: kek.to_vec() };
+        let response = self.invoke(sealed_memory_request::Request::KeySyncRequest(request)).await?;
+        match response {
+            sealed_memory_response::Response::KeySyncResponse(resp) => Ok(resp.status()),
+            _ => Err(anyhow!("unexpected response type for key sync")),
+        }
+    }
+
+    pub async fn add_memory(&mut self, memory: Memory) -> Result<AddMemoryResponse> {
+        let request = AddMemoryRequest { memory: Some(memory) };
+        let response =
+            self.invoke(sealed_memory_request::Request::AddMemoryRequest(request)).await?;
+        expect_response_type!(response, sealed_memory_response::Response::AddMemoryResponse)
+    }
+
+    pub async fn search_memory(
+        &mut self,
+        query: SearchMemoryQuery,
+        page_size: i32,
+        result_mask: Option<ResultMask>,
+        page_token: &str,
+        keep_all_llm_views: bool,
+    ) -> Result<SearchMemoryResponse> {
+        let request = SearchMemoryRequest {
+            query: Some(query),
+            page_size,
+            result_mask,
+            page_token: page_token.to_string(),
+            keep_all_llm_views,
+        };
+        let response =
+            self.invoke(sealed_memory_request::Request::SearchMemoryRequest(request)).await?;
+        expect_response_type!(response, sealed_memory_response::Response::SearchMemoryResponse)
+    }
+
+    pub async fn delete_memory(&mut self, ids: Vec<String>) -> Result<DeleteMemoryResponse> {
+        let request = DeleteMemoryRequest { ids };
+        let response =
+            self.invoke(sealed_memory_request::Request::DeleteMemoryRequest(request)).await?;
+        expect_response_type!(response, sealed_memory_response::Response::DeleteMemoryResponse)
+    }
+
+    pub async fn reset_memory(&mut self) -> Result<ResetMemoryResponse> {
+        let request = ResetMemoryRequest::default();
+        let response =
+            self.invoke(sealed_memory_request::Request::ResetMemoryRequest(request)).await?;
+        expect_response_type!(response, sealed_memory_response::Response::ResetMemoryResponse)
+    }
+
+    pub async fn get_memory_by_id(
+        &mut self,
+        id: &str,
+        result_mask: Option<ResultMask>,
+    ) -> Result<GetMemoryByIdResponse> {
+        let request = GetMemoryByIdRequest { id: id.to_string(), result_mask };
+        let response =
+            self.invoke(sealed_memory_request::Request::GetMemoryByIdRequest(request)).await?;
+        expect_response_type!(response, sealed_memory_response::Response::GetMemoryByIdResponse)
     }
 
     pub async fn get_memories_by_id(
