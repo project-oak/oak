@@ -23,16 +23,27 @@
               allowUnfree = true; # needed to get android stuff to compile
             };
           };
-          # Create a bazelisk package that can be called as "bazel".
-          bazelisk-as-bazel = pkgs.symlinkJoin {
-            name = "bazelisk-as-bazel";
-            paths = [ pkgs.bazelisk ];
-            postBuild = ''
-              # Remove the original binary link if you only want the alias
-              # or keep it. Here we explicitly create the alias link:
-              ln -s $out/bin/bazelisk $out/bin/bazel
-            '';
-          };
+          # Create a bazelisk wrapper that normalizes PATH before invoking
+          # bazelisk. This prevents Bazel analysis cache invalidation caused
+          # by different host shells (e.g. IDE terminals vs interactive
+          # terminals) having different base PATHs. Nix prepends its store
+          # paths to the host PATH, so different starting PATHs produce
+          # different final PATHs. Bazel tracks the full PATH as part of its
+          # client_env cache key, so differing PATHs cause full rebuilds.
+          # By normalizing inside the wrapper, the user's interactive shell
+          # keeps its full PATH (jj, direnv, etc. all work), but the bazel
+          # process always sees a deterministic PATH.
+          bazelisk-as-bazel =
+            let
+              wrapper = pkgs.writeShellScriptBin "bazel" ''
+                export PATH="$(echo "$PATH" | tr ':' '\n' | grep '^/nix/store/' | tr '\n' ':' | sed 's/:$//'):/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+                exec ${pkgs.bazelisk}/bin/bazelisk "$@"
+              '';
+            in
+            pkgs.symlinkJoin {
+              name = "bazelisk-as-bazel";
+              paths = [ wrapper pkgs.bazelisk ];
+            };
           inherit (pkgs) lib stdenv;
           androidSdk =
             (pkgs.androidenv.composeAndroidPackages {
