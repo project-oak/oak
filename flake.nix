@@ -220,7 +220,6 @@
                 gcrane
                 jq
                 libelf
-                libguestfs-with-appliance
                 perl
                 rekor-cli
                 strip-nondeterminism
@@ -235,9 +234,10 @@
                 elfutils
                 glibc
                 glibc.static
+                libguestfs-with-appliance
               ];
-              env = {
-                LIBGUESTFS_PATH = "${pkgs.libguestfs-with-appliance}/lib/guestfs";
+              env = { } // lib.optionalAttrs stdenv.isLinux {
+                LIBGUESTFS_PATH = "${if stdenv.isLinux then pkgs.libguestfs-with-appliance else "dummy"}/lib/guestfs";
               };
             };
             # Shell for most CI steps (i.e. without containers support).
