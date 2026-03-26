@@ -1331,10 +1331,8 @@ impl IcingMetaDatabase {
         &self,
         request: &SearchMemoriesRequest,
     ) -> anyhow::Result<(SearchResultIds, PageToken)> {
-        let filter = request.filter.as_ref().context("SearchMemoriesRequest.filter is required")?;
-
         // Build the Icing search spec from the filter tree.
-        let search_spec = self.build_search_memories_filter(filter, SCHEMA_NAME)?;
+        let search_spec = self.build_search_memories_filter(&request.filter)?;
 
         let scoring_spec = Self::build_search_memories_sort_mode(&request.sort)?;
 
@@ -1489,35 +1487,35 @@ impl IcingMetaDatabase {
     /// `SearchSpecProto`.
     fn build_search_memories_filter(
         &self,
-        filter: &SearchMemoriesFilter,
-        schema_name: &str,
+        filter: &Option<SearchMemoriesFilter>,
     ) -> anyhow::Result<icing::SearchSpecProto> {
         use search_memories_filter::Value;
-        let value = filter.value.as_ref().context("SearchMemoriesFilter.value is required")?;
+        let value = match filter.as_ref().and_then(|f| f.value.as_ref()) {
+            // No filter provided, default to selecting everything.
+            Some(v) => v,
+            None => {
+                return Ok(icing::SearchSpecProto {
+                    schema_type_filters: vec![SCHEMA_NAME.to_string()],
+                    ..Default::default()
+                });
+            }
+        };
         match value {
-            Value::IdFilter(f) => {
-                self.build_string_filter_spec(MEMORY_ID_NAME, &f.value, schema_name)
-            }
-            Value::NameFilter(f) => self.build_string_filter_spec(NAME_NAME, &f.value, schema_name),
-            Value::TagsFilter(f) => self.build_string_filter_spec(TAG_NAME, &f.value, schema_name),
+            Value::IdFilter(f) => self.build_string_filter_spec(MEMORY_ID_NAME, &f.value),
+            Value::NameFilter(f) => self.build_string_filter_spec(NAME_NAME, &f.value),
+            Value::TagsFilter(f) => self.build_string_filter_spec(TAG_NAME, &f.value),
             Value::CreatedTimestampFilter(f) => {
-                self.build_time_filter_spec(CREATED_TIMESTAMP_NAME, f, schema_name)
+                self.build_time_filter_spec(CREATED_TIMESTAMP_NAME, f)
             }
-            Value::EventTimestampFilter(f) => {
-                self.build_time_filter_spec(EVENT_TIMESTAMP_NAME, f, schema_name)
-            }
+            Value::EventTimestampFilter(f) => self.build_time_filter_spec(EVENT_TIMESTAMP_NAME, f),
             Value::ExpirationTimestampFilter(f) => {
-                self.build_time_filter_spec(EXPIRATION_TIMESTAMP_NAME, f, schema_name)
+                self.build_time_filter_spec(EXPIRATION_TIMESTAMP_NAME, f)
             }
             Value::EmbeddingFilter(f) => self.build_embedding_filter_spec(f),
-            Value::AndOperator(filters) => {
-                self.build_composite_filter(&filters.filters, "AND", schema_name)
-            }
-            Value::OrOperator(filters) => {
-                self.build_composite_filter(&filters.filters, "OR", schema_name)
-            }
+            Value::AndOperator(filters) => self.build_composite_filter(&filters.filters, "AND"),
+            Value::OrOperator(filters) => self.build_composite_filter(&filters.filters, "OR"),
             Value::NotOperator(inner) => {
-                let mut child = self.build_search_memories_filter(inner, schema_name)?;
+                let mut child = self.build_search_memories_filter(&Some((**inner).clone()))?;
                 let child_query = child.query.take().context("child filter produced no query")?;
                 child.query = Some(format!("NOT ({child_query})"));
                 Ok(child)
@@ -1530,7 +1528,6 @@ impl IcingMetaDatabase {
         &self,
         filters: &[SearchMemoriesFilter],
         operator: &str,
-        schema_name: &str,
     ) -> anyhow::Result<icing::SearchSpecProto> {
         ensure!(!filters.is_empty(), "composite filter must have at least one child");
         let mut sub_queries = Vec::new();
@@ -1538,7 +1535,7 @@ impl IcingMetaDatabase {
         let mut merged_spec = icing::SearchSpecProto::default();
 
         for child_filter in filters {
-            let child = self.build_search_memories_filter(child_filter, schema_name)?;
+            let child = self.build_search_memories_filter(&Some(child_filter.clone()))?;
             if let Some(q) = child.query {
                 sub_queries.push(q);
             }
@@ -1574,21 +1571,18 @@ impl IcingMetaDatabase {
         &self,
         field_name: &str,
         value: &str,
-        schema_name: &str,
     ) -> anyhow::Result<icing::SearchSpecProto> {
         let query_string = format!("({field_name}:{value})");
-        let mut search_spec = icing::SearchSpecProto {
+        let search_spec = icing::SearchSpecProto {
             query: Some(query_string),
             enabled_features: vec![
                 "NUMERIC_SEARCH".to_string(),
                 icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
             ],
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+            schema_type_filters: vec![SCHEMA_NAME.to_string()],
             ..Default::default()
         };
-        if !schema_name.is_empty() {
-            search_spec.schema_type_filters.push(schema_name.to_string());
-        }
         Ok(search_spec)
     }
 
@@ -1632,7 +1626,6 @@ impl IcingMetaDatabase {
         &self,
         field_name: &str,
         filter: &TimeFilter,
-        schema_name: &str,
     ) -> anyhow::Result<icing::SearchSpecProto> {
         let timestamp = filter.value.as_ref().context("TimeFilter.value is required")?;
         let value = timestamp_to_i64(timestamp);
@@ -1644,18 +1637,16 @@ impl IcingMetaDatabase {
             ComparisonType::Gt => ">",
         };
         let query_string = format!("({field_name} {op} {value})");
-        let mut search_spec = icing::SearchSpecProto {
+        let search_spec = icing::SearchSpecProto {
             query: Some(query_string),
             enabled_features: vec![
                 "NUMERIC_SEARCH".to_string(),
                 icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
             ],
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+            schema_type_filters: vec![SCHEMA_NAME.to_string()],
             ..Default::default()
         };
-        if !schema_name.is_empty() {
-            search_spec.schema_type_filters.push(schema_name.to_string());
-        }
         Ok(search_spec)
     }
 

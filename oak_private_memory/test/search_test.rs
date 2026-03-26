@@ -1177,3 +1177,19 @@ fn test_search_memories_v2_embedding_filter_multiple_view_types() -> anyhow::Res
 
     Ok(())
 }
+
+#[gtest]
+fn test_search_memories_v2_no_filter() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-no-filter-no-embeddings-test"))?;
+
+    // Add two memories without embeddings
+    db.add_memory(&mem_tagged("m1", &["tag1"]), "blob1".into())?;
+    db.add_memory(&mem_tagged("m2", &["tag2"]), "blob2".into())?;
+
+    // Create an empty SearchMemoriesRequest (no filter, no sort)
+    let request = SearchMemoriesRequest { page_size: 10, ..Default::default() };
+    let (results, _) = db.search_memories(&request)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq("blob1"), eq("blob2")]);
+    Ok(())
+}
