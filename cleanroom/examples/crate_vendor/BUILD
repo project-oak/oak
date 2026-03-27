@@ -68,6 +68,7 @@ rust_test(
         "TEST_CARGO_LOCK": "$(rootpath testdata/Cargo.lock)",
     },
     tags = [
+        "manual",
         "requires-network",
     ],
     deps = [
