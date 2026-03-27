@@ -318,19 +318,6 @@ rust_test(
 )
 
 rust_test(
-    name = "proto_serialization_test",
-    srcs = ["test/proto_serialization_test.rs"],
-    deps = [
-        "//proto:sealed_memory_rust_proto",
-        "@oak_crates_index//:env_logger",
-        "@oak_crates_index//:log",
-        "@oak_crates_index//:prost",
-        "@oak_crates_index//:prost-types",
-        "@oak_crates_index//:serde_json",
-    ],
-)
-
-rust_test(
     name = "client_test",
     srcs = ["test/client_test.rs"],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],

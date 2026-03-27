@@ -74,7 +74,6 @@ cargo_build_script(
         "@oak//oak_grpc_utils",
         "@oak//oak_proto_build_utils",
         "@oak_crates_index//:prost-build",
-        "@oak_crates_index//:serde",
         "@rules_rust//tools/runfiles",
     ],
 )
@@ -91,11 +90,8 @@ rust_library(
     deps = [
         ":build",
         "@oak//oak_proto_rust",
-        "@oak_crates_index//:base64",
-        "@oak_crates_index//:chrono",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
-        "@oak_crates_index//:serde",
         "@oak_crates_index//:tonic",
     ],
 )
