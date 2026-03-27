@@ -30,7 +30,6 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_server:
     SealedMemoryService, SealedMemoryServiceServer,
 };
 use sealed_memory_rust_proto::{oak::private_memory::TlsSessionFrame, prelude::v1::*};
-use session::TlsEncryptedSession;
 use tokio::{net::TcpListener, sync::mpsc};
 use tokio_stream::{Stream, StreamExt, wrappers::TcpListenerStream};
 
@@ -200,7 +199,7 @@ impl OakSessionHandler {
 /// data.
 struct TlsSessionHandler {
     metrics: Arc<metrics::Metrics>,
-    session: TlsEncryptedSession,
+    session: oak_session_tls::OakSessionTls,
     application_handler: SealedMemorySessionHandler,
 }
 
@@ -214,7 +213,7 @@ impl TlsSessionHandler {
     ) -> Self {
         Self {
             metrics: metrics.clone(),
-            session: TlsEncryptedSession::new(tls_session),
+            session: tls_session,
             application_handler: SealedMemorySessionHandler::new(
                 metrics.clone(),
                 persistence_tx.clone(),
@@ -229,10 +228,9 @@ impl TlsSessionHandler {
     pub async fn handle_app_request(&mut self, encrypted_request: &[u8]) -> tonic::Result<Vec<u8>> {
         self.metrics.inc_requests(RequestMetricName::total());
 
-        let decrypted_request = self
-            .session
-            .decrypt(encrypted_request)
-            .into_invalid_argument("failed to decrypt TLS request")?;
+        let decrypted_request = self.session.decrypt(encrypted_request).map_err(|e| {
+            tonic::Status::invalid_argument(format!("failed to decrypt TLS request: {e}"))
+        })?;
 
         if decrypted_request.is_empty() {
             // This can happen if the TLS frame only contained handshake data
@@ -246,10 +244,9 @@ impl TlsSessionHandler {
                 self.metrics.inc_failures(RequestMetricName::total());
                 Err(e)
             }
-            Ok(plaintext_response) => self
-                .session
-                .encrypt(&plaintext_response)
-                .into_internal_error("failed to encrypt TLS response"),
+            Ok(plaintext_response) => self.session.encrypt(&plaintext_response).map_err(|e| {
+                tonic::Status::internal(format!("failed to encrypt TLS response: {e}"))
+            }),
         }
     }
 }

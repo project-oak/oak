@@ -23,7 +23,7 @@
 
 use std::{io::BufReader, sync::Arc};
 
-use client::PrivateMemoryTlsClient;
+use client::{PrivateMemoryAppClient, PrivateMemoryTlsClient};
 use oak_session_tls::{
     ClientContextConfig, OakSessionTlsClientContext, OakSessionTlsServerContext,
     ServerContextConfig, TlsIdentity, utils,

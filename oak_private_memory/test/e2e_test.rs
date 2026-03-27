@@ -21,7 +21,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use client::PrivateMemoryClient;
+use client::{PrivateMemoryAppClient, PrivateMemoryClient};
 use private_memory_test_utils::{MockClock, TestContext, system_time_to_timestamp};
 use sealed_memory_rust_proto::{
     oak::private_memory::{Embedding, LlmView, LlmViews, MatchType, TextQuery, memory_value},

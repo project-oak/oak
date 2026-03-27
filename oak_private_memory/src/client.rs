@@ -202,8 +202,16 @@ impl PrivateMemoryClient {
 
         sealed_memory_response.response.ok_or_else(|| anyhow!("empty response"))
     }
+}
 
-    pub async fn register_user(
+#[async_trait]
+pub trait PrivateMemoryAppClient {
+    async fn invoke(
+        &mut self,
+        request: sealed_memory_request::Request,
+    ) -> Result<sealed_memory_response::Response>;
+
+    async fn register_user(
         &mut self,
         pm_uid: &str,
         kek: &[u8],
@@ -221,11 +229,7 @@ impl PrivateMemoryClient {
         }
     }
 
-    pub async fn key_sync(
-        &mut self,
-        pm_uid: &str,
-        kek: &[u8],
-    ) -> Result<key_sync_response::Status> {
+    async fn key_sync(&mut self, pm_uid: &str, kek: &[u8]) -> Result<key_sync_response::Status> {
         let request =
             KeySyncRequest { pm_uid: pm_uid.to_string(), key_encryption_key: kek.to_vec() };
         let response = self.invoke(sealed_memory_request::Request::KeySyncRequest(request)).await?;
@@ -235,7 +239,7 @@ impl PrivateMemoryClient {
         }
     }
 
-    pub async fn add_memory(&mut self, memory: Memory) -> Result<AddMemoryResponse> {
+    async fn add_memory(&mut self, memory: Memory) -> Result<AddMemoryResponse> {
         let request = AddMemoryRequest { memory: Some(memory) };
         let response =
             self.invoke(sealed_memory_request::Request::AddMemoryRequest(request)).await?;
@@ -243,7 +247,7 @@ impl PrivateMemoryClient {
     }
 
     #[allow(deprecated)]
-    pub async fn get_memories(
+    async fn get_memories(
         &mut self,
         tag: &str,
         page_size: i32,
@@ -261,7 +265,7 @@ impl PrivateMemoryClient {
         expect_response_type!(response, sealed_memory_response::Response::GetMemoriesResponse)
     }
 
-    pub async fn get_memory_by_id(
+    async fn get_memory_by_id(
         &mut self,
         id: &str,
         result_mask: Option<ResultMask>,
@@ -272,7 +276,7 @@ impl PrivateMemoryClient {
         expect_response_type!(response, sealed_memory_response::Response::GetMemoryByIdResponse)
     }
 
-    pub async fn search_memory(
+    async fn search_memory(
         &mut self,
         query: SearchMemoryQuery,
         page_size: i32,
@@ -292,21 +296,21 @@ impl PrivateMemoryClient {
         expect_response_type!(response, sealed_memory_response::Response::SearchMemoryResponse)
     }
 
-    pub async fn delete_memory(&mut self, ids: Vec<String>) -> Result<DeleteMemoryResponse> {
+    async fn delete_memory(&mut self, ids: Vec<String>) -> Result<DeleteMemoryResponse> {
         let request = DeleteMemoryRequest { ids };
         let response =
             self.invoke(sealed_memory_request::Request::DeleteMemoryRequest(request)).await?;
         expect_response_type!(response, sealed_memory_response::Response::DeleteMemoryResponse)
     }
 
-    pub async fn reset_memory(&mut self) -> Result<ResetMemoryResponse> {
+    async fn reset_memory(&mut self) -> Result<ResetMemoryResponse> {
         let request = ResetMemoryRequest::default();
         let response =
             self.invoke(sealed_memory_request::Request::ResetMemoryRequest(request)).await?;
         expect_response_type!(response, sealed_memory_response::Response::ResetMemoryResponse)
     }
 
-    pub async fn get_memories_by_id(
+    async fn get_memories_by_id(
         &mut self,
         ids: Vec<String>,
         result_mask: Option<ResultMask>,
@@ -317,7 +321,7 @@ impl PrivateMemoryClient {
         expect_response_type!(response, sealed_memory_response::Response::GetMemoriesByIdResponse)
     }
 
-    pub async fn get_database_metrics(&mut self) -> Result<GetDatabaseMetricsResponse> {
+    async fn get_database_metrics(&mut self) -> Result<GetDatabaseMetricsResponse> {
         let request = GetDatabaseMetricsRequest::default();
         let response =
             self.invoke(sealed_memory_request::Request::GetDatabaseMetricsRequest(request)).await?;
@@ -328,6 +332,15 @@ impl PrivateMemoryClient {
     }
 }
 
+#[async_trait]
+impl PrivateMemoryAppClient for PrivateMemoryClient {
+    async fn invoke(
+        &mut self,
+        request: sealed_memory_request::Request,
+    ) -> Result<sealed_memory_response::Response> {
+        self.invoke(request).await
+    }
+}
 // ---------------------------------------------------------------------------
 // TLS Client Support
 // ---------------------------------------------------------------------------
@@ -460,109 +473,14 @@ impl PrivateMemoryTlsClient {
 
         sealed_memory_response.response.ok_or_else(|| anyhow!("empty response"))
     }
+}
 
-    pub async fn register_user(
+#[async_trait]
+impl PrivateMemoryAppClient for PrivateMemoryTlsClient {
+    async fn invoke(
         &mut self,
-        pm_uid: &str,
-        kek: &[u8],
-    ) -> Result<user_registration_response::Status> {
-        let request = UserRegistrationRequest {
-            pm_uid: pm_uid.to_string(),
-            key_encryption_key: kek.to_vec(),
-            boot_strap_info: Some(KeyDerivationInfo::default()),
-        };
-        let response =
-            self.invoke(sealed_memory_request::Request::UserRegistrationRequest(request)).await?;
-        match response {
-            sealed_memory_response::Response::UserRegistrationResponse(resp) => Ok(resp.status()),
-            _ => Err(anyhow!("unexpected response type for user registration")),
-        }
-    }
-
-    pub async fn key_sync(
-        &mut self,
-        pm_uid: &str,
-        kek: &[u8],
-    ) -> Result<key_sync_response::Status> {
-        let request =
-            KeySyncRequest { pm_uid: pm_uid.to_string(), key_encryption_key: kek.to_vec() };
-        let response = self.invoke(sealed_memory_request::Request::KeySyncRequest(request)).await?;
-        match response {
-            sealed_memory_response::Response::KeySyncResponse(resp) => Ok(resp.status()),
-            _ => Err(anyhow!("unexpected response type for key sync")),
-        }
-    }
-
-    pub async fn add_memory(&mut self, memory: Memory) -> Result<AddMemoryResponse> {
-        let request = AddMemoryRequest { memory: Some(memory) };
-        let response =
-            self.invoke(sealed_memory_request::Request::AddMemoryRequest(request)).await?;
-        expect_response_type!(response, sealed_memory_response::Response::AddMemoryResponse)
-    }
-
-    pub async fn search_memory(
-        &mut self,
-        query: SearchMemoryQuery,
-        page_size: i32,
-        result_mask: Option<ResultMask>,
-        page_token: &str,
-        keep_all_llm_views: bool,
-    ) -> Result<SearchMemoryResponse> {
-        let request = SearchMemoryRequest {
-            query: Some(query),
-            page_size,
-            result_mask,
-            page_token: page_token.to_string(),
-            keep_all_llm_views,
-        };
-        let response =
-            self.invoke(sealed_memory_request::Request::SearchMemoryRequest(request)).await?;
-        expect_response_type!(response, sealed_memory_response::Response::SearchMemoryResponse)
-    }
-
-    pub async fn delete_memory(&mut self, ids: Vec<String>) -> Result<DeleteMemoryResponse> {
-        let request = DeleteMemoryRequest { ids };
-        let response =
-            self.invoke(sealed_memory_request::Request::DeleteMemoryRequest(request)).await?;
-        expect_response_type!(response, sealed_memory_response::Response::DeleteMemoryResponse)
-    }
-
-    pub async fn reset_memory(&mut self) -> Result<ResetMemoryResponse> {
-        let request = ResetMemoryRequest::default();
-        let response =
-            self.invoke(sealed_memory_request::Request::ResetMemoryRequest(request)).await?;
-        expect_response_type!(response, sealed_memory_response::Response::ResetMemoryResponse)
-    }
-
-    pub async fn get_memory_by_id(
-        &mut self,
-        id: &str,
-        result_mask: Option<ResultMask>,
-    ) -> Result<GetMemoryByIdResponse> {
-        let request = GetMemoryByIdRequest { id: id.to_string(), result_mask };
-        let response =
-            self.invoke(sealed_memory_request::Request::GetMemoryByIdRequest(request)).await?;
-        expect_response_type!(response, sealed_memory_response::Response::GetMemoryByIdResponse)
-    }
-
-    pub async fn get_memories_by_id(
-        &mut self,
-        ids: Vec<String>,
-        result_mask: Option<ResultMask>,
-    ) -> Result<GetMemoriesByIdResponse> {
-        let request = GetMemoriesByIdRequest { ids, result_mask };
-        let response =
-            self.invoke(sealed_memory_request::Request::GetMemoriesByIdRequest(request)).await?;
-        expect_response_type!(response, sealed_memory_response::Response::GetMemoriesByIdResponse)
-    }
-
-    pub async fn get_database_metrics(&mut self) -> Result<GetDatabaseMetricsResponse> {
-        let request = GetDatabaseMetricsRequest::default();
-        let response =
-            self.invoke(sealed_memory_request::Request::GetDatabaseMetricsRequest(request)).await?;
-        expect_response_type!(
-            response,
-            sealed_memory_response::Response::GetDatabaseMetricsResponse
-        )
+        request: sealed_memory_request::Request,
+    ) -> Result<sealed_memory_response::Response> {
+        self.invoke(request).await
     }
 }

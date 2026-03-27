@@ -134,18 +134,6 @@ rust_library(
 )
 
 rust_library(
-    name = "session",
-    srcs = ["src/session.rs"],
-    deps = [
-        "@oak//oak_proto_rust",
-        "@oak//oak_session",
-        "@oak//oak_session/tls/rust:oak_session_tls",
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:prost",
-    ],
-)
-
-rust_library(
     name = "session_binder",
     srcs = ["src/session_binder.rs"],
     proc_macro_deps = [
@@ -176,7 +164,6 @@ rust_library(
         ":external_db_client",
         ":log",
         ":metrics",
-        ":session",
         ":session_binder",
         "//app",
         "//database",

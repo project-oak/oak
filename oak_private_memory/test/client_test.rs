@@ -20,7 +20,7 @@ use attestation_testing::{
     DUMMY_ATTESTATION_ID, DummySessionBindingVerifierProvider, RejectingVerifier,
     dummy_client_session_config,
 };
-use client::PrivateMemoryClient;
+use client::{PrivateMemoryAppClient, PrivateMemoryClient};
 use oak_session::{attestation::AttestationType, config::SessionConfig, handshake::HandshakeType};
 use private_memory_test_utils::{start_server, system_time_to_timestamp};
 use sealed_memory_rust_proto::{

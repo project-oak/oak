@@ -40,7 +40,6 @@ rust_library(
         "//:external_db_client",
         "//:log",
         "//:metrics",
-        "//:session",
         "//database",
         "//proto:sealed_memory_rust_proto",
         "//proto/grpc:sealed_memory_grpc_proto",
