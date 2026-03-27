@@ -13,9 +13,6 @@ import? "justfile.local"
 # Same, but for a user-wide local Oak justfile (works with Git worktrees).
 import? "~/.oak_justfile.local"
 
-# Recipes for detailing with Rust crate versioning.
-mod crates 'justfiles/crates.just'
-
 # Recipes for building Oak Containers images
 mod containers 'justfiles/containers.just'
 
@@ -292,7 +289,3 @@ run-ctf-sha2-deploy:
 
 run-oak-verity-deploy:
     ./oak_verity/deploy.sh
-
-
-# To help ease the transition. We should eventually remove this.
-alias bazel-repin-all := crates::repin
