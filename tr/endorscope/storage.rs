@@ -32,7 +32,8 @@
 //! signed by a particular verifying key:
 //!
 //! let hashes = loader.list_endorsements_by_key(key_hash)?;
-//! let package = loader.load(hashes[hashes.len() - 1], rekor_public_key)?;
+//! let package = loader.load(hashes[hashes.len() - 1], rekor_public_key,
+//!     c2sp_policy, pes_ref_value)?;
 //! package.verify(now).context("verifying endorsement")?;
 
 use alloc::{
@@ -58,7 +59,9 @@ const MPM_CLAIM_TYPE: &str = "https://github.com/project-oak/oak/blob/main/docs/
 // found at go/oak-search-index-structure.
 const ENDORSEMENT_FOR_SUBJECT_LINK: &str = "13";
 const SIGNATURE_FOR_ENDORSEMENT_LINK: &str = "14";
-const LOG_ENTRY_FOR_ENDORSEMENT_LINK: &str = "15";
+const REKOR_LOG_ENTRY_FOR_ENDORSEMENT_LINK: &str = "15";
+const C2SP_TLOG_PROOF_FOR_ENDORSEMENT_LINK: &str = "31";
+const PES_CONFIRMATION_FOR_ENDORSEMENT_LINK: &str = "32";
 const PUBLIC_KEY_FOR_SIGNATURE_LINK: &str = "16";
 const ENDORSEMENTS_FOR_KEY_LINK: &str = "21";
 const KEYS_FOR_KEYSET_LINK: &str = "22";
@@ -222,6 +225,8 @@ impl EndorsementLoader {
     ///   endorsement package.
     /// - rekor_public_key: Rekor's verifying key if a log entry is expected and
     ///   should be verified. If it is not expected, pass `None`.
+    /// - c2sp_policy: C2SP policy to verify the C2SP t-log proof.
+    /// - pes_ref_value: PES reference value (unimplemented).
     ///
     /// Returns:
     /// - The endorsement package.
@@ -229,6 +234,8 @@ impl EndorsementLoader {
         &self,
         endorsement_hash: &str,
         rekor_public_key: Option<String>,
+        c2sp_policy: Option<String>,
+        pes_ref_value: Option<String>,
     ) -> Result<Package> {
         let endorsement = self
             .storage
@@ -240,9 +247,10 @@ impl EndorsementLoader {
             .with_context(|| {
                 format!("reading signature file for endorsement {}", endorsement_hash)
             })?;
-        let log_entry = self
+
+        let rekor_log_entry = self
             .storage
-            .get_linked_file(endorsement_hash, LOG_ENTRY_FOR_ENDORSEMENT_LINK)
+            .get_linked_file(endorsement_hash, REKOR_LOG_ENTRY_FOR_ENDORSEMENT_LINK)
             .with_context(|| {
                 format!("reading rekor log entry for endorsement {}", endorsement_hash)
             })
@@ -251,6 +259,32 @@ impl EndorsementLoader {
                 // If the link file for the rekor log entry is not found in the
                 // index, we assume the endorsement is not committed to a
                 // transparency log.
+                Some(ureq::Error::Status(404, _)) => Ok(None),
+                _ => Err(err),
+            })?;
+        let c2sp_tlog_proof = self
+            .storage
+            .get_linked_file(endorsement_hash, C2SP_TLOG_PROOF_FOR_ENDORSEMENT_LINK)
+            .with_context(|| {
+                format!("reading C2SP t-log proof for endorsement {}", endorsement_hash)
+            })
+            .map(Some)
+            .or_else(|err| match err.downcast_ref::<ureq::Error>() {
+                // If the link file for the C2SP t-log proof is not found in
+                // the index, we assume the endorsement doesn't have one.
+                Some(ureq::Error::Status(404, _)) => Ok(None),
+                _ => Err(err),
+            })?;
+        let pes_confirmation = self
+            .storage
+            .get_linked_file(endorsement_hash, PES_CONFIRMATION_FOR_ENDORSEMENT_LINK)
+            .with_context(|| {
+                format!("reading PES confirmation for endorsement {}", endorsement_hash)
+            })
+            .map(Some)
+            .or_else(|err| match err.downcast_ref::<ureq::Error>() {
+                // If the link file for the PES confirmation is not found in
+                // the index, we assume the endorsement doesn't have one.
                 Some(ureq::Error::Status(404, _)) => Ok(None),
                 _ => Err(err),
             })?;
@@ -282,10 +316,14 @@ impl EndorsementLoader {
         Ok(Package {
             endorsement,
             signature,
-            log_entry,
+            rekor_log_entry,
+            c2sp_tlog_proof,
+            pes_confirmation,
             subject,
             endorser_public_key,
             rekor_public_key,
+            c2sp_policy,
+            pes_ref_value,
         })
     }
 }

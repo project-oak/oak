@@ -74,15 +74,19 @@ pub async fn pull_package(
             .remove("dev.sigstore.cosign/bundle")
             .context("Cosign image does not have bundle annotation")?;
         let parsed_log_entry = LogEntry::from_cosign_bundle(bundle)?;
-        let log_entry = serialize_rekor_log_entry(&parsed_log_entry)?;
+        let rekor_log_entry = serialize_rekor_log_entry(&parsed_log_entry)?;
 
         Ok(Package {
             endorsement: layer.data,
             signature,
             subject: None,
-            log_entry: Some(log_entry),
+            rekor_log_entry: Some(rekor_log_entry),
+            c2sp_tlog_proof: None,
+            pes_confirmation: None,
             endorser_public_key: endorser_public_key.to_owned(),
             rekor_public_key: Some(get_rekor_v1_public_key_pem().to_string()),
+            c2sp_policy: None,
+            pes_ref_value: None,
         })
     } else {
         anyhow::bail!("No layers found in image");

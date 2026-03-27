@@ -22,6 +22,7 @@
 use alloc::{string::String, vec, vec::Vec};
 
 use anyhow::{Context, Result};
+use c2sp::policy::Policy;
 use intoto::statement::DefaultStatement;
 use oak_proto_rust::oak::attestation::v1::{EndorsementReferenceValue, SignedEndorsement};
 use verify_endorsement::{
@@ -44,9 +45,15 @@ pub struct Package {
     /// endorsement.json.sig).
     pub signature: Vec<u8>,
 
-    /// The log entry related to the signed endorsement if it exists
+    /// The Rekor log entry related to the signed endorsement if it exists
     /// (contents of logentry.json).
-    pub log_entry: Option<Vec<u8>>,
+    pub rekor_log_entry: Option<Vec<u8>>,
+
+    /// The C2SP t-log proof to the signed endorsement if it exists.
+    pub c2sp_tlog_proof: Option<Vec<u8>>,
+
+    /// The PES confirmation of the signed endorsement if it exists.
+    pub pes_confirmation: Option<Vec<u8>>,
 
     /// The subject mentioned in the endorsement if it is needed for the
     /// verification.
@@ -55,8 +62,17 @@ pub struct Package {
     /// The public key for verifying the endorsement signature as PEM.
     pub endorser_public_key: String,
 
-    /// The public key for verifying the log entry signature as PEM.
+    /// The public key for verifying the log entry signature as PEM. Leaving
+    /// this empty disables Rekor verification.
     pub rekor_public_key: Option<String>,
+
+    /// The policy to verify the C2SP t-log proof. Leaving this empty disables
+    /// C2SP verification.
+    pub c2sp_policy: Option<String>,
+
+    /// Reference value to verify PES confirmation. Leaving this empty disables
+    /// PES verification.
+    pub pes_ref_value: Option<String>,
 }
 
 impl Package {
@@ -66,7 +82,17 @@ impl Package {
             None => &vec![],
             Some(array) => array,
         };
-        let log_entry = match &self.log_entry {
+        let rekor_log_entry = match &self.rekor_log_entry {
+            None => &vec![],
+            Some(array) => array,
+        };
+        // TODO: b/495419687 - Need to extend create_signed_endorsement.
+        let _c2sp_tlog_proof = match &self.c2sp_tlog_proof {
+            None => &vec![],
+            Some(array) => array,
+        };
+        // TODO: b/495419687 - Need to extend create_signed_endorsement.
+        let _pes_confirmation = match &self.pes_confirmation {
             None => &vec![],
             Some(array) => array,
         };
@@ -75,7 +101,7 @@ impl Package {
             &self.signature,
             KEY_ID,
             subject,
-            log_entry,
+            rekor_log_entry,
         ))
     }
 
@@ -84,6 +110,9 @@ impl Package {
         let endorser_key = create_verifying_key_from_pem(&self.endorser_public_key, KEY_ID);
         let rekor_key =
             self.rekor_public_key.as_ref().map(|pem| create_verifying_key_from_pem(pem, KEY_ID));
+        // TODO: b/495419687 - Need to pass c2sp_policy and PES reference
+        // value to create_endorsement_reference_value.
+        let _c2sp_policy = self.c2sp_policy.as_ref().map(|p| Policy::parse(p));
         create_endorsement_reference_value(endorser_key, claim_types, rekor_key)
     }
 

@@ -75,7 +75,7 @@ echo "===== 👍👍👍 verifying remotely (without log entry) works ==========
 ${CLI} --now-utc-millis=1709254800000 verify file \
   "--endorsement=${TESTDATA_DIR}/endorsement.json" \
   "--signature=${TESTDATA_DIR}/endorsement.json.sig" \
-  "--log-entry=${TESTDATA_DIR}/logentry.json" \
+  "--rekor-log-entry=${TESTDATA_DIR}/logentry.json" \
   "--endorser-public-key=${TESTDATA_DIR}/endorser_public_key.pem"
 
 echo "===== 👍👍👍 verifying file works ==================================="

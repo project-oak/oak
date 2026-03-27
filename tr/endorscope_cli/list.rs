@@ -78,10 +78,30 @@ pub(crate) struct ListArgs {
 
     #[arg(
         long,
-        help = "Public key to verify Rekor log entries, as PEM. Unset to disable verification, e.g. when log entries are not available by design.",
+        help = "Specifies that no t-log inclusion (Rekor, C2SP/Sigsum or PES) should be verified."
+    )]
+    skip_tlog_verification: bool,
+
+    #[arg(
+        long,
+        help = "Public key to verify Rekor log entries, as PEM. Can be empty. Default is to verify Rekor inclusion, unless overridden by --skip_tlog_verification",
         default_value = get_rekor_v1_public_key_pem(),
     )]
     rekor_public_key: String,
+
+    #[arg(
+        long,
+        help = "C2SP policy to verify C2SP t-log proofs. Empty by default, so no verification happens.",
+        default_value = ""
+    )]
+    c2sp_policy: String,
+
+    #[arg(
+        long,
+        help = "Reference value for verifying a PES confirmation. Empty by default, so no verification happens.",
+        default_value = ""
+    )]
+    pes_ref_value: String,
 
     #[arg(
         long,
@@ -196,12 +216,23 @@ pub(crate) fn list(
         intersect(hashes);
     }
 
+    let (rekor_public_key, c2sp_policy, pes_ref_value) = if p.skip_tlog_verification {
+        (None, None, None)
+    } else {
+        (
+            string_to_option_string(p.rekor_public_key),
+            string_to_option_string(p.c2sp_policy),
+            string_to_option_string(p.pes_ref_value),
+        )
+    };
     list_endorsement_hashes(
         current_time,
         claim_types,
         &loader,
         final_hashes.unwrap_or_default(),
-        string_to_option_string(p.rekor_public_key),
+        rekor_public_key,
+        c2sp_policy,
+        pes_ref_value,
         p.limit,
     );
 }
@@ -223,19 +254,27 @@ fn list_endorsements_by_keyset(loader: &EndorsementLoader, keyset_hash: &str) ->
     keyset_vec
 }
 
+#[allow(clippy::too_many_arguments)]
 fn list_endorsement_hashes(
     current_time: Instant,
     claim_types: Vec<String>,
     loader: &EndorsementLoader,
     endorsement_hashes: Vec<String>,
     rekor_public_key: Option<String>,
+    c2sp_policy: Option<String>,
+    pes_ref_value: Option<String>,
     limit: usize,
 ) {
     // The index is append-only so we iterate backwards to show the most recent
     // endorsements first.
     for (index, endorsement_hash) in endorsement_hashes.iter().rev().enumerate() {
         let result = loader
-            .load(endorsement_hash, rekor_public_key.clone())
+            .load(
+                endorsement_hash,
+                rekor_public_key.clone(),
+                c2sp_policy.clone(),
+                pes_ref_value.clone(),
+            )
             .with_context(|| format!("loading endorsement {endorsement_hash}"));
         match result {
             Ok(package) => {

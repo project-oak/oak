@@ -71,9 +71,10 @@ async fn main() -> anyhow::Result<()> {
         // therefore we may pass the key as empty.
         let package = pull_package(&client, &auth, &image_reference, "").await?;
         let endorsement = &package.endorsement;
-        let log_entry = package.log_entry.as_ref().ok_or(anyhow::anyhow!("missing log entry"))?;
+        let rekor_log_entry =
+            package.rekor_log_entry.as_ref().ok_or(anyhow::anyhow!("missing Rekor log entry"))?;
         println!("Received statement: {endorsement:?}");
-        println!("Converted Rekor log entry: {log_entry:?}");
+        println!("Converted Rekor log entry: {rekor_log_entry:?}");
         package.get_signed_endorsement()?
     };
     let endorsement =
