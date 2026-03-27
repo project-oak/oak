@@ -23,6 +23,8 @@ use anyhow::{Context, Result};
 use regex::Regex;
 use tree_sitter::{Parser, Query, QueryCursor};
 
+use crate::crate_key::CrateKey;
+
 /// Parse MODULE.bazel to extract crate names and their requested versions.
 ///
 /// Uses Starlark native parsing via `tree-sitter` to dynamically evaluate
@@ -130,19 +132,6 @@ pub fn parse_lock_file(path: &Path) -> Result<HashMap<String, Vec<semver::Versio
 
     let mut packages: HashMap<String, Vec<semver::Version>> = HashMap::new();
 
-    // Find the last '-' that's followed by a digit — this separates crate name
-    // from version in strings like "serde-1.0.210" or "serde_json-1.0.138".
-    // Rust's regex crate doesn't support look-ahead, so we do it manually.
-    fn find_version_sep(s: &str) -> Option<usize> {
-        let bytes = s.as_bytes();
-        for i in (0..bytes.len().saturating_sub(1)).rev() {
-            if bytes[i] == b'-' && bytes[i + 1].is_ascii_digit() {
-                return Some(i);
-            }
-        }
-        None
-    }
-
     fn find_repo_specs(value: &serde_json::Value, specs: &mut Vec<serde_json::Value>) {
         match value {
             serde_json::Value::Object(map) => {
@@ -168,16 +157,13 @@ pub fn parse_lock_file(path: &Path) -> Result<HashMap<String, Vec<semver::Versio
     for specs in &all_specs {
         if let serde_json::Value::Object(map) = specs {
             for repo_name in map.keys() {
-                // Match oak_{std,no_std,no_std_no_avx}_crates_index__<crate>-<version>
-                if repo_name.contains("__") && repo_name.contains("_crates_index__") {
-                    if let Some(crate_and_version) = repo_name.split("__").nth(1) {
-                        if let Some(sep_idx) = find_version_sep(crate_and_version) {
-                            let name = &crate_and_version[..sep_idx];
-                            let version_str = &crate_and_version[sep_idx + 1..];
-                            if let Ok(version) = semver::Version::parse(version_str) {
-                                packages.entry(name.to_string()).or_default().push(version);
-                            }
-                        }
+                if !repo_name.contains("_crates_index__") {
+                    continue;
+                }
+                if let Some(raw_key) = repo_name.split("__").nth(1) {
+                    let key = CrateKey::new(raw_key);
+                    if let Some(version) = key.semver_version() {
+                        packages.entry(key.name().to_string()).or_default().push(version);
                     }
                 }
             }

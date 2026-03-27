@@ -14,7 +14,9 @@
 // limitations under the License.
 //
 
+mod crate_key;
 mod crates_io;
+mod deps;
 mod parse;
 mod report;
 
@@ -98,6 +100,14 @@ struct Cli {
     /// Include pre-release versions in the report
     #[arg(long)]
     include_pre_release: bool,
+
+    /// Show dependency paths for a specific crate
+    #[arg(long)]
+    deps: Option<String>,
+
+    /// Depth of reverse-dependency tree (used with --deps)
+    #[arg(long, default_value = "1", requires = "deps")]
+    depth: usize,
 }
 
 fn default_cache_path() -> PathBuf {
@@ -107,6 +117,15 @@ fn default_cache_path() -> PathBuf {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+
+    // --deps mode: build dep graph and print, then exit.
+    if let Some(ref crate_name) = cli.deps {
+        anyhow::ensure!(cli.lock_file.exists(), "{} not found", cli.lock_file.display());
+        eprintln!("Building dependency graph from {}...", cli.lock_file.display());
+        let dep_graph = deps::DepGraph::from_lock_file(&cli.lock_file)?;
+        dep_graph.print_deps(crate_name, cli.depth)?;
+        return Ok(());
+    }
 
     let bzl_file = cli.bzl_file;
     let versions_path = cli.versions_file;

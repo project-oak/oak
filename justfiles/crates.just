@@ -20,3 +20,19 @@ versions *ARGS:
     set -euo pipefail
     (cd tools/analyze_crate_versions && bazel build //:analyze_crate_versions)
     exec tools/analyze_crate_versions/bazel-bin/analyze_crate_versions {{ARGS}}
+
+# Show dependency tree for a crate to understand why it's included.
+[doc("Show full dependency info for a crate in the lock file.
+Shows dependents (reverse deps), dependencies (forward deps), and
+all paths from root crates to the target.
+
+Examples:
+    just crates deps serde          # direct dependents + deps
+    just crates deps serde 3        # 3 levels deep in both directions
+    just crates deps ring 2         # debug multi-version pulls
+")]
+deps crate depth="1":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    (cd tools/analyze_crate_versions && bazel build //:analyze_crate_versions)
+    exec tools/analyze_crate_versions/bazel-bin/analyze_crate_versions --deps={{crate}} --depth={{depth}}
