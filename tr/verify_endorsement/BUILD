@@ -39,7 +39,11 @@ rust_library(
 rust_test(
     name = "verify_endorsement_tests",
     crate = ":verify_endorsement",
+    data = [
+        "//oak_attestation_verification/testdata:endorsement",
+    ],
     deps = [
+        "//oak_attestation_verification:test_util",
         "@oak_crates_index//:base64",
         "@oak_crates_index//:sha2",
     ],

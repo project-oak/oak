@@ -29,8 +29,8 @@ use intoto::statement::{DefaultStatement, parse_statement};
 use key_util::{convert_pem_to_raw, verify_signature};
 use oak_proto_rust::oak::attestation::v1::{
     C2sptLogProofReferenceValue, ClaimReferenceValue, Endorsement, EndorsementReferenceValue,
-    KeyType, Signature, SignedEndorsement, SkipVerification, VerifyingKey,
-    VerifyingKeyReferenceValue, VerifyingKeySet, endorsement::Format,
+    KeyType, Signature, SignedEndorsement, SkipVerification, TLogReferenceValues, VerifyingKey,
+    VerifyingKeyReferenceValue, VerifyingKeySet, endorsement::Format, t_log_reference_values,
     verifying_key_reference_value,
 };
 use oak_time::Instant;
@@ -81,6 +81,7 @@ pub fn create_endorsement_reference_value(
     endorser_key: VerifyingKey,
     claim_types: Vec<String>,
     rekor_key: Option<VerifyingKey>,
+    tlog: Option<TLogReferenceValues>,
 ) -> EndorsementReferenceValue {
     let rekor_key_set =
         rekor_key.map(|v| VerifyingKeySet { keys: [v].to_vec(), ..Default::default() });
@@ -91,6 +92,7 @@ pub fn create_endorsement_reference_value(
         endorser: Some(VerifyingKeySet { keys: [endorser_key].to_vec(), ..Default::default() }),
         required_claims: Some(ClaimReferenceValue { claim_types }),
         rekor: Some(rekor),
+        tlog,
         ..Default::default()
     }
 }
@@ -120,6 +122,17 @@ pub fn create_verifying_key_reference_value(
     }
 }
 
+/// Creates a `TLogReferenceValues` instance from ingredients.
+pub fn create_tlog_reference_values(
+    strategy: t_log_reference_values::Strategy,
+    rekor_key: Option<VerifyingKey>,
+    c2sp_policy: Option<String>,
+) -> TLogReferenceValues {
+    let rekor = rekor_key.map(|k| VerifyingKeySet { keys: [k].to_vec(), ..Default::default() });
+    let c2sp = c2sp_policy.map(|p| C2sptLogProofReferenceValue { policy: p });
+    TLogReferenceValues { strategy: Some(strategy), rekor, c2sp, ..Default::default() }
+}
+
 /// Creates an `EndorsementReferenceValue` instance from ingredients.
 pub fn create_endorsement_reference_value_from_raw(
     endorser_public_key: &[u8],
@@ -128,7 +141,7 @@ pub fn create_endorsement_reference_value_from_raw(
 ) -> EndorsementReferenceValue {
     let endorser_key = create_verifying_key_from_raw(endorser_public_key, key_id);
     let rekor_key = create_verifying_key_from_raw(rekor_public_key, 1);
-    create_endorsement_reference_value(endorser_key, vec![], Some(rekor_key))
+    create_endorsement_reference_value(endorser_key, vec![], Some(rekor_key), None)
 }
 
 /// Verifies a signed endorsement against a reference value.
@@ -168,19 +181,7 @@ pub fn verify_endorsement(
     statement.validate(None, current_time, &claims).context("validating endorsement statement")?;
 
     if let Some(tlog) = ref_value.tlog.as_ref() {
-        if let Some(rekor) = tlog.rekor.as_ref() {
-            verify_rekor_log_entry(
-                &signed_endorsement.rekor_log_entry,
-                rekor,
-                &endorsement.serialized,
-                now_utc_millis,
-            )
-            .context("verifying Rekor log entry")?;
-        }
-        if let Some(c2sp) = tlog.c2sp.as_ref() {
-            verify_c2sp_tlog_proof(signed_endorsement, endorsement, c2sp)
-                .context("verifying C2SP tlog proof")?;
-        }
+        verify_tlog(tlog, signed_endorsement, now_utc_millis).context("verifying t-log")?;
     } else {
         #[allow(deprecated)]
         let rekor_ref_value =
@@ -208,14 +209,82 @@ pub fn verify_endorsement(
     Ok(statement)
 }
 
+/// Verifies t-log entries according to the aggregation strategy.
+///
+/// The strategy determines how individual t-log verification results are
+/// combined:
+/// - `Skip`: bypasses all t-log verification regardless of what is populated.
+/// - `All`: requires every populated t-log verification to pass. If none are
+///   populated this is equivalent to `Skip`.
+/// - `Any`: requires at least one populated t-log verification to pass. If none
+///   are populated, verification always fails.
+fn verify_tlog(
+    tlog: &TLogReferenceValues,
+    signed_endorsement: &SignedEndorsement,
+    now_utc_millis: i64,
+) -> anyhow::Result<()> {
+    let endorsement =
+        signed_endorsement.endorsement.as_ref().context("no endorsement in signed endorsement")?;
+    let strategy = tlog.strategy.as_ref().context("missing t-log verification strategy")?;
+
+    match strategy {
+        t_log_reference_values::Strategy::Skip(_) => Ok(()),
+        t_log_reference_values::Strategy::All(_) => {
+            // Every populated verification must pass.
+            if let Some(rekor) = tlog.rekor.as_ref() {
+                verify_rekor_log_entry(
+                    &signed_endorsement.rekor_log_entry,
+                    rekor,
+                    &endorsement.serialized,
+                    now_utc_millis,
+                )
+                .context("verifying Rekor log entry")?;
+            }
+            if let Some(c2sp) = tlog.c2sp.as_ref() {
+                verify_c2sp_tlog_proof(&signed_endorsement.c2sp_tlog_proof, endorsement, c2sp)
+                    .context("verifying C2SP tlog proof")?;
+            }
+            Ok(())
+        }
+        t_log_reference_values::Strategy::Any(_) => {
+            // At least one populated verification must pass.
+            let mut errors: Vec<String> = Vec::new();
+            if let Some(rekor) = tlog.rekor.as_ref() {
+                match verify_rekor_log_entry(
+                    &signed_endorsement.rekor_log_entry,
+                    rekor,
+                    &endorsement.serialized,
+                    now_utc_millis,
+                ) {
+                    Ok(_) => return Ok(()),
+                    Err(e) => errors.push(alloc::format!("verifying Rekor log entry: {e}")),
+                }
+            }
+            if let Some(c2sp) = tlog.c2sp.as_ref() {
+                match verify_c2sp_tlog_proof(&signed_endorsement.c2sp_tlog_proof, endorsement, c2sp)
+                {
+                    Ok(()) => return Ok(()),
+                    Err(e) => errors.push(alloc::format!("verifying C2SP tlog proof: {e}")),
+                }
+            }
+            if errors.is_empty() {
+                errors.push(String::from(
+                    "strategy is 'any' but no t-log verifications are populated",
+                ));
+            }
+            anyhow::bail!("t-log verifications failed: {}", errors.join("; "))
+        }
+    }
+}
+
 /// Verifies a C2SP tlog-proof bundle against the given endorsement and
 /// reference value.
 fn verify_c2sp_tlog_proof(
-    signed_endorsement: &SignedEndorsement,
+    c2sp_tlog_proof: &Vec<u8>,
     endorsement: &Endorsement,
     c2sp_ref: &C2sptLogProofReferenceValue,
 ) -> anyhow::Result<()> {
-    let proof = TLogProof::try_from(&signed_endorsement.c2sp_tlog_proof)?;
+    let proof = TLogProof::try_from(c2sp_tlog_proof)?;
     let policy = Policy::try_from(c2sp_ref)?;
     proof.verify(&policy, &endorsement.serialized)?;
     Ok(())
@@ -256,6 +325,7 @@ mod tests {
         C2sptLogProofReferenceValue, Endorsement, SignedEndorsement,
     };
     use oak_time::Instant;
+    use test_util::EndorsementData;
 
     use super::*;
 
@@ -299,12 +369,11 @@ mod tests {
 
         let (proof_text, vkey) = make_test_tlog_proof(entry, origin, &log_key);
 
-        let signed_endorsement =
-            SignedEndorsement { c2sp_tlog_proof: proof_text.into_bytes(), ..Default::default() };
+        let c2sp_tlog_proof = proof_text.into_bytes();
         let endorsement = Endorsement { serialized: entry.to_vec(), ..Default::default() };
         let c2sp_ref = C2sptLogProofReferenceValue { policy: make_log_policy(&vkey) };
 
-        let result = verify_c2sp_tlog_proof(&signed_endorsement, &endorsement, &c2sp_ref);
+        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
         assert!(result.is_ok(), "expected success, got: {:?}", result.err());
     }
 
@@ -314,10 +383,10 @@ mod tests {
         let log_key = NoteSigningKey::from_parts(origin, SignatureType::Ed25519, [42u8; 32]);
         let vkey = log_key.verifying_key.to_vkey_string();
         let c2sp_ref = C2sptLogProofReferenceValue { policy: make_log_policy(&vkey) };
-        let signed_endorsement = SignedEndorsement::default();
+        let c2sp_tlog_proof = Vec::new();
         let endorsement = Endorsement::default();
 
-        let result = verify_c2sp_tlog_proof(&signed_endorsement, &endorsement, &c2sp_ref);
+        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("invalid proof header"), "unexpected error: {err}");
@@ -329,14 +398,11 @@ mod tests {
         let log_key = NoteSigningKey::from_parts(origin, SignatureType::Ed25519, [42u8; 32]);
         let vkey = log_key.verifying_key.to_vkey_string();
 
-        let signed_endorsement = SignedEndorsement {
-            c2sp_tlog_proof: b"not a valid proof".to_vec(),
-            ..Default::default()
-        };
+        let c2sp_tlog_proof = b"not a valid proof".to_vec();
         let endorsement = Endorsement::default();
         let c2sp_ref = C2sptLogProofReferenceValue { policy: make_log_policy(&vkey) };
 
-        let result = verify_c2sp_tlog_proof(&signed_endorsement, &endorsement, &c2sp_ref);
+        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("invalid proof header"), "unexpected error: {err}");
@@ -352,13 +418,12 @@ mod tests {
         // Build a proof over the correct entry.
         let (proof_text, vkey) = make_test_tlog_proof(entry, origin, &log_key);
 
-        let signed_endorsement =
-            SignedEndorsement { c2sp_tlog_proof: proof_text.into_bytes(), ..Default::default() };
+        let c2sp_tlog_proof = proof_text.into_bytes();
         // But pass the wrong entry as endorsement.serialized.
         let endorsement = Endorsement { serialized: wrong_entry.to_vec(), ..Default::default() };
         let c2sp_ref = C2sptLogProofReferenceValue { policy: make_log_policy(&vkey) };
 
-        let result = verify_c2sp_tlog_proof(&signed_endorsement, &endorsement, &c2sp_ref);
+        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("root hash mismatch"), "unexpected error: {err}");
@@ -377,12 +442,11 @@ mod tests {
         // But use other_key's vkey for verification.
         let wrong_vkey = other_key.verifying_key.to_vkey_string();
 
-        let signed_endorsement =
-            SignedEndorsement { c2sp_tlog_proof: proof_text.into_bytes(), ..Default::default() };
+        let c2sp_tlog_proof = proof_text.into_bytes();
         let endorsement = Endorsement { serialized: entry.to_vec(), ..Default::default() };
         let c2sp_ref = C2sptLogProofReferenceValue { policy: make_log_policy(&wrong_vkey) };
 
-        let result = verify_c2sp_tlog_proof(&signed_endorsement, &endorsement, &c2sp_ref);
+        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
         assert!(result.is_err());
     }
 
@@ -419,12 +483,11 @@ mod tests {
         let witness_vkey = witness_key.verifying_key.to_vkey_string();
         let policy_text = alloc::format!("log {log_vkey}\nwitness w1 {witness_vkey}\nquorum w1\n");
 
-        let signed_endorsement =
-            SignedEndorsement { c2sp_tlog_proof: proof_text.into_bytes(), ..Default::default() };
+        let c2sp_tlog_proof = proof_text.into_bytes();
         let endorsement = Endorsement { serialized: entry.to_vec(), ..Default::default() };
         let c2sp_ref = C2sptLogProofReferenceValue { policy: policy_text };
 
-        let result = verify_c2sp_tlog_proof(&signed_endorsement, &endorsement, &c2sp_ref);
+        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
         assert!(result.is_ok(), "expected success, got: {:?}", result.err());
     }
 
@@ -444,14 +507,342 @@ mod tests {
         let witness_vkey = witness_key.verifying_key.to_vkey_string();
         let policy_text = alloc::format!("log {log_vkey}\nwitness w1 {witness_vkey}\nquorum w1\n");
 
-        let signed_endorsement =
-            SignedEndorsement { c2sp_tlog_proof: proof_text.into_bytes(), ..Default::default() };
+        let c2sp_tlog_proof = proof_text.into_bytes();
         let endorsement = Endorsement { serialized: entry.to_vec(), ..Default::default() };
         let c2sp_ref = C2sptLogProofReferenceValue { policy: policy_text };
 
-        let result = verify_c2sp_tlog_proof(&signed_endorsement, &endorsement, &c2sp_ref);
+        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("witness quorum not satisfied"), "unexpected error: {err}");
+    }
+
+    /// Creates a dummy Rekor `VerifyingKey` for tests.
+    fn make_dummy_rekor_key() -> VerifyingKey {
+        VerifyingKey { r#type: KeyType::EcdsaP256Sha256.into(), key_id: 1, raw: vec![0u8; 32] }
+    }
+
+    /// Builds a Rekor `VerifyingKey` from a raw public key, matching
+    /// the pattern used by `EndorsementData`.
+    fn make_rekor_key(rekor_public_key: &[u8]) -> VerifyingKey {
+        VerifyingKey {
+            r#type: KeyType::EcdsaP256Sha256.into(),
+            key_id: 1,
+            raw: rekor_public_key.to_vec(),
+        }
+    }
+
+    #[test]
+    fn verify_tlog_fails_when_strategy_missing() {
+        let tlog = TLogReferenceValues::default();
+        let signed_endorsement =
+            SignedEndorsement { endorsement: Some(Endorsement::default()), ..Default::default() };
+
+        let result = verify_tlog(&tlog, &signed_endorsement, 0);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("missing t-log verification strategy"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn verify_tlog_skip_succeeds_even_with_invalid_data() {
+        let tlog = create_tlog_reference_values(
+            t_log_reference_values::Strategy::Skip(SkipVerification {}),
+            // Populate invalid Rekor + C2SP refs to prove they are truly skipped.
+            Some(make_dummy_rekor_key()),
+            Some("bogus policy".into()),
+        );
+        let signed_endorsement =
+            SignedEndorsement { endorsement: Some(Endorsement::default()), ..Default::default() };
+
+        let result = verify_tlog(&tlog, &signed_endorsement, 0);
+        assert!(result.is_ok(), "expected skip to succeed, got: {:?}", result.err());
+    }
+
+    #[test]
+    fn verify_tlog_all_succeeds_with_nothing_populated() {
+        // All with no verifications populated is equivalent to skip.
+        let tlog =
+            create_tlog_reference_values(t_log_reference_values::Strategy::All(()), None, None);
+        let signed_endorsement =
+            SignedEndorsement { endorsement: Some(Endorsement::default()), ..Default::default() };
+
+        let result = verify_tlog(&tlog, &signed_endorsement, 0);
+        assert!(result.is_ok(), "expected success, got: {:?}", result.err());
+    }
+
+    #[test]
+    fn verify_tlog_all_succeeds_with_valid_rekor() {
+        let d = EndorsementData::load();
+        let rekor_key = make_rekor_key(&d.rekor_public_key);
+        let tlog = create_tlog_reference_values(
+            t_log_reference_values::Strategy::All(()),
+            Some(rekor_key),
+            None,
+        );
+        let signed_endorsement = SignedEndorsement {
+            endorsement: Some(Endorsement {
+                serialized: d.endorsement.clone(),
+                ..Default::default()
+            }),
+            rekor_log_entry: d.log_entry.clone(),
+            ..Default::default()
+        };
+
+        let result = verify_tlog(&tlog, &signed_endorsement, 0);
+        assert!(result.is_ok(), "expected success, got: {:?}", result.err());
+    }
+
+    #[test]
+    fn verify_tlog_all_succeeds_with_valid_c2sp() {
+        let entry = b"test endorsement data";
+        let origin = "test.log.example.com/log";
+        let log_key = NoteSigningKey::from_parts(origin, SignatureType::Ed25519, [42u8; 32]);
+        let (proof_text, vkey) = make_test_tlog_proof(entry, origin, &log_key);
+
+        let tlog = create_tlog_reference_values(
+            t_log_reference_values::Strategy::All(()),
+            None,
+            Some(make_log_policy(&vkey)),
+        );
+        let signed_endorsement = SignedEndorsement {
+            endorsement: Some(Endorsement { serialized: entry.to_vec(), ..Default::default() }),
+            c2sp_tlog_proof: proof_text.into_bytes(),
+            ..Default::default()
+        };
+
+        let result = verify_tlog(&tlog, &signed_endorsement, 0);
+        assert!(result.is_ok(), "expected success, got: {:?}", result.err());
+    }
+
+    #[test]
+    fn verify_tlog_all_fails_when_rekor_log_entry_empty() {
+        // Rekor is populated but the signed endorsement has no log entry.
+        let tlog = create_tlog_reference_values(
+            t_log_reference_values::Strategy::All(()),
+            Some(make_dummy_rekor_key()),
+            None,
+        );
+        let signed_endorsement =
+            SignedEndorsement { endorsement: Some(Endorsement::default()), ..Default::default() };
+
+        let result = verify_tlog(&tlog, &signed_endorsement, 0);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("verifying Rekor log entry"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn verify_tlog_all_fails_when_rekor_log_entry_invalid() {
+        let tlog = create_tlog_reference_values(
+            t_log_reference_values::Strategy::All(()),
+            Some(make_dummy_rekor_key()),
+            None,
+        );
+        let signed_endorsement = SignedEndorsement {
+            endorsement: Some(Endorsement::default()),
+            rekor_log_entry: b"not valid json".to_vec(),
+            ..Default::default()
+        };
+
+        let result = verify_tlog(&tlog, &signed_endorsement, 0);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("verifying Rekor log entry"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn verify_tlog_all_fails_when_c2sp_invalid() {
+        let entry = b"test endorsement data";
+        let tlog = create_tlog_reference_values(
+            t_log_reference_values::Strategy::All(()),
+            None,
+            Some(make_log_policy("bad+vkey+here")),
+        );
+        let signed_endorsement = SignedEndorsement {
+            endorsement: Some(Endorsement { serialized: entry.to_vec(), ..Default::default() }),
+            c2sp_tlog_proof: b"not a valid proof".to_vec(),
+            ..Default::default()
+        };
+
+        let result = verify_tlog(&tlog, &signed_endorsement, 0);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn verify_tlog_all_fails_when_rekor_passes_but_c2sp_fails() {
+        // Both Rekor and C2SP are populated. Rekor is valid but C2SP will
+        // fail because the endorsement data doesn't match the C2SP entry.
+        let d = EndorsementData::load();
+        let rekor_key = make_rekor_key(&d.rekor_public_key);
+
+        let entry = b"test endorsement data";
+        let origin = "test.log.example.com/log";
+        let log_key = NoteSigningKey::from_parts(origin, SignatureType::Ed25519, [42u8; 32]);
+        let (proof_text, vkey) = make_test_tlog_proof(entry, origin, &log_key);
+
+        let tlog = create_tlog_reference_values(
+            t_log_reference_values::Strategy::All(()),
+            Some(rekor_key),
+            Some(make_log_policy(&vkey)),
+        );
+        let signed_endorsement = SignedEndorsement {
+            endorsement: Some(Endorsement {
+                serialized: d.endorsement.clone(),
+                ..Default::default()
+            }),
+            rekor_log_entry: d.log_entry.clone(),
+            c2sp_tlog_proof: proof_text.into_bytes(),
+            ..Default::default()
+        };
+
+        // Rekor passes, then C2SP fails (endorsement.serialized != entry).
+        let result = verify_tlog(&tlog, &signed_endorsement, 0);
+        assert!(result.is_err(), "expected C2SP to fail");
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("C2SP"), "expected C2SP error, got: {err}");
+    }
+
+    #[test]
+    fn verify_tlog_any_succeeds_with_valid_rekor() {
+        let d = EndorsementData::load();
+        let rekor_key = make_rekor_key(&d.rekor_public_key);
+        let tlog = create_tlog_reference_values(
+            t_log_reference_values::Strategy::Any(()),
+            Some(rekor_key),
+            None,
+        );
+        let signed_endorsement = SignedEndorsement {
+            endorsement: Some(Endorsement {
+                serialized: d.endorsement.clone(),
+                ..Default::default()
+            }),
+            rekor_log_entry: d.log_entry.clone(),
+            ..Default::default()
+        };
+
+        let result = verify_tlog(&tlog, &signed_endorsement, 0);
+        assert!(result.is_ok(), "expected success, got: {:?}", result.err());
+    }
+
+    #[test]
+    fn verify_tlog_any_succeeds_when_c2sp_valid() {
+        let entry = b"test endorsement data";
+        let origin = "test.log.example.com/log";
+        let log_key = NoteSigningKey::from_parts(origin, SignatureType::Ed25519, [42u8; 32]);
+        let (proof_text, vkey) = make_test_tlog_proof(entry, origin, &log_key);
+
+        let tlog = create_tlog_reference_values(
+            t_log_reference_values::Strategy::Any(()),
+            None,
+            Some(make_log_policy(&vkey)),
+        );
+        let signed_endorsement = SignedEndorsement {
+            endorsement: Some(Endorsement { serialized: entry.to_vec(), ..Default::default() }),
+            c2sp_tlog_proof: proof_text.into_bytes(),
+            ..Default::default()
+        };
+
+        let result = verify_tlog(&tlog, &signed_endorsement, 0);
+        assert!(result.is_ok(), "expected success, got: {:?}", result.err());
+    }
+
+    #[test]
+    fn verify_tlog_any_succeeds_when_rekor_fails_but_c2sp_valid() {
+        // Rekor is populated but will fail; C2SP is valid and should make
+        // the overall `Any` strategy succeed.
+        let entry = b"test endorsement data";
+        let origin = "test.log.example.com/log";
+        let log_key = NoteSigningKey::from_parts(origin, SignatureType::Ed25519, [42u8; 32]);
+        let (proof_text, vkey) = make_test_tlog_proof(entry, origin, &log_key);
+
+        let tlog = create_tlog_reference_values(
+            t_log_reference_values::Strategy::Any(()),
+            Some(make_dummy_rekor_key()),
+            Some(make_log_policy(&vkey)),
+        );
+        let signed_endorsement = SignedEndorsement {
+            endorsement: Some(Endorsement { serialized: entry.to_vec(), ..Default::default() }),
+            // Rekor log entry is empty so Rekor verification will fail.
+            c2sp_tlog_proof: proof_text.into_bytes(),
+            ..Default::default()
+        };
+
+        let result = verify_tlog(&tlog, &signed_endorsement, 0);
+        assert!(result.is_ok(), "expected success, got: {:?}", result.err());
+    }
+
+    #[test]
+    fn verify_tlog_any_fails_when_nothing_populated() {
+        let tlog =
+            create_tlog_reference_values(t_log_reference_values::Strategy::Any(()), None, None);
+        let signed_endorsement =
+            SignedEndorsement { endorsement: Some(Endorsement::default()), ..Default::default() };
+
+        let result = verify_tlog(&tlog, &signed_endorsement, 0);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("no t-log verifications are populated"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn verify_tlog_any_fails_when_only_rekor_populated_and_fails() {
+        let tlog = create_tlog_reference_values(
+            t_log_reference_values::Strategy::Any(()),
+            Some(make_dummy_rekor_key()),
+            None,
+        );
+        let signed_endorsement = SignedEndorsement {
+            endorsement: Some(Endorsement::default()),
+            rekor_log_entry: b"not valid json".to_vec(),
+            ..Default::default()
+        };
+
+        let result = verify_tlog(&tlog, &signed_endorsement, 0);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Rekor"), "expected Rekor error in: {err}");
+    }
+
+    #[test]
+    fn verify_tlog_any_fails_when_all_populated_fail() {
+        let entry = b"test endorsement data";
+        let tlog = create_tlog_reference_values(
+            t_log_reference_values::Strategy::Any(()),
+            None,
+            Some(make_log_policy("bad+vkey+here")),
+        );
+        let signed_endorsement = SignedEndorsement {
+            endorsement: Some(Endorsement { serialized: entry.to_vec(), ..Default::default() }),
+            c2sp_tlog_proof: b"not a valid proof".to_vec(),
+            ..Default::default()
+        };
+
+        let result = verify_tlog(&tlog, &signed_endorsement, 0);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("t-log verifications failed"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn verify_tlog_any_fails_when_both_rekor_and_c2sp_fail() {
+        let tlog = create_tlog_reference_values(
+            t_log_reference_values::Strategy::Any(()),
+            Some(make_dummy_rekor_key()),
+            Some(make_log_policy("bad+vkey+here")),
+        );
+        let signed_endorsement = SignedEndorsement {
+            endorsement: Some(Endorsement::default()),
+            rekor_log_entry: b"not valid json".to_vec(),
+            c2sp_tlog_proof: b"not a valid proof".to_vec(),
+            ..Default::default()
+        };
+
+        let result = verify_tlog(&tlog, &signed_endorsement, 0);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        // Both errors should appear in the message.
+        assert!(err.contains("Rekor"), "expected Rekor error in: {err}");
+        assert!(err.contains("C2SP"), "expected C2SP error in: {err}");
     }
 }

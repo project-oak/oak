@@ -47,7 +47,8 @@ pub fn confidential_space_policy_from_reference_values(
                 .ok_or(anyhow::anyhow!("endorser public key missing"))?
                 .clone();
             let rekor_key = cosign_reference_values.rekor_public_key.clone();
-            let ref_value = create_endorsement_reference_value(endorser_key, Vec::new(), rekor_key);
+            let ref_value =
+                create_endorsement_reference_value(endorser_key, Vec::new(), rekor_key, None);
             let binary_ref_value = BinaryReferenceValue {
                 r#type: Some(binary_reference_value::Type::Endorsement(ref_value)),
             };
