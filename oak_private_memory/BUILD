@@ -199,7 +199,6 @@ rust_library(
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:futures",
         "@oak_crates_index//:prost",
-        "@oak_crates_index//:serde_json",
         "@oak_crates_index//:tonic",
     ],
 )

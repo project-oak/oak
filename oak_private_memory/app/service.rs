@@ -30,7 +30,7 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_server:
     SealedMemoryService, SealedMemoryServiceServer,
 };
 use sealed_memory_rust_proto::{oak::private_memory::TlsSessionFrame, prelude::v1::*};
-use session::{EncryptedSession, TlsEncryptedSession};
+use session::TlsEncryptedSession;
 use tokio::{net::TcpListener, sync::mpsc};
 use tokio_stream::{Stream, StreamExt, wrappers::TcpListenerStream};
 
@@ -195,8 +195,9 @@ impl OakSessionHandler {
 
 /// Handles a TLS-based session (used by `StartTlsSession` RPC).
 ///
+///
 /// The TLS handshake is completed before this handler processes any application
-/// data. All encrypt/decrypt goes through the [`EncryptedSession`] trait.
+/// data.
 struct TlsSessionHandler {
     metrics: Arc<metrics::Metrics>,
     session: TlsEncryptedSession,
@@ -348,7 +349,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
                 )
                 .await;
 
-            let (tls_session, mut _initial_data) = match handshake_result {
+            let (tls_session, _initial_data) = match handshake_result {
                 Ok(res) => res,
                 Err(e) => {
                     log::error!("TLS handshake failed: {}", e);

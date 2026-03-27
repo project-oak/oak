@@ -329,7 +329,7 @@ impl SealedMemorySessionHandler {
             return Ok(KeySyncResponse { status: key_sync_response::Status::InvalidKey.into() });
         }
 
-        let db_client = self
+        let mut db_client = self
             .db_client
             .get_or_connect()
             .await
@@ -338,7 +338,6 @@ impl SealedMemorySessionHandler {
         let dek: Vec<u8>;
 
         if let Some(data_blob) = db_client
-            .clone()
             .get_unencrypted_blob(&uid, true)
             .await
             .into_internal_error("Failed to get unencrypted blob")?
@@ -455,10 +454,6 @@ impl SealedMemorySessionHandler {
 }
 
 impl SealedMemorySessionHandler {
-    /// This implementation is quite simple, since there's just a single request
-    /// that is a string. In a real implementation, we'd probably
-    /// deserialize into a proto, and dispatch to various handlers from
-    /// there.
     pub async fn handle(&self, request_bytes: &[u8]) -> tonic::Result<Vec<u8>> {
         let request = self
             .deserialize_request(request_bytes)
