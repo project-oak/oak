@@ -21,7 +21,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use client::{PrivateMemoryClient, SerializationFormat};
+use client::PrivateMemoryClient;
 use private_memory_test_utils::{MockClock, TestContext, system_time_to_timestamp};
 use sealed_memory_rust_proto::{
     oak::private_memory::{Embedding, LlmView, LlmViews, MatchType, TextQuery, memory_value},
@@ -37,81 +37,74 @@ async fn test_add_get_reset_memory_all_modes() {
     let url = &ctx.url;
     let pm_uid = "test_add_get_reset_user";
 
-    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
-        let mut client =
-            PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format)
-                .await
-                .unwrap();
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
-        let mut contents_map = HashMap::new();
-        contents_map.insert(
-            "text_data".to_string(),
-            MemoryValue {
-                value: Some(memory_value::Value::BytesVal("this is a test".as_bytes().to_vec())),
-                ..Default::default()
-            },
-        );
-        contents_map.insert(
-            "string_data".to_string(),
-            MemoryValue {
-                value: Some(memory_value::Value::StringVal("this is a test string".to_string())),
-                ..Default::default()
-            },
-        );
-        contents_map.insert(
-            "int64_data".to_string(),
-            MemoryValue {
-                value: Some(memory_value::Value::Int64Val(123456789)),
-                ..Default::default()
-            },
-        );
-        let memory_to_add = Memory {
-            id: "".to_string(),
-            content: Some(MemoryContent { contents: contents_map }),
-            tags: vec!["tag".to_string()],
+    let mut contents_map = HashMap::new();
+    contents_map.insert(
+        "text_data".to_string(),
+        MemoryValue {
+            value: Some(memory_value::Value::BytesVal("this is a test".as_bytes().to_vec())),
             ..Default::default()
-        };
+        },
+    );
+    contents_map.insert(
+        "string_data".to_string(),
+        MemoryValue {
+            value: Some(memory_value::Value::StringVal("this is a test string".to_string())),
+            ..Default::default()
+        },
+    );
+    contents_map.insert(
+        "int64_data".to_string(),
+        MemoryValue { value: Some(memory_value::Value::Int64Val(123456789)), ..Default::default() },
+    );
+    let memory_to_add = Memory {
+        id: "".to_string(),
+        content: Some(MemoryContent { contents: contents_map }),
+        tags: vec!["tag".to_string()],
+        ..Default::default()
+    };
 
-        let add_memory_response = client.add_memory(memory_to_add.clone()).await.unwrap();
-        let memory_id_from_add = add_memory_response.id;
-        client.add_memory(memory_to_add).await.unwrap();
+    let add_memory_response = client.add_memory(memory_to_add.clone()).await.unwrap();
+    let memory_id_from_add = add_memory_response.id;
+    client.add_memory(memory_to_add).await.unwrap();
 
-        // GetMemoriesRequest
-        let get_memories_response_1 = client.get_memories("tag", 1, None, "").await.unwrap();
-        assert_eq!(get_memories_response_1.memories.len(), 1);
+    // GetMemoriesRequest
+    let get_memories_response_1 = client.get_memories("tag", 1, None, "").await.unwrap();
+    assert_eq!(get_memories_response_1.memories.len(), 1);
 
-        let memory_content = get_memories_response_1.memories[0].content.clone().unwrap();
-        assert_eq!(memory_content.contents.len(), 3);
-        assert_eq!(
-            memory_content.contents["text_data"].value,
-            Some(memory_value::Value::BytesVal("this is a test".as_bytes().to_vec()))
-        );
-        assert_eq!(
-            memory_content.contents["string_data"].value,
-            Some(memory_value::Value::StringVal("this is a test string".to_string()))
-        );
-        assert_eq!(
-            memory_content.contents["int64_data"].value,
-            Some(memory_value::Value::Int64Val(123456789))
-        );
+    let memory_content = get_memories_response_1.memories[0].content.clone().unwrap();
+    assert_eq!(memory_content.contents.len(), 3);
+    assert_eq!(
+        memory_content.contents["text_data"].value,
+        Some(memory_value::Value::BytesVal("this is a test".as_bytes().to_vec()))
+    );
+    assert_eq!(
+        memory_content.contents["string_data"].value,
+        Some(memory_value::Value::StringVal("this is a test string".to_string()))
+    );
+    assert_eq!(
+        memory_content.contents["int64_data"].value,
+        Some(memory_value::Value::Int64Val(123456789))
+    );
 
-        // GetMemoryByIdRequest
-        let get_memory_by_id_response =
-            client.get_memory_by_id(&memory_id_from_add, None).await.unwrap();
-        assert!(get_memory_by_id_response.success);
-        assert_eq!(memory_id_from_add, get_memory_by_id_response.memory.unwrap().id);
+    // GetMemoryByIdRequest
+    let get_memory_by_id_response =
+        client.get_memory_by_id(&memory_id_from_add, None).await.unwrap();
+    assert!(get_memory_by_id_response.success);
+    assert_eq!(memory_id_from_add, get_memory_by_id_response.memory.unwrap().id);
 
-        // ResetMemoryRequest
-        let reset_memory_response = client.reset_memory().await.unwrap();
-        assert!(reset_memory_response.success);
+    // ResetMemoryRequest
+    let reset_memory_response = client.reset_memory().await.unwrap();
+    assert!(reset_memory_response.success);
 
-        // GetMemoriesRequest again
-        let get_memories_response_2 = client.get_memories("tag", 10, None, "").await.unwrap();
-        assert_eq!(get_memories_response_2.memories.len(), 0);
+    // GetMemoriesRequest again
+    let get_memories_response_2 = client.get_memories("tag", 10, None, "").await.unwrap();
+    assert_eq!(get_memories_response_2.memories.len(), 0);
 
-        // Wait for the database to be deleted.
-        sleep(Duration::from_secs(1)).await;
-    }
+    // Wait for the database to be deleted.
+    sleep(Duration::from_secs(1)).await;
     ctx.teardown().await;
 }
 
@@ -121,77 +114,71 @@ async fn test_standalone_text_query() {
     let url = &ctx.url;
     let pm_uid = "test_standalone_text_query_user";
 
-    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
-        let mut client =
-            PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format)
-                .await
-                .unwrap();
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
-        let memory1 = Memory {
-            id: "memory1".to_string(),
-            event_timestamp: Some(prost_types::Timestamp { seconds: 100, nanos: 0 }),
-            ..Default::default()
-        };
-        client.add_memory(memory1).await.unwrap();
+    let memory1 = Memory {
+        id: "memory1".to_string(),
+        event_timestamp: Some(prost_types::Timestamp { seconds: 100, nanos: 0 }),
+        ..Default::default()
+    };
+    client.add_memory(memory1).await.unwrap();
 
-        let memory2 = Memory {
-            id: "memory2".to_string(),
-            event_timestamp: Some(prost_types::Timestamp { seconds: 200, nanos: 0 }),
-            ..Default::default()
-        };
-        client.add_memory(memory2).await.unwrap();
+    let memory2 = Memory {
+        id: "memory2".to_string(),
+        event_timestamp: Some(prost_types::Timestamp { seconds: 200, nanos: 0 }),
+        ..Default::default()
+    };
+    client.add_memory(memory2).await.unwrap();
 
-        let memory3 = Memory {
-            id: "memory3".to_string(),
-            event_timestamp: Some(prost_types::Timestamp { seconds: 300, nanos: 0 }),
-            ..Default::default()
-        };
-        client.add_memory(memory3).await.unwrap();
+    let memory3 = Memory {
+        id: "memory3".to_string(),
+        event_timestamp: Some(prost_types::Timestamp { seconds: 300, nanos: 0 }),
+        ..Default::default()
+    };
+    client.add_memory(memory3).await.unwrap();
 
-        // Test timestamp filtering
-        let gte_query = TextQuery {
-            field: MemoryField::EventTimestamp as i32,
-            match_type: MatchType::Gte as i32,
-            value: Some(
-                sealed_memory_rust_proto::oak::private_memory::text_query::Value::TimestampVal(
-                    prost_types::Timestamp { seconds: 200, nanos: 0 },
-                ),
+    // Test timestamp filtering
+    let gte_query = TextQuery {
+        field: MemoryField::EventTimestamp as i32,
+        match_type: MatchType::Gte as i32,
+        value: Some(
+            sealed_memory_rust_proto::oak::private_memory::text_query::Value::TimestampVal(
+                prost_types::Timestamp { seconds: 200, nanos: 0 },
             ),
-        };
-        let query = SearchMemoryQuery {
-            clause: Some(
-                sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::TextQuery(
-                    gte_query,
-                ),
+        ),
+    };
+    let query = SearchMemoryQuery {
+        clause: Some(
+            sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::TextQuery(
+                gte_query,
             ),
-        };
-        let response = client.search_memory(query, 10, None, "", false).await.unwrap();
-        assert_eq!(response.results.len(), 2);
-        let ids: Vec<String> = response.results.into_iter().map(|r| r.memory.unwrap().id).collect();
-        assert!(ids.contains(&"memory2".to_string()));
-        assert!(ids.contains(&"memory3".to_string()));
+        ),
+    };
+    let response = client.search_memory(query, 10, None, "", false).await.unwrap();
+    assert_eq!(response.results.len(), 2);
+    let ids: Vec<String> = response.results.into_iter().map(|r| r.memory.unwrap().id).collect();
+    assert!(ids.contains(&"memory2".to_string()));
+    assert!(ids.contains(&"memory3".to_string()));
 
-        // Test ID filtering
-        let eq_query = TextQuery {
-            field: MemoryField::Id as i32,
-            match_type: MatchType::Equal as i32,
-            value: Some(
-                sealed_memory_rust_proto::oak::private_memory::text_query::Value::StringVal(
-                    "memory1".to_string(),
-                ),
+    // Test ID filtering
+    let eq_query = TextQuery {
+        field: MemoryField::Id as i32,
+        match_type: MatchType::Equal as i32,
+        value: Some(sealed_memory_rust_proto::oak::private_memory::text_query::Value::StringVal(
+            "memory1".to_string(),
+        )),
+    };
+    let query = SearchMemoryQuery {
+        clause: Some(
+            sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::TextQuery(
+                eq_query,
             ),
-        };
-        let query = SearchMemoryQuery {
-            clause: Some(
-                sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::TextQuery(
-                    eq_query,
-                ),
-            ),
-        };
-        let response = client.search_memory(query, 10, None, "", false).await.unwrap();
-        assert_eq!(response.results.len(), 1);
-        assert_eq!(response.results[0].memory.as_ref().unwrap().id, "memory1");
-    }
+        ),
+    };
+    let response = client.search_memory(query, 10, None, "", false).await.unwrap();
+    assert_eq!(response.results.len(), 1);
+    assert_eq!(response.results[0].memory.as_ref().unwrap().id, "memory1");
     ctx.teardown().await;
 }
 
@@ -201,90 +188,86 @@ async fn test_memory_search_only_return_views_with_highest_scores() {
     let url = &ctx.url;
     let pm_uid = "test_embedding_search_with_pagination_user";
 
-    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
-        let mut client =
-            PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format)
-                .await
-                .unwrap();
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
-        // Add memory 1 with two views.
-        let memory1 = Memory {
-            id: "memory1".to_string(),
-            views: Some(LlmViews {
-                llm_views: vec![
-                    LlmView {
-                        id: "view1a".to_string(),
-                        embedding: Some(Embedding {
-                            model_signature: "test_model".to_string(),
-                            values: vec![1.0, 0.0, 0.0],
-                        }),
-                        ..Default::default()
-                    },
-                    LlmView {
-                        id: "view1b".to_string(),
-                        embedding: Some(Embedding {
-                            model_signature: "test_model".to_string(),
-                            values: vec![0.0, 1.0, 0.0],
-                        }),
-                        ..Default::default()
-                    },
-                ],
-            }),
-            ..Default::default()
-        };
-        client.add_memory(memory1).await.unwrap();
+    // Add memory 1 with two views.
+    let memory1 = Memory {
+        id: "memory1".to_string(),
+        views: Some(LlmViews {
+            llm_views: vec![
+                LlmView {
+                    id: "view1a".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: "test_model".to_string(),
+                        values: vec![1.0, 0.0, 0.0],
+                    }),
+                    ..Default::default()
+                },
+                LlmView {
+                    id: "view1b".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: "test_model".to_string(),
+                        values: vec![0.0, 1.0, 0.0],
+                    }),
+                    ..Default::default()
+                },
+            ],
+        }),
+        ..Default::default()
+    };
+    client.add_memory(memory1).await.unwrap();
 
-        // Add memory 2 with two views.
-        let memory2 = Memory {
-            id: "memory2".to_string(),
-            views: Some(LlmViews {
-                llm_views: vec![
-                    LlmView {
-                        id: "view2a".to_string(),
-                        embedding: Some(Embedding {
-                            model_signature: "test_model".to_string(),
-                            values: vec![0.0, 0.0, 1.0],
-                        }),
-                        ..Default::default()
-                    },
-                    LlmView {
-                        id: "view2b".to_string(),
-                        embedding: Some(Embedding {
-                            model_signature: "test_model".to_string(),
-                            values: vec![1.0, 1.0, 0.0], // This view will have the highest score.
-                        }),
-                        ..Default::default()
-                    },
-                ],
-            }),
-            ..Default::default()
-        };
-        client.add_memory(memory2).await.unwrap();
+    // Add memory 2 with two views.
+    let memory2 = Memory {
+        id: "memory2".to_string(),
+        views: Some(LlmViews {
+            llm_views: vec![
+                LlmView {
+                    id: "view2a".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: "test_model".to_string(),
+                        values: vec![0.0, 0.0, 1.0],
+                    }),
+                    ..Default::default()
+                },
+                LlmView {
+                    id: "view2b".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: "test_model".to_string(),
+                        values: vec![1.0, 1.0, 0.0], // This view will have the highest score.
+                    }),
+                    ..Default::default()
+                },
+            ],
+        }),
+        ..Default::default()
+    };
+    client.add_memory(memory2).await.unwrap();
 
-        // Query for memories with an embedding that is closer to memory2's view2b.
-        let embedding_query = SearchMemoryQuery {
-            clause: Some(
-                sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::EmbeddingQuery(
-                    EmbeddingQuery {
-                        embedding: vec![Embedding {
-                            model_signature: "test_model".to_string(),
-                            values: vec![1.0, 1.0, 0.0],
-                        }],
-                        ..Default::default()
-                    },
-                ),
+    // Query for memories with an embedding that is closer to memory2's view2b.
+    let embedding_query = SearchMemoryQuery {
+        clause: Some(
+            sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::EmbeddingQuery(
+                EmbeddingQuery {
+                    embedding: vec![Embedding {
+                        model_signature: "test_model".to_string(),
+                        values: vec![1.0, 1.0, 0.0],
+                    }],
+                    ..Default::default()
+                },
             ),
-        };
+        ),
+    };
 
-        let response = client.search_memory(embedding_query, 1, None, "", false).await.unwrap();
-        assert_eq!(response.results.len(), 1);
-        let top_result = response.results.first().unwrap();
-        assert_eq!(top_result.memory.as_ref().unwrap().id, "memory2");
-        assert_eq!(top_result.score, 2.0);
-        let views = top_result.memory.as_ref().unwrap().views.as_ref().unwrap();
-        assert_eq!(views.llm_views.len(), 1);
-        assert_eq!(views.llm_views[0].id, "view2b");
-    }
+    let response = client.search_memory(embedding_query, 1, None, "", false).await.unwrap();
+    assert_eq!(response.results.len(), 1);
+    let top_result = response.results.first().unwrap();
+    assert_eq!(top_result.memory.as_ref().unwrap().id, "memory2");
+    assert_eq!(top_result.score, 2.0);
+    let views = top_result.memory.as_ref().unwrap().views.as_ref().unwrap();
+    assert_eq!(views.llm_views.len(), 1);
+    assert_eq!(views.llm_views[0].id, "view2b");
     ctx.teardown().await;
 }
 
@@ -294,41 +277,36 @@ async fn test_concurrent_write_sessions() {
     let url = &ctx.url;
     let pm_uid = "test_concurrent_write_sessions_user";
 
-    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
-        // Part 1, concurrent add
-        {
-            let mut client1 =
-                PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format)
-                    .await
-                    .expect("failed to create client 1");
-            let mut client2 =
-                PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format)
-                    .await
-                    .expect("failed to create client 2");
+    // Part 1, concurrent add
+    {
+        let mut client1 = PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK)
+            .await
+            .expect("failed to create client 1");
+        let mut client2 = PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK)
+            .await
+            .expect("failed to create client 2");
 
-            let memory1 = create_test_memory("memory1");
-            let memory2 = create_test_memory("memory2");
-            let memory3 = create_test_memory("memory3");
+        let memory1 = create_test_memory("memory1");
+        let memory2 = create_test_memory("memory2");
+        let memory3 = create_test_memory("memory3");
 
-            client1.add_memory(memory1).await.expect("failed to add memory 1");
-            client2.add_memory(memory2).await.expect("failed to add memory 2");
-            client2.add_memory(memory3).await.expect("failed to add memory 3");
-        }
+        client1.add_memory(memory1).await.expect("failed to add memory 1");
+        client2.add_memory(memory2).await.expect("failed to add memory 2");
+        client2.add_memory(memory3).await.expect("failed to add memory 3");
+    }
 
-        // Part two, read back
-        // We currently don't have a good signal that the peristence worker is done.
-        tokio::time::sleep(Duration::from_secs(10)).await;
+    // Part two, read back
+    // We currently don't have a good signal that the peristence worker is done.
+    tokio::time::sleep(Duration::from_secs(10)).await;
 
-        {
-            let mut client =
-                PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format)
-                    .await
-                    .expect("failed to create readback client");
+    {
+        let mut client = PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK)
+            .await
+            .expect("failed to create readback client");
 
-            expect_memory_by_id(&mut client, "memory1").await;
-            expect_memory_by_id(&mut client, "memory2").await;
-            expect_memory_by_id(&mut client, "memory3").await;
-        }
+        expect_memory_by_id(&mut client, "memory1").await;
+        expect_memory_by_id(&mut client, "memory2").await;
+        expect_memory_by_id(&mut client, "memory3").await;
     }
     ctx.teardown().await;
 }
@@ -364,10 +342,9 @@ async fn test_memory_expiration() {
     let ctx = TestContext::setup().await.unwrap();
     let url = &ctx.url;
     let pm_uid = "test_memory_expiration_user";
-    let format = SerializationFormat::BinaryProto;
 
     let mut client =
-        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format).await.unwrap();
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
     let memory_expired = Memory {
         id: "memory_expired".to_string(),
@@ -397,7 +374,7 @@ async fn test_memory_expiration() {
     // Creating a new client will trigger a key sync which will run expired memories
     // deletion.
     let mut client2 =
-        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format).await.unwrap();
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
     assert!(!client2.get_memory_by_id("memory_expired", None).await.unwrap().success);
     assert!(client2.get_memory_by_id("memory_valid", None).await.unwrap().success);
@@ -414,10 +391,9 @@ async fn test_add_memory_sets_correct_created_timestamp_with_mock_clock() {
     let ctx = TestContext::setup_with_clock(mock_clock.clone()).await.unwrap();
     let url = &ctx.url;
     let pm_uid = "test_add_memory_sets_correct_created_timestamp_user";
-    let format = SerializationFormat::BinaryProto;
 
     let mut client =
-        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format).await.unwrap();
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
     let memory = Memory { id: "memory_without_timestamp".to_string(), ..Default::default() };
     let add_memory_response = client.add_memory(memory).await.unwrap();
@@ -444,10 +420,9 @@ async fn test_add_memory_overwrites_user_created_timestamp() {
     let ctx = TestContext::setup_with_clock(mock_clock.clone()).await.unwrap();
     let url = &ctx.url;
     let pm_uid = "test_add_memory_overwrites_user_created_timestamp_user";
-    let format = SerializationFormat::BinaryProto;
 
     let mut client =
-        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format).await.unwrap();
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
     let user_timestamp = prost_types::Timestamp { seconds: 123456789, nanos: 0 };
     let memory = Memory {
@@ -478,26 +453,22 @@ async fn test_add_memory_duplicate_name_throws_error() {
     let url = &ctx.url;
     let pm_uid = "test_duplicate_name_user";
 
-    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
-        let mut client =
-            PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format)
-                .await
-                .unwrap();
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
-        let memory1 =
-            Memory { id: "id1".to_string(), name: "shared_name".to_string(), ..Default::default() };
+    let memory1 =
+        Memory { id: "id1".to_string(), name: "shared_name".to_string(), ..Default::default() };
 
-        let memory2 =
-            Memory { id: "id2".to_string(), name: "shared_name".to_string(), ..Default::default() };
+    let memory2 =
+        Memory { id: "id2".to_string(), name: "shared_name".to_string(), ..Default::default() };
 
-        // Adding first memory should succeed
-        let response1 = client.add_memory(memory1.clone()).await;
-        assert!(response1.is_ok());
+    // Adding first memory should succeed
+    let response1 = client.add_memory(memory1.clone()).await;
+    assert!(response1.is_ok());
 
-        // Adding second memory with same name but different id should fail
-        let response2 = client.add_memory(memory2.clone()).await;
-        assert!(response2.is_err());
-    }
+    // Adding second memory with same name but different id should fail
+    let response2 = client.add_memory(memory2.clone()).await;
+    assert!(response2.is_err());
 
     ctx.teardown().await;
 }
@@ -508,25 +479,21 @@ async fn test_add_memory_duplicate_name_no_id_throws_error() {
     let url = &ctx.url;
     let pm_uid = "test_duplicate_name_user";
 
-    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
-        let mut client =
-            PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format)
-                .await
-                .unwrap();
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
-        let memory1 =
-            Memory { id: "id1".to_string(), name: "shared_name".to_string(), ..Default::default() };
+    let memory1 =
+        Memory { id: "id1".to_string(), name: "shared_name".to_string(), ..Default::default() };
 
-        let memory2 = Memory { name: "shared_name".to_string(), ..Default::default() };
+    let memory2 = Memory { name: "shared_name".to_string(), ..Default::default() };
 
-        // Adding first memory should succeed
-        let response1 = client.add_memory(memory1.clone()).await;
-        assert!(response1.is_ok());
+    // Adding first memory should succeed
+    let response1 = client.add_memory(memory1.clone()).await;
+    assert!(response1.is_ok());
 
-        // Adding second memory with same name and no id should fail
-        let response2 = client.add_memory(memory2.clone()).await;
-        assert!(response2.is_err());
-    }
+    // Adding second memory with same name and no id should fail
+    let response2 = client.add_memory(memory2.clone()).await;
+    assert!(response2.is_err());
 
     ctx.teardown().await;
 }
@@ -537,23 +504,19 @@ async fn test_add_memory_duplicate_name_same_id_okay() {
     let url = &ctx.url;
     let pm_uid = "test_duplicate_name_user";
 
-    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
-        let mut client =
-            PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format)
-                .await
-                .unwrap();
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
-        let memory1 =
-            Memory { id: "id1".to_string(), name: "shared_name".to_string(), ..Default::default() };
+    let memory1 =
+        Memory { id: "id1".to_string(), name: "shared_name".to_string(), ..Default::default() };
 
-        // Adding first memory should succeed
-        let response1 = client.add_memory(memory1.clone()).await;
-        assert!(response1.is_ok());
+    // Adding first memory should succeed
+    let response1 = client.add_memory(memory1.clone()).await;
+    assert!(response1.is_ok());
 
-        // Adding second memory with same name and same id should succeed
-        let response2 = client.add_memory(memory1.clone()).await;
-        assert!(response2.is_ok());
-    }
+    // Adding second memory with same name and same id should succeed
+    let response2 = client.add_memory(memory1.clone()).await;
+    assert!(response2.is_ok());
 
     ctx.teardown().await;
 }
@@ -564,14 +527,8 @@ async fn test_get_database_metrics() {
     let url = &ctx.url;
     let pm_uid = "test_metrics_user";
 
-    let mut client = PrivateMemoryClient::create_with_start_session(
-        url,
-        pm_uid,
-        TEST_EK,
-        SerializationFormat::BinaryProto,
-    )
-    .await
-    .unwrap();
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
     // ── Empty database ──────────────────────────────────────────────────
     let metrics = client.get_database_metrics().await.unwrap();

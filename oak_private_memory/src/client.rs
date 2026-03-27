@@ -37,12 +37,6 @@ use sealed_memory_rust_proto::{
 };
 use tonic::transport::Channel;
 
-#[derive(Clone, Copy, Debug)]
-pub enum SerializationFormat {
-    BinaryProto,
-    Json,
-}
-
 #[async_trait]
 pub trait Transport {
     async fn send(&mut self, request: SessionRequest) -> Result<()>;
@@ -106,7 +100,6 @@ macro_rules! expect_response_type {
 pub struct PrivateMemoryClient {
     client_session: oak_session::ClientSession,
     transport: Box<dyn Transport + Send>,
-    format: SerializationFormat,
 }
 
 impl PrivateMemoryClient {
@@ -122,7 +115,6 @@ impl PrivateMemoryClient {
         mut transport: Box<dyn Transport + Send>,
         pm_uid: &str,
         kek: &[u8],
-        format: SerializationFormat,
         session_config: SessionConfig,
     ) -> Result<Self> {
         let mut client_session = oak_session::ClientSession::create(session_config)
@@ -143,7 +135,7 @@ impl PrivateMemoryClient {
             }
         }
 
-        let mut client = Self { client_session, transport, format };
+        let mut client = Self { client_session, transport };
 
         client.register_user(pm_uid, kek).await?;
         match client.key_sync(pm_uid, kek).await {
@@ -157,24 +149,20 @@ impl PrivateMemoryClient {
         server_addr: &str,
         pm_uid: &str,
         kek: &[u8],
-        format: SerializationFormat,
     ) -> Result<Self> {
         Self::create_with_start_session_config(
             server_addr,
             pm_uid,
             kek,
-            format,
             Self::default_session_config(),
         )
         .await
     }
 
-    /// Creates a client with a custom `SessionConfig`.
     pub async fn create_with_start_session_config(
         server_addr: &str,
         pm_uid: &str,
         kek: &[u8],
-        format: SerializationFormat,
         session_config: SessionConfig,
     ) -> Result<Self> {
         let channel = Channel::from_shared(server_addr.to_string())
@@ -189,7 +177,7 @@ impl PrivateMemoryClient {
 
         let transport = Box::new(TonicStartSessionTransport { tx, rx });
 
-        Self::new(transport, pm_uid, kek, format, session_config).await
+        Self::new(transport, pm_uid, kek, session_config).await
     }
 
     async fn invoke(
@@ -199,12 +187,7 @@ impl PrivateMemoryClient {
         let sealed_memory_request =
             SealedMemoryRequest { request: Some(request), ..Default::default() };
 
-        let payload = match self.format {
-            SerializationFormat::BinaryProto => sealed_memory_request.encode_to_vec(),
-            SerializationFormat::Json => {
-                serde_json::to_vec(&sealed_memory_request).context("failed to serialize request")?
-            }
-        };
+        let payload = sealed_memory_request.encode_to_vec();
 
         let encrypted_request =
             self.client_session.encrypt(payload).context("failed to encrypt request")?;
@@ -214,14 +197,8 @@ impl PrivateMemoryClient {
         let decrypted_response =
             self.client_session.decrypt(response).context("failed to decrypt response")?;
 
-        let sealed_memory_response = match self.format {
-            SerializationFormat::BinaryProto => {
-                SealedMemoryResponse::decode(decrypted_response.as_ref())
-                    .context("failed to decode response")?
-            }
-            SerializationFormat::Json => serde_json::from_slice(&decrypted_response)
-                .context("failed to deserialize response")?,
-        };
+        let sealed_memory_response = SealedMemoryResponse::decode(decrypted_response.as_ref())
+            .context("failed to decode response")?;
 
         sealed_memory_response.response.ok_or_else(|| anyhow!("empty response"))
     }
@@ -390,7 +367,6 @@ impl TlsFrameTransport {
 pub struct PrivateMemoryTlsClient {
     tls_session: OakSessionTls,
     transport: TlsFrameTransport,
-    format: SerializationFormat,
 }
 
 impl PrivateMemoryTlsClient {
@@ -402,7 +378,6 @@ impl PrivateMemoryTlsClient {
         server_addr: &str,
         pm_uid: &str,
         kek: &[u8],
-        format: SerializationFormat,
         tls_client_context: &OakSessionTlsClientContext,
     ) -> Result<Self> {
         let channel = Channel::from_shared(server_addr.to_string())
@@ -447,7 +422,7 @@ impl PrivateMemoryTlsClient {
         let transport =
             Arc::into_inner(shared_transport).expect("transport has multiple owners").into_inner();
 
-        let mut client = Self { tls_session, transport, format };
+        let mut client = Self { tls_session, transport };
 
         client.register_user(pm_uid, kek).await?;
         match client.key_sync(pm_uid, kek).await {
@@ -464,12 +439,7 @@ impl PrivateMemoryTlsClient {
         let sealed_memory_request =
             SealedMemoryRequest { request: Some(request), ..Default::default() };
 
-        let payload = match self.format {
-            SerializationFormat::BinaryProto => sealed_memory_request.encode_to_vec(),
-            SerializationFormat::Json => {
-                serde_json::to_vec(&sealed_memory_request).context("failed to serialize request")?
-            }
-        };
+        let payload = sealed_memory_request.encode_to_vec();
 
         let encrypted =
             self.tls_session.encrypt(&payload).map_err(|e| anyhow!("TLS encrypt: {e}"))?;
@@ -485,13 +455,8 @@ impl PrivateMemoryTlsClient {
                 .map_err(|e| anyhow!("TLS decrypt: {e}"))?;
         }
 
-        let sealed_memory_response = match self.format {
-            SerializationFormat::BinaryProto => SealedMemoryResponse::decode(decrypted.as_ref())
-                .context("failed to decode response")?,
-            SerializationFormat::Json => {
-                serde_json::from_slice(&decrypted).context("failed to deserialize response")?
-            }
-        };
+        let sealed_memory_response = SealedMemoryResponse::decode(decrypted.as_ref())
+            .context("failed to decode response")?;
 
         sealed_memory_response.response.ok_or_else(|| anyhow!("empty response"))
     }

@@ -26,14 +26,6 @@ pub mod service;
 
 pub use persistence_worker::run_persistence_service;
 
-// The message format for the plaintext.
-#[derive(Default, Copy, Clone, PartialEq)]
-pub enum MessageType {
-    #[default]
-    BinaryProto,
-    Json,
-}
-
 /// The trusted sever configuration.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ApplicationConfig {

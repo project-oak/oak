@@ -23,7 +23,7 @@
 
 use std::{io::BufReader, sync::Arc};
 
-use client::{PrivateMemoryTlsClient, SerializationFormat};
+use client::PrivateMemoryTlsClient;
 use oak_session_tls::{
     ClientContextConfig, OakSessionTlsClientContext, OakSessionTlsServerContext,
     ServerContextConfig, TlsIdentity, utils,
@@ -95,15 +95,8 @@ async fn test_tls_session_basic() {
     let pm_uid = "tls_test_user";
 
     let client_ctx = test_client_context();
-    let mut client = PrivateMemoryTlsClient::create(
-        &url,
-        pm_uid,
-        TEST_EK,
-        SerializationFormat::BinaryProto,
-        &client_ctx,
-    )
-    .await
-    .unwrap();
+    let mut client =
+        PrivateMemoryTlsClient::create(&url, pm_uid, TEST_EK, &client_ctx).await.unwrap();
 
     let memory_id = "tls_test_memory";
     let memory = Memory {
@@ -129,40 +122,6 @@ async fn test_tls_session_basic() {
     assert_eq!(response.memory.unwrap().id, memory_id);
 }
 
-/// Verifies that a TLS session works with JSON serialization.
-#[tokio::test(flavor = "multi_thread")]
-async fn test_tls_session_json() {
-    let server_ctx = Arc::new(test_server_context());
-    let (addr, _server, _db, _persistence) = start_server_with_tls(Some(server_ctx)).await.unwrap();
-    let url = format!("http://{}", addr);
-    let pm_uid = "tls_json_test_user";
-
-    let client_ctx = test_client_context();
-    let mut client = PrivateMemoryTlsClient::create(
-        &url,
-        pm_uid,
-        TEST_EK,
-        SerializationFormat::Json,
-        &client_ctx,
-    )
-    .await
-    .unwrap();
-
-    let memory_id = "tls_json_memory";
-    let memory = Memory {
-        id: memory_id.to_string(),
-        tags: vec!["tls_json_tag".to_string()],
-        ..Default::default()
-    };
-
-    let response = client.add_memory(memory).await.unwrap();
-    assert_eq!(response.id, memory_id);
-
-    let response = client.get_memory_by_id(memory_id, None).await.unwrap();
-    assert!(response.success);
-    assert_eq!(response.memory.unwrap().id, memory_id);
-}
-
 /// Verifies that delete_memory works through a TLS session.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_tls_session_delete() {
@@ -172,15 +131,8 @@ async fn test_tls_session_delete() {
     let pm_uid = "tls_delete_test_user";
 
     let client_ctx = test_client_context();
-    let mut client = PrivateMemoryTlsClient::create(
-        &url,
-        pm_uid,
-        TEST_EK,
-        SerializationFormat::BinaryProto,
-        &client_ctx,
-    )
-    .await
-    .unwrap();
+    let mut client =
+        PrivateMemoryTlsClient::create(&url, pm_uid, TEST_EK, &client_ctx).await.unwrap();
 
     let memory_id = "tls_delete_memory";
     let memory = Memory {
@@ -210,15 +162,8 @@ async fn test_tls_session_reset() {
     let pm_uid = "tls_reset_test_user";
 
     let client_ctx = test_client_context();
-    let mut client = PrivateMemoryTlsClient::create(
-        &url,
-        pm_uid,
-        TEST_EK,
-        SerializationFormat::BinaryProto,
-        &client_ctx,
-    )
-    .await
-    .unwrap();
+    let mut client =
+        PrivateMemoryTlsClient::create(&url, pm_uid, TEST_EK, &client_ctx).await.unwrap();
 
     // Add a memory.
     let memory = Memory {
@@ -247,14 +192,9 @@ async fn test_noise_still_works_with_tls_enabled() {
 
     // Use the standard Noise client to verify it still works when TLS is
     // configured on the server.
-    let mut client = client::PrivateMemoryClient::create_with_start_session(
-        &url,
-        pm_uid,
-        TEST_EK,
-        SerializationFormat::BinaryProto,
-    )
-    .await
-    .unwrap();
+    let mut client = client::PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK)
+        .await
+        .unwrap();
 
     let memory_id = "noise_coexist_memory";
     let memory = Memory {

@@ -37,7 +37,7 @@ use tokio::{
 use tonic::transport::Channel;
 
 use crate::{
-    IntoTonicResult, MessageType, context::UserSessionContext, db_client::SharedDbClient,
+    IntoTonicResult, context::UserSessionContext, db_client::SharedDbClient,
     packing::ResponsePacking,
 };
 // The implementation for one active Oak Private Memory session.
@@ -75,57 +75,12 @@ impl SealedMemorySessionHandler {
         self.session_context.lock().await
     }
 
-    pub fn is_message_type_json(&self, request_bytes: &[u8]) -> bool {
-        serde_json::from_slice::<SealedMemoryRequest>(request_bytes).is_ok()
+    pub fn deserialize_request(&self, request_bytes: &[u8]) -> anyhow::Result<SealedMemoryRequest> {
+        Ok(SealedMemoryRequest::decode(request_bytes)?)
     }
 
-    async fn session_message_type(&self) -> Option<MessageType> {
-        let guarded_session = self.session_context().await;
-        guarded_session.as_ref().map(|session| session.message_type)
-    }
-
-    pub async fn deserialize_request(
-        &self,
-        request_bytes: &[u8],
-    ) -> anyhow::Result<SealedMemoryRequest> {
-        Ok(match self.session_message_type().await {
-            Some(MessageType::BinaryProto) => SealedMemoryRequest::decode(request_bytes)?,
-            Some(MessageType::Json) => {
-                serde_json::from_slice::<SealedMemoryRequest>(request_bytes)?
-            }
-            None => {
-                // Default to trying all the options.
-                if let Ok(request) = SealedMemoryRequest::decode(request_bytes) {
-                    info!("Request is in binary proto format");
-                    request
-                } else if let Ok(request) =
-                    serde_json::from_slice::<SealedMemoryRequest>(request_bytes)
-                {
-                    info!("Request is in json format {:?}", request);
-                    request
-                } else {
-                    anyhow::bail!("The provided request could not be decoded with any strategy")
-                }
-            }
-        })
-    }
-
-    pub async fn serialize_response(
-        &self,
-        response: &SealedMemoryResponse,
-        message_type: Option<MessageType>,
-    ) -> anyhow::Result<Vec<u8>> {
-        let message_type = self
-            .session_message_type()
-            .await
-            // If no session, use the caller-provided type.
-            // If no caller-provided type, default to binaryproto.
-            .unwrap_or(message_type.unwrap_or(MessageType::BinaryProto));
-
-        Ok(match message_type {
-            MessageType::BinaryProto => response.encode_to_vec(),
-            MessageType::Json => serde_json::to_vec(response)?,
-        })
+    pub fn serialize_response(&self, response: &SealedMemoryResponse) -> anyhow::Result<Vec<u8>> {
+        Ok(response.encode_to_vec())
     }
 
     fn is_valid_key(key: &[u8]) -> bool {
@@ -246,12 +201,10 @@ impl SealedMemorySessionHandler {
         key_derivation_info: KeyDerivationInfo,
 
         mut db_client: SealedMemoryDatabaseServiceClient<Channel>,
-        is_json: bool,
     ) -> tonic::Result<()> {
         let (database, database_version, initial_size) =
             get_or_create_db(&mut db_client, &uid, &dek, self.clock.clone()).await?;
 
-        let message_type = if is_json { MessageType::Json } else { MessageType::BinaryProto };
         let mut mutex_guard = self.session_context().await;
         let database = DatabaseWithCache::new(
             database,
@@ -265,7 +218,6 @@ impl SealedMemorySessionHandler {
         *mutex_guard = Some(UserSessionContext {
             dek,
             uid,
-            message_type,
             database_service_client: db_client,
             database_version,
             database,
@@ -276,7 +228,6 @@ impl SealedMemorySessionHandler {
     pub async fn boot_strap_handler(
         &self,
         request: UserRegistrationRequest,
-        is_json: bool,
     ) -> tonic::Result<UserRegistrationResponse> {
         if request.key_encryption_key.is_empty() {
             return Err(tonic::Status::invalid_argument(
@@ -356,15 +307,9 @@ impl SealedMemorySessionHandler {
         info!("Successfully registered new user {}", uid);
         // All errors from setup_user_session_context are infrastructure failures
         // (DB fetch, decryption, import) outside the caller's control.
-        self.setup_user_session_context(
-            uid.clone(),
-            dek,
-            boot_strap_info.clone(),
-            db_client,
-            is_json,
-        )
-        .await
-        .into_internal_error("Failed to setup user session context")?;
+        self.setup_user_session_context(uid.clone(), dek, boot_strap_info.clone(), db_client)
+            .await
+            .into_internal_error("Failed to setup user session context")?;
         Ok(UserRegistrationResponse {
             status: user_registration_response::Status::Success.into(),
             key_derivation_info: Some(boot_strap_info),
@@ -374,7 +319,6 @@ impl SealedMemorySessionHandler {
     pub async fn key_sync_handler(
         &self,
         request: KeySyncRequest,
-        is_json: bool,
     ) -> tonic::Result<KeySyncResponse> {
         if request.key_encryption_key.is_empty() || request.pm_uid.is_empty() {
             return Ok(KeySyncResponse { status: key_sync_response::Status::InvalidPmUid.into() });
@@ -425,7 +369,7 @@ impl SealedMemorySessionHandler {
             return Ok(KeySyncResponse { status: key_sync_response::Status::InvalidPmUid.into() });
         }
 
-        self.setup_user_session_context(uid, dek, key_derivation_info, db_client, is_json)
+        self.setup_user_session_context(uid, dek, key_derivation_info, db_client)
             .await
             .into_internal_error("Failed to setup user session context")?;
 
@@ -518,12 +462,10 @@ impl SealedMemorySessionHandler {
     pub async fn handle(&self, request_bytes: &[u8]) -> tonic::Result<Vec<u8>> {
         let request = self
             .deserialize_request(request_bytes)
-            .await
             .into_internal_error("failed to deserialize request")?;
-        let mut message_type = None;
 
         let request_id = request.request_id;
-        let request_variant = request.request.into_invalid_argument("The request is empty. The json format might be incorrect: the data type should strictly match.")?;
+        let request_variant = request.request.into_invalid_argument("The request is empty.")?;
 
         let metric_name = RequestMetricName::new_sealed_memory_request(&request_variant);
         self.metrics.inc_requests(metric_name.clone());
@@ -531,16 +473,11 @@ impl SealedMemorySessionHandler {
         let start_time = Instant::now();
         let mut response = match request_variant {
             sealed_memory_request::Request::UserRegistrationRequest(request) => {
-                let is_json = self.is_message_type_json(request_bytes);
-                if is_json {
-                    message_type = Some(MessageType::Json);
-                };
-                self.boot_strap_handler(request, is_json).await?.into_response()
+                self.boot_strap_handler(request).await?.into_response()
             }
-            sealed_memory_request::Request::KeySyncRequest(request) => self
-                .key_sync_handler(request, self.is_message_type_json(request_bytes))
-                .await?
-                .into_response(),
+            sealed_memory_request::Request::KeySyncRequest(request) => {
+                self.key_sync_handler(request).await?.into_response()
+            }
             sealed_memory_request::Request::AddMemoryRequest(request) => {
                 self.add_memory_handler(request).await?.into_response()
             }
@@ -577,9 +514,7 @@ impl SealedMemorySessionHandler {
         self.metrics.record_latency(elapsed_time, metric_name);
         response.request_id = request_id;
 
-        self.serialize_response(&response, message_type)
-            .await
-            .into_internal_error("failed to serialize response")
+        self.serialize_response(&response).into_internal_error("failed to serialize response")
     }
 }
 

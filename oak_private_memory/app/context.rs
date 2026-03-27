@@ -18,13 +18,10 @@ use oak_private_memory_database::database_with_cache::DatabaseWithCache;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use tonic::transport::Channel;
 
-use crate::MessageType;
-
 /// The state for each client connection.
 pub struct UserSessionContext {
     pub dek: Vec<u8>,
     pub uid: String,
-    pub message_type: MessageType,
 
     pub database: DatabaseWithCache,
     // This is the opaque version string received when reading in the current database.
