@@ -104,6 +104,8 @@ mod ffi {
 
         fn set_data_type_vector(&self, data_type_vector: i32) -> &PropertyConfigBuilder;
         fn set_data_type_string(&self, match_type: i32, tokenizer: i32) -> &PropertyConfigBuilder;
+        fn set_data_type_joinable_string(&self, joinable_value_type: i32)
+        -> &PropertyConfigBuilder;
         fn set_data_type_int64(&self, value: i32) -> &PropertyConfigBuilder;
 
         fn set_data_type_document<'a>(

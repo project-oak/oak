@@ -283,6 +283,14 @@ class PropertyConfigBuilder {
     return *this;
   }
 
+  const PropertyConfigBuilder& set_data_type_joinable_string(
+      int joinable_value_type) const {
+    inner_->SetDataTypeJoinableString(
+        static_cast<icing::lib::JoinableConfig::ValueType::Code>(
+            joinable_value_type));
+    return *this;
+  }
+
   const PropertyConfigBuilder& set_data_type_document(
       rust::Slice<const uint8_t> schema_type,
       bool index_nested_properties) const {

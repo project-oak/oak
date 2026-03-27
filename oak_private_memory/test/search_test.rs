@@ -1193,3 +1193,165 @@ fn test_search_memories_v2_no_filter() -> anyhow::Result<()> {
     assert_that!(blob_ids, unordered_elements_are![eq("blob1"), eq("blob2")]);
     Ok(())
 }
+
+#[gtest]
+fn test_search_memories_v2_sort_embedding() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-emb-test"))?;
+
+    // Memory 1: Partial match -> medium score (0.5)
+    db.add_memory(&mem_embedded("m1", &[0.5, 0.5, 0.0]), "blob1".into())?;
+    // Memory 2: Exact match -> highest score (1.0)
+    db.add_memory(&mem_embedded("m2", &[1.0, 0.0, 0.0]), "blob2".into())?;
+    // Memory 3: Orthogonal -> lowest score (0.0)
+    db.add_memory(&mem_embedded("m3", &[0.0, 1.0, 0.0]), "blob3".into())?;
+
+    let req = SearchMemoriesRequest {
+        sort: vec![SearchMemoriesSort {
+            sort: Some(SortValue::EmbeddingSort(EmbeddingSort {
+                order: SortOrder::OrderDescending as i32,
+                embedding: Some(Embedding {
+                    model_signature: "test_model".to_string(),
+                    values: vec![1.0, 0.0, 0.0],
+                }),
+                view_type: "".to_string(),
+            })),
+        }],
+        page_size: 10,
+        ..Default::default()
+    };
+
+    assert_that!(search_blob_ids(&db, &req)?, elements_are![eq("blob2"), eq("blob1"), eq("blob3")]);
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_sort_embedding_with_missing_embeddings() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-emb-missing-test"))?;
+
+    // Memory 1: Partial match -> medium score (0.5)
+    db.add_memory(&mem_embedded("m1", &[0.5, 0.5, 0.0]), "blob1".into())?;
+    // Memory 2: Exact match -> highest score (1.0)
+    db.add_memory(&mem_embedded("m2", &[1.0, 0.0, 0.0]), "blob2".into())?;
+    // Memory 3: Small match -> low score (0.1)
+    db.add_memory(&mem_embedded("m3", &[0.1, 0.9, 0.0]), "blob3".into())?;
+    // Memory 4: No embeddings -> should appear last
+    db.add_memory(&mem_tagged("m4", &["tag"]), "blob4".into())?;
+
+    let req = SearchMemoriesRequest {
+        sort: vec![SearchMemoriesSort {
+            sort: Some(SortValue::EmbeddingSort(EmbeddingSort {
+                order: SortOrder::OrderDescending as i32,
+                embedding: Some(Embedding {
+                    model_signature: "test_model".to_string(),
+                    values: vec![1.0, 0.0, 0.0],
+                }),
+                view_type: "".to_string(),
+            })),
+        }],
+        page_size: 10,
+        ..Default::default()
+    };
+
+    assert_that!(
+        search_blob_ids(&db, &req)?,
+        elements_are![eq("blob2"), eq("blob1"), eq("blob3"), eq("blob4")]
+    );
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_sort_embedding_with_view_type() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-emb-type-test"))?;
+
+    // Memory 1: target_type view has lower score, other_type has higher.
+    db.add_memory(
+        &mem_with_typed_views(
+            "m1",
+            &[("target_type", &[0.1, 0.9, 0.0]), ("other_type", &[1.0, 0.0, 0.0])],
+        ),
+        "blob1".into(),
+    )?;
+
+    // Memory 2: target_type view has higher score, other_type has lower.
+    db.add_memory(
+        &mem_with_typed_views(
+            "m2",
+            &[("target_type", &[1.0, 0.0, 0.0]), ("other_type", &[0.1, 0.9, 0.0])],
+        ),
+        "blob2".into(),
+    )?;
+
+    // Memory 3: No target_type view, should rank last regardless of its other_type
+    // score.
+    db.add_memory(
+        &mem_with_typed_views("m3", &[("other_type", &[1.0, 0.0, 0.0])]),
+        "blob3".into(),
+    )?;
+
+    let req = SearchMemoriesRequest {
+        sort: vec![SearchMemoriesSort {
+            sort: Some(SortValue::EmbeddingSort(EmbeddingSort {
+                order: SortOrder::OrderDescending as i32,
+                embedding: Some(Embedding {
+                    model_signature: "test_model".to_string(),
+                    values: vec![1.0, 0.0, 0.0],
+                }),
+                view_type: "target_type".to_string(),
+            })),
+        }],
+        page_size: 10,
+        ..Default::default()
+    };
+
+    // m2 score = 1.0 (from target_type)
+    // m1 score = 0.1 (from target_type)
+    // m3 score = N/A (no target_type view, should sort last)
+    assert_that!(search_blob_ids(&db, &req)?, elements_are![eq("blob2"), eq("blob1"), eq("blob3")]);
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_sort_embedding_uses_max_view_score() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-emb-max-test"))?;
+
+    // m1: max score = 0.9 (from first view)
+    db.add_memory(
+        &mem_with_typed_views("m1", &[("", &[0.9, 0.1, 0.0]), ("", &[0.1, 0.9, 0.0])]),
+        "blob1".into(),
+    )?;
+
+    // m2: max score = 0.8 (from second view)
+    db.add_memory(
+        &mem_with_typed_views("m2", &[("", &[0.5, 0.5, 0.0]), ("", &[0.8, 0.2, 0.0])]),
+        "blob2".into(),
+    )?;
+
+    // m3: max score = 0.95 (from second view)
+    db.add_memory(
+        &mem_with_typed_views("m3", &[("", &[0.2, 0.8, 0.0]), ("", &[0.95, 0.05, 0.0])]),
+        "blob3".into(),
+    )?;
+
+    let req = SearchMemoriesRequest {
+        sort: vec![SearchMemoriesSort {
+            sort: Some(SortValue::EmbeddingSort(EmbeddingSort {
+                order: SortOrder::OrderDescending as i32,
+                embedding: Some(Embedding {
+                    model_signature: "test_model".to_string(),
+                    values: vec![1.0, 0.0, 0.0],
+                }),
+                view_type: "".to_string(),
+            })),
+        }],
+        page_size: 10,
+        ..Default::default()
+    };
+
+    // Expected order by max view score: blob3 (0.95), blob1 (0.9), blob2 (0.8)
+    assert_that!(search_blob_ids(&db, &req)?, elements_are![eq("blob3"), eq("blob1"), eq("blob2")]);
+
+    Ok(())
+}

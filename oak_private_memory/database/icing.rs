@@ -134,6 +134,7 @@ const SCHEMA_NAME: &str = "Memory";
 const TAG_NAME: &str = "tag";
 const NAME_NAME: &str = "name";
 const MEMORY_ID_NAME: &str = "memoryId";
+const MEMORY_QUALIFIED_ID_NAME: &str = "memoryQualifiedId";
 const BLOB_ID_NAME: &str = "blobId";
 const EMBEDDING_NAME: &str = "embedding";
 const CREATED_TIMESTAMP_NAME: &str = "createdTimestamp";
@@ -242,6 +243,8 @@ impl PendingLlmViewMetadata {
         let view_type: &String = &view.r#type;
         let name = &memory.name;
         let tags: Vec<&[u8]> = memory.tags.iter().map(|x| x.as_bytes()).collect();
+        let qualified_memory_id = format!("{NAMESPACE_NAME}#{memory_id}");
+
         let embedding = if let Some(e) = view.embedding.as_ref() {
             e
         } else {
@@ -255,6 +258,10 @@ impl PendingLlmViewMetadata {
             .set_schema(LLM_VIEW_SCHEMA_NAME.as_bytes())
             .add_string_property(TAG_NAME.as_bytes(), &tags)
             .add_string_property(MEMORY_ID_NAME.as_bytes(), &[memory_id.as_bytes()])
+            .add_string_property(
+                MEMORY_QUALIFIED_ID_NAME.as_bytes(),
+                &[qualified_memory_id.as_bytes()],
+            )
             .add_string_property(VIEW_ID_NAME.as_bytes(), &[view_id.as_bytes()])
             .add_string_property(VIEW_TYPE_NAME.as_bytes(), &[view_type.as_bytes()])
             .add_string_property(BLOB_ID_NAME.as_bytes(), &[blob_id.as_bytes()])
@@ -427,6 +434,16 @@ impl IcingMetaDatabase {
         let memory_view_schema_type_builder = icing::create_schema_type_config_builder();
         memory_view_schema_type_builder
             .set_type(LLM_VIEW_SCHEMA_NAME.as_bytes())
+            .add_property(
+                icing::create_property_config_builder()
+                    .set_name(MEMORY_QUALIFIED_ID_NAME.as_bytes())
+                    .set_data_type_joinable_string(
+                        icing::joinable_config::value_type::Code::QualifiedId.into(),
+                    )
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Optional.into(),
+                    )
+            )
             .add_property(
                 icing::create_property_config_builder()
                     .set_name(TAG_NAME.as_bytes())
@@ -1332,9 +1349,9 @@ impl IcingMetaDatabase {
         request: &SearchMemoriesRequest,
     ) -> anyhow::Result<(SearchResultIds, PageToken)> {
         // Build the Icing search spec from the filter tree.
-        let search_spec = self.build_search_memories_filter(&request.filter)?;
+        let mut search_spec = self.build_search_memories_filter(&request.filter)?;
 
-        let scoring_spec = Self::build_search_memories_sort_mode(&request.sort)?;
+        let scoring_spec = Self::build_search_memories_sort(&request.sort, &mut search_spec)?;
 
         let page_size = request.page_size;
 
@@ -1371,8 +1388,9 @@ impl IcingMetaDatabase {
     /// and `getScorableProperty()` to read int64 property values at scoring
     /// time. Memories **with** the sorted field always receive a higher score
     /// than memories without it, so missing-field items naturally sort last.
-    fn build_search_memories_sort_mode(
+    fn build_search_memories_sort(
         sorts: &[SearchMemoriesSort],
+        search_spec: &mut icing::SearchSpecProto,
     ) -> anyhow::Result<icing::ScoringSpecProto> {
         use sealed_memory_rust_proto::oak::private_memory::search_memories_sort::Sort;
 
@@ -1421,10 +1439,71 @@ impl IcingMetaDatabase {
                 EXPIRATION_TIMESTAMP_NAME,
                 ts.order() == SortOrder::OrderAscending,
             )),
-            Sort::EmbeddingSort(_) => {
-                bail!("embedding sort is not yet supported in this CL")
-            }
+            Sort::EmbeddingSort(emb) => Self::build_embedding_sort(emb, search_spec),
         }
+    }
+
+    fn build_embedding_sort(
+        sort: &EmbeddingSort,
+        search_spec: &mut icing::SearchSpecProto,
+    ) -> anyhow::Result<icing::ScoringSpecProto> {
+        let embedding = sort.embedding.as_ref().context("EmbeddingSort.embedding is required")?;
+
+        let mut query_string = "semanticSearch(getEmbeddingParameter(0))".to_string();
+        if !sort.view_type.is_empty() {
+            query_string = format!("({}:{}) AND {}", VIEW_TYPE_NAME, sort.view_type, query_string);
+        }
+
+        search_spec.join_spec = Some(Box::new(icing::JoinSpecProto {
+            parent_property_expression: Some("this.qualifiedId()".to_string()),
+            child_property_expression: Some(MEMORY_QUALIFIED_ID_NAME.to_string()),
+            aggregation_scoring_strategy: Some(
+                icing::join_spec_proto::aggregation_scoring_strategy::Code::Max.into(),
+            ),
+            nested_spec: Some(Box::new(icing::join_spec_proto::NestedSpecProto {
+                search_spec: Some(Box::new(icing::SearchSpecProto {
+                    query: Some(query_string),
+                    term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+                    schema_type_filters: vec![LLM_VIEW_SCHEMA_NAME.to_string()],
+                    embedding_query_metric_type: Some(
+                        icing::search_spec_proto::embedding_query_metric_type::Code::DotProduct.into(),
+                    ),
+                    embedding_query_vectors: vec![icing::create_vector_proto(
+                        embedding.model_signature.as_str(),
+                        &embedding.values,
+                    )],
+                    enabled_features: vec![icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string()],
+                    ..Default::default()
+                })),
+                scoring_spec: Some(icing::ScoringSpecProto {
+                    rank_by: Some(
+                        icing::scoring_spec_proto::ranking_strategy::Code::AdvancedScoringExpression.into(),
+                    ),
+                    advanced_scoring_expression: Some(
+                        "sum(this.matchedSemanticScores(getEmbeddingParameter(0)))".to_string(),
+                    ),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            })),
+            ..Default::default()
+        }));
+
+        let order_by = if sort.order() == SortOrder::OrderAscending {
+            Some(icing::scoring_spec_proto::order::Code::Asc.into())
+        } else {
+            Some(icing::scoring_spec_proto::order::Code::Desc.into())
+        };
+
+        let scoring_spec = icing::ScoringSpecProto {
+            rank_by: Some(
+                icing::scoring_spec_proto::ranking_strategy::Code::JoinAggregateScore.into(),
+            ),
+            order_by,
+            ..Default::default()
+        };
+
+        Ok(scoring_spec)
     }
 
     /// Build a `ScoringSpecProto` that sorts by a scorable int64 property.
