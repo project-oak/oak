@@ -380,4 +380,17 @@ rust_test(
 app_bundle(
     name = "bundle",
     binary = ":private_memory_server",
+    extra_mounts = ["""
+        {
+            "destination": "/tmp",
+            "type": "tmpfs",
+            "source": "tmpfs",
+            "options": [
+                "nosuid",
+                "nodev",
+                "mode=1777",
+                "size=90%"
+            ]
+        }
+    """],
 )

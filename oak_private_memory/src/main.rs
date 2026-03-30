@@ -29,7 +29,20 @@ use tokio::sync::mpsc;
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     private_memory_server_lib::log::init_logging(true);
-    debug!("Logging!");
+    log::info!("Logging!");
+
+    // VERIFICATION: Check /tmp mount status
+    if let Ok(mounts) = std::fs::read_to_string("/proc/mounts") {
+        for line in mounts.lines() {
+            if line.contains("/tmp") {
+                log::info!("VERIFICATION MOUNT: {}", line);
+            }
+        }
+    }
+    if let Ok(output) = std::process::Command::new("df").arg("-h").arg("/tmp").output() {
+        log::info!("VERIFICATION DF: {}", String::from_utf8_lossy(&output.stdout));
+    }
+
     let orchestrator_channel =
         default_orchestrator_channel().await.context("failed to create orchestrator channel")?;
 

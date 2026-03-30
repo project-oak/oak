@@ -42,13 +42,19 @@ def _oak_app_config_impl(ctx):
     args_json = json.encode(ctx.attr.args)
     env_json = json.encode(env_list)
 
+    extra_mounts_str = ""
+    if ctx.attr.extra_mounts:
+        # Prepend a comma because we're injecting into the end of an array
+        extra_mounts_str = ",\n        " + ",\n        ".join(ctx.attr.extra_mounts)
+
     ctx.actions.expand_template(
-        template = ctx.file.template,
+        template = ctx.file._template,
         output = out,
         substitutions = {
             "{{ARGS}}": args_json,
             "{{ENV}}": env_json,
             "{{ROOT_PATH}}": ctx.attr.root_path,
+            "{{EXTRA_MOUNTS}}": extra_mounts_str,
         },
     )
     return [DefaultInfo(files = depset([out]))]
@@ -56,7 +62,7 @@ def _oak_app_config_impl(ctx):
 oak_app_config = rule(
     implementation = _oak_app_config_impl,
     attrs = {
-        "template": attr.label(
+        "_template": attr.label(
             default = "//oak_containers/app_base:config.json.tpl",
             allow_single_file = True,
         ),
@@ -66,6 +72,7 @@ oak_app_config = rule(
             default = "rootfs",
             doc = "The directory containing the root filesystem inside the bundle.",
         ),
+        "extra_mounts": attr.string_list(doc = "List of extra JSON mount strings to include in config.json."),
     },
     doc = "Generates a based Oak Containers-compatible config.json file.",
 )
@@ -78,6 +85,7 @@ def _app_bundle_impl(
         env,
         entrypoint_path,
         root_path,
+        extra_mounts,
         **kwargs):
     binary_name = paths.basename(binary.name)
 
@@ -98,6 +106,7 @@ def _app_bundle_impl(
         args = actual_args,
         env = env,
         root_path = root_path,
+        extra_mounts = extra_mounts,
     )
 
     pkg_files(
@@ -172,6 +181,10 @@ The tarball contains:
         "root_path": attr.string(
             doc = "The directory name in the bundle containing the filesystem.",
             default = "rootfs",
+            configurable = False,
+        ),
+        "extra_mounts": attr.string_list(
+            doc = "List of extra mounts as JSON strings to add to the container config.json.",
             configurable = False,
         ),
         "tars": None,

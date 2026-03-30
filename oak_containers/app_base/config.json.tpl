@@ -123,7 +123,7 @@
                 "rbind",
                 "ro"
             ]
-        }
+        }{{EXTRA_MOUNTS}}
     ],
     "annotations": {
         "org.opencontainers.image.architecture": "amd64",

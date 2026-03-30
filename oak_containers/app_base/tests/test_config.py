@@ -55,6 +55,26 @@ class TestConfig(unittest.TestCase):
 
     self.assertEqual(config["root"]["path"], "custom_root")
 
+  def test_extra_mounts(self):
+    config_path = os.environ.get("EXTRA_MOUNTS_CONFIG_PATH")
+    self.assertTrue(config_path and os.path.exists(config_path))
+
+    with open(config_path, "r") as f:
+      config = json.load(f)
+    # Verify that the extra_mount's /tmp mount is present
+    mounts = config.get("mounts", [])
+    tmp_mounts = [m for m in mounts if m.get("destination") == "/tmp"]
+    self.assertEqual(len(tmp_mounts), 1, "Expected exactly one /tmp mount")
+    tmp_mount = tmp_mounts[0]
+    self.assertEqual(tmp_mount["type"], "tmpfs")
+    self.assertIn("size=90%", tmp_mount["options"])
+
+    # Verify that the default mounts are still present
+    destinations = [m.get("destination") for m in mounts]
+    self.assertIn("/proc", destinations)
+    self.assertIn("/dev", destinations)
+    self.assertIn("/sys", destinations)
+
 
 if __name__ == "__main__":
   # Filter out Bazel-specific arguments like --nocapture that unittest doesn't recognize
