@@ -287,7 +287,7 @@ mod tests {
     use prost::Message;
     use verify_endorsement::{
         create_endorsement_reference_value, create_signed_endorsement,
-        create_verifying_key_from_pem,
+        create_tlog_reference_values_skip, create_verifying_key_from_pem,
     };
     use x509_cert::der::DecodePem;
 
@@ -316,8 +316,11 @@ mod tests {
     fn create_reference_value(key_id: u32) -> BinaryReferenceValue {
         let developer_public_key_pem = read_testdata_string!("developer_key.pub.pem");
         let developer_public_key = create_verifying_key_from_pem(&developer_public_key_pem, key_id);
-        let endorsement =
-            create_endorsement_reference_value(developer_public_key, Vec::new(), None, None);
+        let endorsement = create_endorsement_reference_value(
+            developer_public_key,
+            Vec::new(),
+            create_tlog_reference_values_skip(),
+        );
         BinaryReferenceValue {
             r#type: Some(binary_reference_value::Type::Endorsement(endorsement)),
         }

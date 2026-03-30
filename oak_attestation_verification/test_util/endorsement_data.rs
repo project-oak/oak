@@ -21,7 +21,7 @@ use std::fs;
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::attestation::v1::{
     ClaimReferenceValue, Endorsement, EndorsementReferenceValue, KeyType, Signature,
-    SignedEndorsement, TransparentReleaseEndorsement, VerifyingKey, VerifyingKeyReferenceValue,
+    SignedEndorsement, TLogReferenceValues, TransparentReleaseEndorsement, VerifyingKey,
     VerifyingKeySet, endorsement::Format,
 };
 use oak_time::{Instant, make_instant};
@@ -118,12 +118,17 @@ impl EndorsementData {
                     ..Default::default()
                 }),
                 required_claims: Some(ClaimReferenceValue { claim_types: vec![] }),
-                rekor: Some(VerifyingKeyReferenceValue {
-                    r#type: Some(
-                        oak_proto_rust::oak::attestation::v1::verifying_key_reference_value::Type::Verify(
-                            VerifyingKeySet { keys: [rekor_key].to_vec(), ..Default::default() },
+                tlog: Some(TLogReferenceValues {
+                    strategy: Some(
+                        oak_proto_rust::oak::attestation::v1::t_log_reference_values::Strategy::All(
+                            (),
                         ),
                     ),
+                    rekor: Some(VerifyingKeySet {
+                        keys: [rekor_key].to_vec(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
                 }),
                 ..Default::default()
             },

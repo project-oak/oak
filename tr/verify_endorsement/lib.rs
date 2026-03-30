@@ -21,7 +21,7 @@
 
 extern crate alloc;
 
-use alloc::{string::String, vec, vec::Vec};
+use alloc::{string::String, vec::Vec};
 
 use anyhow::Context;
 use c2sp::{Policy, TLogProof};
@@ -80,19 +80,12 @@ pub fn create_signed_endorsement(
 pub fn create_endorsement_reference_value(
     endorser_key: VerifyingKey,
     claim_types: Vec<String>,
-    rekor_key: Option<VerifyingKey>,
-    tlog: Option<TLogReferenceValues>,
+    tlog: TLogReferenceValues,
 ) -> EndorsementReferenceValue {
-    let rekor_key_set =
-        rekor_key.map(|v| VerifyingKeySet { keys: [v].to_vec(), ..Default::default() });
-    let rekor = create_verifying_key_reference_value(rekor_key_set);
-
-    #[allow(deprecated)]
     EndorsementReferenceValue {
         endorser: Some(VerifyingKeySet { keys: [endorser_key].to_vec(), ..Default::default() }),
         required_claims: Some(ClaimReferenceValue { claim_types }),
-        rekor: Some(rekor),
-        tlog,
+        tlog: Some(tlog),
         ..Default::default()
     }
 }
@@ -123,7 +116,7 @@ pub fn create_verifying_key_reference_value(
 }
 
 /// Creates a `TLogReferenceValues` instance from ingredients.
-pub fn create_tlog_reference_values(
+fn create_tlog_reference_values(
     strategy: t_log_reference_values::Strategy,
     rekor_key: Option<VerifyingKey>,
     c2sp_policy: Option<String>,
@@ -133,15 +126,22 @@ pub fn create_tlog_reference_values(
     TLogReferenceValues { strategy: Some(strategy), rekor, c2sp, ..Default::default() }
 }
 
-/// Creates an `EndorsementReferenceValue` instance from ingredients.
-pub fn create_endorsement_reference_value_from_raw(
-    endorser_public_key: &[u8],
-    key_id: u32,
-    rekor_public_key: &[u8],
-) -> EndorsementReferenceValue {
-    let endorser_key = create_verifying_key_from_raw(endorser_public_key, key_id);
-    let rekor_key = create_verifying_key_from_raw(rekor_public_key, 1);
-    create_endorsement_reference_value(endorser_key, vec![], Some(rekor_key), None)
+/// Creates an empty `TLogReferenceValues` instance which skips verification.
+pub fn create_tlog_reference_values_skip() -> TLogReferenceValues {
+    create_tlog_reference_values(
+        t_log_reference_values::Strategy::Skip(SkipVerification {}),
+        None,
+        None,
+    )
+}
+
+/// Creates a `TLogReferenceValues` instance which verifies all populated
+/// fields.
+pub fn create_tlog_reference_values_all(
+    rekor_key: Option<VerifyingKey>,
+    c2sp_policy: Option<String>,
+) -> TLogReferenceValues {
+    create_tlog_reference_values(t_log_reference_values::Strategy::All(()), rekor_key, c2sp_policy)
 }
 
 /// Verifies a signed endorsement against a reference value.
@@ -317,7 +317,7 @@ pub fn is_kernel_type(statement: &DefaultStatement) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use alloc::string::ToString;
+    use alloc::{string::ToString, vec};
 
     use base64::{Engine, engine::general_purpose::STANDARD as B64};
     use c2sp::{Checkpoint, NoteSigningKey, SignatureType};
@@ -575,11 +575,7 @@ mod tests {
     fn verify_tlog_all_succeeds_with_valid_rekor() {
         let d = EndorsementData::load();
         let rekor_key = make_rekor_key(&d.rekor_public_key);
-        let tlog = create_tlog_reference_values(
-            t_log_reference_values::Strategy::All(()),
-            Some(rekor_key),
-            None,
-        );
+        let tlog = create_tlog_reference_values_all(Some(rekor_key), None);
         let signed_endorsement = SignedEndorsement {
             endorsement: Some(Endorsement {
                 serialized: d.endorsement.clone(),
@@ -600,11 +596,7 @@ mod tests {
         let log_key = NoteSigningKey::from_parts(origin, SignatureType::Ed25519, [42u8; 32]);
         let (proof_text, vkey) = make_test_tlog_proof(entry, origin, &log_key);
 
-        let tlog = create_tlog_reference_values(
-            t_log_reference_values::Strategy::All(()),
-            None,
-            Some(make_log_policy(&vkey)),
-        );
+        let tlog = create_tlog_reference_values_all(None, Some(make_log_policy(&vkey)));
         let signed_endorsement = SignedEndorsement {
             endorsement: Some(Endorsement { serialized: entry.to_vec(), ..Default::default() }),
             c2sp_tlog_proof: proof_text.into_bytes(),
@@ -618,11 +610,7 @@ mod tests {
     #[test]
     fn verify_tlog_all_fails_when_rekor_log_entry_empty() {
         // Rekor is populated but the signed endorsement has no log entry.
-        let tlog = create_tlog_reference_values(
-            t_log_reference_values::Strategy::All(()),
-            Some(make_dummy_rekor_key()),
-            None,
-        );
+        let tlog = create_tlog_reference_values_all(Some(make_dummy_rekor_key()), None);
         let signed_endorsement =
             SignedEndorsement { endorsement: Some(Endorsement::default()), ..Default::default() };
 
@@ -634,11 +622,7 @@ mod tests {
 
     #[test]
     fn verify_tlog_all_fails_when_rekor_log_entry_invalid() {
-        let tlog = create_tlog_reference_values(
-            t_log_reference_values::Strategy::All(()),
-            Some(make_dummy_rekor_key()),
-            None,
-        );
+        let tlog = create_tlog_reference_values_all(Some(make_dummy_rekor_key()), None);
         let signed_endorsement = SignedEndorsement {
             endorsement: Some(Endorsement::default()),
             rekor_log_entry: b"not valid json".to_vec(),
@@ -654,11 +638,7 @@ mod tests {
     #[test]
     fn verify_tlog_all_fails_when_c2sp_invalid() {
         let entry = b"test endorsement data";
-        let tlog = create_tlog_reference_values(
-            t_log_reference_values::Strategy::All(()),
-            None,
-            Some(make_log_policy("bad+vkey+here")),
-        );
+        let tlog = create_tlog_reference_values_all(None, Some(make_log_policy("bad+vkey+here")));
         let signed_endorsement = SignedEndorsement {
             endorsement: Some(Endorsement { serialized: entry.to_vec(), ..Default::default() }),
             c2sp_tlog_proof: b"not a valid proof".to_vec(),
@@ -681,11 +661,7 @@ mod tests {
         let log_key = NoteSigningKey::from_parts(origin, SignatureType::Ed25519, [42u8; 32]);
         let (proof_text, vkey) = make_test_tlog_proof(entry, origin, &log_key);
 
-        let tlog = create_tlog_reference_values(
-            t_log_reference_values::Strategy::All(()),
-            Some(rekor_key),
-            Some(make_log_policy(&vkey)),
-        );
+        let tlog = create_tlog_reference_values_all(Some(rekor_key), Some(make_log_policy(&vkey)));
         let signed_endorsement = SignedEndorsement {
             endorsement: Some(Endorsement {
                 serialized: d.endorsement.clone(),

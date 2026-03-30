@@ -31,7 +31,7 @@ use oak_proto_rust::oak::attestation::v1::{
 use oak_time::Instant;
 use oci_spec::distribution::Reference;
 use prost::Message;
-use verify_endorsement::create_endorsement_reference_value;
+use verify_endorsement::{create_endorsement_reference_value, create_tlog_reference_values_all};
 use x509_cert::{Certificate, der::DecodePem};
 
 use crate::{
@@ -134,12 +134,9 @@ impl AssertionVerifier for GcpAssertionVerifier {
                         .ok_or(anyhow::anyhow!("endorser public key missing"))?
                         .clone();
                     let rekor_key = cosign_reference_values.rekor_public_key.clone();
-                    let endorsement_ref_value = create_endorsement_reference_value(
-                        endorser_key,
-                        Vec::new(),
-                        rekor_key,
-                        None,
-                    );
+                    let tlog = create_tlog_reference_values_all(rekor_key, None);
+                    let endorsement_ref_value =
+                        create_endorsement_reference_value(endorser_key, Vec::new(), tlog);
                     let image_reference_value = BinaryReferenceValue {
                         r#type: Some(binary_reference_value::Type::Endorsement(
                             endorsement_ref_value,
@@ -207,7 +204,7 @@ mod tests {
     };
     use oak_time::make_instant;
     use prost::Message;
-    use verify_endorsement::create_verifying_key_from_pem;
+    use verify_endorsement::{create_tlog_reference_values_skip, create_verifying_key_from_pem};
 
     use super::*;
     use crate::OAK_SESSION_NOISE_V1_AUDIENCE;
@@ -252,8 +249,7 @@ mod tests {
                         create_endorsement_reference_value(
                             developer_public_key,
                             Vec::new(),
-                            None,
-                            None,
+                            create_tlog_reference_values_skip(),
                         ),
                     )),
                 })),

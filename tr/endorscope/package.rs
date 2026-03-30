@@ -23,12 +23,10 @@ use alloc::{string::String, vec, vec::Vec};
 
 use anyhow::{Context, Result};
 use intoto::statement::DefaultStatement;
-use oak_proto_rust::oak::attestation::v1::{
-    EndorsementReferenceValue, SignedEndorsement, t_log_reference_values::Strategy,
-};
+use oak_proto_rust::oak::attestation::v1::{EndorsementReferenceValue, SignedEndorsement};
 use verify_endorsement::{
-    create_endorsement_reference_value, create_signed_endorsement, create_tlog_reference_values,
-    create_verifying_key_from_pem, verify_endorsement,
+    create_endorsement_reference_value, create_signed_endorsement,
+    create_tlog_reference_values_all, create_verifying_key_from_pem, verify_endorsement,
 };
 
 // Due to key rotation the endorser key set could contain multiple verifying
@@ -113,12 +111,8 @@ impl Package {
             self.rekor_public_key.as_ref().map(|pem| create_verifying_key_from_pem(pem, KEY_ID));
         // TODO: b/495419687 - Need to pass PES reference value to
         // create_endorsement_reference_value.
-        let tlog = create_tlog_reference_values(
-            Strategy::All(()),
-            rekor_key.clone(),
-            self.c2sp_policy.clone(),
-        );
-        create_endorsement_reference_value(endorser_key, claim_types, rekor_key, Some(tlog))
+        let tlog = create_tlog_reference_values_all(rekor_key, self.c2sp_policy.clone());
+        create_endorsement_reference_value(endorser_key, claim_types, tlog)
     }
 
     /// Verifies the endorsement package.

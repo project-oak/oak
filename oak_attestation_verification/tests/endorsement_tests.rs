@@ -16,9 +16,7 @@
 
 use oak_attestation_verification::verify_endorsement;
 use oak_digest::raw_to_hex_digest;
-use oak_proto_rust::oak::attestation::v1::{
-    SkipVerification, VerifyingKeyReferenceValue, verifying_key_reference_value,
-};
+use oak_proto_rust::oak::attestation::v1::SkipVerification;
 use oak_time::{Duration, Instant};
 use test_util::endorsement_data::EndorsementData;
 
@@ -209,19 +207,8 @@ fn test_verify_endorsement_fails_with_wrong_endorser_key_id() {
 fn test_verify_endorsement_fails_with_empty_rekor_key() {
     let mut d = EndorsementData::load();
 
-    #[allow(deprecated)]
-    let key_set = match d
-        .ref_value
-        .rekor
-        .as_mut()
-        .expect("no verifying key reference value")
-        .r#type
-        .as_mut()
-        .expect("no key set")
-    {
-        verifying_key_reference_value::Type::Verify(ks) => ks,
-        _ => panic!("wrong reference value type"),
-    };
+    let tlog = d.ref_value.tlog.as_mut().expect("no tlog reference value");
+    let key_set = tlog.rekor.as_mut().expect("no rekor key set");
 
     key_set.keys.remove(0);
 
@@ -237,19 +224,8 @@ fn test_verify_endorsement_fails_with_empty_rekor_key() {
 fn test_verify_endorsement_fails_with_invalid_rekor_key() {
     let mut d = EndorsementData::load();
 
-    #[allow(deprecated)]
-    let key_set = match d
-        .ref_value
-        .rekor
-        .as_mut()
-        .expect("no verifying key reference value")
-        .r#type
-        .as_mut()
-        .expect("no key set")
-    {
-        verifying_key_reference_value::Type::Verify(ks) => ks,
-        _ => panic!("wrong reference value type"),
-    };
+    let tlog = d.ref_value.tlog.as_mut().expect("no tlog reference value");
+    let key_set = tlog.rekor.as_mut().expect("no rekor key set");
 
     key_set.keys[0].raw[0] ^= 1;
 
@@ -280,11 +256,15 @@ fn test_verify_endorsement_fails_with_rekor_key_but_no_log_entry() {
 }
 
 #[test]
-#[allow(deprecated)]
 fn test_verify_endorsement_fails_with_no_rekor_reference_value() {
     let mut d = EndorsementData::load();
 
-    d.ref_value.rekor = None;
+    // Unset rekor and change the strategy to `Any` to ensure that it fails
+    // when nothing is populated.
+    let tlog = d.ref_value.tlog.as_mut().expect("no tlog");
+    tlog.rekor = None;
+    tlog.strategy =
+        Some(oak_proto_rust::oak::attestation::v1::t_log_reference_values::Strategy::Any(()));
 
     let result = verify_endorsement(
         d.make_valid_time().into_unix_millis(),
@@ -295,16 +275,16 @@ fn test_verify_endorsement_fails_with_no_rekor_reference_value() {
 }
 
 #[test]
-#[allow(deprecated)]
 fn test_verify_endorsement_succeeds_with_no_log_entry_and_no_rekor_key() {
     let mut d = EndorsementData::load();
 
-    d.ref_value.rekor = Some(VerifyingKeyReferenceValue {
-        r#type: Some(
-            oak_proto_rust::oak::attestation::v1::verifying_key_reference_value::Type::Skip(
+    d.ref_value.tlog = Some(oak_proto_rust::oak::attestation::v1::TLogReferenceValues {
+        strategy: Some(
+            oak_proto_rust::oak::attestation::v1::t_log_reference_values::Strategy::Skip(
                 SkipVerification {},
             ),
         ),
+        ..Default::default()
     });
     d.signed_endorsement.rekor_log_entry.clear();
 
