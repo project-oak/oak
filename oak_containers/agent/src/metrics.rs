@@ -129,7 +129,7 @@ fn add_base_metrics(observer: &mut OakObserver, handle: tokio::runtime::Handle) 
     observer.register_metric(
         observer
             .meter
-            .u64_observable_counter("tokio_workers_count")
+            .u64_observable_gauge("tokio_workers_count")
             .with_description("Number of worker threads used by the runtime")
             .with_callback({
                 let metrics = handle.metrics().clone();
@@ -145,7 +145,7 @@ fn add_base_metrics(observer: &mut OakObserver, handle: tokio::runtime::Handle) 
     observer.register_metric(
         observer
             .meter
-            .u64_observable_counter("tokio_blocking_threads_count")
+            .u64_observable_gauge("tokio_blocking_threads_count")
             .with_description("Number of additional threads used by the runtime")
             .with_callback({
                 let metrics = handle.metrics().clone();
@@ -161,7 +161,7 @@ fn add_base_metrics(observer: &mut OakObserver, handle: tokio::runtime::Handle) 
     observer.register_metric(
         observer
             .meter
-            .u64_observable_counter("tokio_active_tasks")
+            .u64_observable_gauge("tokio_active_tasks")
             .with_description("Number of active tasks in the runtime")
             .with_callback({
                 let metrics = handle.metrics().clone();
@@ -177,7 +177,7 @@ fn add_base_metrics(observer: &mut OakObserver, handle: tokio::runtime::Handle) 
     observer.register_metric(
         observer
             .meter
-            .u64_observable_counter("tokio_injection_queue_depth")
+            .u64_observable_gauge("tokio_injection_queue_depth")
             .with_description("Number of tasks currently in the runtime's injection queue")
             .with_callback({
                 let metrics = handle.metrics().clone();
@@ -193,7 +193,7 @@ fn add_base_metrics(observer: &mut OakObserver, handle: tokio::runtime::Handle) 
     observer.register_metric(
         observer
             .meter
-            .u64_observable_counter("tokio_worker_local_queue_depth")
+            .u64_observable_gauge("tokio_worker_local_queue_depth")
             .with_description("Number of tasks currently scheduled in the workers' local queue")
             .with_callback({
                 let metrics = handle.metrics().clone();
