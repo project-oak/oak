@@ -81,6 +81,8 @@ TlsOverGrpcServiceImpl::TlsOverGrpcServiceImpl(
 grpc::Status TlsOverGrpcServiceImpl::TlsSession(
     grpc::ServerContext* context,
     grpc::ServerReaderWriter<TlsSessionResponse, TlsSessionRequest>* stream) {
+  stream->SendInitialMetadata();
+
   // Use NewInitializedSession with blocking send/receive callbacks.
   absl::StatusOr<InitializedSession> initialized_session =
       context_->NewInitializedSession(

@@ -115,13 +115,24 @@ void RunClient() {
   stream->Write(request);
 
   // Read the response from the server.
-  TlsSessionResponse response;
-  if (!stream->Read(&response)) {
-    LOG(FATAL) << "Stream closed unexpectedly while waiting for response";
-  }
+  std::string decrypted_message;
+  // Loop until we receive non-empty application data. session->Decrypt may
+  // return empty data if it processed a post-handshake TLS control frame
+  // (e.g., a session ticket).
+  while (decrypted_message.empty()) {
+    TlsSessionResponse response;
+    if (!stream->Read(&response)) {
+      LOG(FATAL) << "Stream closed unexpectedly while waiting for response";
+    }
 
-  absl::StatusOr<std::string> decrypted_message =
-      session->Decrypt(response.frame());
+    absl::StatusOr<std::string> status_or_decrypted =
+        session->Decrypt(response.frame());
+    if (!status_or_decrypted.ok()) {
+      LOG(FATAL) << "Failed to decrypt message: "
+                 << status_or_decrypted.status();
+    }
+    decrypted_message = *status_or_decrypted;
+  }
   LOG(INFO) << "Received: " << decrypted_message;
 
   LOG(INFO) << "Completing session...";
