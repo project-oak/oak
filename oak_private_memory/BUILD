@@ -393,4 +393,7 @@ app_bundle(
             ]
         }
     """],
+    process_rlimits = [
+        '{"type":"RLIMIT_NOFILE","hard":524288,"soft":524288}',
+    ],
 )

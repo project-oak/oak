@@ -36,13 +36,7 @@
                 "CAP_NET_BIND_SERVICE"
             ]
         },
-        "rlimits": [
-            {
-                "type": "RLIMIT_NOFILE",
-                "hard": 1024,
-                "soft": 1024
-            }
-        ],
+        "rlimits": {{PROCESS_RLIMITS}},
         "noNewPrivileges": true
     },
     "root": {

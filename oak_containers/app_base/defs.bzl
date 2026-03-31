@@ -28,6 +28,9 @@ DEFAULT_ENV = {
     "HOME": "/root",
 }
 
+# Default rlimits matching the OCI runtime spec defaults.
+DEFAULT_PROCESS_RLIMITS_JSON = '[{"type":"RLIMIT_NOFILE","hard":1024,"soft":1024}]'
+
 def _oak_app_config_impl(ctx):
     out = ctx.actions.declare_file(ctx.label.name + ".json")
 
@@ -47,6 +50,13 @@ def _oak_app_config_impl(ctx):
         # Prepend a comma because we're injecting into the end of an array
         extra_mounts_str = ",\n        " + ",\n        ".join(ctx.attr.extra_mounts)
 
+    # Build the rlimits JSON array from the process_rlimits attribute.
+    # Each entry is a JSON object string. If not specified, use the defaults.
+    if ctx.attr.process_rlimits:
+        rlimits_json = "[" + ",".join(ctx.attr.process_rlimits) + "]"
+    else:
+        rlimits_json = DEFAULT_PROCESS_RLIMITS_JSON
+
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = out,
@@ -55,6 +65,7 @@ def _oak_app_config_impl(ctx):
             "{{ENV}}": env_json,
             "{{ROOT_PATH}}": ctx.attr.root_path,
             "{{EXTRA_MOUNTS}}": extra_mounts_str,
+            "{{PROCESS_RLIMITS}}": rlimits_json,
         },
     )
     return [DefaultInfo(files = depset([out]))]
@@ -73,6 +84,9 @@ oak_app_config = rule(
             doc = "The directory containing the root filesystem inside the bundle.",
         ),
         "extra_mounts": attr.string_list(doc = "List of extra JSON mount strings to include in config.json."),
+        "process_rlimits": attr.string_list(
+            doc = "List of rlimit JSON object strings. Each entry should be a JSON object with 'type', 'hard', and 'soft' keys. If empty, defaults to RLIMIT_NOFILE 1024/1024.",
+        ),
     },
     doc = "Generates a based Oak Containers-compatible config.json file.",
 )
@@ -86,6 +100,7 @@ def _app_bundle_impl(
         entrypoint_path,
         root_path,
         extra_mounts,
+        process_rlimits,
         **kwargs):
     binary_name = paths.basename(binary.name)
 
@@ -107,6 +122,7 @@ def _app_bundle_impl(
         env = env,
         root_path = root_path,
         extra_mounts = extra_mounts,
+        process_rlimits = process_rlimits,
     )
 
     pkg_files(
@@ -185,6 +201,10 @@ The tarball contains:
         ),
         "extra_mounts": attr.string_list(
             doc = "List of extra mounts as JSON strings to add to the container config.json.",
+            configurable = False,
+        ),
+        "process_rlimits": attr.string_list(
+            doc = "List of rlimit JSON object strings with 'type', 'hard', and 'soft' keys. Overrides the default RLIMIT_NOFILE 1024/1024.",
             configurable = False,
         ),
         "tars": None,

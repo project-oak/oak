@@ -75,6 +75,32 @@ class TestConfig(unittest.TestCase):
     self.assertIn("/dev", destinations)
     self.assertIn("/sys", destinations)
 
+  def test_default_rlimits(self):
+    config_path = os.environ.get("CONFIG_JSON_PATH")
+    self.assertTrue(config_path and os.path.exists(config_path))
+
+    with open(config_path, "r") as f:
+      config = json.load(f)
+
+    rlimits = config["process"]["rlimits"]
+    self.assertEqual(len(rlimits), 1)
+    self.assertEqual(rlimits[0]["type"], "RLIMIT_NOFILE")
+    self.assertEqual(rlimits[0]["hard"], 1024)
+    self.assertEqual(rlimits[0]["soft"], 1024)
+
+  def test_custom_rlimits(self):
+    config_path = os.environ.get("CUSTOM_RLIMITS_CONFIG_PATH")
+    self.assertTrue(config_path and os.path.exists(config_path))
+
+    with open(config_path, "r") as f:
+      config = json.load(f)
+
+    rlimits = config["process"]["rlimits"]
+    self.assertEqual(len(rlimits), 1)
+    self.assertEqual(rlimits[0]["type"], "RLIMIT_NOFILE")
+    self.assertEqual(rlimits[0]["hard"], 65536)
+    self.assertEqual(rlimits[0]["soft"], 65536)
+
 
 if __name__ == "__main__":
   # Filter out Bazel-specific arguments like --nocapture that unittest doesn't recognize

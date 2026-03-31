@@ -66,6 +66,14 @@ oak_app_config(
     """],
 )
 
+oak_app_config(
+    name = "custom_rlimits_config_json",
+    args = ["/bin/true"],
+    process_rlimits = [
+        '{"type":"RLIMIT_NOFILE","hard":65536,"soft":65536}',
+    ],
+)
+
 app_bundle(
     name = "test_bundle",
     args = [
@@ -80,12 +88,14 @@ py_test(
     name = "test_config",
     srcs = ["test_config.py"],
     data = [
+        ":custom_rlimits_config_json",
         ":custom_root_config_json",
         ":extra_mounts_config_json",
         ":test_config_json",
     ],
     env = {
         "CONFIG_JSON_PATH": "$(location :test_config_json)",
+        "CUSTOM_RLIMITS_CONFIG_PATH": "$(location :custom_rlimits_config_json)",
         "CUSTOM_ROOT_CONFIG_PATH": "$(location :custom_root_config_json)",
         "EXTRA_MOUNTS_CONFIG_PATH": "$(location :extra_mounts_config_json)",
     },
