@@ -31,6 +31,8 @@ namespace {
 
 using ::oak::attestation::v1::AmdSevSnpEndorsement;
 using ::oak::attestation::v1::ApplicationEndorsement;
+using ::oak::attestation::v1::CbLayer1TransparentEndorsement;
+using ::oak::attestation::v1::CbLayer2TransparentEndorsement;
 using ::oak::attestation::v1::ContainerEndorsement;
 using ::oak::attestation::v1::FirmwareEndorsement;
 using ::oak::attestation::v1::KernelEndorsement;
@@ -101,6 +103,18 @@ Variant ToVariant<ApplicationEndorsement>(
 }
 
 template <>
+Variant ToVariant<CbLayer1TransparentEndorsement>(
+    const CbLayer1TransparentEndorsement& message) {
+  return CreateVariant(internal::kCbLayer1TransparentEndorsementUuid, message);
+}
+
+template <>
+Variant ToVariant<CbLayer2TransparentEndorsement>(
+    const CbLayer2TransparentEndorsement& message) {
+  return CreateVariant(internal::kCbLayer2TransparentEndorsementUuid, message);
+}
+
+template <>
 std::optional<AmdSevSnpEndorsement> FromVariant(const Variant& variant) {
   return ParseVariant<AmdSevSnpEndorsement>(
       internal::kAmdSevSnpPlatformEndorsementUuid, variant);
@@ -134,6 +148,20 @@ template <>
 std::optional<ApplicationEndorsement> FromVariant(const Variant& variant) {
   return ParseVariant<ApplicationEndorsement>(
       internal::kApplicationEndorsementUuid, variant);
+}
+
+template <>
+std::optional<CbLayer1TransparentEndorsement> FromVariant(
+    const Variant& variant) {
+  return ParseVariant<CbLayer1TransparentEndorsement>(
+      internal::kCbLayer1TransparentEndorsementUuid, variant);
+}
+
+template <>
+std::optional<CbLayer2TransparentEndorsement> FromVariant(
+    const Variant& variant) {
+  return ParseVariant<CbLayer2TransparentEndorsement>(
+      internal::kCbLayer2TransparentEndorsementUuid, variant);
 }
 
 }  // namespace oak

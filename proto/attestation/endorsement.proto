@@ -220,6 +220,18 @@ message ContainerEndorsement {
   SignedEndorsement configuration = 2;
 }
 
+// Event endorsement for the layer matching `CbLayer1TransparentEvent`.
+message CbLayer1TransparentEndorsement {
+  // Endorsement of a serialized proto containing measurements for CB layer 1.
+  SignedEndorsement runtime_agent = 1;
+}
+
+// Event endorsement for the layer matching `CbLayer2TransparentEvent`.
+message CbLayer2TransparentEndorsement {
+  // Endorsement of the binary MPM running on CB.
+  SignedEndorsement binary_mpm = 1;
+}
+
 // Endorsement for a public key used to verify that an encrypted session is
 // bound to the enclave's evidence.
 // Next ID: 4

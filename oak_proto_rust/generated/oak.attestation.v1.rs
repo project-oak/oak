@@ -311,6 +311,20 @@ pub struct ContainerEndorsement {
     #[prost(message, optional, tag = "2")]
     pub configuration: ::core::option::Option<SignedEndorsement>,
 }
+/// Event endorsement for the layer matching `CbLayer1TransparentEvent`.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CbLayer1TransparentEndorsement {
+    /// Endorsement of a serialized proto containing measurements for CB layer 1.
+    #[prost(message, optional, tag = "1")]
+    pub runtime_agent: ::core::option::Option<SignedEndorsement>,
+}
+/// Event endorsement for the layer matching `CbLayer2TransparentEvent`.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CbLayer2TransparentEndorsement {
+    /// Endorsement of the binary MPM running on CB.
+    #[prost(message, optional, tag = "1")]
+    pub binary_mpm: ::core::option::Option<SignedEndorsement>,
+}
 /// Endorsement for a public key used to verify that an encrypted session is
 /// bound to the enclave's evidence.
 /// Next ID: 4
@@ -813,6 +827,8 @@ pub struct CbLayer1TransparentEvent {
 pub struct CbLayer2TransparentEvent {
     /// The packages running on CB. This includes the server-binary that is being
     /// deployed on CB.
+    ///
+    /// TODO: b/493160251 - Specify the order. Is at least the main MPM first?
     #[prost(message, repeated, tag = "1")]
     pub packages: ::prost::alloc::vec::Vec<MpmPackage>,
 }
@@ -1444,6 +1460,29 @@ pub struct CbReferenceValues {
     #[prost(message, repeated, tag = "5")]
     pub layers: ::prost::alloc::vec::Vec<EventReferenceValues>,
 }
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CbLayer1TransparentReferenceValues {
+    #[prost(message, optional, tag = "1")]
+    pub runtime_agent: ::core::option::Option<BinaryReferenceValue>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CbLayer2TransparentReferenceValues {
+    #[prost(message, optional, tag = "1")]
+    pub binary_mpm: ::core::option::Option<BinaryReferenceValue>,
+}
+/// Verifies a transparent CB evidence, i.e. uses the `transparent_event_log`
+/// branch in the associated `Evidence` proto.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CbTransparentReferenceValues {
+    #[prost(message, optional, tag = "1")]
+    pub root_layer: ::core::option::Option<RootLayerReferenceValues>,
+    #[prost(message, optional, tag = "2")]
+    pub kernel_layer: ::core::option::Option<KernelLayerReferenceValues>,
+    #[prost(message, optional, tag = "3")]
+    pub layer1: ::core::option::Option<CbLayer1TransparentReferenceValues>,
+    #[prost(message, optional, tag = "4")]
+    pub layer2: ::core::option::Option<CbLayer2TransparentReferenceValues>,
+}
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CertificateBasedReferenceValues {
     #[prost(message, optional, tag = "1")]
@@ -1486,7 +1525,7 @@ pub mod confidential_space_reference_values {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ReferenceValues {
-    #[prost(oneof = "reference_values::Type", tags = "1, 2, 3, 4, 5")]
+    #[prost(oneof = "reference_values::Type", tags = "1, 2, 3, 4, 5, 6")]
     pub r#type: ::core::option::Option<reference_values::Type>,
 }
 /// Nested message and enum types in `ReferenceValues`.
@@ -1505,6 +1544,8 @@ pub mod reference_values {
         CertificateBased(super::CertificateBasedReferenceValues),
         #[prost(message, tag = "5")]
         ConfidentialSpace(super::ConfidentialSpaceReferenceValues),
+        #[prost(message, tag = "6")]
+        Cbt(super::CbTransparentReferenceValues),
     }
 }
 #[derive(Clone, PartialEq, ::prost::Message)]

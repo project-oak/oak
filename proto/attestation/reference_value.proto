@@ -482,6 +482,23 @@ message CBReferenceValues {
   repeated EventReferenceValues layers = 5;
 }
 
+message CbLayer1TransparentReferenceValues {
+  BinaryReferenceValue runtime_agent = 1;
+}
+
+message CbLayer2TransparentReferenceValues {
+  BinaryReferenceValue binary_mpm = 1;
+}
+
+// Verifies a transparent CB evidence, i.e. uses the `transparent_event_log`
+// branch in the associated `Evidence` proto.
+message CbTransparentReferenceValues {
+  RootLayerReferenceValues root_layer = 1;
+  KernelLayerReferenceValues kernel_layer = 2;
+  CbLayer1TransparentReferenceValues layer1 = 3;
+  CbLayer2TransparentReferenceValues layer2 = 4;
+}
+
 message CertificateBasedReferenceValues {
   CertificateAuthorityReferenceValue ca = 1;
 }
@@ -517,6 +534,7 @@ message ReferenceValues {
     CBReferenceValues cb = 3 [deprecated = true];
     CertificateBasedReferenceValues certificate_based = 4;
     ConfidentialSpaceReferenceValues confidential_space = 5;
+    CbTransparentReferenceValues cbt = 6;
   }
 }
 

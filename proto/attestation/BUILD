@@ -112,6 +112,30 @@ java_lite_proto_library(
 )
 
 proto_library(
+    name = "eventlog_proto",
+    srcs = ["eventlog.proto"],
+    deps = [
+        "//proto:digest_proto",
+        "@com_google_protobuf//:any_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "eventlog_cc_proto",
+    deps = [":eventlog_proto"],
+)
+
+java_proto_library(
+    name = "eventlog_java_proto",
+    deps = [":eventlog_proto"],
+)
+
+java_lite_proto_library(
+    name = "eventlog_java_proto_lite",
+    deps = [":eventlog_proto"],
+)
+
+proto_library(
     name = "evidence_proto",
     srcs = ["evidence.proto"],
     deps = [":eventlog_proto"],
@@ -171,6 +195,16 @@ java_lite_proto_library(
 )
 
 proto_library(
+    name = "service_proto",
+    srcs = ["service.proto"],
+    deps = [
+        ":endorsement_proto",
+        ":evidence_proto",
+        "@com_google_protobuf//:empty_proto",
+    ],
+)
+
+proto_library(
     name = "tcb_version_proto",
     srcs = ["tcb_version.proto"],
 )
@@ -213,40 +247,6 @@ java_lite_proto_library(
     deps = [":verification_proto"],
 )
 
-proto_library(
-    name = "eventlog_proto",
-    srcs = ["eventlog.proto"],
-    deps = [
-        "//proto:digest_proto",
-        "@com_google_protobuf//:any_proto",
-    ],
-)
-
-cc_proto_library(
-    name = "eventlog_cc_proto",
-    deps = [":eventlog_proto"],
-)
-
-java_proto_library(
-    name = "eventlog_java_proto",
-    deps = [":eventlog_proto"],
-)
-
-java_lite_proto_library(
-    name = "eventlog_java_proto_lite",
-    deps = [":eventlog_proto"],
-)
-
-proto_library(
-    name = "service_proto",
-    srcs = ["service.proto"],
-    deps = [
-        ":endorsement_proto",
-        ":evidence_proto",
-        "@com_google_protobuf//:empty_proto",
-    ],
-)
-
 build_test(
     name = "build_test",
     targets = [
@@ -263,6 +263,7 @@ build_test(
         ":dice_java_proto",
         ":eventlog_proto",
         ":eventlog_cc_proto",
+        ":eventlog_java_proto",
         ":endorsement_proto",
         ":endorsement_cc_proto",
         ":endorsement_java_proto",
@@ -272,6 +273,7 @@ build_test(
         ":reference_value_proto",
         ":reference_value_cc_proto",
         ":reference_value_java_proto",
+        ":service_proto",
         ":tcb_version_proto",
         ":tcb_version_cc_proto",
         ":tcb_version_java_proto",

@@ -37,6 +37,8 @@ message CbLayer1TransparentEvent {
 message CbLayer2TransparentEvent {
   // The packages running on CB. This includes the server-binary that is being
   // deployed on CB.
+  //
+  // TODO: b/493160251 - Specify the order. Is at least the main MPM first?
   repeated MpmPackage packages = 1;
 }
 

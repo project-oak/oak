@@ -895,6 +895,36 @@ pub fn serialize_cb_reference_values(instance: &CbReferenceValues) -> serde_json
     })
 }
 
+pub fn serialize_cb_layer1_transparent_reference_values(
+    instance: &CbLayer1TransparentReferenceValues,
+) -> serde_json::Value {
+    let CbLayer1TransparentReferenceValues { runtime_agent } = instance;
+    json!({
+        "runtime_agent": runtime_agent.as_ref().map(serialize_binary_reference_value),
+    })
+}
+
+pub fn serialize_cb_layer2_transparent_reference_values(
+    instance: &CbLayer2TransparentReferenceValues,
+) -> serde_json::Value {
+    let CbLayer2TransparentReferenceValues { binary_mpm } = instance;
+    json!({
+        "binary_mpm": binary_mpm.as_ref().map(serialize_binary_reference_value),
+    })
+}
+
+pub fn serialize_cb_transparent_reference_values(
+    instance: &CbTransparentReferenceValues,
+) -> serde_json::Value {
+    let CbTransparentReferenceValues { root_layer, kernel_layer, layer1, layer2 } = instance;
+    json!({
+        "root_layer": root_layer.as_ref().map(serialize_root_layer_reference_values),
+        "kernel_layer": kernel_layer.as_ref().map(serialize_kernel_layer_reference_values),
+        "layer1": layer1.as_ref().map(serialize_cb_layer1_transparent_reference_values),
+        "layer2": layer2.as_ref().map(serialize_cb_layer2_transparent_reference_values),
+    })
+}
+
 pub fn serialize_certificate_based_reference_values(
     instance: &CertificateBasedReferenceValues,
 ) -> serde_json::Value {
@@ -974,6 +1004,9 @@ pub fn serialize_reference_values(instance: &ReferenceValues) -> serde_json::Val
         }
         Some(reference_values::Type::ConfidentialSpace(instance)) => {
             json!({ "confidential_space": serialize_confidential_space_reference_values(instance) })
+        }
+        Some(reference_values::Type::Cbt(instance)) => {
+            json!({ "cbt": serialize_cb_transparent_reference_values(instance) })
         }
         None => json!(null),
     }
