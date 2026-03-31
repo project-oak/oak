@@ -15,4 +15,5 @@ export BUILD_COMMAND=(
 
 export SUBJECT_PATHS=(
   artifacts/binaries/oak_containers_system_image.tar.xz
+  artifacts/jemalloc/libjemalloc.a
 )
