@@ -205,7 +205,7 @@ mod tests {
 
     #[test]
     fn test_map_clear() {
-        let mut benchmark = HashMapBenchmark::with_defaults(10, 42);
+        let mut benchmark = HashMapBenchmark::with_defaults(10u32, 42u64);
 
         // Initially empty
         assert!(benchmark.map.is_empty());
