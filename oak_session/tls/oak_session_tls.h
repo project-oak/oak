@@ -24,6 +24,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "openssl/base.h"
+#include "openssl/ssl.h"
 
 namespace oak::session::tls {
 
