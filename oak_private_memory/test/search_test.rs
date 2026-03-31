@@ -1355,3 +1355,131 @@ fn test_search_memories_v2_sort_embedding_uses_max_view_score() -> anyhow::Resul
 
     Ok(())
 }
+
+#[gtest]
+fn test_search_memories_v2_sort_embedding_tiebreaker_for_missing_embeddings() -> anyhow::Result<()>
+{
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-emb-missing-tiebreak-test"))?;
+
+    // 1. Has embedding, exact match (score 1.0). Timestamp doesn't matter (10).
+    let mut m1 = mem_embedded("tiebreak1", &[1.0, 0.0, 0.0]);
+    m1.created_timestamp = ts(10);
+    db.add_memory(&m1, "blob1".into())?;
+
+    // 2. Has embedding, partial match (score 0.1). Timestamp doesn't matter (999).
+    let mut m2 = mem_embedded("tiebreak2", &[0.1, 0.9, 0.0]);
+    m2.created_timestamp = ts(999);
+    db.add_memory(&m2, "blob2".into())?;
+
+    // 3. No embedding, older ts (100)
+    let mut m3 = mem_tagged("tiebreak3", &["tag"]);
+    m3.created_timestamp = ts(100);
+    db.add_memory(&m3, "blob3".into())?;
+
+    // 4. No embedding, newer ts (300)
+    let mut m4 = mem_tagged("tiebreak4", &["tag"]);
+    m4.created_timestamp = ts(300);
+    db.add_memory(&m4, "blob4".into())?;
+
+    // 5. No embedding, middle ts (200)
+    let mut m5 = mem_tagged("tiebreak5", &["tag"]);
+    m5.created_timestamp = ts(200);
+    db.add_memory(&m5, "blob5".into())?;
+
+    let req = SearchMemoriesRequest {
+        sort: vec![SearchMemoriesSort {
+            sort: Some(SortValue::EmbeddingSort(EmbeddingSort {
+                order: SortOrder::OrderDescending as i32,
+                embedding: Some(Embedding {
+                    model_signature: "test_model".to_string(),
+                    values: vec![1.0, 0.0, 0.0],
+                }),
+                view_type: "".to_string(),
+            })),
+        }],
+        page_size: 10,
+        ..Default::default()
+    };
+
+    // Expected order: blob1 (score 1.0), blob2 (score 0.1), then missing embeddings
+    // sorted by ts DESC: blob4 (300), blob5 (200), blob3 (100)
+    assert_that!(
+        search_blob_ids(&db, &req)?,
+        elements_are![eq("blob1"), eq("blob2"), eq("blob4"), eq("blob5"), eq("blob3")]
+    );
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_sort_embedding_ignores_timestamp_for_score() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-emb-ts-ignore-test"))?;
+
+    // m1: very old, but slightly higher embedding score (0.9 vs 1.0 = 0.9)
+    let mut m1 = mem_embedded("m1", &[0.9, 0.1, 0.0]);
+    m1.created_timestamp = ts(10);
+    db.add_memory(&m1, "blob1".into())?;
+
+    // m2: very recent, but slightly lower embedding score (0.89 vs 1.0 = 0.89)
+    let mut m2 = mem_embedded("m2", &[0.89, 0.11, 0.0]);
+    m2.created_timestamp = ts(2_000_000_000);
+    db.add_memory(&m2, "blob2".into())?;
+
+    // m3: old, with no embedding at all.
+    let mut m3 = mem_tagged("m3", &["tag"]);
+    m3.created_timestamp = ts(500);
+    db.add_memory(&m3, "blob3".into())?;
+
+    // m4: even more recent, with no embedding at all.
+    let mut m4 = mem_tagged("m4", &["tag"]);
+    m4.created_timestamp = ts(10_000_000_000);
+    db.add_memory(&m4, "blob4".into())?;
+
+    let req = SearchMemoriesRequest {
+        sort: vec![SearchMemoriesSort {
+            sort: Some(SortValue::EmbeddingSort(EmbeddingSort {
+                order: SortOrder::OrderDescending as i32,
+                embedding: Some(Embedding {
+                    model_signature: "test_model".to_string(),
+                    values: vec![1.0, 0.0, 0.0],
+                }),
+                view_type: "".to_string(),
+            })),
+        }],
+        page_size: 10,
+        ..Default::default()
+    };
+
+    // Score should absolutely dominate the timestamp tiebreaker, so m1 (old but
+    // higher score) should rank first.
+    assert_that!(
+        search_blob_ids(&db, &req)?,
+        elements_are![eq("blob1"), eq("blob2"), eq("blob4"), eq("blob3")]
+    );
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_sort_embedding_ascending_throws_error() -> anyhow::Result<()> {
+    let db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-emb-asc-test"))?;
+
+    let req = SearchMemoriesRequest {
+        sort: vec![SearchMemoriesSort {
+            sort: Some(SortValue::EmbeddingSort(EmbeddingSort {
+                order: SortOrder::OrderAscending as i32,
+                embedding: Some(Embedding {
+                    model_signature: "test_model".to_string(),
+                    values: vec![1.0, 0.0, 0.0],
+                }),
+                view_type: "".to_string(),
+            })),
+        }],
+        page_size: 10,
+        ..Default::default()
+    };
+
+    assert_that!(db.search_memories(&req), err(anything()));
+
+    Ok(())
+}

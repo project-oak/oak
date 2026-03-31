@@ -1449,6 +1449,10 @@ impl IcingMetaDatabase {
     ) -> anyhow::Result<icing::ScoringSpecProto> {
         let embedding = sort.embedding.as_ref().context("EmbeddingSort.embedding is required")?;
 
+        if sort.order() == SortOrder::OrderAscending {
+            bail!("Ascending embedding order currently not implemented");
+        }
+
         let mut query_string = "semanticSearch(getEmbeddingParameter(0))".to_string();
         if !sort.view_type.is_empty() {
             query_string = format!("({}:{}) AND {}", VIEW_TYPE_NAME, sort.view_type, query_string);
@@ -1457,9 +1461,6 @@ impl IcingMetaDatabase {
         search_spec.join_spec = Some(Box::new(icing::JoinSpecProto {
             parent_property_expression: Some("this.qualifiedId()".to_string()),
             child_property_expression: Some(MEMORY_QUALIFIED_ID_NAME.to_string()),
-            aggregation_scoring_strategy: Some(
-                icing::join_spec_proto::aggregation_scoring_strategy::Code::Max.into(),
-            ),
             nested_spec: Some(Box::new(icing::join_spec_proto::NestedSpecProto {
                 search_spec: Some(Box::new(icing::SearchSpecProto {
                     query: Some(query_string),
@@ -1489,17 +1490,18 @@ impl IcingMetaDatabase {
             ..Default::default()
         }));
 
-        let order_by = if sort.order() == SortOrder::OrderAscending {
-            Some(icing::scoring_spec_proto::order::Code::Asc.into())
-        } else {
-            Some(icing::scoring_spec_proto::order::Code::Desc.into())
-        };
-
         let scoring_spec = icing::ScoringSpecProto {
             rank_by: Some(
-                icing::scoring_spec_proto::ranking_strategy::Code::JoinAggregateScore.into(),
+                icing::scoring_spec_proto::ranking_strategy::Code::AdvancedScoringExpression.into(),
             ),
-            order_by,
+            // We take the max of embedding scores and (creation time - 1e20).
+            // Since embedding scores are in the range 0-1, this ensures any memory
+            // with embeddings will be ranked above any memory without.
+            advanced_scoring_expression: Some(
+                "maxOrDefault(this.childrenRankingSignals(), this.creationTimestamp() - 1e20)"
+                    .to_string(),
+            ),
+            order_by: Some(icing::scoring_spec_proto::order::Code::Desc.into()),
             ..Default::default()
         };
 
