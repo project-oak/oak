@@ -1179,6 +1179,81 @@ fn test_search_memories_v2_embedding_filter_multiple_view_types() -> anyhow::Res
 }
 
 #[gtest]
+fn test_search_memories_v2_and_filter_embedding_and_tag() -> anyhow::Result<()> {
+    use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-and-filter-emb-tag-test"))?;
+
+    // m1: Passes both (has tag, matching embedding)
+    let mut m1 = mem_embedded("m1", &[1.0, 0.0, 0.0]);
+    m1.tags = vec!["target".to_string()];
+    db.add_memory(&m1, "blob1".into())?;
+
+    // m2: Has tag, but fails embedding filter
+    let mut m2 = mem_embedded("m2", &[0.0, 1.0, 0.0]);
+    m2.tags = vec!["target".to_string()];
+    db.add_memory(&m2, "blob2".into())?;
+
+    // m3: Lacks tag, but passes embedding filter
+    let mut m3 = mem_embedded("m3", &[1.0, 0.0, 0.0]);
+    m3.tags = vec!["other".to_string()];
+    db.add_memory(&m3, "blob3".into())?;
+
+    // m4: Fails both
+    let mut m4 = mem_embedded("m4", &[0.0, 1.0, 0.0]);
+    m4.tags = vec!["other".to_string()];
+    db.add_memory(&m4, "blob4".into())?;
+
+    let embedding_filter = SearchMemoriesFilter {
+        value: Some(Value::EmbeddingFilter(EmbeddingFilter {
+            embedding: Some(Embedding {
+                model_signature: "test_model".to_string(),
+                values: vec![1.0, 0.0, 0.0],
+            }),
+            minimum_score: 0.5,
+            view_type: "".to_string(),
+        })),
+    };
+
+    let req = filter_request(and_filter(vec![tag_filter("target"), embedding_filter]), 10);
+    assert_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob1")]);
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_multiple_embedding_filters_throws_error() -> anyhow::Result<()> {
+    let db = IcingMetaDatabase::new(IcingTempDir::new("v2-multiple-emb-err-test"))?;
+
+    let filter1 = SearchMemoriesFilter {
+        value: Some(FilterValue::EmbeddingFilter(EmbeddingFilter {
+            embedding: Some(Embedding {
+                model_signature: "test_model".to_string(),
+                values: vec![1.0, 0.0, 0.0],
+            }),
+            minimum_score: 0.5,
+            view_type: "type_a".to_string(),
+        })),
+    };
+
+    let filter2 = SearchMemoriesFilter {
+        value: Some(FilterValue::EmbeddingFilter(EmbeddingFilter {
+            embedding: Some(Embedding {
+                model_signature: "test_model".to_string(),
+                values: vec![0.0, 1.0, 0.0],
+            }),
+            minimum_score: 0.5,
+            view_type: "type_b".to_string(),
+        })),
+    };
+
+    let request = filter_request(and_filter(vec![filter1, filter2]), 10);
+
+    assert_that!(db.search_memories(&request), err(anything()));
+
+    Ok(())
+}
+
+#[gtest]
 fn test_search_memories_v2_no_filter() -> anyhow::Result<()> {
     let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-no-filter-no-embeddings-test"))?;
 
@@ -1480,6 +1555,82 @@ fn test_search_memories_v2_sort_embedding_ascending_throws_error() -> anyhow::Re
     };
 
     assert_that!(db.search_memories(&req), err(anything()));
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_filter_embedding_and_sort_embedding_throws_error() -> anyhow::Result<()>
+{
+    let db = IcingMetaDatabase::new(IcingTempDir::new("v2-filter-emb-sort-emb-err-test"))?;
+
+    let embedding =
+        Some(Embedding { model_signature: "test_model".to_string(), values: vec![1.0, 0.0, 0.0] });
+
+    let req = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(FilterValue::EmbeddingFilter(EmbeddingFilter {
+                embedding: embedding.clone(),
+                minimum_score: 0.5,
+                view_type: "".to_string(),
+            })),
+        }),
+        sort: vec![SearchMemoriesSort {
+            sort: Some(SortValue::EmbeddingSort(EmbeddingSort {
+                order: SortOrder::OrderDescending as i32,
+                embedding,
+                view_type: "".to_string(),
+            })),
+        }],
+        page_size: 10,
+        ..Default::default()
+    };
+
+    assert_that!(db.search_memories(&req), err(anything()));
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_filter_tag_and_sort_embedding() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-filter-tag-sort-emb-test"))?;
+
+    // m1: Exact match embedding, has "target" tag -> should be first
+    let mut m1 = mem_embedded("m1", &[1.0, 0.0, 0.0]);
+    m1.tags = vec!["target".to_string()];
+    db.add_memory(&m1, "blob1".into())?;
+
+    // m2: No embedding, has "target" tag -> should be third (last)
+    let m2 = mem_tagged("m2", &["target"]);
+    db.add_memory(&m2, "blob2".into())?;
+
+    // m3: Partial match embedding, has "target" tag -> should be second
+    let mut m3 = mem_embedded("m3", &[0.5, 0.5, 0.0]);
+    m3.tags = vec!["target".to_string()];
+    db.add_memory(&m3, "blob3".into())?;
+
+    // m4: Exact match embedding, but missing "target" tag -> should be filtered out
+    let mut m4 = mem_embedded("m4", &[1.0, 0.0, 0.0]);
+    m4.tags = vec!["other".to_string()];
+    db.add_memory(&m4, "blob4".into())?;
+
+    let req = SearchMemoriesRequest {
+        filter: Some(tag_filter("target")),
+        sort: vec![SearchMemoriesSort {
+            sort: Some(SortValue::EmbeddingSort(EmbeddingSort {
+                order: SortOrder::OrderDescending as i32,
+                embedding: Some(Embedding {
+                    model_signature: "test_model".to_string(),
+                    values: vec![1.0, 0.0, 0.0],
+                }),
+                view_type: "".to_string(),
+            })),
+        }],
+        page_size: 10,
+        ..Default::default()
+    };
+
+    assert_that!(search_blob_ids(&db, &req)?, elements_are![eq("blob1"), eq("blob3"), eq("blob2")]);
 
     Ok(())
 }

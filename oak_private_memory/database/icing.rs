@@ -1353,6 +1353,9 @@ impl IcingMetaDatabase {
 
         let scoring_spec = Self::build_search_memories_sort(&request.sort, &mut search_spec)?;
 
+        debug!("search_spec: {:?}", search_spec);
+        debug!("scoring_spec: {:?}", scoring_spec);
+
         let page_size = request.page_size;
 
         let page_token = PageToken::try_from(request.page_token.clone())
@@ -1365,6 +1368,8 @@ impl IcingMetaDatabase {
 
         let (search_result, next_page_token) =
             self.execute_search(&search_spec, &scoring_spec, page_size, page_token, projection)?;
+
+        debug!("search_result: {:?}", search_result);
 
         let mut search_result_ids = SearchResultIds::default();
         for result in &search_result.results {
@@ -1447,6 +1452,14 @@ impl IcingMetaDatabase {
         sort: &EmbeddingSort,
         search_spec: &mut icing::SearchSpecProto,
     ) -> anyhow::Result<icing::ScoringSpecProto> {
+        if let Some(query) = &search_spec.query {
+            if query.contains("getEmbeddingParameter") {
+                bail!(
+                    "Sorting and filtering by embedding at the same time currently not implemented"
+                );
+            }
+        }
+
         let embedding = sort.embedding.as_ref().context("EmbeddingSort.embedding is required")?;
 
         if sort.order() == SortOrder::OrderAscending {
@@ -1612,12 +1625,20 @@ impl IcingMetaDatabase {
     ) -> anyhow::Result<icing::SearchSpecProto> {
         ensure!(!filters.is_empty(), "composite filter must have at least one child");
         let mut sub_queries = Vec::new();
+        let mut embedding_filter_count = 0;
         let mut merged_features: Vec<String> = Vec::new();
         let mut merged_spec = icing::SearchSpecProto::default();
 
         for child_filter in filters {
             let child = self.build_search_memories_filter(&Some(child_filter.clone()))?;
             if let Some(q) = child.query {
+                if q.contains("getEmbeddingParameter") {
+                    embedding_filter_count += 1;
+                    ensure!(
+                        embedding_filter_count <= 1,
+                        "Multiple embedding filters not currently implemented"
+                    );
+                }
                 sub_queries.push(q);
             }
             for feat in child.enabled_features {
@@ -1633,6 +1654,12 @@ impl IcingMetaDatabase {
                 if !merged_spec.schema_type_filters.contains(&st) {
                     merged_spec.schema_type_filters.push(st);
                 }
+            }
+            if child.embedding_query_metric_type.is_some() {
+                merged_spec.embedding_query_metric_type = child.embedding_query_metric_type;
+            }
+            if !child.embedding_query_vectors.is_empty() {
+                merged_spec.embedding_query_vectors.extend(child.embedding_query_vectors);
             }
         }
 
