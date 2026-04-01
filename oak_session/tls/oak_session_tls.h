@@ -64,6 +64,13 @@ struct TlsIdentity {
   std::string cert_asn1;
 };
 
+// A custom certificate verifier callback.
+// Takes the full DER-encoded certificate chain as input.
+// Normal validation is performed first; if it succeeds, this callback is
+// invoked.
+using CustomCertVerifier =
+    std::function<absl::Status(const std::vector<std::string>& cert_chain)>;
+
 // Provider interface that returns a TlsIdentity.
 // Called each time a new session is created on the context.
 class TlsIdentityProvider {
@@ -82,6 +89,10 @@ struct ServerContextConfig {
   // If set, client verification mode will be enabled, and client verification
   // will be required.
   std::optional<std::string> client_trust_anchor_path;
+
+  // Optional custom certificate verifier. If provided, standard verification
+  // will occur first, followed by the custom verification logic.
+  std::optional<CustomCertVerifier> custom_cert_verifier;
 };
 
 // Parameters to configure OakSessionTlsContext for client behavior.
@@ -93,6 +104,10 @@ struct ClientContextConfig {
   // client's TLS identity. Enables mTLS mode, allowing the server to
   // request a certificate for verification.
   std::unique_ptr<TlsIdentityProvider> tls_identity_provider;
+
+  // Optional custom certificate verifier. If provided, standard verification
+  // will occur first, followed by the custom verification logic.
+  std::optional<CustomCertVerifier> custom_cert_verifier;
 };
 
 /**
@@ -137,15 +152,18 @@ class OakSessionTlsContext {
 
   OakSessionTlsContext(
       OakSessionTlsMode mode, bssl::UniquePtr<SSL_CTX> ssl_ctx,
-      std::unique_ptr<TlsIdentityProvider> tls_identity_provider)
+      std::unique_ptr<TlsIdentityProvider> tls_identity_provider,
+      std::optional<CustomCertVerifier> custom_cert_verifier)
       : mode_(mode),
         ssl_ctx_(std::move(ssl_ctx)),
-        tls_identity_provider_(std::move(tls_identity_provider)) {}
+        tls_identity_provider_(std::move(tls_identity_provider)),
+        custom_cert_verifier_(std::move(custom_cert_verifier)) {}
 
  private:
   OakSessionTlsMode mode_;
   bssl::UniquePtr<SSL_CTX> ssl_ctx_;
   std::unique_ptr<TlsIdentityProvider> tls_identity_provider_;
+  std::optional<CustomCertVerifier> custom_cert_verifier_;
 };
 
 /**
@@ -164,10 +182,12 @@ class OakSessionTlsContext {
 class OakSessionTlsInitializer {
  public:
   static absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> CreateServer(
-      SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity = nullptr);
+      SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity = nullptr,
+      const CustomCertVerifier* custom_cert_verifier = nullptr);
 
   static absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> CreateClient(
-      SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity = nullptr);
+      SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity = nullptr,
+      const CustomCertVerifier* custom_cert_verifier = nullptr);
 
   // Returns true if the handshake is complete.
   //
@@ -193,14 +213,20 @@ class OakSessionTlsInitializer {
 
  private:
   static absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> Create(
-      SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity = nullptr);
+      SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity = nullptr,
+      const CustomCertVerifier* custom_cert_verifier = nullptr);
   OakSessionTlsInitializer(bssl::UniquePtr<SSL> ssl, BIO* bio_read,
-                           BIO* bio_write)
-      : ssl_(std::move(ssl)), bio_read_(bio_read), bio_write_(bio_write) {};
+                           BIO* bio_write,
+                           std::optional<CustomCertVerifier> custom_verifier)
+      : ssl_(std::move(ssl)),
+        bio_read_(bio_read),
+        bio_write_(bio_write),
+        custom_verifier_(std::move(custom_verifier)) {};
   bssl::UniquePtr<SSL> ssl_;
   BIO* bio_read_;
   BIO* bio_write_;
   std::string initial_data_;
+  std::optional<CustomCertVerifier> custom_verifier_;
 };
 
 // Represents an open Oak Session (TLS) that can be used to encrypt and decrypt.

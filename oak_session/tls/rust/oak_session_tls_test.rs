@@ -151,12 +151,14 @@ async fn test_certificate_rotation_works() -> Result<(), Box<dyn std::error::Err
             }
         }),
         client_trust_anchor_der: None,
+        custom_cert_verifier: None,
     })
     .expect("failed to create server context");
 
     let client_ctx1 = OakSessionTlsClientContext::create(ClientContextConfig {
         server_trust_anchor_der: Some(ca_cert.clone()),
         tls_identity_provider: None,
+        custom_cert_verifier: None,
     })
     .expect("failed to create client context");
 
@@ -183,6 +185,7 @@ async fn test_certificate_rotation_works() -> Result<(), Box<dyn std::error::Err
     let client_ctx2 = OakSessionTlsClientContext::create(ClientContextConfig {
         server_trust_anchor_der: Some(ca_cert),
         tls_identity_provider: None,
+        custom_cert_verifier: None,
     })
     .expect("failed to create second client context");
 
@@ -204,6 +207,135 @@ async fn test_certificate_rotation_works() -> Result<(), Box<dyn std::error::Err
     Ok(())
 }
 
+#[derive(Debug)]
+struct MockVerifier {
+    fail: bool,
+}
+
+impl CustomCertVerifier for MockVerifier {
+    fn verify(
+        &self,
+        _end_entity: &CertificateDer<'_>,
+        _intermediates: &[CertificateDer<'_>],
+    ) -> Result<(), String> {
+        if self.fail { Err("Mock validation failed".to_string()) } else { Ok(()) }
+    }
+}
+
+#[tokio::test]
+async fn test_custom_verifier_success() -> Result<(), Box<dyn std::error::Error>> {
+    let pair =
+        TestSessionPair::create_with_verifier(None, Some(Box::new(MockVerifier { fail: false })));
+    let mut server = AsyncServer::spawn(pair.server_ctx);
+
+    let mut client = do_handshake(&mut server, &pair.client_ctx).await;
+
+    let msg = b"success test";
+    let encrypted = client.encrypt(msg)?;
+    let decrypted = server.decrypt(encrypted).await.unwrap();
+    assert_eq!(decrypted, msg);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_custom_verifier_failure() -> Result<(), Box<dyn std::error::Error>> {
+    let pair =
+        TestSessionPair::create_with_verifier(None, Some(Box::new(MockVerifier { fail: true })));
+    let ctx = pair.server_ctx;
+    let mut server = AsyncServer::spawn(ctx);
+
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(async {
+                do_handshake(&mut server, &pair.client_ctx).await;
+            })
+        });
+    }));
+
+    // The handshake should panic because do_handshake uses `.expect("client
+    // handshake failed")`. We expect it to fail if our mock verifier works.
+    assert!(result.is_err(), "Handshake should have failed due to custom verifier");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_custom_verifier_invalid_cert() -> Result<(), Box<dyn std::error::Error>> {
+    let untrusted_cert = load_test_cert("oak_session/tls/testing/test_untrusted.pem");
+    let server_cert = load_test_cert("oak_session/tls/testing/test_server.pem");
+    let server_key = load_test_key("oak_session/tls/testing/test_server.key");
+
+    let server_ctx = OakSessionTlsServerContext::create(ServerContextConfig {
+        tls_identity_provider: utils::create_static_cert_identity_provider(
+            server_key.clone_key(),
+            server_cert.clone(),
+        ),
+        client_trust_anchor_der: None,
+        custom_cert_verifier: None,
+    })?;
+
+    // Client trusts untrusted_cert (so server_cert is invalid to it)
+    let client_ctx = OakSessionTlsClientContext::create(ClientContextConfig {
+        server_trust_anchor_der: Some(untrusted_cert),
+        tls_identity_provider: None,
+        custom_cert_verifier: Some(Box::new(MockVerifier { fail: false })),
+    })?;
+
+    let mut server = AsyncServer::spawn(server_ctx);
+
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(async {
+                do_handshake(&mut server, &client_ctx).await;
+            })
+        });
+    }));
+
+    // Should fail because standard validation rejects the certificate.
+    assert!(result.is_err(), "Handshake should have failed due to standard validation");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_custom_verifier_invalid_self_signed() -> Result<(), Box<dyn std::error::Error>> {
+    let ca_cert = load_test_cert("oak_session/tls/testing/test_ca.pem");
+    let untrusted_cert = load_test_cert("oak_session/tls/testing/test_untrusted.pem");
+    let untrusted_key = load_test_key("oak_session/tls/testing/test_untrusted.key");
+
+    let server_ctx = OakSessionTlsServerContext::create(ServerContextConfig {
+        tls_identity_provider: utils::create_static_cert_identity_provider(
+            untrusted_key.clone_key(),
+            untrusted_cert.clone(),
+        ),
+        client_trust_anchor_der: None,
+        custom_cert_verifier: None,
+    })?;
+
+    // Client trusts CA, so server's untrusted self-signed is rejected.
+    let client_ctx = OakSessionTlsClientContext::create(ClientContextConfig {
+        server_trust_anchor_der: Some(ca_cert),
+        tls_identity_provider: None,
+        custom_cert_verifier: Some(Box::new(MockVerifier { fail: false })),
+    })?;
+
+    let mut server = AsyncServer::spawn(server_ctx);
+
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(async {
+                do_handshake(&mut server, &client_ctx).await;
+            })
+        });
+    }));
+
+    // Should fail because standard validation rejects the self-signed certificate.
+    assert!(result.is_err(), "Handshake should have failed due to standard validation");
+
+    Ok(())
+}
+
 struct TestSessionPair {
     pub server_ctx: OakSessionTlsServerContext,
     pub client_ctx: OakSessionTlsClientContext,
@@ -211,6 +343,13 @@ struct TestSessionPair {
 
 impl TestSessionPair {
     fn create(client_identity: Option<TlsIdentity>) -> Self {
+        Self::create_with_verifier(client_identity, None)
+    }
+
+    fn create_with_verifier(
+        client_identity: Option<TlsIdentity>,
+        custom_cert_verifier: Option<Box<dyn CustomCertVerifier>>,
+    ) -> Self {
         let ca_cert = load_test_cert("oak_session/tls/testing/test_ca.pem");
         let server_cert = load_test_cert("oak_session/tls/testing/test_server.pem");
         let server_key = load_test_key("oak_session/tls/testing/test_server.key");
@@ -221,6 +360,7 @@ impl TestSessionPair {
                 server_cert.clone(),
             ),
             client_trust_anchor_der: client_identity.as_ref().map(|_| ca_cert.clone()),
+            custom_cert_verifier: None,
         })
         .expect("failed to create server context");
 
@@ -228,6 +368,7 @@ impl TestSessionPair {
             server_trust_anchor_der: Some(ca_cert),
             tls_identity_provider: client_identity
                 .map(|id| utils::create_static_cert_identity_provider(id.key_der, id.cert_der)),
+            custom_cert_verifier,
         })
         .expect("failed to create client context");
 

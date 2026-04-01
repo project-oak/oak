@@ -36,3 +36,21 @@ explicit files or in-memory blobs. Additionally,
 `create_self_signed_identity_provider` (Rust) are available to automatically
 generate new self-signed certificates and keys in-memory for testing or fallback
 scenarios.
+
+## Custom Certificate Verification
+
+In advanced scenarios, such as when enforcing attestation properties or custom
+X.509 extensions, applications can provide extra verification logic.
+
+You can configure an optional `CustomCertVerifier` on the connection options
+when creating a context. For C++, this is a std::function callback; for Rust, it
+is a Trait implementation.
+
+This custom verification is **additive**. Standard TLS validation (e.g., trust
+anchor verification, signature validation, and expiry checks) always executes
+first. If standard validation fails, the connection is instantly rejected. Only
+after standard validation succeeds does the library pass the certificate chain
+to your custom verifier. If your custom verifier subsequently fails, the
+connection is aborted. This ensures that application-specific validation safely
+supplements, rather than dangerously overrides, the underlying baseline
+cryptography constraints (like OpenSSL and Rustls).

@@ -204,6 +204,147 @@ TEST(OakSessionTlsTest, UntrustedCertificateRejected) {
   EXPECT_THAT(result, StatusIs(absl::StatusCode::kFailedPrecondition));
 }
 
+TEST(OakSessionTlsTest, CustomCertVerifierSuccess) {
+  auto server_provider =
+      util::CreateFromFiles(kTestServerKeyPath, kTestServerCertPath);
+  ASSERT_THAT(server_provider, IsOk());
+  ServerContextConfig server_config{
+      .tls_identity_provider = std::move(*server_provider),
+  };
+  auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
+  ASSERT_THAT(server_ctx, IsOk());
+
+  bool custom_verifier_called = false;
+  ClientContextConfig client_config{
+      .server_trust_anchor_path = std::string(kTestCaCertPath),
+      .custom_cert_verifier =
+          [&](const std::vector<std::string>& chain) {
+            custom_verifier_called = true;
+            EXPECT_GT(chain.size(), 0);
+            return absl::OkStatus();
+          },
+  };
+  auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
+  ASSERT_THAT(client_ctx, IsOk());
+
+  auto result = RunHandshake(**client_ctx, **server_ctx);
+  ASSERT_THAT(result.client, IsOk());
+  ASSERT_THAT(result.server, IsOk());
+  EXPECT_TRUE(custom_verifier_called);
+}
+
+TEST(OakSessionTlsTest, CustomCertVerifierFailure) {
+  auto server_provider =
+      util::CreateFromFiles(kTestServerKeyPath, kTestServerCertPath);
+  ASSERT_THAT(server_provider, IsOk());
+  ServerContextConfig server_config{
+      .tls_identity_provider = std::move(*server_provider),
+  };
+  auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
+  ASSERT_THAT(server_ctx, IsOk());
+
+  bool custom_verifier_called = false;
+  ClientContextConfig client_config{
+      .server_trust_anchor_path = std::string(kTestCaCertPath),
+      .custom_cert_verifier =
+          [&](const std::vector<std::string>& chain) {
+            custom_verifier_called = true;
+            return absl::FailedPreconditionError("Custom logic rejected cert");
+          },
+  };
+  auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
+  ASSERT_THAT(client_ctx, IsOk());
+
+  auto server_initializer = (*server_ctx)->NewSession();
+  ASSERT_THAT(server_initializer, IsOk());
+  auto client_initializer = (*client_ctx)->NewSession();
+  ASSERT_THAT(client_initializer, IsOk());
+
+  auto client_hello = (*client_initializer)->GetTLSFrame();
+  ASSERT_THAT(client_hello, IsOk());
+
+  ASSERT_THAT((*server_initializer)->PutTLSFrame(*client_hello), IsOk());
+
+  auto server_hello = (*server_initializer)->GetTLSFrame();
+  ASSERT_THAT(server_hello, IsOk());
+
+  auto result = (*client_initializer)->PutTLSFrame(*server_hello);
+  EXPECT_THAT(result, StatusIs(absl::StatusCode::kFailedPrecondition));
+  EXPECT_TRUE(custom_verifier_called);
+}
+
+TEST(OakSessionTlsTest, CustomCertVerifier_InvalidCertFails) {
+  // Server uses a valid cert signed by test_ca.
+  auto server_provider =
+      util::CreateFromFiles(kTestServerKeyPath, kTestServerCertPath);
+  ASSERT_THAT(server_provider, IsOk());
+  ServerContextConfig server_config{
+      .tls_identity_provider = std::move(*server_provider),
+  };
+  auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
+  ASSERT_THAT(server_ctx, IsOk());
+
+  bool custom_verifier_called = false;
+  // Client trusts ONLY test_untrusted (acting as a different CA).
+  // Therefore, the server's cert acts as an invalid cert.
+  ClientContextConfig client_config{
+      .server_trust_anchor_path = std::string(kTestUntrustedCertPath),
+      .custom_cert_verifier =
+          [&](const std::vector<std::string>& chain) {
+            custom_verifier_called = true;
+            return absl::OkStatus();
+          },
+  };
+  auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
+  ASSERT_THAT(client_ctx, IsOk());
+
+  auto server_initializer = (*server_ctx)->NewSession();
+  auto client_initializer = (*client_ctx)->NewSession();
+  auto client_hello = (*client_initializer)->GetTLSFrame();
+  ASSERT_THAT((*server_initializer)->PutTLSFrame(*client_hello), IsOk());
+  auto server_hello = (*server_initializer)->GetTLSFrame();
+
+  auto result = (*client_initializer)->PutTLSFrame(*server_hello);
+  EXPECT_THAT(result, StatusIs(absl::StatusCode::kFailedPrecondition));
+  // Custom verifier should NOT be called if standard validation fails.
+  EXPECT_FALSE(custom_verifier_called);
+}
+
+TEST(OakSessionTlsTest, CustomCertVerifier_InvalidSelfSignedCertFails) {
+  // Server uses an untrusted self-signed certificate.
+  auto server_provider =
+      util::CreateFromFiles(kTestUntrustedKeyPath, kTestUntrustedCertPath);
+  ASSERT_THAT(server_provider, IsOk());
+  ServerContextConfig server_config{
+      .tls_identity_provider = std::move(*server_provider),
+  };
+  auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
+  ASSERT_THAT(server_ctx, IsOk());
+
+  bool custom_verifier_called = false;
+  ClientContextConfig client_config{
+      .server_trust_anchor_path = std::string(kTestCaCertPath),
+      .custom_cert_verifier =
+          [&](const std::vector<std::string>& chain) {
+            custom_verifier_called = true;
+            return absl::OkStatus();
+          },
+  };
+  auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
+  ASSERT_THAT(client_ctx, IsOk());
+
+  auto server_initializer = (*server_ctx)->NewSession();
+  auto client_initializer = (*client_ctx)->NewSession();
+  auto client_hello = (*client_initializer)->GetTLSFrame();
+  ASSERT_THAT((*server_initializer)->PutTLSFrame(*client_hello), IsOk());
+  auto server_hello = (*server_initializer)->GetTLSFrame();
+
+  auto result = (*client_initializer)->PutTLSFrame(*server_hello);
+  EXPECT_THAT(result, StatusIs(absl::StatusCode::kFailedPrecondition));
+  // Custom verifier should NOT be called if standard validation fails.
+  EXPECT_FALSE(custom_verifier_called);
+}
+
 // Verify that the ServerContext can successfully rotate its certificate between
 // sessions.
 TEST(OakSessionTlsTest, CertificateRotationWorks) {
