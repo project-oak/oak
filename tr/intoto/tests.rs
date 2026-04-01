@@ -89,7 +89,7 @@ fn test_convert_validity_right_max() {
 
 #[test]
 fn test_validate_endorsement_statement_success() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
     let statement = parse_statement(&d.endorsement).expect("could not parse endorsement statement");
 
     let result = statement.validate(None, d.make_valid_time(), &[]);
@@ -99,7 +99,7 @@ fn test_validate_endorsement_statement_success() {
 
 #[test]
 fn test_validate_endorsement_statement_fails_too_early() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
     let statement = parse_statement(&d.endorsement).expect("could not parse endorsement statement");
     let too_early = d.valid_not_before - Duration::from_seconds(24 * 3_600);
 
@@ -110,7 +110,7 @@ fn test_validate_endorsement_statement_fails_too_early() {
 
 #[test]
 fn test_validate_statement_fails_too_late() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
     let statement = parse_statement(&d.endorsement).expect("could not parse endorsement statement");
     let too_late = d.valid_not_after + Duration::from_seconds(24 * 3_600);
 

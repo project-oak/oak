@@ -30,7 +30,7 @@ use test_util::{AttestationData, EndorsementData};
 
 #[bench]
 fn bench_verify_endorsement(b: &mut Bencher) {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
 
     b.iter(|| {
         let result = verify_endorsement(

@@ -304,6 +304,8 @@ fn compare_endorser_public_key(
     match key.r#type() {
         KeyType::Undefined => anyhow::bail!("Undefined key type"),
         KeyType::EcdsaP256Sha256 => log_entry.compare_public_key(&key.raw),
+        // TODO: b/485485449 - Support RSA keys when implementing PES verification.
+        KeyType::RsaSha2256 => anyhow::bail!("RSA keys are not supported yet"),
     }
 }
 
@@ -573,7 +575,7 @@ mod tests {
 
     #[test]
     fn verify_tlog_all_succeeds_with_valid_rekor() {
-        let d = EndorsementData::load();
+        let d = EndorsementData::load_for_rekor_verification();
         let rekor_key = make_rekor_key(&d.rekor_public_key);
         let tlog = create_tlog_reference_values_all(Some(rekor_key), None);
         let signed_endorsement = SignedEndorsement {
@@ -653,7 +655,7 @@ mod tests {
     fn verify_tlog_all_fails_when_rekor_passes_but_c2sp_fails() {
         // Both Rekor and C2SP are populated. Rekor is valid but C2SP will
         // fail because the endorsement data doesn't match the C2SP entry.
-        let d = EndorsementData::load();
+        let d = EndorsementData::load_for_rekor_verification();
         let rekor_key = make_rekor_key(&d.rekor_public_key);
 
         let entry = b"test endorsement data";
@@ -681,7 +683,7 @@ mod tests {
 
     #[test]
     fn verify_tlog_any_succeeds_with_valid_rekor() {
-        let d = EndorsementData::load();
+        let d = EndorsementData::load_for_rekor_verification();
         let rekor_key = make_rekor_key(&d.rekor_public_key);
         let tlog = create_tlog_reference_values(
             t_log_reference_values::Strategy::Any(()),

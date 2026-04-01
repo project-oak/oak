@@ -242,6 +242,7 @@ rust_library(
         "//oak_proto_rust",
         "//oak_sev_snp_attestation_report",
         "//oak_time",
+        "//tr/key_util",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:p256",
         "@oak_crates_index//:prost",

@@ -982,9 +982,21 @@ pub struct C2sptLogProofReferenceValue {
     #[prost(string, tag = "2")]
     pub policy: ::prost::alloc::string::String,
 }
-/// TBD - no contents here yet.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct PesReferenceValue {}
+/// Reference value for verifying a PES confirmation.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct PesReferenceValue {
+    /// The PES service's public verifying key(s) used to verify the PES signature.
+    ///
+    /// The PES confirmation is expected to contain the `key_id` of the key used
+    /// for signing. During verification, the `key_id` extracted from the PES
+    /// confirmation can be used to locate the correct key.
+    ///
+    /// This field is a set to support key rotation. During transition period,
+    /// multiple keys can be listed here so that both old and new endorsements
+    /// remain verifiable.
+    #[prost(message, optional, tag = "1")]
+    pub key_set: ::core::option::Option<VerifyingKeySet>,
+}
 /// Encapsulates parameters related to verification of receipts from
 /// t-log-like setups. If nothing should be verified, then this needs to be
 /// disclaimed by
@@ -1514,6 +1526,8 @@ pub enum KeyType {
     /// An overview of key formats can be found at:
     /// <https://www.iana.org/assignments/cose/cose.xhtml#algorithms>
     EcdsaP256Sha256 = 1,
+    /// RSA key with SHA-256 hashing.
+    RsaSha2256 = 2,
 }
 impl KeyType {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -1524,6 +1538,7 @@ impl KeyType {
         match self {
             Self::Undefined => "KEY_TYPE_UNDEFINED",
             Self::EcdsaP256Sha256 => "KEY_TYPE_ECDSA_P256_SHA256",
+            Self::RsaSha2256 => "KEY_TYPE_RSA_SHA2_256",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -1531,6 +1546,7 @@ impl KeyType {
         match value {
             "KEY_TYPE_UNDEFINED" => Some(Self::Undefined),
             "KEY_TYPE_ECDSA_P256_SHA256" => Some(Self::EcdsaP256Sha256),
+            "KEY_TYPE_RSA_SHA2_256" => Some(Self::RsaSha2256),
             _ => None,
         }
     }

@@ -39,6 +39,9 @@ enum KeyType {
   // An overview of key formats can be found at:
   // https://www.iana.org/assignments/cose/cose.xhtml#algorithms
   KEY_TYPE_ECDSA_P256_SHA256 = 1;
+
+  // RSA key with SHA-256 hashing.
+  KEY_TYPE_RSA_SHA2_256 = 2;
 }
 
 message VerifyingKey {
@@ -107,8 +110,19 @@ message C2SPTLogProofReferenceValue {
   string policy = 2;
 }
 
-// TBD - no contents here yet.
-message PesReferenceValue {}
+// Reference value for verifying a PES confirmation.
+message PesReferenceValue {
+  // The PES service's public verifying key(s) used to verify the PES signature.
+  //
+  // The PES confirmation is expected to contain the `key_id` of the key used
+  // for signing. During verification, the `key_id` extracted from the PES
+  // confirmation can be used to locate the correct key.
+  //
+  // This field is a set to support key rotation. During transition period,
+  // multiple keys can be listed here so that both old and new endorsements
+  // remain verifiable.
+  VerifyingKeySet key_set = 1;
+}
 
 // Encapsulates parameters related to verification of receipts from
 // t-log-like setups. If nothing should be verified, then this needs to be

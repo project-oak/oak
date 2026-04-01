@@ -38,7 +38,7 @@ fn create_verifying_key_set(public_key: &[u8]) -> VerifyingKeySet {
 
 #[test]
 fn test_verify_rekor_signature_success() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
     let log_entry = parse_rekor_log_entry(&d.log_entry).expect("could not parse log entry");
 
     let result = verify_rekor_signature(&log_entry, &d.rekor_public_key);
@@ -48,7 +48,7 @@ fn test_verify_rekor_signature_success() {
 
 #[test]
 fn test_verify_rekor_log_entry_success() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
     let key_set = create_verifying_key_set(&d.rekor_public_key);
 
     let result = verify_rekor_log_entry(&d.log_entry, &key_set, &d.endorsement, 0);
@@ -59,7 +59,7 @@ fn test_verify_rekor_log_entry_success() {
 #[test]
 fn test_verify_rekor_log_entry_failure() {
     // Deliberately invalidate the public key.
-    let mut d = EndorsementData::load();
+    let mut d = EndorsementData::load_for_rekor_verification();
     d.rekor_public_key[0] += 1;
     let key_set = create_verifying_key_set(&d.rekor_public_key);
 
@@ -70,7 +70,7 @@ fn test_verify_rekor_log_entry_failure() {
 
 #[test]
 fn test_verify_rekor_log_entry_ecdsa_success() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
 
     let result = verify_rekor_log_entry_ecdsa(&d.log_entry, &d.rekor_public_key, &d.endorsement);
 
@@ -151,7 +151,7 @@ fn test_from_cosign_bundle_parse_round_trip() {
 
 #[test]
 fn test_from_cosign_bundle_verify_rekor() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
     let rekor_key_set = create_verifying_key_set(&d.rekor_public_key);
     let verification_time = make_instant!("2025-10-31T00:00:00Z");
 

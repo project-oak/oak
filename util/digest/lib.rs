@@ -24,4 +24,6 @@ mod digest;
 mod json;
 mod proto;
 
+pub use sha2::{Digest as Sha2Digest, Sha256 as Sha256Hasher};
+
 pub use crate::{digest::*, json::*, proto::*};

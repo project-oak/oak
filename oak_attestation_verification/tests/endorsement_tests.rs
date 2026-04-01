@@ -23,7 +23,7 @@ use test_util::endorsement_data::EndorsementData;
 #[test]
 #[allow(deprecated)]
 fn test_verify_endorsement_success() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
 
     let result = verify_endorsement(
         d.make_valid_time().into_unix_millis(),
@@ -60,7 +60,7 @@ fn test_verify_endorsement_success() {
 
 #[test]
 fn test_verify_endorsement_fails_too_early() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
     let too_early = d.valid_not_before - Duration::from_seconds(3_600);
     let result =
         verify_endorsement(too_early.into_unix_millis(), &d.signed_endorsement, &d.ref_value);
@@ -69,7 +69,7 @@ fn test_verify_endorsement_fails_too_early() {
 
 #[test]
 fn test_verify_endorsement_fails_too_late() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
     let too_late = d.valid_not_after + Duration::from_seconds(3_600);
 
     let result =
@@ -79,7 +79,7 @@ fn test_verify_endorsement_fails_too_late() {
 
 #[test]
 fn test_verify_endorsement_at_not_before_boundary() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
     let details = verify_endorsement(
         d.make_valid_time().into_unix_millis(),
         &d.signed_endorsement,
@@ -100,7 +100,7 @@ fn test_verify_endorsement_at_not_before_boundary() {
 
 #[test]
 fn test_verify_endorsement_at_not_after_boundary() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
     let details = verify_endorsement(
         d.make_valid_time().into_unix_millis(),
         &d.signed_endorsement,
@@ -121,7 +121,7 @@ fn test_verify_endorsement_at_not_after_boundary() {
 
 #[test]
 fn test_verify_endorsement_fails_with_empty_signature() {
-    let mut d = EndorsementData::load();
+    let mut d = EndorsementData::load_for_rekor_verification();
 
     d.signed_endorsement.signature.as_mut().expect("no signature").raw = "".into();
 
@@ -135,7 +135,7 @@ fn test_verify_endorsement_fails_with_empty_signature() {
 
 #[test]
 fn test_verify_endorsement_fails_with_invalid_signature() {
-    let mut d = EndorsementData::load();
+    let mut d = EndorsementData::load_for_rekor_verification();
 
     d.signed_endorsement.signature.as_mut().expect("no signature").raw[0] ^= 1;
 
@@ -149,7 +149,7 @@ fn test_verify_endorsement_fails_with_invalid_signature() {
 
 #[test]
 fn test_verify_endorsement_fails_with_wrong_signature_key_id() {
-    let mut d = EndorsementData::load();
+    let mut d = EndorsementData::load_for_rekor_verification();
 
     d.signed_endorsement.signature.as_mut().expect("no signature").key_id += 1;
 
@@ -163,7 +163,7 @@ fn test_verify_endorsement_fails_with_wrong_signature_key_id() {
 
 #[test]
 fn test_verify_endorsement_fails_with_empty_endorser_key() {
-    let mut d = EndorsementData::load();
+    let mut d = EndorsementData::load_for_rekor_verification();
 
     d.ref_value.endorser.as_mut().expect("").keys.remove(0);
 
@@ -177,7 +177,7 @@ fn test_verify_endorsement_fails_with_empty_endorser_key() {
 
 #[test]
 fn test_verify_endorsement_fails_with_invalid_endorser_key() {
-    let mut d = EndorsementData::load();
+    let mut d = EndorsementData::load_for_rekor_verification();
 
     d.ref_value.endorser.as_mut().expect("").keys[0].raw[0] ^= 1;
 
@@ -191,7 +191,7 @@ fn test_verify_endorsement_fails_with_invalid_endorser_key() {
 
 #[test]
 fn test_verify_endorsement_fails_with_wrong_endorser_key_id() {
-    let mut d = EndorsementData::load();
+    let mut d = EndorsementData::load_for_rekor_verification();
 
     d.ref_value.endorser.as_mut().expect("").keys[0].key_id += 1;
 
@@ -205,7 +205,7 @@ fn test_verify_endorsement_fails_with_wrong_endorser_key_id() {
 
 #[test]
 fn test_verify_endorsement_fails_with_empty_rekor_key() {
-    let mut d = EndorsementData::load();
+    let mut d = EndorsementData::load_for_rekor_verification();
 
     let tlog = d.ref_value.tlog.as_mut().expect("no tlog reference value");
     let key_set = tlog.rekor.as_mut().expect("no rekor key set");
@@ -222,7 +222,7 @@ fn test_verify_endorsement_fails_with_empty_rekor_key() {
 
 #[test]
 fn test_verify_endorsement_fails_with_invalid_rekor_key() {
-    let mut d = EndorsementData::load();
+    let mut d = EndorsementData::load_for_rekor_verification();
 
     let tlog = d.ref_value.tlog.as_mut().expect("no tlog reference value");
     let key_set = tlog.rekor.as_mut().expect("no rekor key set");
@@ -243,7 +243,7 @@ fn test_verify_endorsement_fails_with_invalid_rekor_key() {
 
 #[test]
 fn test_verify_endorsement_fails_with_rekor_key_but_no_log_entry() {
-    let mut d = EndorsementData::load();
+    let mut d = EndorsementData::load_for_rekor_verification();
 
     d.signed_endorsement.rekor_log_entry.clear();
 
@@ -257,7 +257,7 @@ fn test_verify_endorsement_fails_with_rekor_key_but_no_log_entry() {
 
 #[test]
 fn test_verify_endorsement_fails_with_no_rekor_reference_value() {
-    let mut d = EndorsementData::load();
+    let mut d = EndorsementData::load_for_rekor_verification();
 
     // Unset rekor and change the strategy to `Any` to ensure that it fails
     // when nothing is populated.
@@ -276,7 +276,7 @@ fn test_verify_endorsement_fails_with_no_rekor_reference_value() {
 
 #[test]
 fn test_verify_endorsement_succeeds_with_no_log_entry_and_no_rekor_key() {
-    let mut d = EndorsementData::load();
+    let mut d = EndorsementData::load_for_rekor_verification();
 
     d.ref_value.tlog = Some(oak_proto_rust::oak::attestation::v1::TLogReferenceValues {
         strategy: Some(
