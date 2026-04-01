@@ -209,8 +209,9 @@ endorser {
 }
 required_claims: "<required claim 1>"
 required_claims: "<required claim 2>"
-rekor {
-  verify {
+tlog {
+  strategy { all {} }
+  rekor {
     keys {
       type: KEY_TYPE_ECDSA_P256_SHA256
       raw: "<contents of rekor_public_key.pem converted to raw>"
