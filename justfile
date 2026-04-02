@@ -232,6 +232,8 @@ bazel-lockfile-lint-runner:
 bazel-lockfile-crate-analysis:
     bazel mod deps
 
+bazel-lockfile-all: bazel-lockfile bazel-lockfile-codelab bazel-lockfile-private-memory bazel-lockfile-containers-sysroot bazel-lockfile-lint-runner bazel-lockfile-crate-analysis
+
 ####################
 # ARTIFACT COPYING #
 ####################
