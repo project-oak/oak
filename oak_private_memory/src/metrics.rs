@@ -70,6 +70,16 @@ pub struct Metrics {
     key_sync_db_fetch_latency: Histogram<u64>,
     // Latency of decrypting the database during key sync.
     key_sync_decrypt_latency: Histogram<u64>,
+    // Number of operations that failed to replay during a database rebase.
+    db_rebase_operation_failures: Counter<u64>,
+    // Number of failures when cleaning expired memories.
+    db_cleanup_failures: Counter<u64>,
+    // Number of TLS handshake failures.
+    tls_handshake_failures: Counter<u64>,
+    // Number of TLS data receive errors.
+    tls_receive_failures: Counter<u64>,
+    // Number of failures when enqueueing a session for persistence.
+    persistence_enqueue_failures: Counter<u64>,
 }
 
 /// The possible metrics request types.
@@ -200,6 +210,36 @@ impl Metrics {
             .with_unit("ms")
             .build();
 
+        let db_rebase_operation_failures = observer
+            .meter
+            .u64_counter("db_rebase_operation_failures")
+            .with_description("Number of operations that failed to replay during DB rebase.")
+            .build();
+
+        let db_cleanup_failures = observer
+            .meter
+            .u64_counter("db_cleanup_failures")
+            .with_description("Number of failures when cleaning expired memories.")
+            .build();
+
+        let tls_handshake_failures = observer
+            .meter
+            .u64_counter("tls_handshake_failures")
+            .with_description("Number of TLS handshake failures.")
+            .build();
+
+        let tls_receive_failures = observer
+            .meter
+            .u64_counter("tls_receive_failures")
+            .with_description("Number of TLS data receive errors.")
+            .build();
+
+        let persistence_enqueue_failures = observer
+            .meter
+            .u64_counter("persistence_enqueue_failures")
+            .with_description("Number of failures enqueueing sessions for persistence.")
+            .build();
+
         // Initialize the total count to 0 to trigger the metric registration.
         // Otherwise, the metric will only show up once it has been incremented.
         rpc_count.add(0, &[KeyValue::new("request_type", "total")]);
@@ -221,6 +261,11 @@ impl Metrics {
         db_optimize_latency.record(1, &[]);
         key_sync_db_fetch_latency.record(0, &[]);
         key_sync_decrypt_latency.record(0, &[]);
+        db_rebase_operation_failures.add(0, &[]);
+        db_cleanup_failures.add(0, &[]);
+        tls_handshake_failures.add(0, &[]);
+        tls_receive_failures.add(0, &[]);
+        persistence_enqueue_failures.add(0, &[]);
         observer.register_metric(rpc_count.clone());
         observer.register_metric(rpc_failure_count.clone());
         observer.register_metric(rpc_latency.clone());
@@ -240,6 +285,11 @@ impl Metrics {
         observer.register_metric(db_optimize_latency.clone());
         observer.register_metric(key_sync_db_fetch_latency.clone());
         observer.register_metric(key_sync_decrypt_latency.clone());
+        observer.register_metric(db_rebase_operation_failures.clone());
+        observer.register_metric(db_cleanup_failures.clone());
+        observer.register_metric(tls_handshake_failures.clone());
+        observer.register_metric(tls_receive_failures.clone());
+        observer.register_metric(persistence_enqueue_failures.clone());
         Self {
             rpc_count,
             rpc_failure_count,
@@ -260,6 +310,11 @@ impl Metrics {
             db_optimize_latency,
             key_sync_db_fetch_latency,
             key_sync_decrypt_latency,
+            db_rebase_operation_failures,
+            db_cleanup_failures,
+            tls_handshake_failures,
+            tls_receive_failures,
+            persistence_enqueue_failures,
         }
     }
 
@@ -371,6 +426,26 @@ impl Metrics {
 
     pub fn record_key_sync_decrypt_latency(&self, latency_ms: u64) {
         self.key_sync_decrypt_latency.record(latency_ms, &[]);
+    }
+
+    pub fn inc_db_rebase_operation_failures(&self, count: u64) {
+        self.db_rebase_operation_failures.add(count, &[]);
+    }
+
+    pub fn inc_db_cleanup_failures(&self) {
+        self.db_cleanup_failures.add(1, &[]);
+    }
+
+    pub fn inc_tls_handshake_failures(&self) {
+        self.tls_handshake_failures.add(1, &[]);
+    }
+
+    pub fn inc_tls_receive_failures(&self) {
+        self.tls_receive_failures.add(1, &[]);
+    }
+
+    pub fn inc_persistence_enqueue_failures(&self) {
+        self.persistence_enqueue_failures.add(1, &[]);
     }
 }
 

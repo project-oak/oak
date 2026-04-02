@@ -55,7 +55,8 @@ impl Drop for SealedMemorySessionHandler {
         info!("Dropping handler and sending session context to persistence service");
         if let Some(context) = self.session_context.get_mut().take() {
             if let Err(e) = self.persistence_tx.send(context) {
-                info!("Failed to send session context to persistence service: {}", e);
+                self.metrics.inc_persistence_enqueue_failures();
+                warn!("Failed to send session context to persistence service: {}", e);
             }
         }
     }
@@ -374,6 +375,7 @@ impl SealedMemorySessionHandler {
 
         let cleanup_start_time = Instant::now();
         self.clean_expired_memories().await.unwrap_or_else(|e| {
+            get_global_metrics().inc_db_cleanup_failures();
             warn!("Failed to clean expired memories during key sync: {}", e);
         });
         let elapsed = cleanup_start_time.elapsed();

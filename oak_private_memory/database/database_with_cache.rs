@@ -92,16 +92,19 @@ impl DatabaseWithCache {
         self.database.needs_writeback()
     }
 
-    /// db.
-    pub fn rebase(&mut self, new_blob: &[u8]) -> anyhow::Result<()> {
+    /// Rebases the database onto a new base blob, replaying any pending
+    /// mutations. Returns the number of operations that failed to replay.
+    pub fn rebase(&mut self, new_blob: &[u8]) -> anyhow::Result<usize> {
         let tempdir = IcingTempDir::new("pm-rebase");
-        self.database = IcingMetaDatabase::import_with_changes(tempdir, new_blob, &self.database)?;
+        let (new_db, failed_operations) =
+            IcingMetaDatabase::import_with_changes(tempdir, new_blob, &self.database)?;
+        self.database = new_db;
         // Recalculate size after rebase
         let icing_db = self.database.export()?;
         self.current_size = icing_db.encoded_len();
         // This doesn't account for cached memories not in the new blob, but they should
         // be few.
-        Ok(())
+        Ok(failed_operations)
     }
 
     fn add_memory_id(&mut self, memory: &mut Memory) {

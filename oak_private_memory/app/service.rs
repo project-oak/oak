@@ -350,6 +350,8 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
                 Ok(res) => res,
                 Err(e) => {
                     log::error!("TLS handshake failed: {}", e);
+                    metrics.inc_tls_handshake_failures();
+                    metrics.inc_failures(RequestMetricName::handshake());
                     let _ = tx
                         .send(Err(tonic::Status::internal(format!("handshake failed: {}", e))))
                         .await;
@@ -370,6 +372,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
                     Ok(req) => req,
                     Err(e) => {
                         log::error!("Error receiving TLS data: {}", e);
+                        metrics.inc_tls_receive_failures();
                         break;
                     }
                 };

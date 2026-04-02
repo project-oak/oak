@@ -1891,8 +1891,9 @@ impl IcingMetaDatabase {
         new_base_dir: IcingTempDir,
         new_base_blob: &[u8],
         apply_changes_from: &IcingMetaDatabase,
-    ) -> anyhow::Result<Self> {
+    ) -> anyhow::Result<(Self, usize)> {
         let mut new_db = Self::import(new_base_dir, new_base_blob)?;
+        let mut failed_operations: usize = 0;
 
         // Apply each operation to the new database.
         // This will also recreate the applied operations on the new database as a side
@@ -1914,11 +1915,12 @@ impl IcingMetaDatabase {
             };
 
             if result.is_err() {
-                error!("Warning: failed to apply operation onto new database")
+                error!("Warning: failed to apply operation onto new database");
+                failed_operations += 1;
             }
         }
 
-        Ok(new_db)
+        Ok((new_db, failed_operations))
     }
 
     /// Returns (memory_count, llm_view_count) across all documents in the
@@ -2311,7 +2313,7 @@ mod tests {
 
         // When db3 writeback detects that it needs a fresher copy, it will import with
         // its own changes.
-        let db3_prime =
+        let (db3_prime, _) =
             IcingMetaDatabase::import_with_changes(tempdir(), db2_exported.as_slice(), &db3)?;
 
         // Should contain all items.
@@ -2361,7 +2363,7 @@ mod tests {
 
         // When db3 writeback detects that it needs a fresher copy, it will import with
         // its own changes.
-        let db3_prime =
+        let (db3_prime, _) =
             IcingMetaDatabase::import_with_changes(tempdir(), db2_exported.as_slice(), &db3)?;
 
         assert_that!(
@@ -2406,7 +2408,7 @@ mod tests {
 
         // When db3 writeback detects that it needs a fresher copy, it will import with
         // its own changes.
-        let db3_prime =
+        let (db3_prime, _) =
             IcingMetaDatabase::import_with_changes(tempdir(), db2_exported.as_slice(), &db3)?;
 
         assert_that!(

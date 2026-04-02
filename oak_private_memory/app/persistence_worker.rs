@@ -109,7 +109,11 @@ async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Resu
                     .icing_db
                     .context("missing icing_db in refreshed blob result")?;
 
-                user_context.database.rebase(new_icing_db.encode_to_vec().as_slice())?;
+                let failed_operations =
+                    user_context.database.rebase(new_icing_db.encode_to_vec().as_slice())?;
+                if failed_operations > 0 {
+                    get_global_metrics().inc_db_rebase_operation_failures(failed_operations as u64);
+                }
                 user_context.database_version = refreshed_blob.version;
             }
             Err(e) => return Err(e),
