@@ -28,6 +28,14 @@ macro_rules! include_proto {
     };
 }
 
+pub mod google {
+    pub mod pes {
+        pub mod v1 {
+            include_proto!("google.pes.v1");
+        }
+    }
+}
+
 pub mod perftools {
     pub mod profiles {
         include_proto!("perftools.profiles");

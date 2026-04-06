@@ -77,6 +77,8 @@ cargo_build_script(
         "//proto/containers:orchestrator_crypto.proto",
         "//proto/crypto:certificate.proto",
         "//proto/crypto:crypto.proto",
+        "//proto/google/pes/v1:endorsement.proto",
+        "//proto/google/pes/v1:verification_material.proto",
         "//proto/micro_rpc:options.proto",
         "//proto/oak_debug/service:oak_debug.proto",
         "//proto/oak_functions:abi.proto",

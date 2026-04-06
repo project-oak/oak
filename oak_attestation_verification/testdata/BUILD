@@ -43,10 +43,21 @@ filegroup(
         # Public key of the Rekor instance hosted by sigstore.dev. It is downloaded
         # from https://rekor.sigstore.dev/api/v1/log/publicKey.
         "rekor_public_key.pem",
-        # RSA signature of the endorsement, signed by the PES.
-        "endorsement_rsa.json.sig",
-        # Public key of the PES.
-        "pes_public_key.pem",
+        ":pes_endorsement",
+    ],
+)
+
+# Specific test data for PES Sunny Day integration test.
+filegroup(
+    name = "pes_endorsement",
+    srcs = [
+        "pes/endorsement.json",
+        "pes/endorser_public_key.pem",
+        "pes/endorser_signature.sig",
+        "pes/pes_public_key.pem",
+        "pes/pes_signature.hex",
+        "pes/tlog_receipt.binarypb",
+        "pes/tlog_receipt.textproto",
     ],
 )
 

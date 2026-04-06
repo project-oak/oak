@@ -250,6 +250,7 @@ rust_library(
         "//oak_time",
         "//tr/key_util",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:hex",
         "@oak_crates_index//:p256",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:zerocopy",

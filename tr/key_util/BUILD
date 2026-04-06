@@ -37,7 +37,10 @@ rust_library(
 rust_test(
     name = "key_util_tests",
     crate = ":key_util",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_attestation_verification:test_util",
+        "@oak_crates_index//:base64",
+        "@oak_crates_index//:sha2",
     ],
 )

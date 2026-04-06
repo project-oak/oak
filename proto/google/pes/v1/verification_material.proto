@@ -1,0 +1,43 @@
+// Copyright 2026 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package google.pes.v1;
+
+option java_multiple_files = true;
+option java_outer_classname = "VerificationMaterialProto";
+option java_package = "com.google.pes.v1";
+
+// Represent public key material used to verify the signature
+message VerificationMaterial {
+  // X.509 certificate or public key.
+  oneof verification_material {
+    // Only public key of the certificate is used for verification
+    X509Der x509_certificate = 1;
+    EcdsaP256PublicKey ecdsa_p256_sha256 = 2;
+  }
+}
+
+// Wrapper for DER-encoded X.509 certificate.
+message X509Der {
+  // Raw bytes of the certificate
+  bytes der_bytes = 1;
+}
+
+// Represents an ECDSA P-256 Public Key using PKIX standards.
+message EcdsaP256PublicKey {
+  // DER-encoded SubjectPublicKeyInfo (SPKI) see RFC 5280
+  bytes der_bytes = 1;
+}

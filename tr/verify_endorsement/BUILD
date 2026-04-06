@@ -30,6 +30,7 @@ rust_library(
         "//tr/c2sp",
         "//tr/intoto",
         "//tr/key_util",
+        "//tr/pes",
         "//tr/rekor",
         "//util/digest:oak_digest",
         "@oak_crates_index//:anyhow",

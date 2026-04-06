@@ -244,6 +244,14 @@ fn verify_tlog(
                 verify_c2sp_tlog_proof(&signed_endorsement.c2sp_tlog_proof, endorsement, c2sp)
                     .context("verifying C2SP tlog proof")?;
             }
+            if let Some(pes) = tlog.pes.as_ref() {
+                pes::verify_pes_confirmation(
+                    &signed_endorsement.pes_confirmation,
+                    pes.key_set.as_ref().context("missing PES key set")?,
+                    &endorsement.serialized,
+                )
+                .context("verifying PES confirmation")?;
+            }
             Ok(())
         }
         t_log_reference_values::Strategy::Any(_) => {
@@ -265,6 +273,16 @@ fn verify_tlog(
                 {
                     Ok(()) => return Ok(()),
                     Err(e) => errors.push(alloc::format!("verifying C2SP tlog proof: {e}")),
+                }
+            }
+            if let Some(pes) = tlog.pes.as_ref() {
+                match pes::verify_pes_confirmation(
+                    &signed_endorsement.pes_confirmation,
+                    pes.key_set.as_ref().context("missing PES key set")?,
+                    &endorsement.serialized,
+                ) {
+                    Ok(()) => return Ok(()),
+                    Err(e) => errors.push(alloc::format!("verifying PES confirmation: {e}")),
                 }
             }
             if errors.is_empty() {
@@ -822,5 +840,21 @@ mod tests {
         // Both errors should appear in the message.
         assert!(err.contains("Rekor"), "expected Rekor error in: {err}");
         assert!(err.contains("C2SP"), "expected C2SP error in: {err}");
+    }
+
+    #[test]
+    fn verify_pes_integration_routes_correctly() {
+        use test_util::endorsement_data::EndorsementData;
+
+        // Load real PES data using the production data-loading path.
+        let pes_verification_data = EndorsementData::load_for_pes_verification();
+
+        let result = verify_tlog(
+            pes_verification_data.ref_value.tlog.as_ref().unwrap(),
+            &pes_verification_data.signed_endorsement,
+            0, // timestamp doesn't matter for this check
+        );
+
+        assert!(result.is_ok(), "expected PES verification success, got: {:?}", result.err());
     }
 }
