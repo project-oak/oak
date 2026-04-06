@@ -552,7 +552,7 @@ impl IcingMetaDatabase {
         let schema = Self::create_schema()?;
         let result_proto = icing_search_engine.set_schema(&schema)?;
         ensure!(
-            result_proto.status.context("no status")?.code
+            result_proto.status.context("set_schema returned no status in new")?.code
                 == Some(icing::status_proto::Code::Ok.into())
         );
         Ok(Self {
@@ -580,7 +580,7 @@ impl IcingMetaDatabase {
         let icing_search_engine = icing::create_icing_search_engine(&options_bytes);
         let result_proto = icing_search_engine.initialize()?;
         ensure!(
-            result_proto.status.context("no status")?.code
+            result_proto.status.context("initialize returned no status")?.code
                 == Some(icing::status_proto::Code::Ok.into())
         );
         Ok(icing_search_engine)
@@ -615,13 +615,14 @@ impl IcingMetaDatabase {
         pending_metadata: PendingLlmViewMetadata,
     ) -> anyhow::Result<()> {
         let result = self.icing_search_engine.put(pending_metadata.document())?;
-        if result.status.clone().context("no status")?.code
+        if result.status.clone().context("put view returned no status")?.code
             != Some(icing::status_proto::Code::Ok.into())
         {
             debug!("{:?}", result);
         }
         ensure!(
-            result.status.context("no status")?.code == Some(icing::status_proto::Code::Ok.into())
+            result.status.context("put view returned no status (ensure)")?.code
+                == Some(icing::status_proto::Code::Ok.into())
         );
         self.applied_operations.push(MutationOperation::AddView(pending_metadata));
         Ok(())
@@ -629,13 +630,9 @@ impl IcingMetaDatabase {
 
     fn add_pending_metadata(&mut self, pending_metadata: PendingMetadata) -> anyhow::Result<()> {
         let result = self.icing_search_engine.put(pending_metadata.document())?;
-        if result.status.clone().context("no status")?.code
-            != Some(icing::status_proto::Code::Ok.into())
-        {
-            debug!("{:?}", result);
-        }
         ensure!(
-            result.status.context("no status")?.code == Some(icing::status_proto::Code::Ok.into())
+            result.status.context("put memory returned no status at add_pending_metadata")?.code
+                == Some(icing::status_proto::Code::Ok.into())
         );
         self.applied_operations.push(MutationOperation::AddMemory(pending_metadata));
         Ok(())
@@ -702,7 +699,11 @@ impl IcingMetaDatabase {
             &result_spec,
         )?;
 
-        if search_result.status.clone().context("no status")?.code
+        if search_result
+            .status
+            .clone()
+            .context("get_memory_by_name search returned no status")?
+            .code
             != Some(icing::status_proto::Code::Ok.into())
         {
             bail!("Icing search failed: {:?}", search_result.status);
@@ -745,7 +746,11 @@ impl IcingMetaDatabase {
             &result_spec,
         )?;
 
-        if search_result.status.clone().context("no status")?.code
+        if search_result
+            .status
+            .clone()
+            .context("get_blob_id_by_memory_id search returned no status")?
+            .code
             != Some(icing::status_proto::Code::Ok.into())
         {
             bail!("Icing search failed for memory_id {}: {:?}", memory_id, search_result.status);
@@ -791,7 +796,11 @@ impl IcingMetaDatabase {
             &icing::get_default_scoring_spec(),
             &result_spec,
         )?;
-        if search_result.status.clone().context("no status")?.code
+        if search_result
+            .status
+            .clone()
+            .context("get_view_ids_by_memory_id search returned no status")?
+            .code
             != Some(icing::status_proto::Code::Ok.into())
         {
             bail!("Icing search failed for memory_id {}: {:?}", memory_id, search_result.status);
@@ -888,7 +897,11 @@ impl IcingMetaDatabase {
                 PageToken::Invalid => bail!("Invalid page token"),
             };
 
-            if search_result.status.clone().context("no status")?.code
+            if search_result
+                .status
+                .clone()
+                .context("get_all_memory_ids search returned no status")?
+                .code
                 != Some(icing::status_proto::Code::Ok.into())
             {
                 bail!("Icing search failed: {:?}", search_result.status);
@@ -964,7 +977,7 @@ impl IcingMetaDatabase {
             PageToken::Invalid => bail!("invalid page token"),
         };
 
-        if search_result.status.clone().context("no status")?.code
+        if search_result.status.clone().context("execute_search returned no status")?.code
             != Some(icing::status_proto::Code::Ok.into())
         {
             bail!("Icing search failed for {:?}", search_result.status);
@@ -1849,7 +1862,7 @@ impl IcingMetaDatabase {
     pub fn delete_document(&mut self, blob_id: &BlobId) -> anyhow::Result<()> {
         let result =
             self.icing_search_engine.delete(NAMESPACE_NAME.as_bytes(), blob_id.as_bytes())?;
-        if result.status.clone().context("no status")?.code
+        if result.status.clone().context("delete_document returned no status")?.code
             != Some(icing::status_proto::Code::Ok.into())
         {
             bail!("Failed to delete document with id {}: {:?}", blob_id, result.status);
@@ -1964,7 +1977,11 @@ impl IcingMetaDatabase {
                 PageToken::Invalid => bail!("Invalid page token"),
             };
 
-            if search_result.status.clone().context("no status")?.code
+            if search_result
+                .status
+                .clone()
+                .context("count_documents_by_schema search returned no status")?
+                .code
                 != Some(icing::status_proto::Code::Ok.into())
             {
                 bail!("Icing count failed: {:?}", search_result.status);
@@ -1987,7 +2004,7 @@ impl IcingMetaDatabase {
             self.icing_search_engine.persist_to_disk(icing::persist_type::Code::Full.into());
         let result_proto = icing::PersistToDiskResultProto::decode(result_proto.as_slice())?;
         ensure!(
-            result_proto.status.context("no status")?.code
+            result_proto.status.context("persist_to_disk returned no status in export")?.code
                 == Some(icing::status_proto::Code::Ok.into())
         );
         icing::IcingGroundTruthFiles::new(self.base_dir.as_str())
