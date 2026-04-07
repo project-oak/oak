@@ -389,7 +389,7 @@ mod tests {
     }
 
     #[googletest::test]
-    fn IntelVirtPcieHost_hole() {
+    fn intel_virt_pcie_host_hole() {
         // Not much to test, besides there being a hole.
         let mut firmware = TestFirmware::default();
         let zero_page = ZeroPage::new();
