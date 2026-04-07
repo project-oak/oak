@@ -35,7 +35,7 @@ mod machine;
 mod resource_allocator;
 
 use device::Bdf;
-use machine::{I440fx, Machine, Q35};
+use machine::{I440fx, IntelVirtPcieHost, Machine, Q35};
 use resource_allocator::ResourceAllocator;
 
 #[repr(C)]
@@ -356,6 +356,9 @@ pub fn init<P: Platform>(
     match root_bridge_device_id {
         (I440fx::PCI_VENDOR_ID, I440fx::PCI_DEVICE_ID) => {
             init_machine::<P, I440fx>(root_bus, firmware, zero_page, config_access)
+        }
+        (IntelVirtPcieHost::PCI_VENDOR_ID, IntelVirtPcieHost::PCI_DEVICE_ID) => {
+            init_machine::<P, IntelVirtPcieHost>(root_bus, firmware, zero_page, config_access)
         }
         (Q35::PCI_VENDOR_ID, Q35::PCI_DEVICE_ID) => {
             init_machine::<P, Q35>(root_bus, firmware, zero_page, config_access)
