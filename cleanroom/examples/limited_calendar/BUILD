@@ -7,14 +7,15 @@ package(
 )
 
 rust_binary(
-    name = "weather_bin",
+    name = "limited_calendar_bin",
     srcs = ["wasm.rs"],
     deps = [
         "//cleanroom/sdk:cleanroom_sdk",
+        "@oak_crates_index//:serde_json",
     ],
 )
 
 wasi_binary(
-    name = "weather_wasm",
-    binary = ":weather_bin",
+    name = "limited_calendar_wasm",
+    binary = ":limited_calendar_bin",
 )

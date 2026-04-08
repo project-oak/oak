@@ -4,10 +4,10 @@
 and LLM agents.**
 
 Cleanroom executes Wasm modules in a secure environment with fine-grained
-tracking of data confidentiality. Modules interact via standard WASI, while the
-host silently tracks which secrets and files each module has accessed and
-enforces declassification policies before allowing data to leave (e.g. via
-HTTP).
+tracking of data secrecy and integrity. Modules interact via standard WASI,
+while the host silently tracks which secrets each module has accessed (secrecy)
+and who vouches for the data (integrity), enforcing declassification and
+endorsement policies before allowing data to cross trust boundaries.
 
 ## Quick start
 
@@ -23,14 +23,21 @@ bazel run cleanroom -- shell
 ```
 
 That's it! The shell is now network-isolated with the sandbox policy printed on
-entry. Inside the shell you can run modules:
+entry.
+
+Inside the shell you can run modules:
 
 ```console
 $ echo "hello world" | cleanroom run to_uppercase_wasm
 HELLO WORLD
 
-$ cleanroom run redact_secret_wasm
+$ cleanroom run redact_secret_wasm --secrecy=caller,secret_category --integrity=caller
 Redacted secret: top-**********
+
+# Running with an insufficient secrecy label produces an error.
+$ cleanroom run redact_secret_wasm --integrity=caller
+[2026-04-10T12:11:41Z WARN  cleanroom_lib::wasi_ifc] cell read denied: "secret_api_key" with label (S={secret_category}, I={caller}) does not flow to computation label (S={caller}, I={caller}): excess secrecy: [secret_category]
+Error: Custom { kind: Other, error: "Could not read secret_api_key from cell" }
 
 # Network is blocked.
 $ curl wttr.in
@@ -105,61 +112,96 @@ An LLM agent working in a repo has access to source code, secrets (API keys in
 env vars), and the network (via tools). Without IFC, a compromised or
 misbehaving module could exfiltrate secrets by encoding them into HTTP requests.
 
-IFC tracks **which sensitive data a module has seen** and blocks output to
-channels that shouldn't receive that data.
+IFC tracks **which sensitive data a module has seen** (secrecy) and **who
+vouches for the computation** (integrity), blocking output to channels that
+shouldn't receive that data.
 
 ### Labels
 
-Each resource (env var, data cell) carries a **label** — a set of
-confidentiality categories:
+Each resource carries a dual-component **label** — a pair `(secrecy, integrity)`
+where both components are sets of [principals](#principals). This follows the
+[Decentralized Label Model (DLM)][dlm].
 
-| Resource                  | Label               |
-| ------------------------- | ------------------- |
-| Files in `/workspace/`    | `{local_repo}`      |
-| `GITHUB_API_TOKEN`        | `{github}`          |
-| `GOOGLE_CALENDAR_API_KEY` | `{google_calendar}` |
-| HTTP (public internet)    | `∅` (public)        |
-| Agent stdin               | `{local_repo}`      |
+- **Secrecy**: more principals = more restricted. Data labeled `{github, tzn}`
+  requires authority over _both_ to declassify.
+- **Integrity**: more principals = more trusted. Data vouched for by `{github}`
+  is higher-integrity than unsigned data.
 
-### Computation label (`pc`)
+[dlm]: https://www.cs.cornell.edu/andru/papers/iflow-sosp97/
 
-The host tracks a `pc` (program counter label) per module invocation. When a
-module reads a labeled resource, `pc` is joined (set union'd) with the
-resource's label:
+| Resource               | Secrecy              | Integrity  |
+| ---------------------- | -------------------- | ---------- |
+| Cell: `github_api_key` | `{github, tzn}`      | `{github}` |
+| Cell: `user_location`  | `{user_location}`    | `∅`        |
+| HTTP (public internet) | `∅`                  | `∅`        |
+| Agent stdin/stdout     | `{caller_principal}` | `∅`        |
 
-```text
-pc = {local_repo}              ← stdin taint
-  module reads GITHUB_API_TOKEN
-pc = {local_repo, github}      ← accumulated taint
+The data cell configuration file defines both dimensions:
+
+```toml
+[[cell]]
+name      = "github_api_key"
+value     = "ghp_xxx"
+secrecy   = ["github", "tzn"]
+integrity = ["github"]
 ```
 
-### Declassification
+### Principals
 
-Before writing to an output channel (HTTP), `pc` must **flow to** the channel's
-label. Since HTTP is public (`∅`), `pc` must be empty.
+A **principal** is the atom of both lattice dimensions — it represents an
+identity that can own secrecy tags and vouch for integrity. There are three
+kinds, managed in `principals.toml`:
 
-Declassification is **explicit** — the module must call
-`ifc::declassify(categories)` to strip categories from `pc`. The host verifies
-each category is in the module's `can_declassify` privilege (from the policy
-file).
+| Kind    | Example           | Identified by       |
+| ------- | ----------------- | ------------------- |
+| Named   | `tzn`, `github`   | Human-readable name |
+| SSH key | `tzn_key`         | Base64 public key   |
+| Module  | `crate_vendor_v1` | Wasm content digest |
 
-This design is deliberate:
+Delegation is explicit via **speaks-for** edges. For example, an SSH key
+`tzn_key` speaks for the named principal `tzn`. The server resolves transitive
+delegations to determine a caller's full authority.
 
-- **Not automatic.** A module's privilege doesn't automatically apply. The
-  module must consciously invoke `ifc::declassify` at a specific point in its
-  code. This makes the security decision auditable in the module's source.
-- **Two distinct types.** The codebase uses [`Label`](src/ifc.rs) (data taint)
-  vs [`DeclassificationPrivilege`](src/ifc.rs) (policy authority) so they cannot
-  be accidentally confused.
+### Computation label
+
+The host assigns a **fixed** dual-component label at module spawn time from the
+caller's `--secrecy` and `--integrity` flags. Cell reads are **access-checked**
+against this label — no implicit taint raising.
+
+```text
+label = (S={caller, calendar_token}, I={caller})   ← declared at spawn
+  module reads google_oauth_token cell
+  check: {calendar_token} ⊆ {caller, calendar_token} ✓
+label unchanged                                  ← fixed, not raised
+```
+
+### Flow rule
+
+Data at label `L₁` can flow to a channel at label `L₂` iff:
+
+- `L₁.secrecy ⊆ L₂.secrecy` (no write-down)
+- `L₂.integrity ⊆ L₁.integrity` (no read-down)
+
+### Privilege: declassification and endorsement
+
+Modules carry a [`Privilege`](src/ifc.rs) derived from the `speaks_for` edges in
+the policy file. A module's `speaks_for` set determines its full privilege:
+
+- **Declassify**: remove secrecy principals it speaks for.
+- **Endorse**: restore integrity principals it speaks for.
+
+Both operations are **explicit** — the module must call them at a specific point
+in its code. This makes security decisions auditable.
 
 ### What modules see
 
-Modules use **standard WASI** for all I/O. The only IFC-specific APIs are two
+Modules use **standard WASI** for all I/O. The only IFC-specific APIs are
 optional host imports:
 
 ```text
-ifc::get_label()       → current pc categories
-ifc::declassify(cats)  → strip categories (privilege-checked)
+ifc::get_label()       → current secrecy principals
+ifc::declassify(ps)    → remove secrecy principals (privilege-checked)
+ifc::get_cell(name)    → read labeled data cell (access-checked against label)
 ```
 
 Modules that don't call these are just normal WASI programs. The host still
@@ -182,15 +224,16 @@ The policy file is part of the **Trusted Computing Base (TCB)**.
 
 ## Security model
 
-| Property          | Direct mode | Server/client mode                   |
-| ----------------- | ----------- | ------------------------------------ |
-| Filesystem access | ❌ None     | ✅ Via custom FS ABI (IFC-gated)     |
-| Network access    | ❌ None     | ✅ Via WASI HTTP (IFC-gated)         |
-| Secrets           | ❌ None     | ✅ Labeled data cells / env vars     |
-| IFC enforcement   | ❌ No       | ✅ Category-based labels             |
-| Fuel / CPU budget | ✅ wasmtime | ✅ wasmtime                          |
-| Memory budget     | ✅ wasmtime | ✅ wasmtime                          |
-| Network isolation | N/A         | ✅ `sandbox-exec` / `--network=none` |
+| Property          | Direct mode | Server/client mode                    |
+| ----------------- | ----------- | ------------------------------------- |
+| Filesystem access | ❌ None     | ✅ Via custom FS ABI (IFC-gated)      |
+| Network access    | ❌ None     | ✅ Via custom HTTP ABI (IFC-gated)    |
+| Secrets           | ❌ None     | ✅ Labeled data cells / env vars      |
+| IFC enforcement   | ❌ No       | ✅ Dual-component (secrecy+integrity) |
+| Identity          | ❌ No       | ✅ Principal-based trust graph        |
+| Fuel / CPU budget | ✅ wasmtime | ✅ wasmtime                           |
+| Memory budget     | ✅ wasmtime | ✅ wasmtime                           |
+| Network isolation | N/A         | ✅ `sandbox-exec` / `--network=none`  |
 
 ## Building
 
@@ -211,28 +254,42 @@ If you want to run the server and client separately (e.g. for debugging or
 custom setups):
 
 ```bash
+bazel run //cleanroom/tools/generate_policy
+
 # Terminal 1 — start the server
-./bazel-bin/cleanroom/cleanroom server \
+bazel run //cleanroom -- server \
   --policy-file=cleanroom/example_policy.toml \
+  --cells-file=cleanroom/example_cells.toml \
   --socket=/tmp/cleanroom.sock \
   --module-store=/tmp/modules
 
-# Terminal 2 — run a module
+# Terminal 2 — run a module with a label
 export CLEANROOM_SOCKET=/tmp/cleanroom.sock
-echo "hello world" | ./bazel-bin/cleanroom/cleanroom client run \
-  --module=to_uppercase_wasm
+echo "hello world" | bazel run //cleanroom -- run \
+  to_uppercase_wasm --integrity=tzn --secrecy=tzn
+
+# Terminal 2 — run a module that needs access to secret cells
+echo "user@gmail.com" | bazel run //cleanroom -- run \
+  limited_calendar_wasm \
+  --integrity=caller --secrecy=caller,calendar_token
 ```
+
+The `--integrity` flag identifies the caller (who vouches for stdin). The
+`--secrecy` flag sets the secrecy categories for the computation. The module
+must be authorized (via `speaks_for`) for every secrecy principal beyond the
+caller's own identity.
 
 ## Examples
 
-| Module          | Source                                               | Description                            |
-| --------------- | ---------------------------------------------------- | -------------------------------------- |
-| `to_uppercase`  | [`examples/to_uppercase/`](examples/to_uppercase/)   | ASCII uppercase                        |
-| `reverse`       | [`examples/reverse/`](examples/reverse/)             | Reverse bytes                          |
-| `word_count`    | [`examples/word_count/`](examples/word_count/)       | Count lines/words/bytes (like `wc`)    |
-| `redact_secret` | [`examples/redact_secret/`](examples/redact_secret/) | Reads and redacts secrets (IFC demo)   |
-| `weather`       | [`examples/weather/`](examples/weather/)             | Reads city from secrets, shows wttr.in |
-| `crate_vendor`  | [`examples/crate_vendor/`](examples/crate_vendor/)   | Vendored crate downloads               |
+| Module             | Source                                                     | Description                            |
+| ------------------ | ---------------------------------------------------------- | -------------------------------------- |
+| `to_uppercase`     | [`examples/to_uppercase/`](examples/to_uppercase/)         | ASCII uppercase                        |
+| `reverse`          | [`examples/reverse/`](examples/reverse/)                   | Reverse bytes                          |
+| `word_count`       | [`examples/word_count/`](examples/word_count/)             | Count lines/words/bytes (like `wc`)    |
+| `redact_secret`    | [`examples/redact_secret/`](examples/redact_secret/)       | Reads and redacts secrets (IFC demo)   |
+| `weather`          | [`examples/weather/`](examples/weather/)                   | Reads city from secrets, shows wttr.in |
+| `crate_vendor`     | [`examples/crate_vendor/`](examples/crate_vendor/)         | Vendored crate downloads               |
+| `limited_calendar` | [`examples/limited_calendar/`](examples/limited_calendar/) | Google Calendar with IFC + HTTP        |
 
 ## Writing your own module
 
@@ -282,17 +339,22 @@ fn main() {
 cleanroom/
   BUILD                   — Bazel: binary + integration tests
   README.md               — This file
-  example_policy.toml     — Example policy (generated by tools/generate_policy)
+  example_policy.toml     — Trust graph: principals + speaks-for
+                            (generated by tools/generate_policy)
+  example_cells.toml      — Data cells with secrecy + integrity labels
   secrets/                — Example secrets directory (IFC-labeled)
   src/
-    main.rs               — Entry point: run, server, client, shell subcommands
-    ifc.rs                — IFC label types (Label, DeclassificationPrivilege,
-                            ComputationLabel) and lattice operations
-    policy.rs             — TOML policy parser
+    main.rs               — Entry point: run, server, client, shell, principal
+    ifc.rs                — IFC types: Label (secrecy+integrity), Privilege
+                            (declassify+endorse), ComputationLabel, FlowError
+    principals.rs         — Trust graph parser: Named/SSH/Module
+                            principals, speaks-for delegation
+    policy.rs             — Cells parser (TOML)
     protocol.rs           — RPC protocol (bincode over Unix socket)
-    server.rs             — Host-side IFC server daemon
+    server.rs             — Host-side IFC server daemon (identity-aware)
     client.rs             — Thin client for inside the container
     shell.rs              — Sandboxed shell launcher (sandbox-exec / Docker)
+    wasi_ifc.rs           — WASI interception for IFC enforcement
   sdk/
     lib.rs                — Guest SDK (Oak Functions ABI + IFC imports)
     BUILD
@@ -311,11 +373,22 @@ cleanroom/
 
 ## Design decisions
 
-### Why categories, not levels?
+### Why principals, not levels?
 
 A linear lattice (Public < Secret < TopSecret) is too coarse. A module trusted
 to use the Google Calendar API should not automatically be able to use the
-GitHub API. Categories allow **independent** confidentiality concerns.
+GitHub API. Principals allow **independent** secrecy and integrity concerns, and
+tie labels to real identities.
+
+### Why dual-component labels?
+
+Secrecy alone isn't enough for [robust declassification][robust]. Without
+integrity tracking, an attacker-influenced module could steer _what_ gets
+declassified. By tracking integrity alongside secrecy, the system can gate
+declassification on whether the computation was influenced by trusted data only.
+This follows the DLM/DIFC model used in Flume, HiStar, and JIF.
+
+[robust]: https://www.cis.upenn.edu/~stevez/papers/ZM01b.pdf
 
 ### Why explicit declassification?
 

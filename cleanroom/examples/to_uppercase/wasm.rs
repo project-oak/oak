@@ -13,14 +13,15 @@
 // limitations under the License.
 
 //! Cleanroom example: convert all ASCII letters in the input to uppercase.
-//! Uses standard Rust `std::io` and WASI.
+//!
+//! Uses standard WASI I/O. IFC enforcement is handled automatically by
+//! the cleanroom runtime at module boundary.
 
-use std::io::{Read, Write};
+use std::io::{self, Read, Write};
 
 fn main() {
     let mut buf = Vec::new();
-    if std::io::stdin().read_to_end(&mut buf).is_ok() {
-        let out: Vec<u8> = buf.iter().map(|b| b.to_ascii_uppercase()).collect();
-        let _ = std::io::stdout().write_all(&out);
-    }
+    io::stdin().read_to_end(&mut buf).expect("reading stdin");
+    let out: Vec<u8> = buf.iter().map(|b| b.to_ascii_uppercase()).collect();
+    io::stdout().write_all(&out).expect("writing stdout");
 }

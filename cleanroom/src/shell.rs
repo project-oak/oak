@@ -52,8 +52,11 @@ pub struct ShellArgs {
     #[arg(long, value_name = "DIR")]
     pub workspace: Option<PathBuf>,
 
-    /// Path to the IFC policy file (TOML). If not specified, defaults to
+    /// Path to the policy file (TOML). If not specified, auto-detects
     /// `cleanroom/example_policy.toml` relative to workspace.
+    ///
+    /// Defines the trust graph: principals, speaks-for delegations,
+    /// and module identities.
     #[arg(long, value_name = "FILE")]
     pub policy_file: Option<PathBuf>,
 
@@ -82,9 +85,20 @@ pub fn run_shell(args: &ShellArgs) -> Result<()> {
         .with_context(|| format!("resolving workspace path {:?}", workspace_base))?;
 
     let policy_file = match &args.policy_file {
-        Some(path) => std::fs::canonicalize(path)
-            .with_context(|| format!("resolving policy file {:?}", path))?,
-        None => workspace.join("cleanroom/example_policy.toml"),
+        Some(path) => Some(
+            std::fs::canonicalize(path)
+                .with_context(|| format!("resolving policy file {:?}", path))?,
+        ),
+        None => {
+            // Auto-detect: look for the policy file in the workspace.
+            let default_path = workspace.join("cleanroom/example_policy.toml");
+            if default_path.exists() {
+                log::info!("auto-detected policy file at {default_path:?}");
+                Some(default_path)
+            } else {
+                None
+            }
+        }
     };
 
     let cells_file = match &args.cells_file {
@@ -111,7 +125,7 @@ pub fn run_shell(args: &ShellArgs) -> Result<()> {
     let mut server = start_server(
         &workspace,
         &self_binary,
-        &policy_file,
+        policy_file.as_deref(),
         &cells_file,
         &socket_path,
         &module_store,
@@ -138,18 +152,22 @@ pub fn run_shell(args: &ShellArgs) -> Result<()> {
 fn start_server(
     workspace: &Path,
     binary: &Path,
-    policy_file: &Path,
+    policy_file: Option<&Path>,
     cells_file: &Path,
     socket_path: &Path,
     module_store: &Path,
 ) -> Result<Child> {
-    Command::new(binary)
-        .arg("server")
-        .arg(format!("--policy-file={}", policy_file.display()))
+    let mut cmd = Command::new(binary);
+    cmd.arg("server")
         .arg(format!("--cells-file={}", cells_file.display()))
         .arg(format!("--socket={}", socket_path.display()))
-        .arg(format!("--module-store={}", module_store.display()))
-        .current_dir(workspace)
+        .arg(format!("--module-store={}", module_store.display()));
+
+    if let Some(path) = policy_file {
+        cmd.arg(format!("--policy-file={}", path.display()));
+    }
+
+    cmd.current_dir(workspace)
         .stdin(Stdio::null())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
@@ -191,8 +209,8 @@ fn run_sandbox_shell(workspace: &Path, socket_path: &Path, client_binary: &Path)
     }
     eprintln!("└─────────────────────────────────────────────────┘");
 
-    let status = Command::new("sandbox-exec")
-        .arg("-p")
+    let mut cmd = Command::new("sandbox-exec");
+    cmd.arg("-p")
         .arg(&sandbox_profile)
         .arg(&shell)
         .env("CLEANROOM_SOCKET", socket_path)
@@ -200,9 +218,9 @@ fn run_sandbox_shell(workspace: &Path, socket_path: &Path, client_binary: &Path)
         .current_dir(workspace)
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .status()
-        .context("running sandbox-exec")?;
+        .stderr(Stdio::inherit());
+
+    let status = cmd.status().context("running sandbox-exec")?;
 
     if !status.success() {
         bail!("sandboxed shell exited with status {status}");

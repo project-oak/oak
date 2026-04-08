@@ -39,6 +39,7 @@ rust_library(
         "src/ifc.rs",
         "src/lib.rs",
         "src/policy.rs",
+        "src/principals.rs",
         "src/protocol.rs",
         "src/server.rs",
         "src/shell.rs",
@@ -54,15 +55,14 @@ rust_library(
         "@oak_crates_index//:clap",
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:hex",
-        "@oak_crates_index//:http",
         "@oak_crates_index//:log",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:tempfile",
         "@oak_crates_index//:toml",
+        "@oak_crates_index//:ureq",
         "@oak_crates_index//:wasmtime",
         "@oak_crates_index//:wasmtime-wasi",
-        "@oak_crates_index//:wasmtime-wasi-http",
     ],
 )
 
@@ -71,6 +71,7 @@ rust_binary(
     srcs = ["src/bin/main.rs"],
     deps = [
         ":cleanroom_lib",
+        "//oak_file_utils",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:env_logger",
@@ -88,6 +89,7 @@ rust_test(
     data = [
         ":cleanroom",
         "//cleanroom/examples/cat_file:cat_file_wasm",
+        "//cleanroom/examples/redact_secret:redact_secret_wasm",
         "//cleanroom/examples/reverse:reverse_wasm",
         "//cleanroom/examples/to_uppercase:to_uppercase_wasm",
         "//cleanroom/examples/word_count:word_count_wasm",
@@ -98,6 +100,7 @@ rust_test(
         "TO_UPPERCASE_WASM": "$(rootpath //cleanroom/examples/to_uppercase:to_uppercase_wasm)",
         "REVERSE_WASM": "$(rootpath //cleanroom/examples/reverse:reverse_wasm)",
         "WORD_COUNT_WASM": "$(rootpath //cleanroom/examples/word_count:word_count_wasm)",
+        "REDACT_SECRET_WASM": "$(rootpath //cleanroom/examples/redact_secret:redact_secret_wasm)",
     },
     deps = [
         ":cleanroom_lib",

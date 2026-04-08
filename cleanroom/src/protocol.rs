@@ -29,6 +29,8 @@ use std::io::{Read, Write};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
+use crate::ifc::Label;
+
 /// A message from the client to the server.
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ClientToServer {
@@ -38,6 +40,26 @@ pub enum ClientToServer {
         digest: String,
         /// Bytes to feed as stdin to the module.
         stdin: Vec<u8>,
+        /// Initial label for the computation.
+        ///
+        /// The **integrity** component identifies the caller: the
+        /// principals who vouch for the stdin data.  The server
+        /// derives the output channel label from this set.
+        ///
+        /// The **secrecy** component specifies what secret data the
+        /// module may access.  The module must be authorized (via
+        /// `speaks_for`) for every secrecy principal beyond the
+        /// caller's own identity.
+        ///
+        /// Default is the public label (anonymous, no secret access).
+        #[serde(default)]
+        label: Label,
+        /// Command-line arguments forwarded to the module.
+        ///
+        /// These are provided to the module via WASI `args` and can
+        /// be read with `std::env::args()` or parsed with `clap`.
+        #[serde(default)]
+        args: Vec<String>,
     },
     /// List all modules registered in the manifest.
     ListModules,
@@ -46,8 +68,8 @@ pub enum ClientToServer {
         /// Content digest of the module.
         digest: String,
     },
-    /// Custom FsReadFile Result
-    FsReadFileResult { data: Vec<u8> },
+    /// Custom FsReadFile Result (None if the file does not exist).
+    FsReadFileResult { data: Option<Vec<u8>> },
     /// Custom FsWriteFile Result
     FsWriteFileResult { success: bool },
     /// Custom FsDeleteFile Result
@@ -142,12 +164,18 @@ pub fn read_message<R: Read, T: for<'de> Deserialize<'de>>(reader: &mut R) -> Re
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ifc::Principal;
 
     #[test]
     fn roundtrip_run_request() {
         let req = ClientToServer::Run {
             digest: "sha256:abc123".to_string(),
             stdin: b"hello world".to_vec(),
+            label: Label::new(
+                vec![Principal::new("secret_category"), Principal::new("tzn")],
+                vec![Principal::new("tzn")],
+            ),
+            args: vec!["--lockfile=Cargo.lock".to_string()],
         };
 
         let mut buf = Vec::new();
@@ -157,9 +185,12 @@ mod tests {
         let decoded: ClientToServer = read_message(&mut cursor).unwrap();
 
         match decoded {
-            ClientToServer::Run { digest, stdin } => {
+            ClientToServer::Run { digest, stdin, label, args } => {
                 assert_eq!(digest, "sha256:abc123");
                 assert_eq!(stdin, b"hello world");
+                assert_eq!(label.secrecy_names(), vec!["secret_category", "tzn"]);
+                assert_eq!(label.integrity_names(), vec!["tzn"]);
+                assert_eq!(args, vec!["--lockfile=Cargo.lock"]);
             }
             _ => panic!("wrong variant"),
         }

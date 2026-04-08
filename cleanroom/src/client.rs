@@ -25,10 +25,13 @@ use std::{
 
 use anyhow::{Context, Result};
 
-use crate::protocol::{self, ClientToServer, ModuleInfo, RunStatus, ServerToClient};
+use crate::{
+    ifc::Label,
+    protocol::{self, ClientToServer, ModuleInfo, RunStatus, ServerToClient},
+};
 
 /// Connects to the server, runs a module, and prints the output.
-pub fn client_run(socket_path: &Path, module: &str) -> Result<()> {
+pub fn client_run(socket_path: &Path, module: &str, label: Label, args: Vec<String>) -> Result<()> {
     use std::io::IsTerminal;
 
     // Read stdin.
@@ -49,7 +52,7 @@ pub fn client_run(socket_path: &Path, module: &str) -> Result<()> {
     // Connect and send the Run request.
     let mut stream = UnixStream::connect(socket_path).context("connecting to cleanroom server")?;
 
-    let request = ClientToServer::Run { digest: digest.clone(), stdin: stdin_bytes };
+    let request = ClientToServer::Run { digest: digest.clone(), stdin: stdin_bytes, label, args };
     protocol::write_message(&mut stream, &request).context("sending request")?;
 
     loop {
@@ -59,13 +62,19 @@ pub fn client_run(socket_path: &Path, module: &str) -> Result<()> {
         match response {
             ServerToClient::FsReadFile { path } => {
                 log::info!("ThinClient: server requested FsReadFile for path={}", path);
-                let data = std::fs::read(&path).unwrap_or_default();
+                let data = std::fs::read(&path).ok();
                 let reply = ClientToServer::FsReadFileResult { data };
                 protocol::write_message(&mut stream, &reply).context("sending FsReadFileResult")?;
             }
             ServerToClient::FsWriteFile { path, data } => {
                 log::info!("ThinClient: server requested FsWriteFile for path={}", path);
-                let success = std::fs::write(&path, data).is_ok();
+                let success = {
+                    if let Some(parent) = std::path::Path::new(&path).parent() {
+                        std::fs::create_dir_all(parent).ok();
+                    }
+                    std::fs::write(&path, data)
+                }
+                .is_ok();
                 let reply = ClientToServer::FsWriteFileResult { success };
                 protocol::write_message(&mut stream, &reply)
                     .context("sending FsWriteFileResult")?;

@@ -13,14 +13,12 @@
 // limitations under the License.
 
 //! Cleanroom example: reverse the bytes of the input.
-//! Uses standard Rust `std::io` and WASI.
 
-use std::io::{Read, Write};
+use std::io::{self, Read, Write};
 
 fn main() {
     let mut buf = Vec::new();
-    if std::io::stdin().read_to_end(&mut buf).is_ok() {
-        buf.reverse();
-        let _ = std::io::stdout().write_all(&buf);
-    }
+    io::stdin().read_to_end(&mut buf).expect("reading stdin");
+    buf.reverse();
+    io::stdout().write_all(&buf).expect("writing stdout");
 }

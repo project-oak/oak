@@ -23,20 +23,19 @@ package(
 )
 
 # A standalone replacement for `cargo vendor`. Compiles to wasm32-wasip2
-# and runs inside a Wasm runtime (e.g. wasmtime) with sandboxed wasi:http
-# network access.
+# and runs inside the cleanroom sandbox with IFC-aware I/O.
 #
-# Parses a Cargo.lock file, downloads all registry crate archives from
-# crates.io, extracts them into a vendor/ directory, and generates the
-# .cargo/config.toml needed for offline builds with `cargo build --frozen`.
+# Reads a JSON config from stdin, downloads all registry crate archives from
+# crates.io, extracts them into a vendor/ directory via the filesystem proxy,
+# and generates the .cargo/config.toml needed for offline builds.
 rust_binary(
     name = "crate_vendor_bin",
     srcs = ["src/main.rs"],
     deps = [
+        "//cleanroom/sdk:cleanroom_sdk",
         "//util/digest:oak_digest",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
-        "@oak_crates_index//:env_logger",
         "@oak_crates_index//:flate2",
         "@oak_crates_index//:hex",
         "@oak_crates_index//:log",
@@ -44,7 +43,6 @@ rust_binary(
         "@oak_crates_index//:serde_json",
         "@oak_crates_index//:tar",
         "@oak_crates_index//:toml",
-        "@oak_crates_index//:waki",
     ],
 )
 
@@ -62,9 +60,11 @@ rust_test(
     data = [
         "testdata/Cargo.lock",
         ":crate_vendor",
+        "//cleanroom",
     ],
     env = {
-        "CRATE_VENDOR_BIN": "$(rootpath :crate_vendor)",
+        "CLEANROOM_BIN": "$(rootpath //cleanroom:cleanroom)",
+        "CRATE_VENDOR_WASM": "$(rootpath :crate_vendor)",
         "TEST_CARGO_LOCK": "$(rootpath testdata/Cargo.lock)",
     },
     tags = [

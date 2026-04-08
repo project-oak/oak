@@ -15,9 +15,10 @@
 use std::io;
 
 fn main() -> io::Result<()> {
-    // Read "secret_api_key" from the cell store (taints computation
-    // with {secret_category}).
-    let input = cleanroom_sdk::get_cell("secret_api_key").ok_or_else(|| {
+    // Read "secret_api_key" from the cell store. The cell is labeled
+    // {secret_category}, so the computation must already include that
+    // in its secrecy.
+    let input = cleanroom_sdk::read_cell("secret_api_key").ok_or_else(|| {
         io::Error::new(io::ErrorKind::Other, "Could not read secret_api_key from cell")
     })?;
 
@@ -28,11 +29,9 @@ fn main() -> io::Result<()> {
         "****".to_string()
     };
 
-    // The raw secret has been redacted — declassify so the output can
-    // be released.
-    cleanroom_sdk::declassify(&["secret_category"]);
-
-    println!("Redacted secret: {}", redacted);
+    // Write the redacted output to stdout. The runtime enforces IFC
+    // at module boundary — declassification is implicit.
+    println!("Redacted secret: {redacted}");
 
     Ok(())
 }

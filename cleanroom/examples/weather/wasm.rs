@@ -14,24 +14,20 @@
 
 use std::io::{self, Read};
 
-/// Fetches weather from wttr.in via WASI HTTP.
+/// Fetches weather from wttr.in.
 ///
-/// Reads a city name from the `user_location` cell (in the
-/// `user_location` IFC category), fetches weather data for that
-/// city, and explicitly declassifies the output before returning it.
+/// Reads a city name from the `user_location` cell, fetches weather
+/// data for that city, and prints the result.  IFC enforcement is
+/// handled by the runtime automatically.
 fn main() -> io::Result<()> {
-    // Because this module reads from the "user_location" cell, its computation
-    // label automatically becomes tainted with that label. It will look at the
-    // policy deciding whether to allow output.
-
     // 1. Read the labeled data from the cell store.
-    let city = match cleanroom_sdk::get_cell("user_location") {
+    let city = match cleanroom_sdk::read_cell("user_location") {
         Some(val) => val,
         None => {
             // Fall back to reading from stdin.
-            let mut buf = String::new();
-            io::stdin().read_to_string(&mut buf)?;
-            let trimmed = buf.trim().to_string();
+            let mut buf = Vec::new();
+            io::stdin().read_to_end(&mut buf)?;
+            let trimmed = String::from_utf8_lossy(&buf).trim().to_string();
             if trimmed.is_empty() { "London".to_string() } else { trimmed }
         }
     };
@@ -51,23 +47,17 @@ fn main() -> io::Result<()> {
     // city of london: ☁️   +10°C
     //
     // curl 'wttr.in?format=4'
-    // city of london: ☁️   🌡️+10°C 🌬️↘16km/h
+    // city of london: ☁️   🌡️+10°C 🌬️↘16km
     let url = format!("https://wttr.in/{}?format=2", city);
-    eprintln!("Fetching weather from wttr.in");
+    eprintln!("fetching weather from wttr.in");
 
-    // Declassify user_location before making the network request.
-    // The URL format (format=2) does not include the city name in
-    // the response, so the output does not leak the user's location.
-    cleanroom_sdk::declassify(&["user_location"]);
-
-    match waki::Client::new().get(&url).send() {
+    match cleanroom_sdk::http_get(&url, &[]) {
         Ok(response) => {
-            let body = response.body().unwrap_or_default();
-            let text = String::from_utf8_lossy(&body);
-            print!("{}", text);
+            let text = String::from_utf8_lossy(&response.body);
+            print!("{text}");
         }
         Err(e) => {
-            eprintln!("HTTP request failed: {}", e);
+            eprintln!("HTTP request failed: {e}");
             std::process::exit(1);
         }
     }

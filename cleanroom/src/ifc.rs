@@ -16,48 +16,39 @@
 //!
 //! # Model
 //!
-//! Cleanroom uses a **category-based** confidentiality model inspired
-//! by the [Decentralized Label Model (DLM)][dlm]. Each piece of data
-//! carries a [`Label`] — a **set of category names** such as
-//! `{local_repo}`, `{github}`, or `{google_calendar}`.
+//! Cleanroom uses a **dual-component label** model inspired by the
+//! [Decentralized Label Model (DLM)][dlm] and matching the reference
+//! implementation at `mcp/ifc/labels/label.py`.
 //!
-//! ## Why categories instead of levels?
+//! A [`Label`] is a pair `(secrecy, integrity)` where both components
+//! are sets of [`Principal`]s:
 //!
-//! A linear lattice (Public < Secret < TopSecret) is too coarse: a
-//! Google Docs API key and a GitHub token are both "secret," but they
-//! represent independent confidentiality concerns. A module trusted
-//! to declassify Google Docs data should not automatically be able to
-//! declassify GitHub data.
-//!
-//! With categories, the lattice is the **powerset** of all category
-//! names, ordered by subset inclusion:
-//!
-//! - `{github}` and `{google_calendar}` are **incomparable** — neither is a
-//!   subset of the other.
-//! - `{github}` ⊂ `{github, google_calendar}` — strictly less confidential.
-//! - `∅` (the empty set) is **public** — the bottom of the lattice.
+//! - **Secrecy**: more principals = more restricted (subset ordering). Data
+//!   labeled `{github, tzn}` requires authority over *both* to declassify.
+//! - **Integrity**: more principals = more trusted (reversed ordering). Data
+//!   vouched for by `{github}` can flow to channels requiring `{github}`
+//!   integrity or lower.
 //!
 //! ## Lattice operations
 //!
-//! | Operation | Meaning | Formula |
-//! |-----------|---------|---------|
-//! | **Join** | Taint acquired by reading | `L₁ ∪ L₂` |
-//! | **Flows-to** | Can data flow from here to there? | `L₁ ⊆ L₂` |
-//! | **Declassify** | Explicitly release categories | `L \ {categories}` |
-//! | **Public** | No restrictions | `∅` |
+//! | Operation | Secrecy | Integrity |
+//! |-----------|---------|-----------|
+//! | **Join** (read two inputs) | `S₁ ∪ S₂` | `I₁ ∩ I₂` |
+//! | **Flows-to** | `self.S ⊆ target.S` | `target.I ⊆ self.I` |
+//! | **Declassify** | Remove from S | _(unchanged)_ |
+//! | **Endorse** | _(unchanged)_ | Add to I |
 //!
-//! ## Computation label (`pc`)
+//! ## Principals
 //!
-//! The host tracks a [`ComputationLabel`] per module invocation.  When
-//! a module reads a labeled resource (env var, file), `pc` is joined
-//! with the resource's label.  Before any **output** operation (HTTP
-//! request, stdout to a public channel), the host checks:
+//! A [`Principal`] is an atom of both lattice dimensions.  There are
+//! three kinds (distinguished in `principals.toml`, uniform here):
 //!
-//! 1. The module has explicitly called `ifc::declassify` for every category
-//!    remaining in `pc`.  (Declassification is deliberate, not automatic — see
-//!    [Robust Declassification](#robust-declassification).)
-//! 2. Each declassified category is in the module's
-//!    [`DeclassificationPrivilege`].
+//! - **Named**: abstract identities (`tzn`, `github`).
+//! - **SSH key**: cryptographic identity for a human or machine.
+//! - **Module**: code identity (Wasm content digest).
+//!
+//! Authority flows via the "speaks for" relation ([Lampson et al.
+//! 1992][lampson]).
 //!
 //! ## Robust declassification
 //!
@@ -65,290 +56,482 @@
 //! secret and attacker-controlled input, the attacker can steer *what*
 //! gets declassified.  [Zdancewic & Myers (2001)][robust] showed that
 //! declassification should only be allowed when the integrity of the
-//! computation is high — i.e. the decision of *what to declassify*
-//! was not influenced by low-integrity data.
-//!
-//! The integrity dimension is **deferred** in this initial
-//! implementation.  The current design tracks confidentiality
-//! categories only.  Integrity (an independent lattice dimension) can
-//! be layered on later without changing the [`Label`] type — it would
-//! become a second field alongside the category set.
+//! computation is high — i.e. the decision was not influenced by
+//! low-integrity data.
 //!
 //! [dlm]: https://www.cs.cornell.edu/andru/papers/iflow-sosp97/
 //! [robust]: https://www.cis.upenn.edu/~stevez/papers/ZM01b.pdf
+//! [lampson]: https://doi.org/10.1145/138873.138874
 
 use std::{collections::BTreeSet, fmt};
 
 use serde::{Deserialize, Serialize};
 
+// ── Principal ────────────────────────────────────────────────────
+
+/// A principal identity — the atom of both the secrecy and integrity
+/// lattices.
+///
+/// The value is the principal's unique name from `principals.toml`.
+/// Named principals like `"tzn"` and `"github"` are abstract
+/// identities.  SSH keys and modules are concrete principals that
+/// speak for named ones via explicit delegation.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct Principal(String);
+
+impl Principal {
+    /// Creates a principal with the given name.
+    pub fn new(name: impl Into<String>) -> Self {
+        Self(name.into())
+    }
+
+    /// Returns the principal's name.
+    pub fn name(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for Principal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 // ── Label ────────────────────────────────────────────────────────
 
-/// A confidentiality label: a set of category names.
+/// A dual-component IFC label: (secrecy, integrity).
 ///
-/// The lattice is the powerset of all category names, ordered by
-/// subset inclusion.  ⊥ (bottom) is the empty set — public data.
+/// This matches the `Label` class in `mcp/ifc/labels/label.py`.
 ///
-/// # Examples
+/// - **Secrecy** (`S`): set of principals.  More = more restricted. Ordering:
+///   `S₁ ⊑ S₂` iff `S₁ ⊆ S₂`.
+/// - **Integrity** (`I`): set of principals.  More = more trusted. Ordering:
+///   `I₁ ⊑ I₂` iff `I₂ ⊆ I₁` (reversed).
 ///
-/// ```
-/// # use cleanroom::ifc::Label;
-/// let public = Label::public();
-/// let github = Label::category("github");
-/// let both = Label::categories(["github", "local_repo"]);
-///
-/// assert!(public.flows_to(&github).is_ok()); // public ⊆ {github}
-/// assert!(github.flows_to(&public).is_err()); // {github} ⊄ ∅
-/// assert!(github.flows_to(&both).is_ok()); // {github} ⊆ {github, local_repo}
-/// ```
+/// Combined flows-to: `L₁` can flow to `L₂` iff
+/// `L₁.S ⊆ L₂.S` AND `L₂.I ⊆ L₁.I`.
 #[derive(Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct Label(BTreeSet<String>);
+pub struct Label {
+    /// Secrecy component: who must authorize release.
+    secrecy: BTreeSet<Principal>,
+    /// Integrity component: who vouches for this data.
+    integrity: BTreeSet<Principal>,
+}
 
 impl Label {
-    /// The public (bottom) label: no confidentiality restrictions.
+    /// Creates a label with explicit secrecy and integrity.
+    pub fn new(
+        secrecy: impl IntoIterator<Item = Principal>,
+        integrity: impl IntoIterator<Item = Principal>,
+    ) -> Self {
+        Self { secrecy: secrecy.into_iter().collect(), integrity: integrity.into_iter().collect() }
+    }
+
+    /// The public (bottom) label: no secrecy, no integrity.
     pub fn public() -> Self {
-        Self(BTreeSet::new())
+        Self::default()
     }
 
-    /// A label with a single category.
-    pub fn category(name: impl Into<String>) -> Self {
-        let mut set = BTreeSet::new();
-        set.insert(name.into());
-        Self(set)
+    /// A label with secrecy principals only (no integrity).
+    pub fn secret(principals: impl IntoIterator<Item = Principal>) -> Self {
+        Self { secrecy: principals.into_iter().collect(), integrity: BTreeSet::new() }
     }
 
-    /// A label with multiple categories.
-    pub fn categories(names: impl IntoIterator<Item = impl Into<String>>) -> Self {
-        Self(names.into_iter().map(Into::into).collect())
+    /// A label with integrity principals only (no secrecy).
+    pub fn trusted(principals: impl IntoIterator<Item = Principal>) -> Self {
+        Self { secrecy: BTreeSet::new(), integrity: principals.into_iter().collect() }
     }
 
-    /// Returns the join (set union) of two labels.
+    /// Returns the join (least upper bound) of two labels.
     ///
-    /// This is the taint operation: the result contains all categories
-    /// from both labels.
+    /// Secrecy: union (taint grows).
+    /// Integrity: intersection (trust degrades).
     pub fn join(&self, other: &Label) -> Label {
-        Label(self.0.union(&other.0).cloned().collect())
-    }
-
-    /// Returns a new label with the given categories removed.
-    ///
-    /// This is the declassification primitive.  **The caller must
-    /// verify privilege** before calling — see
-    /// [`ComputationLabel::declassify`].
-    fn declassify(&self, categories: &[String]) -> Label {
-        Label(self.0.iter().filter(|c| !categories.contains(c)).cloned().collect())
+        Label {
+            secrecy: self.secrecy.union(&other.secrecy).cloned().collect(),
+            integrity: self.integrity.intersection(&other.integrity).cloned().collect(),
+        }
     }
 
     /// Checks whether data at this label can flow to a channel with
-    /// `target` label (i.e. `self ⊆ target`).
+    /// `target` label.
     ///
-    /// Returns `Ok(())` on success.  On failure, the error carries the
-    /// excess categories that block the flow.
-    pub fn flows_to(&self, target: &Label) -> Result<(), ExcessCategories> {
-        let excess: BTreeSet<String> = self.0.difference(&target.0).cloned().collect();
-        if excess.is_empty() { Ok(()) } else { Err(ExcessCategories(excess)) }
+    /// Flow is allowed iff:
+    /// - `self.secrecy ⊆ target.secrecy` (no write-down)
+    /// - `target.integrity ⊆ self.integrity` (no read-down)
+    pub fn flows_to(&self, target: &Label) -> Result<(), FlowError> {
+        let excess_secrecy: BTreeSet<Principal> =
+            self.secrecy.difference(&target.secrecy).cloned().collect();
+        let missing_integrity: BTreeSet<Principal> =
+            target.integrity.difference(&self.integrity).cloned().collect();
+
+        if excess_secrecy.is_empty() && missing_integrity.is_empty() {
+            Ok(())
+        } else {
+            Err(FlowError { excess_secrecy, missing_integrity })
+        }
     }
 
-    /// Returns `true` if this is the public (empty) label.
+    /// Checks if data at this label can flow to `target` after
+    /// exercising the given declassification and endorsement
+    /// privilege.
+    ///
+    /// This applies privilege per-operation without mutating any
+    /// label.  The `declassify` set removes secrecy principals from
+    /// `self` and the `endorse` set adds integrity principals to
+    /// `self` before performing the flow check.
+    ///
+    /// Returns an error if the privilege does not cover the
+    /// requested principals or if the adjusted label still does not
+    /// flow.
+    pub fn flows_to_with_privilege(
+        &self,
+        target: &Label,
+        privilege: &Privilege,
+        declassify: &BTreeSet<Principal>,
+        endorse: &BTreeSet<Principal>,
+    ) -> Result<(), FlowError> {
+        // Verify privilege covers all requested operations.
+        let uncovered_declass = privilege.uncovered_declassify(declassify);
+        let uncovered_endorse = privilege.uncovered_endorse(endorse);
+        if !uncovered_declass.is_empty() || !uncovered_endorse.is_empty() {
+            return Err(FlowError {
+                excess_secrecy: uncovered_declass,
+                missing_integrity: uncovered_endorse,
+            });
+        }
+
+        // Apply privilege: declassify removes secrecy, endorse adds integrity.
+        let adjusted = self.declassify(declassify).endorse(endorse);
+        adjusted.flows_to(target)
+    }
+
+    /// Checks if data at this label can flow to `target` after
+    /// declassifying (removing secrecy) using the given privilege.
+    ///
+    /// Use this for **writes / output**: data leaves the computation
+    /// toward a less-secret destination. Declassification lowers
+    /// secrecy; endorsement is not applied.
+    pub fn flows_to_declassifying(
+        &self,
+        target: &Label,
+        privilege: &Privilege,
+    ) -> Result<(), FlowError> {
+        let adjusted = self.declassify(privilege.declassify_set());
+        adjusted.flows_to(target)
+    }
+
+    /// Checks if data at this label can flow to `target` after
+    /// endorsing (raising integrity) using the given privilege.
+    ///
+    /// Use this for **reads / input**: data enters the computation
+    /// from a less-trusted source. Endorsement raises integrity;
+    /// declassification is not applied.
+    pub fn flows_to_endorsing(
+        &self,
+        target: &Label,
+        privilege: &Privilege,
+    ) -> Result<(), FlowError> {
+        let adjusted = self.endorse(privilege.endorse_set());
+        adjusted.flows_to(target)
+    }
+
+    /// Returns `true` if the label is public (no secrecy, no integrity).
     pub fn is_public(&self) -> bool {
-        self.0.is_empty()
+        self.secrecy.is_empty() && self.integrity.is_empty()
     }
 
-    /// Returns the category names in this label.
-    pub fn category_names(&self) -> &BTreeSet<String> {
-        &self.0
+    /// Returns `true` if the secrecy component is empty.
+    pub fn is_declassified(&self) -> bool {
+        self.secrecy.is_empty()
     }
 
-    /// Returns the number of categories.
-    pub fn len(&self) -> usize {
-        self.0.len()
+    /// Returns a new label with the given secrecy principals removed.
+    pub fn declassify(&self, principals: &BTreeSet<Principal>) -> Label {
+        Label {
+            secrecy: self.secrecy.difference(principals).cloned().collect(),
+            integrity: self.integrity.clone(),
+        }
     }
 
-    /// Returns `true` if the label has no categories (synonym for
-    /// [`is_public`](Self::is_public)).
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
+    /// Returns a new label with the given integrity principals added.
+    pub fn endorse(&self, principals: &BTreeSet<Principal>) -> Label {
+        Label {
+            secrecy: self.secrecy.clone(),
+            integrity: self.integrity.union(principals).cloned().collect(),
+        }
+    }
+
+    /// Returns the secrecy principal names as strings.
+    pub fn secrecy_names(&self) -> Vec<String> {
+        self.secrecy.iter().map(|p| p.name().to_string()).collect()
+    }
+
+    /// Returns the secrecy principal set.
+    pub fn secrecy_set(&self) -> &BTreeSet<Principal> {
+        &self.secrecy
+    }
+
+    /// Returns the integrity principal names as strings.
+    pub fn integrity_names(&self) -> Vec<String> {
+        self.integrity.iter().map(|p| p.name().to_string()).collect()
+    }
+
+    /// Returns the integrity principal set.
+    pub fn integrity_set(&self) -> &BTreeSet<Principal> {
+        &self.integrity
     }
 }
 
 impl fmt::Debug for Label {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.0.is_empty() {
-            write!(f, "Label(∅)")
-        } else {
-            let cats: Vec<_> = self.0.iter().collect();
-            write!(
-                f,
-                "Label({{{}}})",
-                cats.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")
-            )
-        }
+        write!(f, "Label(S={:?}, I={:?})", self.secrecy_names(), self.integrity_names())
     }
 }
 
 impl fmt::Display for Label {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.0.is_empty() {
-            write!(f, "∅ (public)")
-        } else {
-            let cats: Vec<_> = self.0.iter().collect();
-            write!(f, "{{{}}}", cats.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", "))
-        }
+        let s = format_principal_set(&self.secrecy);
+        let i = format_principal_set(&self.integrity);
+        write!(f, "(S={s}, I={i})")
     }
 }
 
-// ── DeclassificationPrivilege ────────────────────────────────────
+fn format_principal_set(set: &BTreeSet<Principal>) -> String {
+    if set.is_empty() {
+        "∅".to_string()
+    } else {
+        let names: Vec<_> = set.iter().map(|p| p.name()).collect();
+        format!("{{{}}}", names.join(", "))
+    }
+}
 
-/// The set of categories a module is allowed to declassify.
+// ── Privilege ────────────────────────────────────────────────────
+
+/// Authority to declassify secrecy principals and endorse integrity
+/// principals.
 ///
-/// This is a **newtype** around `BTreeSet<String>` to distinguish it
-/// from a [`Label`] at the type level.  A `Label` is *data about
-/// taint*; a `DeclassificationPrivilege` is *authority granted by
-/// policy*.  Conflating the two would be a security-relevant type
-/// error.
+/// This is the unified privilege type, replacing the separate
+/// `DeclassificationPrivilege` and `EndorsementPrivilege`.
+/// Matches `mcp/ifc/labels/privilege.py::Privilege`.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct DeclassificationPrivilege(BTreeSet<String>);
+pub struct Privilege {
+    /// Principals whose secrecy this module can remove.
+    declassify: BTreeSet<Principal>,
+    /// Principals whose integrity this module can restore.
+    endorse: BTreeSet<Principal>,
+}
 
-impl DeclassificationPrivilege {
-    /// No declassification privilege (empty set).
+impl Privilege {
+    /// No privilege at all.
     pub fn none() -> Self {
-        Self(BTreeSet::new())
+        Self::default()
     }
 
-    /// Privilege to declassify the given categories.
-    pub fn for_categories(categories: impl IntoIterator<Item = impl Into<String>>) -> Self {
-        Self(categories.into_iter().map(Into::into).collect())
+    /// Privilege to declassify the given principals.
+    pub fn for_declassification(ps: impl IntoIterator<Item = Principal>) -> Self {
+        Self { declassify: ps.into_iter().collect(), endorse: BTreeSet::new() }
     }
 
-    /// Returns `true` if every category in `requested` is covered by
-    /// this privilege.
-    pub fn covers(&self, requested: &[String]) -> bool {
-        requested.iter().all(|c| self.0.contains(c.as_str()))
+    /// Privilege to endorse the given principals.
+    pub fn for_endorsement(ps: impl IntoIterator<Item = Principal>) -> Self {
+        Self { declassify: BTreeSet::new(), endorse: ps.into_iter().collect() }
     }
 
-    /// Returns the categories that are requested but not covered.
-    pub fn uncovered(&self, requested: &[String]) -> Vec<String> {
-        requested.iter().filter(|c| !self.0.contains(c.as_str())).cloned().collect()
+    /// Full privilege for the given principals (both declassify and endorse).
+    pub fn full(ps: impl IntoIterator<Item = Principal>) -> Self {
+        let set: BTreeSet<Principal> = ps.into_iter().collect();
+        Self { declassify: set.clone(), endorse: set }
     }
 
-    /// Returns the underlying set.
-    pub fn as_set(&self) -> &BTreeSet<String> {
-        &self.0
+    /// Creates a privilege with explicit sets.
+    pub fn new(
+        declassify: impl IntoIterator<Item = Principal>,
+        endorse: impl IntoIterator<Item = Principal>,
+    ) -> Self {
+        Self {
+            declassify: declassify.into_iter().collect(),
+            endorse: endorse.into_iter().collect(),
+        }
+    }
+
+    /// Returns `true` if every principal in `requested` is covered
+    /// by the declassification privilege.
+    pub fn covers_declassify(&self, requested: &BTreeSet<Principal>) -> bool {
+        requested.is_subset(&self.declassify)
+    }
+
+    /// Returns the declassification principals not covered.
+    pub fn uncovered_declassify(&self, requested: &BTreeSet<Principal>) -> BTreeSet<Principal> {
+        requested.difference(&self.declassify).cloned().collect()
+    }
+
+    /// Returns `true` if every principal in `requested` is covered
+    /// by the endorsement privilege.
+    pub fn covers_endorse(&self, requested: &BTreeSet<Principal>) -> bool {
+        requested.is_subset(&self.endorse)
+    }
+
+    /// Returns the endorsement principals not covered.
+    pub fn uncovered_endorse(&self, requested: &BTreeSet<Principal>) -> BTreeSet<Principal> {
+        requested.difference(&self.endorse).cloned().collect()
+    }
+
+    /// Returns the declassification set.
+    pub fn declassify_set(&self) -> &BTreeSet<Principal> {
+        &self.declassify
+    }
+
+    /// Returns the endorsement set.
+    pub fn endorse_set(&self) -> &BTreeSet<Principal> {
+        &self.endorse
+    }
+
+    /// Merges another privilege into this one (union of both sets).
+    pub fn merge(&self, other: &Privilege) -> Privilege {
+        Privilege {
+            declassify: self.declassify.union(&other.declassify).cloned().collect(),
+            endorse: self.endorse.union(&other.endorse).cloned().collect(),
+        }
     }
 }
 
 // ── ComputationLabel ─────────────────────────────────────────────
 
-/// Tracks the current confidentiality taint for a single module
-/// invocation.
+/// Tracks the current IFC label for a single module invocation.
 ///
-/// Created at the start of each invocation (typically with
-/// `{local_repo}` since stdin comes from within the workspace).
-/// Updated whenever the module reads a labeled resource.
-///
-/// # Invariant
-///
-/// The set of categories in `pc` only grows via [`observe`](Self::observe)
-/// and shrinks via [`declassify`](Self::declassify).  It never grows
-/// without an explicit read of a labeled resource.
+/// Created at the start of each invocation.  The label's secrecy
+/// grows via [`observe`](Self::observe) and shrinks via
+/// [`declassify`](Self::declassify).  Integrity shrinks via
+/// [`observe`](Self::observe) and grows via
+/// [`endorse`](Self::endorse).
 pub struct ComputationLabel {
-    /// The current program-counter label.
-    pc: Label,
+    /// The current computation label.
+    label: Label,
 }
 
 impl ComputationLabel {
-    /// Creates a new computation label with the given initial taint.
-    ///
-    /// # Why start with taint?
-    ///
-    /// In the cleanroom architecture, stdin comes from a human or
-    /// agent working inside the workspace.  Even the *choice* of what
-    /// to send to a module may leak information about the repo
-    /// contents.  So stdin is conservatively labeled `{local_repo}`.
+    /// Creates a computation label with the given initial label.
     pub fn new(initial: Label) -> Self {
-        Self { pc: initial }
+        Self { label: initial }
     }
 
-    /// Creates an untainted (public) computation label.
+    /// Creates a public (untainted, untrusted) computation label.
     pub fn untainted() -> Self {
-        Self { pc: Label::public() }
+        Self { label: Label::public() }
     }
 
     /// Records that the module observed data with the given label.
     ///
-    /// Joins the label into `pc`, raising the taint level.  This is
-    /// called by the host when the module reads an env var or file.
-    pub fn observe(&mut self, label: &Label) {
-        self.pc = self.pc.join(label);
+    /// Joins the label: secrecy grows (union), integrity degrades
+    /// (intersection).
+    pub fn observe(&mut self, data_label: &Label) {
+        self.label = self.label.join(data_label);
     }
 
-    /// Attempts to declassify the given categories.
-    ///
-    /// This models the module calling `ifc::declassify(categories)`.
+    /// Attempts to declassify (remove secrecy for) the given
+    /// principals.
     ///
     /// # Errors
     ///
-    /// Returns [`DeclassifyError`] if any requested category is not
-    /// covered by [privilege](DeclassificationPrivilege).  In that
-    /// case, `pc` is **not modified** — declassification is atomic.
+    /// Returns [`DeclassifyError`] if any requested principal is not
+    /// covered by privilege.  Label is **not modified** on failure.
     pub fn declassify(
         &mut self,
-        categories: &[String],
-        privilege: &DeclassificationPrivilege,
+        principals: &BTreeSet<Principal>,
+        privilege: &Privilege,
     ) -> Result<(), DeclassifyError> {
-        let uncovered = privilege.uncovered(categories);
+        let uncovered = privilege.uncovered_declassify(principals);
         if !uncovered.is_empty() {
-            return Err(DeclassifyError { unprivileged_categories: uncovered });
+            return Err(DeclassifyError { unprivileged: uncovered });
         }
-        self.pc = self.pc.declassify(categories);
+        self.label = self.label.declassify(principals);
         Ok(())
     }
 
-    /// Returns a snapshot of the current computation label.
+    /// Attempts to endorse (restore integrity for) the given
+    /// principals.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EndorseError`] if any requested principal is not
+    /// covered by privilege.  Label is **not modified** on failure.
+    pub fn endorse(
+        &mut self,
+        principals: &BTreeSet<Principal>,
+        privilege: &Privilege,
+    ) -> Result<(), EndorseError> {
+        let uncovered = privilege.uncovered_endorse(principals);
+        if !uncovered.is_empty() {
+            return Err(EndorseError { unprivileged: uncovered });
+        }
+        self.label = self.label.endorse(principals);
+        Ok(())
+    }
+
+    /// Returns the current label.
     pub fn current_label(&self) -> &Label {
-        &self.pc
+        &self.label
     }
 }
 
 // ── Errors ───────────────────────────────────────────────────────
 
-/// Error returned when a module attempts to declassify categories it
-/// does not have privilege for.
+/// Error returned by [`Label::flows_to`] when the flow is blocked.
+#[derive(Debug)]
+pub struct FlowError {
+    /// Secrecy principals present in source but not target.
+    pub excess_secrecy: BTreeSet<Principal>,
+    /// Integrity principals required by target but missing from source.
+    pub missing_integrity: BTreeSet<Principal>,
+}
+
+impl fmt::Display for FlowError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut parts = Vec::new();
+        if !self.excess_secrecy.is_empty() {
+            let names: Vec<_> = self.excess_secrecy.iter().map(|p| p.name()).collect();
+            parts.push(format!("excess secrecy: [{}]", names.join(", ")));
+        }
+        if !self.missing_integrity.is_empty() {
+            let names: Vec<_> = self.missing_integrity.iter().map(|p| p.name()).collect();
+            parts.push(format!("missing integrity: [{}]", names.join(", ")));
+        }
+        write!(f, "{}", parts.join("; "))
+    }
+}
+
+impl std::error::Error for FlowError {}
+
+/// Error from [`ComputationLabel::declassify`].
 #[derive(Debug)]
 pub struct DeclassifyError {
-    /// Categories the module attempted to declassify but lacks
-    /// privilege for.
-    pub unprivileged_categories: Vec<String>,
+    pub unprivileged: BTreeSet<Principal>,
 }
 
 impl fmt::Display for DeclassifyError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "missing declassification privilege for: [{}]",
-            self.unprivileged_categories.join(", ")
-        )
+        let names: Vec<_> = self.unprivileged.iter().map(|p| p.name()).collect();
+        write!(f, "missing declassification privilege for: [{}]", names.join(", "))
     }
 }
 
 impl std::error::Error for DeclassifyError {}
 
-/// Error returned by [`Label::flows_to`] when the source label
-/// contains categories not present in the target channel label.
+/// Error from [`ComputationLabel::endorse`].
 #[derive(Debug)]
-pub struct ExcessCategories(pub BTreeSet<String>);
+pub struct EndorseError {
+    pub unprivileged: BTreeSet<Principal>,
+}
 
-impl fmt::Display for ExcessCategories {
+impl fmt::Display for EndorseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let cats: Vec<_> = self.0.iter().collect();
-        write!(
-            f,
-            "excess categories: [{}]",
-            cats.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")
-        )
+        let names: Vec<_> = self.unprivileged.iter().map(|p| p.name()).collect();
+        write!(f, "missing endorsement privilege for: [{}]", names.join(", "))
     }
 }
 
-impl std::error::Error for ExcessCategories {}
+impl std::error::Error for EndorseError {}
 
 // ── Tests ────────────────────────────────────────────────────────
 
@@ -356,39 +539,51 @@ impl std::error::Error for ExcessCategories {}
 mod tests {
     use super::*;
 
-    // -- Label construction helpers --
+    // -- Helpers --
 
-    fn public() -> Label {
-        Label::public()
+    fn p(name: &str) -> Principal {
+        Principal::new(name)
     }
+    fn ps(names: &[&str]) -> BTreeSet<Principal> {
+        names.iter().map(|n| p(n)).collect()
+    }
+
     fn local_repo() -> Label {
-        Label::category("local_repo")
+        Label::secret([p("local_repo")])
     }
     fn github() -> Label {
-        Label::category("github")
+        Label::secret([p("github")])
     }
     fn google_calendar() -> Label {
-        Label::category("google_calendar")
+        Label::secret([p("google_calendar")])
+    }
+
+    // -- Principal tests --
+
+    #[test]
+    fn principal_equality_and_ordering() {
+        assert_eq!(p("alice"), p("alice"));
+        assert_ne!(p("alice"), p("bob"));
+        assert!(p("alice") < p("bob"));
     }
 
     // -- Label lattice tests --
 
     #[test]
-    fn public_is_bottom_of_the_lattice() {
-        let p = public();
-        assert!(p.is_public());
-        p.flows_to(&local_repo()).expect("public flows to everything");
-        p.flows_to(&github()).expect("public flows to everything");
-        p.flows_to(&public()).expect("public flows to itself");
+    fn public_is_bottom() {
+        let pub_label = Label::public();
+        assert!(pub_label.is_public());
+        pub_label.flows_to(&local_repo()).expect("public flows to everything");
+        pub_label.flows_to(&github()).expect("public flows to everything");
     }
 
     #[test]
-    fn single_category_does_not_flow_to_public() {
-        assert!(github().flows_to(&public()).is_err());
+    fn secret_does_not_flow_to_public() {
+        assert!(github().flows_to(&Label::public()).is_err());
     }
 
     #[test]
-    fn independent_categories_are_incomparable() {
+    fn independent_secrecy_incomparable() {
         assert!(github().flows_to(&google_calendar()).is_err());
         assert!(google_calendar().flows_to(&github()).is_err());
     }
@@ -396,199 +591,194 @@ mod tests {
     #[test]
     fn subset_flows_to_superset() {
         let small = github();
-        let big = Label::categories(["github", "local_repo"]);
-
+        let big = Label::secret([p("github"), p("local_repo")]);
         small.flows_to(&big).expect("{github} ⊆ {github, local_repo}");
-        assert!(big.flows_to(&small).is_err(), "{{github, local_repo}} ⊄ {{github}}");
+        assert!(big.flows_to(&small).is_err());
     }
 
     #[test]
-    fn join_is_set_union() {
+    fn join_unions_secrecy() {
         let a = local_repo();
         let b = a.join(&github());
-        assert_eq!(b, Label::categories(["github", "local_repo"]));
+        assert_eq!(b.secrecy, ps(&["github", "local_repo"]));
     }
 
     #[test]
-    fn join_is_idempotent() {
-        let a = local_repo();
-        let b = a.join(&local_repo());
-        assert_eq!(b, local_repo());
+    fn join_intersects_integrity() {
+        let a = Label::trusted([p("alice"), p("bob")]);
+        let b = Label::trusted([p("alice")]);
+        let joined = a.join(&b);
+        assert_eq!(joined.integrity, ps(&["alice"]));
     }
 
     #[test]
-    fn join_does_not_mutate_originals() {
-        let a = local_repo();
-        let b = github();
-        let c = a.join(&b);
-
-        assert_eq!(a, local_repo(), "original unchanged");
-        assert_eq!(b, github(), "original unchanged");
-        assert_eq!(c, Label::categories(["github", "local_repo"]));
-    }
-
-    // -- DeclassificationPrivilege tests --
-
-    #[test]
-    fn privilege_covers_matching_categories() {
-        let priv_ = DeclassificationPrivilege::for_categories(["local_repo"]);
-        assert!(priv_.covers(&["local_repo".into()]));
+    fn integrity_flows_to_lower() {
+        let high = Label::trusted([p("alice"), p("bob")]);
+        let low = Label::trusted([p("alice")]);
+        high.flows_to(&low).expect("higher integrity flows to lower");
     }
 
     #[test]
-    fn privilege_does_not_cover_ungranted_categories() {
-        let priv_ = DeclassificationPrivilege::for_categories(["local_repo"]);
-        assert!(!priv_.covers(&["github".into()]));
+    fn integrity_does_not_flow_to_higher() {
+        let low = Label::trusted([p("alice")]);
+        let high = Label::trusted([p("alice"), p("bob")]);
+        let err = low.flows_to(&high).unwrap_err();
+        assert!(err.missing_integrity.contains(&p("bob")));
     }
 
     #[test]
-    fn privilege_uncovered_returns_missing_categories() {
-        let priv_ = DeclassificationPrivilege::for_categories(["local_repo"]);
-        let missing = priv_.uncovered(&["local_repo".into(), "github".into()]);
-        assert_eq!(missing, vec!["github"]);
+    fn combined_flow_check() {
+        // Data: secret to github, trusted by alice.
+        let data = Label::new([p("github")], [p("alice")]);
+        // Channel: accepts github secrets, requires alice integrity.
+        let channel = Label::new([p("github")], [p("alice")]);
+        data.flows_to(&channel).expect("exact match flows");
+
+        // Channel requiring more integrity → blocked.
+        let strict = Label::new([p("github")], [p("alice"), p("bob")]);
+        assert!(data.flows_to(&strict).is_err());
+    }
+
+    // -- Privilege tests --
+
+    #[test]
+    fn privilege_covers_declassify() {
+        let priv_ = Privilege::for_declassification([p("local_repo")]);
+        assert!(priv_.covers_declassify(&ps(&["local_repo"])));
+        assert!(!priv_.covers_declassify(&ps(&["github"])));
+    }
+
+    #[test]
+    fn privilege_covers_endorse() {
+        let priv_ = Privilege::for_endorsement([p("alice")]);
+        assert!(priv_.covers_endorse(&ps(&["alice"])));
+        assert!(!priv_.covers_endorse(&ps(&["bob"])));
+    }
+
+    #[test]
+    fn privilege_merge() {
+        let a = Privilege::for_declassification([p("x")]);
+        let b = Privilege::for_endorsement([p("y")]);
+        let merged = a.merge(&b);
+        assert!(merged.covers_declassify(&ps(&["x"])));
+        assert!(merged.covers_endorse(&ps(&["y"])));
     }
 
     // -- ComputationLabel tests --
 
     #[test]
-    fn untainted_computation_is_fully_declassified() {
+    fn untainted_is_public() {
         let pc = ComputationLabel::untainted();
-        assert!(pc.current_label().flows_to(&public()).is_ok());
-    }
-
-    #[test]
-    fn observing_labeled_data_taints_computation() {
-        let mut pc = ComputationLabel::untainted();
-        pc.observe(&github());
-
-        assert!(pc.current_label().flows_to(&public()).is_err());
-        assert_eq!(*pc.current_label(), github());
-    }
-
-    #[test]
-    fn observing_multiple_resources_accumulates_taint() {
-        let mut pc = ComputationLabel::untainted();
-        pc.observe(&local_repo());
-        pc.observe(&github());
-
-        assert_eq!(
-            *pc.current_label(),
-            Label::categories(["github", "local_repo"]),
-            "taint is the union of all observed labels"
-        );
-    }
-
-    #[test]
-    fn declassify_with_privilege_succeeds() {
-        let priv_ = DeclassificationPrivilege::for_categories(["local_repo"]);
-        let mut pc = ComputationLabel::new(local_repo());
-
-        pc.declassify(&["local_repo".into()], &priv_).expect("should succeed");
         assert!(pc.current_label().is_public());
     }
 
     #[test]
-    fn declassify_without_privilege_fails_and_preserves_pc() {
-        let priv_ = DeclassificationPrivilege::none();
+    fn observe_taints() {
+        let mut pc = ComputationLabel::untainted();
+        pc.observe(&github());
+        assert!(pc.current_label().flows_to(&Label::public()).is_err());
+    }
+
+    #[test]
+    fn observe_accumulates_secrecy() {
+        let mut pc = ComputationLabel::untainted();
+        pc.observe(&local_repo());
+        pc.observe(&github());
+        assert_eq!(pc.current_label().secrecy, ps(&["github", "local_repo"]));
+    }
+
+    #[test]
+    fn observe_degrades_integrity() {
+        let mut pc = ComputationLabel::new(Label::trusted([p("alice"), p("bob")]));
+        pc.observe(&Label::trusted([p("alice")]));
+        assert_eq!(pc.current_label().integrity, ps(&["alice"]));
+    }
+
+    #[test]
+    fn declassify_with_privilege() {
+        let priv_ = Privilege::for_declassification([p("local_repo")]);
+        let mut pc = ComputationLabel::new(local_repo());
+        pc.declassify(&ps(&["local_repo"]), &priv_).expect("should succeed");
+        assert!(pc.current_label().is_declassified());
+    }
+
+    #[test]
+    fn declassify_without_privilege_fails() {
+        let priv_ = Privilege::none();
         let mut pc = ComputationLabel::new(github());
-
-        let err = pc.declassify(&["github".into()], &priv_).unwrap_err();
-        assert_eq!(err.unprivileged_categories, vec!["github"]);
-        assert!(!pc.current_label().is_public(), "pc must not change on failed declassification");
+        let err = pc.declassify(&ps(&["github"]), &priv_).unwrap_err();
+        assert!(err.unprivileged.contains(&p("github")));
+        assert!(!pc.current_label().is_declassified(), "label unchanged on failure");
     }
 
     #[test]
-    fn partial_declassify_leaves_remaining_taint() {
-        let priv_ = DeclassificationPrivilege::for_categories(["local_repo"]);
-        let mut pc = ComputationLabel::new(Label::categories(["local_repo", "github"]));
-
-        pc.declassify(&["local_repo".into()], &priv_).expect("should succeed");
-        assert_eq!(*pc.current_label(), github(), "only the declassified category is removed");
-    }
-
-    // -- Output channel checks --
-
-    #[test]
-    fn public_computation_can_output_to_http() {
-        let pc = ComputationLabel::untainted();
-        let http_channel = Label::public();
-
-        pc.current_label().flows_to(&http_channel).expect("should be allowed");
+    fn endorse_restores_integrity() {
+        let priv_ = Privilege::for_endorsement([p("alice")]);
+        let mut pc = ComputationLabel::untainted();
+        pc.endorse(&ps(&["alice"]), &priv_).expect("should succeed");
+        assert!(pc.current_label().integrity.contains(&p("alice")));
     }
 
     #[test]
-    fn tainted_computation_cannot_output_to_http() {
-        let pc = ComputationLabel::new(local_repo());
-        let http_channel = Label::public();
-
-        assert!(pc.current_label().flows_to(&http_channel).is_err());
+    fn endorse_without_privilege_fails() {
+        let priv_ = Privilege::none();
+        let mut pc = ComputationLabel::untainted();
+        let err = pc.endorse(&ps(&["alice"]), &priv_).unwrap_err();
+        assert!(err.unprivileged.contains(&p("alice")));
+        assert!(pc.current_label().integrity.is_empty(), "label unchanged on failure");
     }
 
-    #[test]
-    fn tainted_computation_can_output_to_same_level_channel() {
-        let pc = ComputationLabel::new(local_repo());
-        let agent_channel = local_repo();
-
-        pc.current_label().flows_to(&agent_channel).expect("should be allowed");
-    }
-
-    // -- Scenario: crate_vendor module --
+    // -- Scenario: crate_vendor --
 
     #[test]
     fn scenario_crate_vendor() {
-        // crate_vendor reads Cargo.lock (tainted {local_repo}),
-        // declassifies, then fetches crates via HTTP (public channel).
-        let priv_ = DeclassificationPrivilege::for_categories(["local_repo"]);
-        let mut pc = ComputationLabel::new(local_repo()); // stdin is tainted
+        let priv_ = Privilege::for_declassification([p("local_repo")]);
+        let mut pc = ComputationLabel::new(local_repo());
 
-        // Read Cargo.lock from repo (same label, no change).
-        pc.observe(&local_repo());
+        pc.observe(&local_repo()); // read Cargo.lock
+        assert!(pc.current_label().flows_to(&Label::public()).is_err());
 
-        // HTTP is blocked before declassification.
-        assert!(pc.current_label().flows_to(&public()).is_err(), "must declassify before HTTP");
-
-        // Explicitly declassify.
-        pc.declassify(&["local_repo".into()], &priv_).expect("privileged");
-
-        // Now HTTP is allowed.
-        pc.current_label().flows_to(&public()).expect("HTTP allowed after declassification");
+        pc.declassify(&ps(&["local_repo"]), &priv_).expect("privileged");
+        pc.current_label().flows_to(&Label::public()).expect("HTTP allowed");
     }
 
-    // -- Scenario: google_calendar_read module --
+    // -- Scenario: integrity flow --
 
     #[test]
-    fn scenario_google_calendar_read() {
-        // Reads the API key, declassifies, calls Google Calendar API.
-        let priv_ = DeclassificationPrivilege::for_categories(["google_calendar"]);
-        let mut pc = ComputationLabel::untainted();
+    fn scenario_integrity_flow() {
+        let priv_ = Privilege::new([p("alice")], [p("alice")]);
+        let mut pc = ComputationLabel::new(Label::new([p("alice")], [p("alice")]));
 
-        // Read the API key.
-        pc.observe(&google_calendar());
+        // Read untrusted network data → integrity degrades.
+        pc.observe(&Label::public());
+        assert!(pc.current_label().integrity.is_empty());
 
-        // Declassify and make the HTTP call.
-        pc.declassify(&["google_calendar".into()], &priv_).expect("privileged");
-        pc.current_label().flows_to(&public()).expect("HTTP allowed");
+        // Endorse to restore alice's integrity.
+        pc.endorse(&ps(&["alice"]), &priv_).expect("endorsed");
+        assert!(pc.current_label().integrity.contains(&p("alice")));
+
+        // Declassify alice's data.
+        pc.declassify(&ps(&["alice"]), &priv_).expect("declassified");
+        assert!(pc.current_label().is_declassified());
     }
 
-    // -- Scenario: module reads both GitHub and Google Calendar data
-    //    but only has privilege for one --
+    // -- Scenario: multi-principal secret --
 
     #[test]
-    fn scenario_insufficient_privilege_blocks_output() {
-        let priv_ = DeclassificationPrivilege::for_categories(["github"]);
+    fn scenario_multi_principal_secret() {
+        // GitHub API key labeled {tzn, github} — needs both to declassify.
+        let api_key = Label::secret([p("tzn"), p("github")]);
         let mut pc = ComputationLabel::untainted();
+        pc.observe(&api_key);
 
-        // Accidentally reads both.
-        pc.observe(&github());
-        pc.observe(&google_calendar());
+        // Module only has tzn privilege → partial declassify.
+        let partial = Privilege::for_declassification([p("tzn")]);
+        pc.declassify(&ps(&["tzn"]), &partial).expect("partial ok");
+        assert!(pc.current_label().flows_to(&Label::public()).is_err(), "github still blocks");
 
-        // Can declassify github but not google_calendar.
-        pc.declassify(&["github".into()], &priv_).expect("github OK");
-
-        let excess = pc.current_label().flows_to(&public()).unwrap_err();
-        assert!(
-            excess.0.contains("google_calendar"),
-            "google_calendar taint remains and blocks HTTP"
-        );
+        // Module also gets github privilege → full declassify.
+        let full = Privilege::for_declassification([p("github")]);
+        pc.declassify(&ps(&["github"]), &full).expect("full ok");
+        assert!(pc.current_label().is_declassified());
     }
 }

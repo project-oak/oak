@@ -14,43 +14,37 @@
 // limitations under the License.
 //
 
-//! Generates both `cleanroom/example_policy.toml` and a module store
-//! (`/tmp/modules/`) from one or more compiled Wasm modules.
+//! Updates `cleanroom/example_policy.toml` with fresh module digests
+//! and populates the module store (`/tmp/modules/`).
+//!
+//! The tool reads the existing policy file, matches each Wasm module
+//! argument to a principal by name, and updates its `module_digest`
+//! field in place.  All other fields (speaks_for, SSH keys, named
+//! principals) are preserved.  New modules not yet in the policy are
+//! appended.
 //!
 //! Each positional argument is a path to a `.wasm` binary. The tool:
 //!
 //! 1. Computes the SHA-256 digest of each module.
 //! 2. Copies each module into `/tmp/modules/sha256/<digest>`.
 //! 3. Writes `/tmp/modules/manifest.toml` mapping names → digests.
-//! 4. Writes `cleanroom/example_policy.toml` with module entries.
-//!
-//! Declassification privileges are assigned via an explicit map from
-//! module name to categories.  Unlisted modules default to
-//! `can_declassify = ["local_repo"]`.
+//! 4. Updates `cleanroom/example_policy.toml` with current digests.
 
-use std::{collections::HashMap, env, fs, path::PathBuf};
+use std::{env, fs, path::PathBuf};
 
 use anyhow::Context;
+use cleanroom_lib::principals::{PrincipalEntry, PrincipalsFile};
 use sha2::{Digest, Sha256};
 
 /// A processed module ready for policy and manifest generation.
 struct Module {
     /// Human-readable name derived from the file stem.
     name: String,
-    /// Hex-encoded SHA-256 digest.
+    /// Full digest string (e.g. "sha256:abcd...").
     digest: String,
-    /// Categories this module is allowed to declassify.
-    can_declassify: Vec<String>,
 }
 
 fn main() -> anyhow::Result<()> {
-    // Explicit map from module name to declassification privileges.
-    let privileges: HashMap<&str, Vec<&str>> = HashMap::from([
-        ("to_uppercase_wasm", vec!["local_repo"]),
-        ("redact_secret_wasm", vec!["secret_category"]),
-        ("weather_wasm", vec!["user_location"]),
-    ]);
-
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         anyhow::bail!("Usage: generate_policy <wasm_module>...");
@@ -76,6 +70,7 @@ fn main() -> anyhow::Result<()> {
         let mut hasher = Sha256::new();
         hasher.update(&wasm_bytes);
         let digest_hex = format!("{:x}", hasher.finalize());
+        let digest = format!("sha256:{digest_hex}");
 
         let name = wasm_path
             .file_stem()
@@ -83,14 +78,7 @@ fn main() -> anyhow::Result<()> {
             .map(|s| s.trim_end_matches(".wasm").to_string())
             .unwrap_or_else(|| "unknown".to_string());
 
-        let can_declassify: Vec<String> = privileges
-            .get(name.as_str())
-            .map(|cats| cats.iter().map(|s| s.to_string()).collect())
-            .unwrap_or_else(|| vec!["local_repo".to_string()]);
-
         // Copy the module binary into the content-addressed store.
-        // Since the filename *is* the digest, an existing file with the same
-        // name must have the same content. Verify by size and skip the copy.
         let dest = store_dir.join(&digest_hex);
         if dest.exists() {
             let existing_len = fs::metadata(&dest)
@@ -105,45 +93,53 @@ fn main() -> anyhow::Result<()> {
                     wasm_bytes.len()
                 );
             }
-            println!("  {} → sha256:{} (already in store)", name, digest_hex);
+            println!("  {} → {} (already in store)", name, digest);
         } else {
             fs::write(&dest, &wasm_bytes)
                 .with_context(|| format!("writing {} to store", wasm_path.display()))?;
-            println!("  {} → sha256:{}", name, digest_hex);
+            println!("  {} → {}", name, digest);
         }
 
-        modules.push(Module { name, digest: digest_hex, can_declassify });
+        modules.push(Module { name, digest });
     }
 
     // Generate manifest.toml for the module store.
     let mut manifest = String::from("[modules]\n");
     for m in &modules {
-        manifest.push_str(&format!("{} = \"sha256:{}\"\n", m.name, m.digest));
+        manifest.push_str(&format!("{} = \"{}\"\n", m.name, m.digest));
     }
     let manifest_path = module_store.join("manifest.toml");
     fs::write(&manifest_path, &manifest)
         .with_context(|| format!("writing manifest to {}", manifest_path.display()))?;
 
-    // Generate example_policy.toml.
-    let mut policy = String::new();
+    // Read the existing policy file, or start fresh.
+    let policy_path = workspace_dir.join("cleanroom").join("example_policy.toml");
+    let mut policy = if policy_path.exists() {
+        PrincipalsFile::load(&policy_path).context("reading existing policy file")?
+    } else {
+        PrincipalsFile::default()
+    };
 
+    // Update or insert each module's digest.
     for m in &modules {
-        let declassify_list =
-            m.can_declassify.iter().map(|s| format!("\"{}\"", s)).collect::<Vec<_>>().join(", ");
-        policy.push_str(&format!(
-            r#"[[module]]
-name           = "{}"
-digest         = "sha256:{}"
-can_declassify = [{}]
-
-"#,
-            m.name, m.digest, declassify_list
-        ));
+        if let Some(entry) = policy.principal.iter_mut().find(|p| p.name == m.name) {
+            // Update existing entry's digest.
+            entry.module_digest = Some(m.digest.clone());
+        } else {
+            // New module — append with default speaks_for based on known
+            // privilege requirements.
+            let speaks_for = default_speaks_for(&m.name);
+            policy.principal.push(PrincipalEntry {
+                name: m.name.clone(),
+                module_digest: Some(m.digest.clone()),
+                speaks_for,
+                ssh_public_key: None,
+            });
+        }
     }
 
-    let policy_path = workspace_dir.join("cleanroom").join("example_policy.toml");
-    fs::write(&policy_path, &policy)
-        .with_context(|| format!("writing policy to {}", policy_path.display()))?;
+    // Write the updated policy file.
+    policy.save(&policy_path).context("writing policy file")?;
 
     println!();
     println!("Generated:");
@@ -152,4 +148,21 @@ can_declassify = [{}]
     println!("  Store:    {}", store_dir.display());
 
     Ok(())
+}
+
+/// Returns the default `speaks_for` list for a newly-discovered module.
+///
+/// Modules that need to declassify data for outgoing HTTP or output
+/// must have privilege over the relevant secrecy principals.  This
+/// table encodes those known requirements so that the generated policy
+/// is immediately usable.
+fn default_speaks_for(module_name: &str) -> Vec<String> {
+    match module_name {
+        "weather_wasm" => vec!["user_location".to_string()],
+        "limited_calendar_wasm" => {
+            vec!["calendar_token".to_string(), "alice".to_string()]
+        }
+        "crate_vendor" => vec!["alice".to_string()],
+        _ => vec![],
+    }
 }

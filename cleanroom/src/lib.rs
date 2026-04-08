@@ -15,6 +15,7 @@
 pub mod client;
 pub mod ifc;
 pub mod policy;
+pub mod principals;
 pub mod protocol;
 pub mod server;
 pub mod shell;

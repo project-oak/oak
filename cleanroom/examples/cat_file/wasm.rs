@@ -12,31 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 
-fn main() -> io::Result<()> {
-    let mut buf = String::new();
-    io::stdin().read_to_string(&mut buf)?;
-    let path = buf.trim();
+fn main() {
+    let mut buf = Vec::new();
+    io::stdin().read_to_end(&mut buf).expect("reading stdin");
+    let path = String::from_utf8_lossy(&buf);
+    let path = path.trim();
 
     if path.is_empty() {
         eprintln!("No path provided in stdin");
         std::process::exit(1);
     }
 
-    eprintln!("Catting file: {}", path);
+    eprintln!("Catting file: {path}");
 
-    let data = cleanroom_sdk::read_file(path).map_err(|e| {
-        eprintln!("Failed to read file via custom ABI {}: {}", path, e);
-        std::io::Error::new(std::io::ErrorKind::Other, e)
-    })?;
-
-    let contents = String::from_utf8(data).map_err(|e| {
-        eprintln!("Failed to parse file contents as UTF-8: {}", e);
-        std::io::Error::new(std::io::ErrorKind::InvalidData, e)
-    })?;
-
-    print!("{}", contents);
-
-    Ok(())
+    match cleanroom_sdk::read_file(path) {
+        Ok(data) => {
+            io::stdout().write_all(&data).expect("writing stdout");
+        }
+        Err(e) => {
+            eprintln!("Failed to read file via proxy: {path}: {e}");
+            std::process::exit(1);
+        }
+    }
 }

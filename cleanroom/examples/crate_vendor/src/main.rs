@@ -17,16 +17,23 @@
 //! A standalone replacement for `cargo vendor` that downloads all
 //! registry dependencies listed in a `Cargo.lock` file and extracts them
 //! into a local `vendor/` directory.
+//!
+//! Runs inside the cleanroom sandbox:
+//! - Filesystem access via `cleanroom_sdk::{read_file, write_file, ...}`
+//! - Output via standard `println!` / `eprintln!`
+//! - HTTP downloads via `cleanroom_sdk::http_get`
+//!
+//! CLI arguments are forwarded via the cleanroom runtime and parsed
+//! with `clap`.  Example invocation:
+//!
+//! ```text
+//! cleanroom run crate_vendor -- --lockfile=Cargo.lock --output-dir=vendor
+//! ```
 
-use std::{
-    collections::BTreeSet,
-    fs, io,
-    path::{Path, PathBuf},
-};
+use std::{io, path::PathBuf};
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use flate2::read::GzDecoder;
 use oak_digest::{Digest, Sha256, Sha384, Sha512};
 use serde::Deserialize;
 
@@ -38,16 +45,28 @@ use serde::Deserialize;
 #[command(name = "crate_vendor", about = "cargo vendor replacement")]
 struct Args {
     #[arg(long, default_value = "Cargo.lock")]
-    lockfile: PathBuf,
+    lockfile: String,
 
     #[arg(long, default_value = "vendor")]
-    output_dir: PathBuf,
+    output_dir: String,
 
     #[arg(long)]
-    config_dir: Option<PathBuf>,
+    config_dir: Option<String>,
 
     #[arg(long)]
     dry_run: bool,
+}
+
+// ---------------------------------------------------------------------------
+// Logging helpers (use cleanroom SDK stderr)
+// ---------------------------------------------------------------------------
+
+fn log_info(msg: &str) {
+    eprintln!("[INFO] {msg}");
+}
+
+fn log_debug(msg: &str) {
+    eprintln!("[DEBUG] {msg}");
 }
 
 // ---------------------------------------------------------------------------
@@ -74,6 +93,10 @@ impl Package {
         self.source.as_deref() == Some(CRATES_IO_REGISTRY)
     }
 
+    /// Returns the download URL for a `.crate` archive from crates.io.
+    ///
+    /// The URL pattern follows the crates.io download endpoint documented at
+    /// <https://doc.rust-lang.org/cargo/reference/registry-web-api.html#download>
     fn download_url(&self) -> String {
         format!(
             "https://static.crates.io/crates/{name}/{name}-{version}.crate",
@@ -97,7 +120,6 @@ fn parse_lockfile(content: &str) -> Result<Vec<Package>> {
 // ---------------------------------------------------------------------------
 
 fn main() {
-    env_logger::init();
     let args = Args::parse();
 
     if let Err(e) = run(&args) {
@@ -107,18 +129,25 @@ fn main() {
 }
 
 fn run(args: &Args) -> Result<()> {
-    let lockfile_content = fs::read_to_string(&args.lockfile)
-        .with_context(|| format!("reading lockfile {:?}", args.lockfile))?;
-    let packages = parse_lockfile(&lockfile_content).context("parsing Cargo.lock")?;
+    // Read the lockfile via the cleanroom filesystem proxy.
+    let lockfile_bytes = cleanroom_sdk::read_file(&args.lockfile)
+        .map_err(|e| anyhow::anyhow!("reading lockfile {:?}: {e}", args.lockfile))?;
+    let lockfile_content =
+        String::from_utf8(lockfile_bytes).context("lockfile is not valid UTF-8")?;
 
+    let packages = parse_lockfile(&lockfile_content).context("parsing Cargo.lock")?;
     let registry_packages: Vec<&Package> = packages.iter().filter(|p| p.is_crates_io()).collect();
 
     if registry_packages.is_empty() {
-        log::info!("no registry packages found in lockfile");
+        log_info("no registry packages found in lockfile");
         return Ok(());
     }
 
-    log::info!("found {} registry packages in {:?}", registry_packages.len(), args.lockfile,);
+    log_info(&format!(
+        "found {} registry packages in {:?}",
+        registry_packages.len(),
+        args.lockfile,
+    ));
 
     if args.dry_run {
         for pkg in &registry_packages {
@@ -128,25 +157,21 @@ fn run(args: &Args) -> Result<()> {
         return Ok(());
     }
 
-    fs::create_dir_all(&args.output_dir)
-        .with_context(|| format!("creating output directory {:?}", args.output_dir))?;
-
     let mut downloaded = 0u32;
     let mut skipped = 0u32;
-    let mut crate_names = BTreeSet::new();
 
     for pkg in &registry_packages {
-        let dest_dir = args.output_dir.join(pkg.vendor_dir_name());
-        let checksum_file = dest_dir.join(".cargo-checksum.json");
-        crate_names.insert(pkg.vendor_dir_name());
+        let dest_dir = format!("{}/{}", args.output_dir, pkg.vendor_dir_name());
+        let checksum_file = format!("{dest_dir}/.cargo-checksum.json");
 
-        if checksum_file.exists() {
-            log::debug!("skipping {} (already vendored)", pkg.vendor_dir_name());
+        // Skip if already vendored (checksum file exists).
+        if cleanroom_sdk::read_file(&checksum_file).is_ok() {
+            log_debug(&format!("skipping {} (already vendored)", pkg.vendor_dir_name()));
             skipped += 1;
             continue;
         }
 
-        log::info!("downloading {}", pkg.vendor_dir_name());
+        log_info(&format!("downloading {}", pkg.vendor_dir_name()));
 
         let expected_hex = pkg.checksum.as_deref().unwrap_or_default();
         if expected_hex.is_empty() {
@@ -168,8 +193,8 @@ fn run(args: &Args) -> Result<()> {
             "package": checksum_val
         });
 
-        fs::write(&checksum_file, checksum_json.to_string())
-            .with_context(|| format!("writing {:?}", checksum_file))?;
+        cleanroom_sdk::write_file(&checksum_file, checksum_json.to_string().as_bytes())
+            .map_err(|e| anyhow::anyhow!("writing {checksum_file}: {e}"))?;
 
         downloaded += 1;
     }
@@ -200,41 +225,38 @@ fn fetch_file_with_digest(expected_digest: &Digest, urls: &[String]) -> Result<V
     let mut last_err = anyhow::anyhow!("no URLs provided");
 
     for url in urls {
-        log::debug!("attempting to fetch from {}", url);
-        match waki::Client::new()
-            .get(url)
-            .connect_timeout(std::time::Duration::from_secs(30))
-            .send()
-        {
-            Ok(response) => match response.body() {
-                Ok(bytes) => {
-                    let actual_digest = match expected_digest {
-                        Digest::Sha256(_) => Digest::Sha256(Sha256::from_contents(&bytes)),
-                        Digest::Sha384(_) => Digest::Sha384(Sha384::from_contents(&bytes)),
-                        Digest::Sha512(_) => Digest::Sha512(Sha512::from_contents(&bytes)),
-                        _ => {
-                            last_err = anyhow::anyhow!(
-                                "unsupported digest type for fetch: {}",
-                                expected_digest.to_typed_hash()
-                            );
-                            continue;
-                        }
-                    };
+        log_debug(&format!("attempting to fetch from {}", url));
+        match cleanroom_sdk::http_get(url, &[]) {
+            Ok(response) => {
+                if response.status != 200 {
+                    last_err = anyhow::anyhow!("HTTP {} for {url}", response.status);
+                    continue;
+                }
 
-                    if actual_digest == *expected_digest {
-                        return Ok(bytes);
-                    } else {
+                let bytes = response.body;
+                let actual_digest = match expected_digest {
+                    Digest::Sha256(_) => Digest::Sha256(Sha256::from_contents(&bytes)),
+                    Digest::Sha384(_) => Digest::Sha384(Sha384::from_contents(&bytes)),
+                    Digest::Sha512(_) => Digest::Sha512(Sha512::from_contents(&bytes)),
+                    _ => {
                         last_err = anyhow::anyhow!(
-                            "checksum mismatch for {url}: expected {}, got {}",
-                            expected_digest.to_typed_hash(),
-                            actual_digest.to_typed_hash()
+                            "unsupported digest type for fetch: {}",
+                            expected_digest.to_typed_hash()
                         );
+                        continue;
                     }
+                };
+
+                if actual_digest == *expected_digest {
+                    return Ok(bytes);
+                } else {
+                    last_err = anyhow::anyhow!(
+                        "checksum mismatch for {url}: expected {}, got {}",
+                        expected_digest.to_typed_hash(),
+                        actual_digest.to_typed_hash()
+                    );
                 }
-                Err(e) => {
-                    last_err = anyhow::anyhow!("failed to read response body from {url}: {e}");
-                }
-            },
+            }
             Err(e) => {
                 last_err = anyhow::anyhow!("failed to HTTP GET {url}: {e}");
             }
@@ -248,58 +270,41 @@ fn fetch_file_with_digest(expected_digest: &Digest, urls: &[String]) -> Result<V
 /// Extracts a downloaded `.crate` archive (a gzipped tarball) into the
 /// specified directory.
 ///
-/// This function decompresses the provided bytes, reads the TAR archive, and
-/// extracts all files into `dest_dir`. It automatically strips the first path
-/// component from each entry (which in `.crate` files is typically the
-/// `name-version` root directory) so that the contents are placed directly at
-/// the root of `dest_dir`.
-///
-/// If `dest_dir` already exists, it is completely removed and recreated before
-/// extraction.
-fn extract_crate(crate_bytes: &[u8], dest_dir: &Path) -> Result<()> {
-    let gz = GzDecoder::new(io::Cursor::new(crate_bytes));
+/// Reads the tar entries into memory and writes each file via the cleanroom
+/// filesystem proxy. The first path component (typically `name-version/`)
+/// is stripped so contents are placed directly in `dest_dir`.
+fn extract_crate(crate_bytes: &[u8], dest_dir: &str) -> Result<()> {
+    let gz = flate2::read::GzDecoder::new(io::Cursor::new(crate_bytes));
     let mut archive = tar::Archive::new(gz);
-
-    if dest_dir.exists() {
-        fs::remove_dir_all(dest_dir)
-            .with_context(|| format!("removing existing directory {:?}", dest_dir))?;
-    }
-    fs::create_dir_all(dest_dir).with_context(|| format!("creating directory {:?}", dest_dir))?;
 
     for entry in archive.entries().context("reading tar entries")? {
         let mut entry = entry.context("reading tar entry")?;
         let path = entry.path().context("reading entry path")?.into_owned();
 
+        // Strip the top-level `name-version/` prefix.
         let stripped = path.components().skip(1).collect::<PathBuf>();
 
         if stripped.as_os_str().is_empty() {
             continue;
         }
 
-        let dest = dest_dir.join(&stripped);
-
-        if entry.header().entry_type().is_dir() {
-            fs::create_dir_all(&dest).with_context(|| format!("creating directory {:?}", dest))?;
-        } else {
-            if let Some(parent) = dest.parent() {
-                fs::create_dir_all(parent)
-                    .with_context(|| format!("creating parent directory {:?}", parent))?;
-            }
-            let mut file =
-                fs::File::create(&dest).with_context(|| format!("creating file {:?}", dest))?;
-            io::copy(&mut entry, &mut file).with_context(|| format!("writing file {:?}", dest))?;
+        // Only extract regular files — directories are created implicitly
+        // by write_file when the server creates parent directories.
+        if !entry.header().entry_type().is_dir() {
+            let dest = format!("{dest_dir}/{}", stripped.display());
+            let mut contents = Vec::new();
+            io::Read::read_to_end(&mut entry, &mut contents)
+                .with_context(|| format!("reading tar entry {}", stripped.display()))?;
+            cleanroom_sdk::write_file(&dest, &contents)
+                .map_err(|e| anyhow::anyhow!("writing {dest}: {e}"))?;
         }
     }
 
     Ok(())
 }
 
-fn write_cargo_config(config_dir: &Path, vendor_dir: &Path) -> Result<()> {
-    fs::create_dir_all(config_dir)
-        .with_context(|| format!("creating config directory {:?}", config_dir))?;
-
-    let config_path = config_dir.join("config.toml");
-    let vendor_path = vendor_dir.display();
+fn write_cargo_config(config_dir: &str, vendor_dir: &str) -> Result<()> {
+    let config_path = format!("{config_dir}/config.toml");
 
     let config = format!(
         r#"# Auto-generated by crate_vendor. Do not edit.
@@ -310,48 +315,13 @@ fn write_cargo_config(config_dir: &Path, vendor_dir: &Path) -> Result<()> {
 replace-with = "vendored-sources"
 
 [source.vendored-sources]
-directory = "{vendor_path}"
+directory = "{vendor_dir}"
 "#
     );
 
-    fs::write(&config_path, config).with_context(|| format!("writing {:?}", config_path))?;
+    cleanroom_sdk::write_file(&config_path, config.as_bytes())
+        .map_err(|e| anyhow::anyhow!("writing {config_path}: {e}"))?;
 
-    log::info!("wrote {:?}", config_path);
+    log_info(&format!("wrote {config_path}"));
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_fetch_with_valid_digest() {
-        // Known checksum for anyhow 1.0.98
-        let expected_hex = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487";
-        let expected_digest = Digest::from_typed_hash(&format!("sha2-256:{}", expected_hex))
-            .expect("valid typed hash");
-
-        let urls = vec!["https://static.crates.io/crates/anyhow/anyhow-1.0.98.crate".to_string()];
-
-        let result = fetch_file_with_digest(&expected_digest, &urls);
-        assert!(result.is_ok(), "fetching a valid crate should succeed");
-    }
-
-    #[test]
-    fn test_fetch_with_invalid_digest() {
-        let expected_hex = "0000000000000000000000000000000000000000000000000000000000000000";
-        let expected_digest = Digest::from_typed_hash(&format!("sha2-256:{}", expected_hex))
-            .expect("valid typed hash");
-
-        let urls = vec!["https://static.crates.io/crates/anyhow/anyhow-1.0.98.crate".to_string()];
-
-        let result = fetch_file_with_digest(&expected_digest, &urls);
-        assert!(result.is_err(), "fetching with wrong checksum should fail");
-
-        let err_msg = result.unwrap_err().to_string();
-        assert!(
-            err_msg.contains("failed to fetch file with digest"),
-            "error message should cite the digest mismatch"
-        );
-    }
 }

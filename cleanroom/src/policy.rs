@@ -17,7 +17,7 @@
 //! The policy is a TOML file that configures the entire IFC
 //! environment for a cleanroom session. It defines:
 //! - **Modules**: Wasm modules identified by content digest, each with a
-//!   human-readable name and a [`DeclassificationPrivilege`].
+//!   human-readable name and a [`Privilege`](crate::ifc::Privilege).
 //!
 //! # Why TOML?
 //!
@@ -38,9 +38,7 @@
 //! # Example
 //!
 //! ```toml
-//! # crate_vendor — reads Cargo.lock, fetches crates, writes vendored
-//! # sources.  Needs to declassify local_repo to make HTTP requests
-//! # whose URLs are derived from Cargo.lock content.
+//! # crate_vendor — reads Cargo.lock, fetches crates.
 //! [[module]]
 //! name           = "crate_vendor"
 //! digest         = "sha256:aaa..."
@@ -52,7 +50,7 @@ use std::{collections::HashMap, path::Path};
 use anyhow::{Context, Result};
 use serde::Deserialize;
 
-use crate::ifc::{DeclassificationPrivilege, Label};
+use crate::ifc::{Label, Principal, Privilege};
 
 // ── TOML schema types ────────────────────────────────────────────
 //
@@ -85,7 +83,12 @@ pub struct CellsFile {
 pub struct CellConfig {
     pub name: String,
     pub value: String,
-    pub label: Vec<String>,
+    /// Secrecy principals for this cell's label.
+    #[serde(default)]
+    pub secrecy: Vec<String>,
+    /// Integrity principals for this cell's label.
+    #[serde(default)]
+    pub integrity: Vec<String>,
 }
 
 /// Configuration for a Wasm module.
@@ -95,7 +98,7 @@ pub struct ModuleConfig {
     pub name: String,
     /// Content digest in `algorithm:hex` format (e.g. `sha256:e3b0c44...`).
     pub digest: String,
-    /// Categories this module is privileged to declassify.
+    /// Principals this module is privileged to declassify.
     #[serde(default)]
     pub can_declassify: Vec<String>,
 }
@@ -120,8 +123,8 @@ pub struct ResolvedModule {
     pub name: String,
     /// Content digest.
     pub digest: String,
-    /// Declassification privilege granted to this module.
-    pub privilege: DeclassificationPrivilege,
+    /// Privilege granted to this module.
+    pub privilege: Privilege,
 }
 
 impl Policy {
@@ -142,8 +145,8 @@ impl Policy {
             let resolved = ResolvedModule {
                 name: m.name.clone(),
                 digest: m.digest.clone(),
-                privilege: DeclassificationPrivilege::for_categories(
-                    m.can_declassify.iter().cloned(),
+                privilege: Privilege::for_declassification(
+                    m.can_declassify.iter().map(Principal::new),
                 ),
             };
             modules_by_digest.insert(m.digest.clone(), resolved);
@@ -165,10 +168,11 @@ impl Policy {
     pub fn load_cells_toml(&mut self, toml_str: &str) -> Result<()> {
         let file: CellsFile = toml::from_str(toml_str).context("parsing cells TOML")?;
         for c in &file.cell {
-            self.cells.insert(
-                c.name.clone(),
-                (c.value.clone(), Label::categories(c.label.iter().cloned())),
+            let label = Label::new(
+                c.secrecy.iter().map(Principal::new),
+                c.integrity.iter().map(Principal::new),
             );
+            self.cells.insert(c.name.clone(), (c.value.clone(), label));
         }
         Ok(())
     }
@@ -225,8 +229,10 @@ can_declassify = ["google_calendar"]
         let m = policy.module_by_digest("sha256:aaa111").unwrap();
 
         assert_eq!(m.name, "crate_vendor");
-        assert!(m.privilege.covers(&["local_repo".into()]));
-        assert!(!m.privilege.covers(&["github".into()]));
+        assert!(
+            m.privilege.covers_declassify(&[Principal::new("local_repo")].into_iter().collect())
+        );
+        assert!(!m.privilege.covers_declassify(&[Principal::new("github")].into_iter().collect()));
     }
 
     #[test]
@@ -235,7 +241,9 @@ can_declassify = ["google_calendar"]
         let m = policy.module_by_name("github_publish").unwrap();
 
         assert_eq!(m.digest, "sha256:bbb222");
-        assert!(m.privilege.covers(&["local_repo".into(), "github".into()]));
+        assert!(m.privilege.covers_declassify(
+            &[Principal::new("local_repo"), Principal::new("github")].into_iter().collect()
+        ));
     }
 
     #[test]
@@ -243,5 +251,23 @@ can_declassify = ["google_calendar"]
         let policy = Policy::from_toml(EXAMPLE_POLICY).unwrap();
         assert!(policy.module_by_digest("sha256:unknown").is_none());
         assert!(policy.module_by_name("unknown_tool").is_none());
+    }
+
+    #[test]
+    fn cells_with_secrecy_and_integrity() {
+        let cells_toml = r#"
+[[cell]]
+name = "github_api_key"
+value = "ghp_xxx"
+secrecy = ["github", "tzn"]
+integrity = ["github"]
+"#;
+        let mut policy = Policy::default();
+        policy.load_cells_toml(cells_toml).unwrap();
+        let (value, label) = policy.get_cell("github_api_key").unwrap();
+        assert_eq!(value, "ghp_xxx");
+        assert!(label.secrecy_set().contains(&Principal::new("github")));
+        assert!(label.secrecy_set().contains(&Principal::new("tzn")));
+        assert!(label.integrity_set().contains(&Principal::new("github")));
     }
 }

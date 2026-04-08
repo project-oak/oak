@@ -28,13 +28,18 @@ rust_binary(
         "$(location //cleanroom/examples/to_uppercase:to_uppercase_wasm)",
         "$(location //cleanroom/examples/redact_secret:redact_secret_wasm)",
         "$(location //cleanroom/examples/weather:weather_wasm)",
+        "$(location //cleanroom/examples/limited_calendar:limited_calendar_wasm)",
+        "$(location //cleanroom/examples/crate_vendor:crate_vendor)",
     ],
     data = [
+        "//cleanroom/examples/crate_vendor",
+        "//cleanroom/examples/limited_calendar:limited_calendar_wasm",
         "//cleanroom/examples/redact_secret:redact_secret_wasm",
         "//cleanroom/examples/to_uppercase:to_uppercase_wasm",
         "//cleanroom/examples/weather:weather_wasm",
     ],
     deps = [
+        "//cleanroom:cleanroom_lib",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:sha2",
     ],

@@ -2,14 +2,22 @@
 #
 # Each [[cell]] defines a named data cell with an IFC label. When a
 # Wasm module reads a cell via `get-cell`, its computation label is
-# automatically tainted with the cell's label.
+# automatically tainted with the cell's secrecy and integrity.
 
 [[cell]]
-name  = "user_location"
-value = "rome"
-label = ["user_location"]
+name      = "user_location"
+value     = "rome"
+secrecy   = ["user_location"]
+integrity = ["alice"]
 
 [[cell]]
-name  = "secret_api_key"
-value = "top-secret-42"
-label = ["secret_category"]
+name      = "secret_api_key"
+value     = "top-secret-42"
+secrecy   = ["secret_category"]
+integrity = ["alice"]
+
+[[cell]]
+name      = "google_oauth_token"
+value     = "ya29.a0Aa7MYioZNBusZnLOlGLIRLnwQDRb1xvnmLb6ImZGRPzYJ8E27nUzo8WbquQXu9DDiLR_HaQkngXu2O3On8Y1xriBzoNGkCAexo3ZAzOPkVKZtvDPWGDfXe3El9gsde4YiZbQ-OjCNp-QzHWwJMM-SuaGzxX1nEDJPNcFnFvdRc2GUTBFwDuBifO7eUNh7yiD5RW27bQaCgYKAXkSARYSFQHGX2MiC6HEf9mYYnXfZU6Jzz1_QA0206"
+secrecy   = ["calendar_token"]
+integrity = ["alice"]

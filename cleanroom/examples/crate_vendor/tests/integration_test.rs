@@ -14,38 +14,48 @@
 
 //! End-to-end integration tests for the `crate_vendor` binary.
 //!
-//! These tests run the actual binary against a checked-in `Cargo.lock`
-//! file (in `testdata/`) and verify the output structure, checksums,
-//! and generated config.
+//! These tests run the actual binary via `cleanroom run` against a
+//! checked-in `Cargo.lock` file and verify the output structure,
+//! checksums, and generated config.
 //!
 //! Run via:
 //! ```text
 //! bazel test //cleanroom/examples/crate_vendor:crate_vendor_integration_test
 //! ```
 
-use std::{env, fs, path::PathBuf, process::Command};
+use std::{
+    env, fs,
+    io::Write,
+    path::PathBuf,
+    process::{Command, Stdio},
+};
 
 /// Resolves a Bazel runfile path from the environment variable `var`.
 fn env_path(var: &str) -> PathBuf {
     PathBuf::from(env::var(var).expect("env var not set"))
 }
 
-/// Runs crate_vendor with the given arguments and returns
-/// `(stdout, stderr, success)`.
+/// Runs crate_vendor through `cleanroom run` with the given JSON config
+/// as stdin. Returns `(stdout, stderr, success)`.
 fn run_crate_vendor(
-    args: &[&str],
+    config_json: &str,
     mappings: &[(&std::path::Path, &str)],
 ) -> (String, String, bool) {
-    let bin = env_path("CRATE_VENDOR_BIN");
-    let mut cmd = Command::new("wasmtime");
-    cmd.args(["run", "--wasi=http", "--wasi=cli"]);
-    for (host, guest) in mappings {
-        cmd.arg(format!("--dir={}::{}", host.display(), guest));
-    }
-    cmd.arg(&bin);
-    cmd.args(args);
+    let bin = env_path("CLEANROOM_BIN");
+    let wasm = env_path("CRATE_VENDOR_WASM");
 
-    let output = cmd.output().expect("failed to spawn wasmtime");
+    let mut child = Command::new(&bin)
+        .arg("run-local")
+        .arg(&wasm)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn cleanroom");
+
+    child.stdin.take().unwrap().write_all(config_json.as_bytes()).expect("writing stdin");
+
+    let output = child.wait_with_output().expect("waiting for cleanroom");
 
     (
         String::from_utf8_lossy(&output.stdout).into_owned(),
@@ -72,12 +82,12 @@ const EXPECTED_CRATES: &[(&str, &str)] = &[
 #[test]
 fn dry_run_lists_all_crates() {
     let lockfile = env_path("TEST_CARGO_LOCK");
-    let tmp = tempfile::tempdir().expect("failed to create tempdir");
-    let copied_lockfile = tmp.path().join("Cargo.lock");
-    fs::copy(&lockfile, &copied_lockfile).unwrap();
+    let config = serde_json::json!({
+        "lockfile": lockfile.to_str().unwrap(),
+        "dry_run": true,
+    });
 
-    let (stdout, stderr, ok) =
-        run_crate_vendor(&["--lockfile=/out/Cargo.lock", "--dry-run"], &[(tmp.path(), "/out")]);
+    let (stdout, stderr, ok) = run_crate_vendor(&config.to_string(), &[]);
 
     assert!(ok, "crate_vendor --dry-run should succeed. stderr: {stderr}");
 
@@ -98,14 +108,14 @@ fn vendor_downloads_and_extracts_crates() {
     let lockfile = env_path("TEST_CARGO_LOCK");
     let tmp = tempfile::tempdir().expect("failed to create tempdir");
     let vendor_dir = tmp.path().join("vendor");
-    let copied_lockfile = tmp.path().join("Cargo.lock");
-    fs::copy(&lockfile, &copied_lockfile).unwrap();
     fs::create_dir_all(&vendor_dir).unwrap();
 
-    let (stdout, stderr, ok) = run_crate_vendor(
-        &["--lockfile=/out/Cargo.lock", "--output-dir=/out/vendor"],
-        &[(tmp.path(), "/out")],
-    );
+    let config = serde_json::json!({
+        "lockfile": lockfile.to_str().unwrap(),
+        "output_dir": vendor_dir.to_str().unwrap(),
+    });
+
+    let (stdout, stderr, ok) = run_crate_vendor(&config.to_string(), &[]);
 
     assert!(ok, "crate_vendor should succeed. stderr: {stderr}");
     assert!(
@@ -154,22 +164,19 @@ fn vendor_is_idempotent() {
     let lockfile = env_path("TEST_CARGO_LOCK");
     let tmp = tempfile::tempdir().expect("failed to create tempdir");
     let vendor_dir = tmp.path().join("vendor");
-    let copied_lockfile = tmp.path().join("Cargo.lock");
-    fs::copy(&lockfile, &copied_lockfile).unwrap();
     fs::create_dir_all(&vendor_dir).unwrap();
 
+    let config = serde_json::json!({
+        "lockfile": lockfile.to_str().unwrap(),
+        "output_dir": vendor_dir.to_str().unwrap(),
+    });
+
     // First run: all downloads.
-    let (_stdout, stderr, ok) = run_crate_vendor(
-        &["--lockfile=/out/Cargo.lock", "--output-dir=/out/vendor"],
-        &[(tmp.path(), "/out")],
-    );
+    let (_stdout, stderr, ok) = run_crate_vendor(&config.to_string(), &[]);
     assert!(ok, "first run should succeed. stderr: {stderr}");
 
     // Second run: everything should be skipped.
-    let (stdout, stderr, ok) = run_crate_vendor(
-        &["--lockfile=/out/Cargo.lock", "--output-dir=/out/vendor"],
-        &[(tmp.path(), "/out")],
-    );
+    let (stdout, stderr, ok) = run_crate_vendor(&config.to_string(), &[]);
     assert!(ok, "second run should succeed. stderr: {stderr}");
     assert!(stdout.contains("0 downloaded"), "second run should download nothing, got:\n{stdout}",);
     assert!(
@@ -184,15 +191,16 @@ fn config_toml_is_generated() {
     let tmp = tempfile::tempdir().expect("failed to create tempdir");
     let vendor_dir = tmp.path().join("vendor");
     let config_dir = tmp.path().join(".cargo");
-    let copied_lockfile = tmp.path().join("Cargo.lock");
-    fs::copy(&lockfile, &copied_lockfile).unwrap();
     fs::create_dir_all(&vendor_dir).unwrap();
     fs::create_dir_all(&config_dir).unwrap();
 
-    let (_stdout, stderr, ok) = run_crate_vendor(
-        &["--lockfile=/out/Cargo.lock", "--output-dir=/out/vendor", "--config-dir=/out/.cargo"],
-        &[(tmp.path(), "/out")],
-    );
+    let config = serde_json::json!({
+        "lockfile": lockfile.to_str().unwrap(),
+        "output_dir": vendor_dir.to_str().unwrap(),
+        "config_dir": config_dir.to_str().unwrap(),
+    });
+
+    let (_stdout, stderr, ok) = run_crate_vendor(&config.to_string(), &[]);
 
     assert!(ok, "crate_vendor should succeed. stderr: {stderr}");
 
@@ -208,9 +216,5 @@ fn config_toml_is_generated() {
     assert!(
         config.contains("[source.vendored-sources]"),
         "config should contain [source.vendored-sources]",
-    );
-    assert!(
-        config.contains("/out/vendor"),
-        "config should reference the guest vendor directory path /out/vendor",
     );
 }

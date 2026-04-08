@@ -42,8 +42,9 @@ use anyhow::{Context, Result, bail};
 use sha2::{Digest, Sha256};
 
 use crate::{
-    ifc::{ComputationLabel, Label},
+    ifc::{Label, Principal, Privilege},
     policy::Policy,
+    principals::PrincipalsFile,
     protocol::{self, ClientToServer, ModuleInfo, RunStatus, ServerToClient},
 };
 
@@ -51,18 +52,43 @@ use crate::{
 ///
 /// This function blocks until the process is terminated.
 pub fn run_server(
-    policy_file: &Path,
+    policy_file: Option<&Path>,
     cells_file: Option<&Path>,
     socket_path: &Path,
     module_store: &Path,
 ) -> Result<()> {
-    let mut policy = Policy::from_file(policy_file).context("loading policy file")?;
+    let mut policy = Policy::default();
 
     if let Some(cells_path) = cells_file {
         policy.load_cells_file(cells_path).context("loading cells file")?;
     }
 
+    let principals = match policy_file {
+        Some(path) => {
+            let pf = PrincipalsFile::load(path).context("loading policy file")?;
+            log::info!("loaded {} principals from {path:?}", pf.principal.len());
+            for p in &pf.principal {
+                log::info!("  principal: {}", p.name);
+                if let Some(digest) = &p.module_digest {
+                    log::info!("    module_digest: {}", digest);
+                }
+                if !p.speaks_for.is_empty() {
+                    log::info!("    speaks_for: {:?}", p.speaks_for);
+                }
+            }
+            pf
+        }
+        None => {
+            log::info!("no policy file, running without identity-based IFC");
+            PrincipalsFile::default()
+        }
+    };
+
     let manifest = load_manifest(module_store).context("loading module manifest")?;
+    log::info!("loaded {} modules from manifest", manifest.len());
+    for (name, digest) in &manifest {
+        log::info!("  module: {} -> {}", name, digest);
+    }
 
     // Remove stale socket file if it exists.
     if socket_path.exists() {
@@ -83,7 +109,7 @@ pub fn run_server(
             }
         };
 
-        let result = handle_connection(&mut stream, &policy, &manifest, module_store);
+        let result = handle_connection(&mut stream, &policy, &manifest, module_store, &principals);
         if let Err(e) = result {
             log::error!("CleanroomState::run_server: error handling connection: {e:#}");
             // Try to send an error response.
@@ -102,6 +128,7 @@ fn handle_connection(
     policy: &Policy,
     manifest: &HashMap<String, String>,
     module_store: &Path,
+    principals: &PrincipalsFile,
 ) -> Result<()> {
     log::info!("CleanroomState::handle_connection: reading request...");
     let request: ClientToServer = protocol::read_message(stream).context("reading request")?;
@@ -112,11 +139,18 @@ fn handle_connection(
     ));
 
     let response = match request {
-        ClientToServer::Run { digest, stdin } => {
-            handle_run(&digest, &stdin, policy, module_store, Some(client_stream))
+        ClientToServer::Run { digest, stdin, label, args } => {
+            log::info!("handling run request for digest \"{}\" with label {}", digest, label);
+            let ctx = ConnectionContext {
+                policy,
+                module_store,
+                principals,
+                client_stream: Some(client_stream),
+            };
+            handle_run(&digest, &stdin, &label, &args, ctx)
         }
         ClientToServer::ListModules => handle_list_modules(manifest, policy),
-        ClientToServer::QueryPolicy { digest } => handle_query_policy(&digest, policy),
+        ClientToServer::QueryPolicy { digest } => handle_query_policy(&digest, policy, principals),
         _ => return Err(anyhow::anyhow!("unexpected request type at top level")),
     };
 
@@ -124,60 +158,70 @@ fn handle_connection(
     Ok(())
 }
 
+pub struct ConnectionContext<'a> {
+    pub policy: &'a Policy,
+    pub module_store: &'a Path,
+    pub principals: &'a PrincipalsFile,
+    pub client_stream: Option<Arc<Mutex<std::os::unix::net::UnixStream>>>,
+}
+
 /// Handles a `Run` request: loads the module, executes it with WASI +
 /// IFC, and returns the result.
 ///
 /// **Output enforcement**: the server checks whether the module's
 /// computation label flows to the output channel's label.  The
-/// channel label is `{local_repo}` because the client runs inside
-/// the repo sandbox and already has access to local data.  If the
-/// computation carries categories beyond `local_repo` (e.g.
-/// `secret_category`), stdout is **not** returned — the module must
-/// declassify those categories first.
+/// channel label is derived from the caller's authority.  If the
+/// computation carries categories beyond the channel (i.e. the
+/// module didn't fully declassify), stdout is **not** returned.
 fn handle_run(
     digest: &str,
     stdin: &[u8],
-    policy: &Policy,
-    module_store: &Path,
-    client_stream: Option<Arc<Mutex<std::os::unix::net::UnixStream>>>,
+    requested_label: &Label,
+    args: &[String],
+    ctx: ConnectionContext,
 ) -> ServerToClient {
-    // The client lives inside the repo sandbox, so it already has
-    // local_repo-level data.  Output can flow there without
-    // declassification.
-    let channel_label = Label::category("local_repo");
+    // Enforce that the computation carries the caller's ambient secrecy.
+    // In the future, this will be derived from the socket or peer credentials.
+    let mut effective_secrecy = requested_label.secrecy_set().clone();
+    effective_secrecy.insert(Principal::new("caller"));
+    let effective_label = Label::new(effective_secrecy, requested_label.integrity_set().clone());
 
-    match execute_module(digest, stdin, policy, module_store, client_stream) {
-        Ok((status, output_label, stdout, stderr)) => {
-            if let Err(excess) = output_label.flows_to(&channel_label) {
-                // Output is tainted — block stdout.
-                log::warn!("blocking tainted output from module {digest}: {excess}");
-                ServerToClient::RunResult {
-                    status: RunStatus::Trapped,
-                    stdout: Vec::new(),
-                    stderr: format!(
-                        "output blocked: computation is tainted with [{excess}]; \
-                         call declassify() first\n",
-                    )
-                    .into_bytes(),
-                }
-            } else {
-                // Computation label flows to channel — safe to return.
-                ServerToClient::RunResult { status, stdout, stderr }
-            }
+    let caller_principals: Vec<Principal> =
+        requested_label.integrity_set().iter().cloned().collect();
+    let channel_label = if caller_principals.is_empty() {
+        Label::public()
+    } else {
+        // Resolve the full authority chain for each integrity principal.
+        let mut full_authority = std::collections::BTreeSet::new();
+        for p in &caller_principals {
+            full_authority.extend(ctx.principals.resolve_speaks_for(p.name()));
         }
+        let authority_vec: Vec<Principal> = full_authority.into_iter().collect();
+        Label::new(authority_vec.clone(), authority_vec)
+    };
+
+    match execute_module(digest, stdin, &effective_label, args, &channel_label, ctx) {
+        Ok((status, stdout, stderr)) => ServerToClient::RunResult { status, stdout, stderr },
         Err(e) => ServerToClient::Error { message: format!("{e:#}") },
     }
 }
 
-/// Executes a Wasm module using the Wasmtime Component Model with IFC tracking.
+/// Executes a Wasm module using the Wasmtime Component Model with
+/// per-operation IFC privilege.
+///
+/// The computation label is immutable for the duration of execution.
+/// Privilege is exercised per-I/O-operation via the custom
+/// `oak:cleanroom/ifc` interface rather than by mutating a global
+/// label.
 pub fn run_component_module(
     wasm_bytes: &[u8],
-    policy: &crate::policy::Policy,
     stdin: &[u8],
-    pc: &Arc<Mutex<ComputationLabel>>,
-    privilege: crate::ifc::DeclassificationPrivilege,
-    client_stream: Option<Arc<Mutex<std::os::unix::net::UnixStream>>>,
-) -> Result<(RunStatus, Label, Vec<u8>, Vec<u8>)> {
+    args: &[String],
+    label: Label,
+    privilege: Privilege,
+    channel_label: Label,
+    ctx: ConnectionContext,
+) -> Result<(RunStatus, Vec<u8>, Vec<u8>)> {
     use wasmtime::{
         Engine, Store,
         component::{Component, Linker},
@@ -190,38 +234,40 @@ pub fn run_component_module(
     let engine = Engine::default();
     let mut linker: Linker<CleanroomState> = Linker::new(&engine);
 
-    // Add standard WASI interfaces (clocks, random number generation, etc.).
     wasmtime_wasi::add_to_linker_sync(&mut linker)?;
 
-    wasmtime_wasi_http::add_only_http_to_linker_sync(&mut linker)
-        .context("adding outgoing HTTP to component linker")?;
-
-    // Add custom Cleanroom host bindings for IFC tracking and proxied filesystem
-    // access.
+    // Add custom Cleanroom host bindings for IFC metadata (get-label,
+    // read-cell), proxied filesystem access, and IFC-gated HTTP.
     crate::wasi_ifc::Runner::add_to_linker(&mut linker, |s| s)
         .context("adding custom cleanroom bindings to linker")?;
 
-    // Configure the WASI context.
+    // Configure the WASI context with standard I/O pipes.
     //
-    // No direct filesystem preopens are provided. Modules must access files
-    // exclusively through the custom `oak:cleanroom/fs` interface, which
-    // proxies I/O operations through the client stream to the host file system.
-    let mut ctx_builder = WasiCtxBuilder::new();
+    // Stdin is provided as a memory pipe. Stdout and stderr are
+    // captured in memory and released to the caller only if the
+    // IFC check passes at module completion.
+    let stdout_pipe = wasmtime_wasi::pipe::MemoryOutputPipe::new(usize::MAX);
+    let stderr_pipe = wasmtime_wasi::pipe::MemoryOutputPipe::new(usize::MAX);
 
-    let stdout_pipe = wasmtime_wasi::pipe::MemoryOutputPipe::new(1024 * 1024); // 1MB buffer
-    let stderr_pipe = wasmtime_wasi::pipe::MemoryOutputPipe::new(1024 * 1024); // 1MB buffer
+    let mut ctx_builder = WasiCtxBuilder::new();
     ctx_builder.stdin(wasmtime_wasi::pipe::MemoryInputPipe::new(stdin.to_vec()));
     ctx_builder.stdout(stdout_pipe.clone());
     ctx_builder.stderr(stderr_pipe.clone());
 
+    // WASI args include argv[0] (program name). Prepend one so that
+    // clap and std::env::args() don't consume the first real argument.
+    let mut wasi_args = vec!["module".to_string()];
+    wasi_args.extend_from_slice(args);
+    ctx_builder.args(&wasi_args);
+
     let state = CleanroomState {
         table: wasmtime_wasi::ResourceTable::new(),
         ctx: ctx_builder.build(),
-        http_ctx: wasmtime_wasi_http::WasiHttpCtx::new(),
-        pc: Arc::clone(pc),
-        policy: std::sync::Arc::new(policy.clone()),
-        privilege,
-        client_stream,
+        label: label.clone(),
+        policy: std::sync::Arc::new(ctx.policy.clone()),
+        privilege: privilege.clone(),
+        channel_label: channel_label.clone(),
+        client_stream: ctx.client_stream,
     };
 
     let mut store = Store::new(&engine, state);
@@ -229,59 +275,114 @@ pub fn run_component_module(
         Component::from_binary(&engine, wasm_bytes).context("reading component binary")?;
 
     let instance = linker.instantiate(&mut store, &component).context("instantiating component")?;
-
     let command = Command::new(&mut store, &instance).context("creating command wrapper")?;
 
-    match command.wasi_cli_run().call_run(&mut store) {
+    // Run the module.
+    let run_result = command.wasi_cli_run().call_run(&mut store);
+
+    // Extract captured output from WASI pipes.
+    drop(store);
+    let stdout_bytes: Vec<u8> = stdout_pipe.try_into_inner().unwrap_or_default().into();
+    let stderr_bytes: Vec<u8> = stderr_pipe.try_into_inner().unwrap_or_default().into();
+
+    // IFC boundary check: the computation label must flow to the
+    // channel label (with module privilege) for output to be released.
+    let output_allowed = label.flows_to_declassifying(&channel_label, &privilege).is_ok();
+
+    match run_result {
         Ok(_) => {
-            let stdout_bytes = stdout_pipe.contents().to_vec();
-            let stderr_bytes = stderr_pipe.contents().to_vec();
-            Ok((
-                RunStatus::Ok,
-                pc.lock().unwrap().current_label().clone(),
-                stdout_bytes,
-                stderr_bytes,
-            ))
+            if output_allowed {
+                Ok((RunStatus::Ok, stdout_bytes, stderr_bytes))
+            } else {
+                log::warn!(
+                    "IFC: suppressing output — computation label {} \
+                     does not flow to channel label {} with module privilege",
+                    label,
+                    channel_label
+                );
+                Ok((RunStatus::Ok, Vec::new(), Vec::new()))
+            }
         }
         Err(e) => {
-            let mut stderr_bytes = stderr_pipe.contents().to_vec();
-            stderr_bytes.extend(format!("\nWasmtime trap: {e:#}").into_bytes());
-            Ok((
-                RunStatus::Trapped,
-                pc.lock().unwrap().current_label().clone(),
-                Vec::new(),
-                stderr_bytes,
-            ))
+            let mut err_output = if output_allowed { stderr_bytes } else { Vec::new() };
+            err_output.extend(format!("\nWasmtime trap: {e:#}").into_bytes());
+            Ok((RunStatus::Trapped, Vec::new(), err_output))
         }
     }
 }
 
 /// Loads and executes a module from the store using its digest, applying policy
 /// constraints.
+///
+/// ## Fixed-label IFC model
+///
+/// 1. The initial label is the `requested_label` from the caller, which
+///    specifies both **secrecy** and **integrity** for the computation.
+/// 2. The module must be authorized (via `speaks_for`) for every secrecy
+///    principal in the label (except the caller's own identity).
+/// 3. The caller's label must flow to the computation label (no spawning at
+///    lower secrecy from a more secret environment).
+/// 4. Cell reads are access-checked: the cell's label must flow to the
+///    computation's label (no implicit taint raising).
 fn execute_module(
     digest: &str,
     stdin: &[u8],
-    policy: &Policy,
-    module_store: &Path,
-    client_stream: Option<Arc<Mutex<std::os::unix::net::UnixStream>>>,
-) -> Result<(RunStatus, Label, Vec<u8>, Vec<u8>)> {
-    let wasm_path = resolve_module_path(digest, module_store)?;
+    requested_label: &Label,
+    args: &[String],
+    channel_label: &Label,
+    ctx: ConnectionContext,
+) -> Result<(RunStatus, Vec<u8>, Vec<u8>)> {
+    let wasm_path = resolve_module_path(digest, ctx.module_store)?;
     let wasm_bytes =
         std::fs::read(&wasm_path).with_context(|| format!("reading module at {wasm_path:?}"))?;
 
     verify_digest(digest, &wasm_bytes)?;
 
-    let module_policy = policy.module_by_digest(digest);
-    if module_policy.is_none() {
-        log::warn!("Module {digest} is not listed in policy, proceeding with pure sandbox");
+    let initial_label = requested_label.clone();
+    log::info!("computation label: {}", initial_label);
+
+    // The caller's identity is the integrity set of the label.
+    let caller_integrity = initial_label.integrity_set();
+
+    // Resolve the module's identity to its privilege.
+    let module_authority = match ctx.principals.find_by_digest(digest) {
+        Some(entry) => {
+            let auth = ctx.principals.resolve_speaks_for(&entry.name);
+            log::info!("module \"{}\" speaks for: {:?}", entry.name, auth);
+            auth
+        }
+        None => {
+            log::info!("module {digest} not in principals file, no privilege");
+            std::collections::BTreeSet::new()
+        }
+    };
+
+    // Authorization check: the module must be authorized for secrecy
+    // principals in the label, EXCEPT for the caller's own identities
+    // (the integrity set). Any module can operate at the caller's
+    // level without requiring explicit authorization.
+    let auth_principals: Vec<Principal> = initial_label
+        .secrecy_set()
+        .iter()
+        .filter(|p| !caller_integrity.contains(p))
+        .cloned()
+        .collect();
+    let runtime_label = Label::secret(auth_principals);
+    let module_label = Label::secret(module_authority.iter().cloned().collect::<Vec<_>>());
+    if let Err(e) = runtime_label.flows_to(&module_label) {
+        anyhow::bail!("module not authorized for requested secrecy: {e}");
     }
 
-    let privilege = module_policy
-        .map(|m| m.privilege.clone())
-        .unwrap_or_else(crate::ifc::DeclassificationPrivilege::none);
-
-    let pc = Arc::new(Mutex::new(ComputationLabel::untainted()));
-    run_component_module(&wasm_bytes, policy, stdin, &pc, privilege, client_stream)
+    let privilege = Privilege::full(module_authority);
+    run_component_module(
+        &wasm_bytes,
+        stdin,
+        args,
+        initial_label,
+        privilege,
+        channel_label.clone(),
+        ctx,
+    )
 }
 
 /// Resolves a module digest to its absolute path within the module store.
@@ -323,14 +424,21 @@ fn handle_list_modules(manifest: &HashMap<String, String>, _policy: &Policy) -> 
     ServerToClient::ModuleList { modules }
 }
 
-/// Retrieves policy configuration (e.g., declassification privileges) for a
-/// given module digest.
-fn handle_query_policy(digest: &str, policy: &Policy) -> ServerToClient {
-    match policy.module_by_digest(digest) {
-        Some(m) => ServerToClient::PolicyInfo {
-            can_declassify: m.privilege.as_set().iter().cloned().collect(),
-        },
-        None => ServerToClient::Error { message: format!("Module {digest} not found in policy") },
+/// Retrieves privilege information for a module based on its
+/// principals entry.
+fn handle_query_policy(
+    digest: &str,
+    _policy: &Policy,
+    principals: &PrincipalsFile,
+) -> ServerToClient {
+    match principals.find_by_digest(digest) {
+        Some(entry) => {
+            let auth = principals.resolve_speaks_for(&entry.name);
+            ServerToClient::PolicyInfo {
+                can_declassify: auth.into_iter().map(|p| p.name().to_string()).collect(),
+            }
+        }
+        None => ServerToClient::PolicyInfo { can_declassify: vec![] },
     }
 }
 

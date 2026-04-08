@@ -21,9 +21,17 @@ module**. The eventual architecture:
 └─────────────────────────────┘      └────────────────────────────┘
 ```
 
-This tool compiles as a `wasm32-wasip2` component and runs inside [wasmtime][].
-The host provides HTTP via [`wasi:http`][wasi-http] — making the fetch module
-the _only_ component with network access.
+This tool compiles as a `wasm32-wasip2` component and runs inside the
+[cleanroom][] sandbox. All I/O flows through the cleanroom SDK:
+
+- **Filesystem** — `cleanroom_sdk::{read_file, write_file}` (proxied to the
+  caller's sandbox via a Unix socket)
+- **Output** — `cleanroom_sdk::{write_stdout_str, write_stderr_str}` with
+  per-operation declassification
+- **HTTP** — `cleanroom_sdk::http_get` with per-operation declassification
+  (IFC-gated outgoing requests via the host)
+- **CLI args** — parsed with `clap` via WASI `args`, forwarded by the cleanroom
+  runtime
 
 ## Usage
 
@@ -33,48 +41,73 @@ Build the wasm component
 bazel build //cleanroom/examples/crate_vendor:crate_vendor
 ```
 
-Run with wasmtime (requires wasi:http access)
+### Via `cleanroom run` (server mode)
 
-```console
-$ wasmtime run --wasi=http --wasi=cli --dir=. \
-  "$(bazel cquery --output=files //cleanroom/examples/crate_vendor:crate_vendor)" \
-  --lockfile=cleanroom/examples/crate_vendor/testdata/Cargo.lock --output-dir=$(mktemp --directory)
-vendored 21 crates (21 downloaded, 0 already present) into "/tmp/tmp.wNCCR9OAzN"
+Start a cleanroom shell, then invoke the module with CLI args after `--`:
+
+```bash
+bazel run cleanroom -- shell
+cleanroom run crate_vendor \
+  --secrecy=caller --integrity=caller \
+  -- --lockfile=cleanroom/examples/crate_vendor/testdata/Cargo.lock --output-dir=bin/vendor
 ```
 
-Dry run — just print what would be downloaded
+The filesystem proxy runs inside the caller's sandbox, so `--lockfile` and
+`--output-dir` are paths relative to the caller's working directory.
 
-```console
-$ wasmtime run --wasi=http --wasi=cli --dir=. \
+### Via `cleanroom run-local` (no server, local development)
+
+```bash
+cleanroom run-local \
   "$(bazel cquery --output=files //cleanroom/examples/crate_vendor:crate_vendor)" \
-  --lockfile=cleanroom/examples/crate_vendor/testdata/Cargo.lock --dry-run
+  -- --lockfile=cleanroom/examples/crate_vendor/testdata/Cargo.lock \
+     --output-dir=/tmp/vendor
+```
+
+### Dry run — list crates without downloading
+
+```bash
+cleanroom run-local \
+  "$(bazel cquery --output=files //cleanroom/examples/crate_vendor:crate_vendor)" \
+  -- --lockfile=cleanroom/examples/crate_vendor/testdata/Cargo.lock --dry-run
+```
+
+```text
 aho-corasick-1.1.3: https://static.crates.io/crates/aho-corasick/aho-corasick-1.1.3.crate
 anyhow-1.0.98: https://static.crates.io/crates/anyhow/anyhow-1.0.98.crate
-autocfg-1.5.0: https://static.crates.io/crates/autocfg/autocfg-1.5.0.crate
-bytes-1.10.1: https://static.crates.io/crates/bytes/bytes-1.10.1.crate
-either-1.15.0: https://static.crates.io/crates/either/either-1.15.0.crate
-googletest-0.14.2: https://static.crates.io/crates/googletest/googletest-0.14.2.crate
-googletest_macro-0.14.2: https://static.crates.io/crates/googletest_macro/googletest_macro-0.14.2.crate
-itertools-0.14.0: https://static.crates.io/crates/itertools/itertools-0.14.0.crate
-memchr-2.7.5: https://static.crates.io/crates/memchr/memchr-2.7.5.crate
-num-traits-0.2.19: https://static.crates.io/crates/num-traits/num-traits-0.2.19.crate
-proc-macro2-1.0.95: https://static.crates.io/crates/proc-macro2/proc-macro2-1.0.95.crate
-prost-0.14.1: https://static.crates.io/crates/prost/prost-0.14.1.crate
-prost-derive-0.14.1: https://static.crates.io/crates/prost-derive/prost-derive-0.14.1.crate
-prost-types-0.14.1: https://static.crates.io/crates/prost-types/prost-types-0.14.1.crate
-quote-1.0.40: https://static.crates.io/crates/quote/quote-1.0.40.crate
-regex-1.11.1: https://static.crates.io/crates/regex/regex-1.11.1.crate
-regex-automata-0.4.9: https://static.crates.io/crates/regex-automata/regex-automata-0.4.9.crate
-regex-syntax-0.8.5: https://static.crates.io/crates/regex-syntax/regex-syntax-0.8.5.crate
-rustversion-1.0.21: https://static.crates.io/crates/rustversion/rustversion-1.0.21.crate
-syn-2.0.104: https://static.crates.io/crates/syn/syn-2.0.104.crate
-unicode-ident-1.0.18: https://static.crates.io/crates/unicode-ident/unicode-ident-1.0.18.crate
-
+...
 21 crates would be downloaded (dry run)
 ```
 
-[wasmtime]: https://wasmtime.dev/
-[wasi-http]: https://github.com/WebAssembly/wasi-http
+### Generate `.cargo/config.toml`
+
+Pass `--config-dir` to automatically generate the Cargo config for offline
+builds:
+
+```bash
+cleanroom run crate_vendor \
+  --secrecy=caller --integrity=caller \
+  -- --lockfile=Cargo.lock --output-dir=vendor --config-dir=.cargo
+```
+
+This writes `.cargo/config.toml` with:
+
+```toml
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"
+```
+
+## CLI flags
+
+| Flag           | Default      | Description                          |
+| -------------- | ------------ | ------------------------------------ |
+| `--lockfile`   | `Cargo.lock` | Path to the `Cargo.lock` file        |
+| `--output-dir` | `vendor`     | Directory to extract crates into     |
+| `--config-dir` |              | Write `.cargo/config.toml` here      |
+| `--dry-run`    | `false`      | Print crate list without downloading |
 
 ## What it does
 
@@ -107,5 +140,6 @@ to download crates from crates.io.
 - ❌ Version resolution (`cargo update`)
 
 [cv]: https://doc.rust-lang.org/cargo/commands/cargo-vendor.html
+[cleanroom]: /cleanroom/README.md
 [crate-dl]:
   https://doc.rust-lang.org/cargo/reference/registry-web-api.html#download
