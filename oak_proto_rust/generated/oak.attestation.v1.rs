@@ -315,8 +315,15 @@ pub struct ContainerEndorsement {
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CbLayer1TransparentEndorsement {
     /// Endorsement of a serialized proto containing measurements for CB layer 1.
+    #[deprecated]
     #[prost(message, optional, tag = "1")]
     pub runtime_agent: ::core::option::Option<SignedEndorsement>,
+    /// Endorsement of the runtime agent binary.
+    #[prost(message, optional, tag = "2")]
+    pub runtime_agent_binary: ::core::option::Option<SignedEndorsement>,
+    /// Endorsement of the userspace tarball.
+    #[prost(message, optional, tag = "3")]
+    pub userspace: ::core::option::Option<SignedEndorsement>,
 }
 /// Event endorsement for the layer matching `CbLayer2TransparentEvent`.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -813,11 +820,22 @@ pub struct MpmAttachment {
 #[serde(default)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CbLayer1TransparentEvent {
-    /// SHA2-256 of a proto containing the binary and metadata measurements for CB
-    /// layer 1.
+    /// SHA2-256 digest of a proto containing binary and metadata measurements
+    /// for CB layer 1. This is a single measurement of the artifacts that are
+    /// now measured separately in fields #2 and #3. It was calculated
+    /// differently and cannot be derived from them.
+    #[deprecated]
     #[prost(bytes = "vec", tag = "1")]
     #[serde(with = "crate::base64data")]
     pub runtime_agent_measurement: ::prost::alloc::vec::Vec<u8>,
+    /// SHA2-256 digest of the runtime agent binary.
+    #[prost(bytes = "vec", tag = "2")]
+    #[serde(with = "crate::base64data")]
+    pub runtime_agent_binary_measurement: ::prost::alloc::vec::Vec<u8>,
+    /// SHA2-256 digest of the userspace tarball.
+    #[prost(bytes = "vec", tag = "3")]
+    #[serde(with = "crate::base64data")]
+    pub userspace_measurement: ::prost::alloc::vec::Vec<u8>,
 }
 /// Layer 2 (or Stage 2) event proto for CB that is shareable with end clients.
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -1462,8 +1480,13 @@ pub struct CbReferenceValues {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CbLayer1TransparentReferenceValues {
+    #[deprecated]
     #[prost(message, optional, tag = "1")]
     pub runtime_agent: ::core::option::Option<BinaryReferenceValue>,
+    #[prost(message, optional, tag = "2")]
+    pub runtime_agent_binary: ::core::option::Option<BinaryReferenceValue>,
+    #[prost(message, optional, tag = "3")]
+    pub userspace: ::core::option::Option<BinaryReferenceValue>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CbLayer2TransparentReferenceValues {

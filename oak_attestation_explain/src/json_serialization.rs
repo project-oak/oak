@@ -895,12 +895,16 @@ pub fn serialize_cb_reference_values(instance: &CbReferenceValues) -> serde_json
     })
 }
 
+#[allow(deprecated)]
 pub fn serialize_cb_layer1_transparent_reference_values(
     instance: &CbLayer1TransparentReferenceValues,
 ) -> serde_json::Value {
-    let CbLayer1TransparentReferenceValues { runtime_agent } = instance;
+    let CbLayer1TransparentReferenceValues { runtime_agent, runtime_agent_binary, userspace } =
+        instance;
     json!({
         "runtime_agent": runtime_agent.as_ref().map(serialize_binary_reference_value),
+        "runtime_agent_binary": runtime_agent_binary.as_ref().map(serialize_binary_reference_value),
+        "userspace": userspace.as_ref().map(serialize_binary_reference_value),
     })
 }
 

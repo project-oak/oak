@@ -483,7 +483,9 @@ message CBReferenceValues {
 }
 
 message CbLayer1TransparentReferenceValues {
-  BinaryReferenceValue runtime_agent = 1;
+  BinaryReferenceValue runtime_agent = 1 [deprecated = true];
+  BinaryReferenceValue runtime_agent_binary = 2;
+  BinaryReferenceValue userspace = 3;
 }
 
 message CbLayer2TransparentReferenceValues {
