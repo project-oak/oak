@@ -153,11 +153,10 @@ enum MutationOperation {
     // No action for this one, it just indicates that the database was newly created.
     Create,
 
-    // A new item was added. The content blob will have been written separately, this operation
-    // contains only the metadata changes that need to be re-written to a new database version on
-    // version conflicts.
-    AddMemory(PendingMetadata),
-    AddView(PendingLlmViewMetadata),
+    // A memory was added (or upserted). The content blob will have been written
+    // separately; this operation contains the metadata and associated views that
+    // need to be re-written to a new database version on version conflicts.
+    AddMemory { metadata: PendingMetadata, views: Vec<PendingLlmViewMetadata> },
 
     // The item with the given ID was removed.
     // Note that exact operation timing is not maintained. So if another session
@@ -596,45 +595,45 @@ impl IcingMetaDatabase {
             self.delete_memories([memory.id.clone()].as_ref())?;
         }
         let pending_metadata = PendingMetadata::new(memory, &blob_id)?;
-        self.add_pending_metadata(pending_metadata)?;
+        let mut pending_views: Vec<PendingLlmViewMetadata> = Vec::new();
         if let Some(views) = memory.views.as_ref() {
             for view in &views.llm_views {
                 // TODO: yongheng - Generate view id if not provided.
                 if let Some(pending_view_metadata) =
                     PendingLlmViewMetadata::new(memory, view, &blob_id)?
                 {
-                    self.add_pending_memory_view_metadata(pending_view_metadata)?;
+                    pending_views.push(pending_view_metadata);
                 }
             }
         }
-        Ok(())
+        self.put_memory_with_views(pending_metadata, pending_views)
     }
 
-    fn add_pending_memory_view_metadata(
+    /// Puts the memory metadata and its associated views into the Icing index
+    /// and records a single `AddMemory` operation in the mutation log.
+    fn put_memory_with_views(
         &mut self,
-        pending_metadata: PendingLlmViewMetadata,
+        metadata: PendingMetadata,
+        views: Vec<PendingLlmViewMetadata>,
     ) -> anyhow::Result<()> {
-        let result = self.icing_search_engine.put(pending_metadata.document())?;
-        if result.status.clone().context("put view returned no status")?.code
-            != Some(icing::status_proto::Code::Ok.into())
-        {
-            debug!("{:?}", result);
+        let result = self.icing_search_engine.put(metadata.document())?;
+        ensure!(
+            result.status.context("put memory returned no status at put_memory_with_views")?.code
+                == Some(icing::status_proto::Code::Ok.into())
+        );
+        for view in &views {
+            let result = self.icing_search_engine.put(view.document())?;
+            if result.status.clone().context("put view returned no status")?.code
+                != Some(icing::status_proto::Code::Ok.into())
+            {
+                debug!("{:?}", result);
+            }
+            ensure!(
+                result.status.context("put view returned no status (ensure)")?.code
+                    == Some(icing::status_proto::Code::Ok.into())
+            );
         }
-        ensure!(
-            result.status.context("put view returned no status (ensure)")?.code
-                == Some(icing::status_proto::Code::Ok.into())
-        );
-        self.applied_operations.push(MutationOperation::AddView(pending_metadata));
-        Ok(())
-    }
-
-    fn add_pending_metadata(&mut self, pending_metadata: PendingMetadata) -> anyhow::Result<()> {
-        let result = self.icing_search_engine.put(pending_metadata.document())?;
-        ensure!(
-            result.status.context("put memory returned no status at add_pending_metadata")?.code
-                == Some(icing::status_proto::Code::Ok.into())
-        );
-        self.applied_operations.push(MutationOperation::AddMemory(pending_metadata));
+        self.applied_operations.push(MutationOperation::AddMemory { metadata, views });
         Ok(())
     }
 
@@ -1917,11 +1916,8 @@ impl IcingMetaDatabase {
                     // No action, now the database is created.
                     Ok(())
                 }
-                MutationOperation::AddMemory(pending_metadata) => {
-                    new_db.add_pending_metadata(pending_metadata.clone())
-                }
-                MutationOperation::AddView(pending_view_metadata) => {
-                    new_db.add_pending_memory_view_metadata(pending_view_metadata.clone())
+                MutationOperation::AddMemory { metadata, views } => {
+                    new_db.put_memory_with_views(metadata.clone(), views.clone())
                 }
                 MutationOperation::Remove(id) => new_db.delete_memories(&[id.to_string()]),
                 MutationOperation::Reset => Ok(new_db.reset()?),
@@ -2396,6 +2392,47 @@ mod tests {
                 eq(&PageToken::Start),
             ))
         );
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn icing_import_with_changes_test_add_memory_with_views() -> anyhow::Result<()> {
+        // Original base db.
+        let mut db1 = IcingMetaDatabase::new(tempdir())?;
+        let (_mid_a, bid_a) = add_test_memory(&mut db1, "A");
+
+        // Now "write it back"
+        let db1_exported = db1.export().expect("Failed to export db 1").encode_to_vec();
+
+        // First concurrent changer adds B
+        let mut db2 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
+        let (_mid_b, bid_b) = add_test_memory(&mut db2, "B");
+        let db2_exported = db2.export().expect("Failed to export db 2").encode_to_vec();
+
+        // Second concurrent changer adds C with a view
+        let mut db3 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
+        let bid_c = 99999.to_string();
+        db3.add_memory(&mem_with_view("C", &["tag"], "view_c", &[1.0, 0.0, 0.0]), bid_c.clone())?;
+
+        // Rebase db3 on top of db2
+        let (db3_prime, _) =
+            IcingMetaDatabase::import_with_changes(tempdir(), db2_exported.as_slice(), &db3)?;
+
+        // Should contain all items.
+        assert_that!(
+            db3_prime.get_memories_by_tag("tag", 10, PageToken::Start),
+            ok((
+                unordered_elements_are![eq(bid_a.as_str()), eq(bid_b.as_str()), eq(bid_c.as_str()),],
+                eq(&PageToken::Start),
+            ))
+        );
+
+        // The view should also be searchable in the rebased db.
+        let query = embedding_query(&[1.0, 0.0, 0.0]);
+        let (results, _) = db3_prime.search(&query, 10, PageToken::Start)?;
+        let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+        assert_that!(blob_ids, elements_are![eq(&bid_c)]);
 
         Ok(())
     }
