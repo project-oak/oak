@@ -225,6 +225,27 @@ impl PendingMetadata {
     pub fn document(&self) -> &DocumentProto {
         &self.icing_document
     }
+
+    /// Extracts the memory ID from the document's string properties.
+    pub fn memory_id(&self) -> Option<&str> {
+        self.get_string_property(MEMORY_ID_NAME)
+    }
+
+    /// Extracts the memory name from the document's string properties.
+    /// Returns `None` if unnamed.
+    pub fn name(&self) -> Option<&str> {
+        self.get_string_property(NAME_NAME)
+    }
+
+    fn get_string_property(&self, property_name: &str) -> Option<&str> {
+        self.icing_document
+            .properties
+            .iter()
+            .find(|prop| prop.name.as_deref() == Some(property_name))?
+            .string_values
+            .first()
+            .map(|s| s.as_str())
+    }
 }
 
 /// The generated metadata for a memory.
@@ -716,6 +737,52 @@ impl IcingMetaDatabase {
             bail!("Two memories with the same name found: {:?}", search_result.results)
         }
         Ok(search_result.results.first().and_then(Self::extract_blob_id_from_doc))
+    }
+
+    /// Returns the memory ID of a memory with the given name, or `None` if no
+    /// such memory exists.
+    pub fn get_memory_id_by_name(&self, name: &str) -> anyhow::Result<Option<MemoryId>> {
+        let query_str = build_non_expired_query_str(NAME_NAME, name);
+
+        let search_spec = icing::SearchSpecProto {
+            query: Some(query_str),
+            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+            schema_type_filters: vec![SCHEMA_NAME.to_string()],
+            enabled_features: vec![
+                "NUMERIC_SEARCH".to_string(),
+                icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
+                icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string(),
+            ],
+            ..Default::default()
+        };
+
+        let result_spec = icing::ResultSpecProto {
+            num_per_page: Some(2),
+            type_property_masks: vec![Self::create_memory_id_projection(SCHEMA_NAME)],
+            ..Default::default()
+        };
+
+        let search_result: icing::SearchResultProto = self.icing_search_engine.search(
+            &search_spec,
+            &icing::get_default_scoring_spec(),
+            &result_spec,
+        )?;
+
+        if search_result
+            .status
+            .clone()
+            .context("get_memory_id_by_name search returned no status")?
+            .code
+            != Some(icing::status_proto::Code::Ok.into())
+        {
+            bail!("Icing search failed: {:?}", search_result.status);
+        }
+
+        if search_result.results.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(search_result.results.first().and_then(Self::extract_memory_id_from_doc))
     }
 
     pub fn get_blob_id_by_memory_id(&self, memory_id: MemoryId) -> anyhow::Result<Option<BlobId>> {
@@ -1917,6 +1984,23 @@ impl IcingMetaDatabase {
                     Ok(())
                 }
                 MutationOperation::AddMemory { metadata, views } => {
+                    // Enforce name uniqueness: if a memory with the same name
+                    // already exists in the new base, delete it first. This
+                    // mirrors the handler-level semantics where a name
+                    // identifies a unique memory.
+                    if let Some(name) = metadata.name() {
+                        if let Ok(Some(existing_id)) = new_db.get_memory_id_by_name(name) {
+                            let _ = new_db.delete_memories(&[existing_id]);
+                        }
+                    }
+                    // Also handle ID-based upsert: if the memory ID already
+                    // exists, delete it first to clear stale views.
+                    if let Some(memory_id) = metadata.memory_id() {
+                        if let Ok(Some(_)) = new_db.get_blob_id_by_memory_id(memory_id.to_string())
+                        {
+                            let _ = new_db.delete_memories(&[memory_id.to_string()]);
+                        }
+                    }
                     new_db.put_memory_with_views(metadata.clone(), views.clone())
                 }
                 MutationOperation::Remove(id) => new_db.delete_memories(&[id.to_string()]),
@@ -2433,6 +2517,52 @@ mod tests {
         let (results, _) = db3_prime.search(&query, 10, PageToken::Start)?;
         let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
         assert_that!(blob_ids, elements_are![eq(&bid_c)]);
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn icing_import_with_changes_test_name_uniqueness() -> anyhow::Result<()> {
+        // Original base db.
+        let db1 = IcingMetaDatabase::new(tempdir())?;
+
+        // Now "write it back"
+        let db1_exported = db1.export().expect("Failed to export db 1").encode_to_vec();
+
+        // First concurrent changer adds memory with name "shared_name"
+        let mut db2 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
+        let mem_a = Memory {
+            id: "A".to_string(),
+            tags: vec!["tag".to_string()],
+            name: "shared_name".to_string(),
+            ..Default::default()
+        };
+        let bid_a = "blob_a".to_string();
+        db2.add_memory(&mem_a, bid_a.clone())?;
+        let db2_exported = db2.export().expect("Failed to export db 2").encode_to_vec();
+
+        // Second concurrent changer also adds memory with name "shared_name" but
+        // different ID
+        let mut db3 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
+        let mem_b = Memory {
+            id: "B".to_string(),
+            tags: vec!["tag".to_string()],
+            name: "shared_name".to_string(),
+            ..Default::default()
+        };
+        let bid_b = "blob_b".to_string();
+        db3.add_memory(&mem_b, bid_b.clone())?;
+
+        // Rebase db3 on top of db2
+        let (db3_prime, _) =
+            IcingMetaDatabase::import_with_changes(tempdir(), db2_exported.as_slice(), &db3)?;
+
+        // The memory from db3 (bid_b) should have overwritten the one from db2 (bid_a)
+        // So only bid_b should be present for the tag.
+        assert_that!(
+            db3_prime.get_memories_by_tag("tag", 10, PageToken::Start),
+            ok((elements_are![eq(bid_b.as_str())], eq(&PageToken::Start),))
+        );
 
         Ok(())
     }
