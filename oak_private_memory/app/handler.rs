@@ -437,10 +437,11 @@ impl SealedMemorySessionHandler {
             &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
 
         let memory_ids: Vec<MemoryId> = request.ids.into_iter().collect();
-        Ok(DeleteMemoryResponse {
-            success: database.delete_memories(memory_ids).await.is_ok(),
-            ..Default::default()
-        })
+        database
+            .delete_memories(memory_ids)
+            .await
+            .into_internal_error("failed to delete memories")?;
+        Ok(DeleteMemoryResponse { success: true, ..Default::default() })
     }
 
     pub async fn get_database_metrics_handler(

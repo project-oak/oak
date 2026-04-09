@@ -630,3 +630,41 @@ async fn test_get_database_metrics() {
 
     ctx.teardown().await;
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_delete_memory_concurrent_delete_fails() {
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
+    let pm_uid = "test_concurrent_delete_user";
+
+    let mut client1 =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+
+    let memory = Memory { id: "memory_to_delete".to_string(), ..Default::default() };
+    client1.add_memory(memory).await.unwrap();
+
+    let mut client2 =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+
+    // Spawn two concurrent tasks to delete the same memory.
+    let handle1 =
+        tokio::spawn(
+            async move { client1.delete_memory(vec!["memory_to_delete".to_string()]).await },
+        );
+
+    let handle2 =
+        tokio::spawn(
+            async move { client2.delete_memory(vec!["memory_to_delete".to_string()]).await },
+        );
+
+    let (res1, res2) = tokio::join!(handle1, handle2);
+    let res1 = res1.unwrap();
+    let res2 = res2.unwrap();
+
+    // One should succeed, one should fail (if external DB fails on not found).
+    // We assert that exactly one fails.
+    let err_count = [res1.is_err(), res2.is_err()].iter().filter(|&&x| x).count();
+    assert_eq!(err_count, 1, "Exactly one delete should fail");
+
+    ctx.teardown().await;
+}

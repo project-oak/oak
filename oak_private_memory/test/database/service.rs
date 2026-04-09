@@ -249,7 +249,9 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
         let request = request.into_inner();
         let mut db = self.database.lock().await;
         for id in request.ids {
-            db.remove(&id);
+            if db.remove(&id).is_none() {
+                return Err(tonic::Status::not_found(format!("Blob {} not found", id)));
+            }
         }
         Ok(tonic::Response::new(DeleteBlobsResponse {}))
     }
