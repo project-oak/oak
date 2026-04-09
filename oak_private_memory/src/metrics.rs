@@ -90,6 +90,9 @@ enum RequestMetricNameInner {
     SealedMemoryRequest(String),
     Handshake,
     Total,
+    DecryptionFailure,
+    DeserializationFailure,
+    EmptyTlsFrame,
 }
 
 #[derive(Clone, Debug)]
@@ -495,6 +498,9 @@ impl From<RequestMetricName> for Value {
             RequestMetricNameInner::SealedMemoryRequest(variant) => variant.into(),
             RequestMetricNameInner::Handshake => "Handshake".into(),
             RequestMetricNameInner::Total => "total".into(),
+            RequestMetricNameInner::DecryptionFailure => "DecryptionFailure".into(),
+            RequestMetricNameInner::DeserializationFailure => "DeserializationFailure".into(),
+            RequestMetricNameInner::EmptyTlsFrame => "EmptyTlsFrame".into(),
         }
     }
 }
@@ -506,6 +512,18 @@ impl RequestMetricName {
 
     pub fn handshake() -> RequestMetricName {
         RequestMetricName(RequestMetricNameInner::Handshake)
+    }
+
+    pub fn decryption_failure() -> RequestMetricName {
+        RequestMetricName(RequestMetricNameInner::DecryptionFailure)
+    }
+
+    pub fn deserialization_failure() -> RequestMetricName {
+        RequestMetricName(RequestMetricNameInner::DeserializationFailure)
+    }
+
+    pub fn empty_tls_frame() -> RequestMetricName {
+        RequestMetricName(RequestMetricNameInner::EmptyTlsFrame)
     }
 
     pub fn new_sealed_memory_request(

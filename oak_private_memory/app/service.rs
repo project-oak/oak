@@ -173,10 +173,15 @@ impl OakSessionHandler {
         &mut self,
         session_request: SessionRequest,
     ) -> tonic::Result<Option<SessionResponse>> {
-        let decrypted_request = self
-            .server_session
-            .decrypt(session_request)
-            .into_invalid_argument("failed to decrypt request")?;
+        let decrypted_request = match self.server_session.decrypt(session_request) {
+            Ok(req) => req,
+            Err(e) => {
+                self.metrics.inc_requests(RequestMetricName::decryption_failure());
+                return Err(tonic::Status::invalid_argument(format!(
+                    "failed to decrypt request: {e}"
+                )));
+            }
+        };
 
         match self.application_handler.handle(&decrypted_request).await {
             Err(e) => {
@@ -229,6 +234,7 @@ impl TlsSessionHandler {
         self.metrics.inc_requests(RequestMetricName::total());
 
         let decrypted_request = self.session.decrypt(encrypted_request).map_err(|e| {
+            self.metrics.inc_requests(RequestMetricName::decryption_failure());
             tonic::Status::invalid_argument(format!("failed to decrypt TLS request: {e}"))
         })?;
 
@@ -236,6 +242,7 @@ impl TlsSessionHandler {
             // This can happen if the TLS frame only contained handshake data
             // (e.g., tickets, key updates) but no application data. We should
             // gracefully return empty bytes instead of failing to deserialize.
+            self.metrics.inc_requests(RequestMetricName::empty_tls_frame());
             return Ok(Vec::new());
         }
 

@@ -458,9 +458,10 @@ impl SealedMemorySessionHandler {
 
 impl SealedMemorySessionHandler {
     pub async fn handle(&self, request_bytes: &[u8]) -> tonic::Result<Vec<u8>> {
-        let request = self
-            .deserialize_request(request_bytes)
-            .into_internal_error("failed to deserialize request")?;
+        let request = self.deserialize_request(request_bytes).map_err(|e| {
+            self.metrics.inc_requests(RequestMetricName::deserialization_failure());
+            tonic::Status::internal(format!("failed to deserialize request: {e}"))
+        })?;
 
         let request_id = request.request_id;
         let request_variant = request.request.into_invalid_argument("The request is empty.")?;
