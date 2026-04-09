@@ -1130,6 +1130,7 @@ impl IcingMetaDatabase {
         // some items of a page instead of the whole page. But the OSS version
         // does not have it yet.
         // TODO: yongheng - Add support for Icing's new get_next_page api.
+        ensure!(page_size > 0, "page_size must be positive for embedding search");
         let mut id_maps: HashMap<BlobId, Vec<(ViewId, f32)>> = HashMap::new();
         loop {
             let (search_result, next_page_token) = self.execute_search(
@@ -1150,7 +1151,7 @@ impl IcingMetaDatabase {
                     id_maps.entry(blob_id).or_default().push((view_id, score));
                 }
             }
-            if id_maps.keys().len() == page_size as usize || page_token == PageToken::Start {
+            if id_maps.len() == page_size as usize || page_token == PageToken::Start {
                 break;
             }
         }
@@ -2344,6 +2345,25 @@ mod tests {
         let scores: Vec<f32> = results.items.iter().map(|r| r.score).collect();
         assert_that!(blob_ids, elements_are![eq(&bid1)]);
         assert_that!(scores, elements_are![eq(&0.9)]);
+        Ok(())
+    }
+
+    #[gtest]
+    fn embedding_search_zero_page_size_fails() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(tempdir())?;
+
+        let bid = 98765.to_string();
+        db.add_memory(
+            &mem_with_view("memory_embed_1", &["embed_tag"], "view1", &[1.0, 0.0, 0.0]),
+            bid,
+        )?;
+
+        let query = embedding_query(&[1.0, 0.0, 0.0]);
+
+        // Query with page_size = 0 should fail
+        let result = db.search(&query, 0, PageToken::Start);
+        assert!(result.is_err());
+
         Ok(())
     }
 
