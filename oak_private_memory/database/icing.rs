@@ -935,8 +935,11 @@ impl IcingMetaDatabase {
         let mut page_token = PageToken::Start;
         loop {
             let search_spec = icing::SearchSpecProto {
-                query: Some(format!("({} >= 0)", CREATED_TIMESTAMP_NAME)),
-                enabled_features: vec!["NUMERIC_SEARCH".to_string()],
+                query: Some(format!("hasProperty(\"{}\")", BLOB_ID_NAME)),
+                enabled_features: vec![
+                    icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string(),
+                    icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
+                ],
                 term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
                 schema_type_filters: vec![SCHEMA_NAME.to_string()],
                 ..Default::default()
@@ -2363,6 +2366,23 @@ mod tests {
         // Query with page_size = 0 should fail
         let result = db.search(&query, 0, PageToken::Start);
         assert!(result.is_err());
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn get_all_memory_ids_finds_memory_without_timestamp() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(tempdir())?;
+
+        let bid = 98765.to_string();
+        // Create memory without created_timestamp
+        db.add_memory(
+            &Memory { id: "no_ts".into(), tags: vec!["tag".into()], ..Default::default() },
+            bid.clone(),
+        )?;
+
+        let memory_ids = db.get_all_memory_ids()?;
+        assert_that!(memory_ids, elements_are![eq("no_ts")]);
 
         Ok(())
     }
