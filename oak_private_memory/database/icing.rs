@@ -357,6 +357,13 @@ impl IcingMetaDatabase {
         }
     }
 
+    fn create_memory_and_blob_id_projection(schema_name: &str) -> icing::TypePropertyMask {
+        icing::TypePropertyMask {
+            schema_type: Some(schema_name.to_string()),
+            paths: vec![MEMORY_ID_NAME.to_string(), BLOB_ID_NAME.to_string()],
+        }
+    }
+
     fn extract_blob_ids_from_search_result(search_result: icing::SearchResultProto) -> Vec<BlobId> {
         search_result.results.iter().filter_map(Self::extract_blob_id_from_doc).collect::<Vec<_>>()
     }
@@ -692,56 +699,10 @@ impl IcingMetaDatabase {
         Ok((blob_ids, next_page_token))
     }
 
-    pub fn get_memory_by_name(&self, name: &str) -> anyhow::Result<Option<BlobId>> {
-        let query_str = build_non_expired_query_str(NAME_NAME, name);
-
-        let search_spec = icing::SearchSpecProto {
-            query: Some(query_str),
-            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
-            schema_type_filters: vec![SCHEMA_NAME.to_string()],
-            enabled_features: vec![
-                "NUMERIC_SEARCH".to_string(),
-                icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
-                icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string(),
-            ],
-            ..Default::default()
-        };
-
-        let result_spec = icing::ResultSpecProto {
-            num_per_page: Some(2), // We expect at most one result, but set to two to detect errors.
-            type_property_masks: vec![Self::create_blob_id_projection(SCHEMA_NAME)],
-            ..Default::default()
-        };
-
-        let search_result: icing::SearchResultProto = self.icing_search_engine.search(
-            &search_spec,
-            &icing::get_default_scoring_spec(), // Scoring doesn't matter much here
-            &result_spec,
-        )?;
-
-        if search_result
-            .status
-            .clone()
-            .context("get_memory_by_name search returned no status")?
-            .code
-            != Some(icing::status_proto::Code::Ok.into())
-        {
-            bail!("Icing search failed: {:?}", search_result.status);
-        }
-
-        if search_result.results.is_empty() {
-            return Ok(None);
-        }
-
-        if search_result.results.len() > 1 {
-            bail!("Two memories with the same name found: {:?}", search_result.results)
-        }
-        Ok(search_result.results.first().and_then(Self::extract_blob_id_from_doc))
-    }
-
-    /// Returns the memory ID of a memory with the given name, or `None` if no
-    /// such memory exists.
-    pub fn get_memory_id_by_name(&self, name: &str) -> anyhow::Result<Option<MemoryId>> {
+    pub fn get_memory_metadata_by_name(
+        &self,
+        name: &str,
+    ) -> anyhow::Result<Option<(MemoryId, BlobId)>> {
         let query_str = build_non_expired_query_str(NAME_NAME, name);
 
         let search_spec = icing::SearchSpecProto {
@@ -758,7 +719,7 @@ impl IcingMetaDatabase {
 
         let result_spec = icing::ResultSpecProto {
             num_per_page: Some(2),
-            type_property_masks: vec![Self::create_memory_id_projection(SCHEMA_NAME)],
+            type_property_masks: vec![Self::create_memory_and_blob_id_projection(SCHEMA_NAME)],
             ..Default::default()
         };
 
@@ -771,7 +732,7 @@ impl IcingMetaDatabase {
         if search_result
             .status
             .clone()
-            .context("get_memory_id_by_name search returned no status")?
+            .context("get_memory_metadata_by_name search returned no status")?
             .code
             != Some(icing::status_proto::Code::Ok.into())
         {
@@ -782,7 +743,15 @@ impl IcingMetaDatabase {
             return Ok(None);
         }
 
-        Ok(search_result.results.first().and_then(Self::extract_memory_id_from_doc))
+        if search_result.results.len() > 1 {
+            bail!("Two memories with the same name found: {:?}", search_result.results)
+        }
+
+        Ok(search_result.results.first().and_then(Self::extract_metadata_from_doc))
+    }
+
+    pub fn get_memory_by_name(&self, name: &str) -> anyhow::Result<Option<BlobId>> {
+        Ok(self.get_memory_metadata_by_name(name)?.map(|(_, bid)| bid))
     }
 
     pub fn get_blob_id_by_memory_id(&self, memory_id: MemoryId) -> anyhow::Result<Option<BlobId>> {
@@ -917,6 +886,30 @@ impl IcingMetaDatabase {
             .string_values
             .first()
             .cloned()
+    }
+
+    fn extract_metadata_from_doc(
+        doc_hit: &icing::search_result_proto::ResultProto,
+    ) -> Option<(MemoryId, BlobId)> {
+        let doc = doc_hit.document.as_ref()?;
+        let mut memory_id = None;
+        let mut blob_id = None;
+
+        let memory_id_name = MEMORY_ID_NAME.to_string();
+        let blob_id_name = BLOB_ID_NAME.to_string();
+
+        for prop in &doc.properties {
+            if prop.name.as_ref() == Some(&memory_id_name) {
+                memory_id = prop.string_values.first().cloned();
+            } else if prop.name.as_ref() == Some(&blob_id_name) {
+                blob_id = prop.string_values.first().cloned();
+            }
+        }
+
+        match (memory_id, blob_id) {
+            (Some(mid), Some(bid)) => Some((mid, bid)),
+            _ => None,
+        }
     }
 
     fn extract_memory_ids_from_search_result(
@@ -1989,7 +1982,8 @@ impl IcingMetaDatabase {
                     // mirrors the handler-level semantics where a name
                     // identifies a unique memory.
                     if let Some(name) = metadata.name() {
-                        if let Ok(Some(existing_id)) = new_db.get_memory_id_by_name(name) {
+                        if let Ok(Some((existing_id, _))) = new_db.get_memory_metadata_by_name(name)
+                        {
                             let _ = new_db.delete_memories(&[existing_id]);
                         }
                     }
