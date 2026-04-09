@@ -1005,9 +1005,24 @@ impl IcingMetaDatabase {
     }
 
     pub fn reset(&mut self) -> anyhow::Result<()> {
-        self.icing_search_engine.reset();
+        let result_bytes = self.icing_search_engine.reset();
+        let result = icing::ResetResultProto::decode(result_bytes.as_slice())?;
+        ensure!(
+            result.status.clone().context("reset returned no status")?.code
+                == Some(icing::status_proto::Code::Ok.into()),
+            "Icing reset failed: {:?}",
+            result.status
+        );
+
         let schema = Self::create_schema()?;
-        self.icing_search_engine.set_schema(&schema)?;
+        let set_schema_result = self.icing_search_engine.set_schema(&schema)?;
+        ensure!(
+            set_schema_result.status.clone().context("set_schema returned no status")?.code
+                == Some(icing::status_proto::Code::Ok.into()),
+            "Icing set_schema failed: {:?}",
+            set_schema_result.status
+        );
+
         self.applied_operations.push(MutationOperation::Reset);
         Ok(())
     }

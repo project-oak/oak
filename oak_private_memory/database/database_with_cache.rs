@@ -229,7 +229,7 @@ impl DatabaseWithCache {
         if !all_memory_ids.is_empty() {
             self.delete_memories(all_memory_ids).await?;
         }
-        let _ = self.meta_db().reset();
+        self.meta_db().reset()?;
         // Recalculate size based on the empty Icing DB
         let empty_icing_db = self.database.export()?;
         self.current_size = empty_icing_db.encoded_len();
