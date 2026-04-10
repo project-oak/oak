@@ -66,6 +66,10 @@ pub struct Metrics {
     db_persist_queue_size: Gauge<u64>,
     // Optimize latency.
     db_optimize_latency: Histogram<u64>,
+    // Speed of saving the database (KB/ms).
+    db_save_speed: Histogram<u64>,
+    // Speed of loading the database (KB/ms).
+    db_load_speed: Histogram<u64>,
     // Latency of fetching the metadata blob from external DB during key sync.
     key_sync_db_fetch_latency: Histogram<u64>,
     // Latency of decrypting the database during key sync.
@@ -200,6 +204,18 @@ impl Metrics {
             .with_description("Latency of optimizing the database.")
             .with_unit("ms")
             .build();
+        let db_save_speed = observer
+            .meter
+            .u64_histogram("db_save_speed")
+            .with_description("Speed of saving the database.")
+            .with_unit("KB/ms")
+            .build();
+        let db_load_speed = observer
+            .meter
+            .u64_histogram("db_load_speed")
+            .with_description("Speed of loading the database.")
+            .with_unit("KB/ms")
+            .build();
         let key_sync_db_fetch_latency = observer
             .meter
             .u64_histogram("key_sync_db_fetch_latency")
@@ -311,6 +327,8 @@ impl Metrics {
             db_decryption_failures,
             db_persist_queue_size,
             db_optimize_latency,
+            db_save_speed,
+            db_load_speed,
             key_sync_db_fetch_latency,
             key_sync_decrypt_latency,
             db_rebase_operation_failures,
@@ -349,11 +367,10 @@ impl Metrics {
 
     /// Record the time it took to save the DB.
     pub fn record_db_save_speed(&self, speed: u64) {
-        // Round up as 1ms.
+        // Round up as 1.
         let speed = std::cmp::max(1, speed);
 
-        self.rpc_latency
-            .record(speed, &[opentelemetry::KeyValue::new("request_type", "db_save_kb_per_ms")]);
+        self.db_save_speed.record(speed, &[]);
     }
 
     /// Record the time it took to optimize the DB.
@@ -363,11 +380,10 @@ impl Metrics {
 
     /// Record the time it took to load the DB.
     pub fn record_db_load_speed(&self, speed: u64) {
-        // Round up as 1ms.
+        // Round up as 1.
         let speed = std::cmp::max(1, speed);
 
-        self.rpc_latency
-            .record(speed, &[opentelemetry::KeyValue::new("request_type", "db_load_kb_per_ms")]);
+        self.db_load_speed.record(speed, &[]);
     }
 
     pub fn record_db_size(&self, size: u64) {
