@@ -155,6 +155,7 @@ impl PrivateMemoryClient {
             pm_uid,
             kek,
             Self::default_session_config(),
+            false,
         )
         .await
     }
@@ -164,6 +165,7 @@ impl PrivateMemoryClient {
         pm_uid: &str,
         kek: &[u8],
         session_config: SessionConfig,
+        propagate_errors_in_proto: bool,
     ) -> Result<Self> {
         let channel = Channel::from_shared(server_addr.to_string())
             .context("failed to create shared channel")?
@@ -172,8 +174,17 @@ impl PrivateMemoryClient {
             .context("failed to connect to server")?;
         let mut client = SealedMemoryServiceClient::new(channel);
         let (tx, rx_stream) = mpsc::channel(10);
+
+        let mut request = tonic::Request::new(rx_stream);
+        if propagate_errors_in_proto {
+            // Note: The `x-error-propagation` header is only for migration purposes.
+            // Once all clients move to the new in-response error handling, we will
+            // remove this header and always use the in-response error behavior.
+            request.metadata_mut().insert("x-error-propagation", "response-proto".parse().unwrap());
+        }
+
         let rx =
-            client.start_session(rx_stream).await.context("failed to start session")?.into_inner();
+            client.start_session(request).await.context("failed to start session")?.into_inner();
 
         let transport = Box::new(TonicStartSessionTransport { tx, rx });
 

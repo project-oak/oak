@@ -34,8 +34,10 @@ use tokio::{net::TcpListener, sync::mpsc};
 use tokio_stream::{Stream, StreamExt, wrappers::TcpListenerStream};
 
 use crate::{
-    ApplicationConfig, IntoTonicResult, context::UserSessionContext, db_client::SharedDbClient,
-    handler::SealedMemorySessionHandler,
+    ApplicationConfig, IntoTonicResult,
+    context::UserSessionContext,
+    db_client::SharedDbClient,
+    handler::{ErrorPropagationBehavior, SealedMemorySessionHandler},
 };
 
 /// The gRPC service implementation.
@@ -71,14 +73,39 @@ impl SealedMemoryServiceImplementation {
         }
     }
 
-    fn new_oak_session_handler(&self) -> tonic::Result<OakSessionHandler> {
+    fn new_oak_session_handler(
+        &self,
+        error_propagation_behavior: ErrorPropagationBehavior,
+    ) -> tonic::Result<OakSessionHandler> {
         OakSessionHandler::new(
             &self.metrics,
             &self.persistence_tx,
             self.db_client.clone(),
             (self.session_config_factory)(),
             self.clock.clone(),
+            error_propagation_behavior,
         )
+    }
+
+    /// Extracts the error propagation behavior from gRPC metadata.
+    ///
+    /// Note: The `x-error-propagation` header is only for migration purposes.
+    /// Once all clients move to the new in-response error handling, we will
+    /// make it the default and remove the header.
+    fn get_error_propagation_behavior(
+        metadata: &tonic::metadata::MetadataMap,
+    ) -> ErrorPropagationBehavior {
+        metadata
+            .get("x-error-propagation")
+            .map(|v| v.to_str().unwrap_or(""))
+            .map(|s| {
+                if s == "response-proto" {
+                    ErrorPropagationBehavior::PropagateInResponseProto
+                } else {
+                    ErrorPropagationBehavior::PropagateAsGrpcStatus
+                }
+            })
+            .unwrap_or(ErrorPropagationBehavior::PropagateAsGrpcStatus)
     }
 }
 
@@ -99,6 +126,7 @@ impl OakSessionHandler {
         db_client: Arc<SharedDbClient>,
         session_config: SessionConfig,
         clock: Arc<dyn Clock>,
+        error_propagation_behavior: ErrorPropagationBehavior,
     ) -> tonic::Result<Self> {
         let server_session = ServerSession::create(session_config)
             .into_failed_precondition("failed to initialize oak session")?;
@@ -110,6 +138,7 @@ impl OakSessionHandler {
                 persistence_tx.clone(),
                 db_client,
                 clock,
+                error_propagation_behavior,
             ),
         })
     }
@@ -215,6 +244,7 @@ impl TlsSessionHandler {
         db_client: Arc<SharedDbClient>,
         tls_session: oak_session_tls::OakSessionTls,
         clock: Arc<dyn Clock>,
+        error_propagation_behavior: ErrorPropagationBehavior,
     ) -> Self {
         Self {
             metrics: metrics.clone(),
@@ -224,6 +254,7 @@ impl TlsSessionHandler {
                 persistence_tx.clone(),
                 db_client,
                 clock,
+                error_propagation_behavior,
             ),
         }
     }
@@ -272,7 +303,8 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         &self,
         request: tonic::Request<tonic::Streaming<SessionRequest>>,
     ) -> Result<tonic::Response<Self::InvokeStream>, tonic::Status> {
-        let mut oak_session_handler = self.new_oak_session_handler()?;
+        let behavior = Self::get_error_propagation_behavior(request.metadata());
+        let mut oak_session_handler = self.new_oak_session_handler(behavior)?;
 
         let mut request_stream = request.into_inner();
         let response_stream = async_stream::try_stream! {
@@ -290,7 +322,8 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         &self,
         request: tonic::Request<tonic::Streaming<SealedMemorySessionRequest>>,
     ) -> Result<tonic::Response<Self::StartSessionStream>, tonic::Status> {
-        let mut oak_session_handler = self.new_oak_session_handler()?;
+        let behavior = Self::get_error_propagation_behavior(request.metadata());
+        let mut oak_session_handler = self.new_oak_session_handler(behavior)?;
 
         let mut request_stream = request.into_inner();
         let response_stream = async_stream::try_stream! {
@@ -310,6 +343,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         &self,
         request: tonic::Request<tonic::Streaming<TlsSessionFrame>>,
     ) -> Result<tonic::Response<Self::StartTlsSessionStream>, tonic::Status> {
+        let behavior = Self::get_error_propagation_behavior(request.metadata());
         let tls_ctx = self
             .tls_server_context
             .as_ref()
@@ -366,8 +400,14 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
                 }
             };
 
-            let mut tls_handler =
-                TlsSessionHandler::new(&metrics, &persistence_tx, db_client, tls_session, clock);
+            let mut tls_handler = TlsSessionHandler::new(
+                &metrics,
+                &persistence_tx,
+                db_client,
+                tls_session,
+                clock,
+                behavior,
+            );
             debug!("TLS handshake completed");
 
             let mut stream =

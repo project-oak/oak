@@ -40,6 +40,18 @@ use crate::{
     IntoTonicResult, context::UserSessionContext, db_client::SharedDbClient,
     packing::ResponsePacking,
 };
+/// Controls how errors are propagated to the client.
+///
+/// Note: The header-based configuration and `PropagateAsGrpcStatus` behavior
+/// are only for migration purposes. Once all clients move to the new
+/// in-response error handling (`PropagateInResponseProto`), we will make it the
+/// default and remove the header support.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ErrorPropagationBehavior {
+    PropagateAsGrpcStatus = 0,
+    PropagateInResponseProto = 1,
+}
+
 // The implementation for one active Oak Private Memory session.
 // A new instances of this struct is created per-request.
 pub struct SealedMemorySessionHandler {
@@ -48,6 +60,7 @@ pub struct SealedMemorySessionHandler {
     metrics: Arc<metrics::Metrics>,
     persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
     clock: Arc<dyn Clock>,
+    error_propagation_behavior: ErrorPropagationBehavior,
 }
 
 impl Drop for SealedMemorySessionHandler {
@@ -68,8 +81,16 @@ impl SealedMemorySessionHandler {
         persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
         db_client: Arc<SharedDbClient>,
         clock: Arc<dyn Clock>,
+        error_propagation_behavior: ErrorPropagationBehavior,
     ) -> Self {
-        Self { session_context: Default::default(), db_client, metrics, persistence_tx, clock }
+        Self {
+            session_context: Default::default(),
+            db_client,
+            metrics,
+            persistence_tx,
+            clock,
+            error_propagation_behavior,
+        }
     }
 
     pub async fn session_context(&self) -> MutexGuard<'_, Option<UserSessionContext>> {
@@ -464,13 +485,42 @@ impl SealedMemorySessionHandler {
         })?;
 
         let request_id = request.request_id;
-        let request_variant = request.request.into_invalid_argument("The request is empty.")?;
+
+        let request_variant = match request.request {
+            Some(v) => v,
+            None => {
+                let status = tonic::Status::invalid_argument("The request is empty.");
+                let resp = Self::handle_error(status, self.error_propagation_behavior, request_id)?;
+                return self
+                    .serialize_response(&resp)
+                    .into_internal_error("failed to serialize response");
+            }
+        };
 
         let metric_name = RequestMetricName::new_sealed_memory_request(&request_variant);
         self.metrics.inc_requests(metric_name.clone());
 
         let start_time = Instant::now();
-        let mut response = match request_variant {
+
+        let result = self.handle_request_variant(request_variant).await;
+
+        let mut response = match result {
+            Ok(resp) => resp,
+            Err(status) => Self::handle_error(status, self.error_propagation_behavior, request_id)?,
+        };
+
+        let elapsed_time = start_time.elapsed().as_millis() as u64;
+        self.metrics.record_latency(elapsed_time, metric_name);
+        response.request_id = request_id;
+
+        self.serialize_response(&response).into_internal_error("failed to serialize response")
+    }
+
+    async fn handle_request_variant(
+        &self,
+        request_variant: sealed_memory_request::Request,
+    ) -> tonic::Result<SealedMemoryResponse> {
+        let response = match request_variant {
             sealed_memory_request::Request::UserRegistrationRequest(request) => {
                 self.boot_strap_handler(request).await?.into_response()
             }
@@ -509,11 +559,32 @@ impl SealedMemorySessionHandler {
                 self.get_database_metrics_handler(request).await?.into_response()
             }
         };
-        let elapsed_time = start_time.elapsed().as_millis() as u64;
-        self.metrics.record_latency(elapsed_time, metric_name);
-        response.request_id = request_id;
+        Ok(response)
+    }
 
-        self.serialize_response(&response).into_internal_error("failed to serialize response")
+    fn make_error_response(status: tonic::Status, request_id: i32) -> SealedMemoryResponse {
+        SealedMemoryResponse {
+            response: Some(sealed_memory_response::Response::Error(
+                sealed_memory_rust_proto::google::rpc::Status {
+                    code: status.code() as i32,
+                    message: status.message().to_string(),
+                    details: vec![],
+                },
+            )),
+            request_id,
+        }
+    }
+
+    fn handle_error(
+        status: tonic::Status,
+        error_propagation_behavior: ErrorPropagationBehavior,
+        request_id: i32,
+    ) -> Result<SealedMemoryResponse, tonic::Status> {
+        if error_propagation_behavior == ErrorPropagationBehavior::PropagateInResponseProto {
+            Ok(Self::make_error_response(status, request_id))
+        } else {
+            Err(status)
+        }
     }
 }
 

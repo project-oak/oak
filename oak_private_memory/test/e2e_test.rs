@@ -668,3 +668,62 @@ async fn test_delete_memory_concurrent_delete_fails() {
 
     ctx.teardown().await;
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_error_propagation_behavior() {
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
+    let pm_uid = "test_error_user";
+
+    // 1. Test default behavior (propagates as gRPC status)
+    let mut client_default = PrivateMemoryClient::create_with_start_session_config(
+        url,
+        pm_uid,
+        TEST_EK,
+        PrivateMemoryClient::default_session_config(),
+        false,
+    )
+    .await
+    .unwrap();
+
+    // Send invalid request (empty key) to trigger an error
+    let request = UserRegistrationRequest {
+        pm_uid: pm_uid.to_string(),
+        key_encryption_key: vec![], // Invalid!
+        ..Default::default()
+    };
+
+    let result = client_default
+        .invoke(sealed_memory_request::Request::UserRegistrationRequest(request.clone()))
+        .await;
+
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(format!("{:?}", err).contains("key_encryption_key not set"));
+
+    // 2. Test metadata-triggered behavior (propagates in response proto)
+    let mut client_proto = PrivateMemoryClient::create_with_start_session_config(
+        url,
+        pm_uid,
+        TEST_EK,
+        PrivateMemoryClient::default_session_config(),
+        true,
+    )
+    .await
+    .unwrap();
+
+    let response = client_proto
+        .invoke(sealed_memory_request::Request::UserRegistrationRequest(request))
+        .await
+        .unwrap();
+
+    match response {
+        sealed_memory_response::Response::Error(status) => {
+            assert_eq!(status.code, tonic::Code::InvalidArgument as i32);
+            assert!(status.message.contains("key_encryption_key not set"));
+        }
+        _ => panic!("expected error response, got {:?}", response),
+    }
+
+    ctx.teardown().await;
+}
