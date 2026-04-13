@@ -2303,42 +2303,59 @@ mod tests {
         Ok(())
     }
 
-    /// Verifies that `import` applies the schema after restoring ground truth
-    /// files, so that memories with views/embeddings survive the round-trip and
-    /// the imported database is fully functional (searchable and writable).
+    /// Imports a golden icing export snapshot that was generated with a
+    /// *previous* schema version and verifies that the current code can still
+    /// read, search, and extend the data. If someone changes the schema in a
+    /// way that breaks backward compatibility, this test will fail.
+    ///
+    /// To regenerate the golden file after an intentional schema change:
+    /// ```
+    /// bazel run //database/tools:generate_golden_export -- \
+    ///     $(pwd)/database/testdata/golden_icing_export.pb
+    /// ```
     #[gtest]
-    fn import_applies_schema_and_preserves_views() -> anyhow::Result<()> {
-        // --- Set up a DB with both plain and view-bearing memories. ---
-        let mut original_db = IcingMetaDatabase::new(tempdir())?;
+    fn import_golden_snapshot_preserves_data() -> anyhow::Result<()> {
+        let r = runfiles::Runfiles::create().expect("failed to init runfiles");
+        let golden_path =
+            runfiles::rlocation!(r, "oak_private_memory/database/testdata/golden_icing_export.pb")
+                .expect("missing golden export snapshot");
+        let golden_bytes =
+            std::fs::read(&golden_path).expect("failed to read golden export snapshot");
 
-        // Plain memory (metadata schema only).
-        let (plain_mid, plain_bid) = add_test_memory(&mut original_db, "plain");
-
-        // Memory with an embedding view (LLM view schema).
-        let view_mem = mem_with_view("view_mem", &["vtag"], "v1", &[1.0, 0.0, 0.0]);
-        original_db.add_memory(&view_mem, "view_blob".into())?;
-
-        // --- Export and re-import. ---
-        let exported = original_db.export()?.encode_to_vec();
-        drop(original_db);
-
-        let mut imported_db = IcingMetaDatabase::import(tempdir(), exported.as_slice())?;
+        let mut imported_db = IcingMetaDatabase::import(tempdir(), golden_bytes.as_slice())?;
 
         // 1. Plain memory metadata is intact.
-        expect_that!(imported_db.get_blob_id_by_memory_id(plain_mid)?, eq(&Some(plain_bid)));
+        assert_eq!(
+            imported_db.get_blob_id_by_memory_id("golden_plain".into())?,
+            Some("golden_blob_plain".to_string()),
+        );
 
-        // 2. Tag search still works (requires metadata schema).
-        let (tag_results, _) = imported_db.get_memories_by_tag("vtag", 10, PageToken::Start)?;
-        assert_that!(tag_results, unordered_elements_are![eq(&"view_blob".to_string())]);
+        // 2. Named memory is findable by name.
+        assert_eq!(
+            imported_db.get_memory_by_name("my_golden_memory")?,
+            Some("golden_blob_named".to_string()),
+        );
 
-        // 3. Embedding search still works (requires LLM view schema).
+        // 3. Tag search works (requires metadata schema indexing).
+        let (tag_results, _) =
+            imported_db.get_memories_by_tag("golden_tag", 10, PageToken::Start)?;
+        assert_that!(
+            tag_results,
+            unordered_elements_are![
+                eq(&"golden_blob_plain".to_string()),
+                eq(&"golden_blob_named".to_string()),
+                eq(&"golden_blob_view".to_string())
+            ]
+        );
+
+        // 4. Embedding search works (requires LLM view schema).
         let query = embedding_query(&[1.0, 0.0, 0.0]);
         let (search_results, _) = imported_db.search(&query, 10, PageToken::Start)?;
         let blob_ids: Vec<String> =
             search_results.items.iter().map(|r| r.blob_id.clone()).collect();
-        assert_that!(blob_ids, unordered_elements_are![eq(&"view_blob".to_string())]);
+        assert_that!(blob_ids, unordered_elements_are![eq(&"golden_blob_view".to_string())]);
 
-        // 4. Writing new memories after import succeeds (schema must be set).
+        // 5. Writing new memories after import succeeds (schema must be set).
         let new_mem = mem_with_view("new_mem", &["new_tag"], "v_new", &[0.0, 1.0, 0.0]);
         imported_db.add_memory(&new_mem, "new_blob".into())?;
         let (new_results, _) = imported_db.get_memories_by_tag("new_tag", 10, PageToken::Start)?;

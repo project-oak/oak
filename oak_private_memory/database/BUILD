@@ -21,6 +21,30 @@ package(
     licenses = ["notice"],
 )
 
+# Custom target to update the golden snapshot without running a test in CI.
+genrule(
+    name = "gen_update_script",
+    outs = ["update_snapshot.sh"],
+    cmd = "cat << 'EOF' > $@\n" +
+          "#!/bin/bash\n" +
+          "set -e\n" +
+          "if [ -z \"$$BUILD_WORKSPACE_DIRECTORY\" ]; then\n" +
+          "  echo \"Error: This script must be run with 'bazel run'\"\n" +
+          "  exit 1\n" +
+          "fi\n" +
+          "# Run the generator and output directly to the source tree\n" +
+          "$$BUILD_WORKSPACE_DIRECTORY/bazel-bin/database/tools/generate_golden_export $$BUILD_WORKSPACE_DIRECTORY/database/testdata/golden_icing_export.pb\n" +
+          "echo \"Updated database/testdata/golden_icing_export.pb\"\n" +
+          "EOF\n" +
+          "chmod +x $@",
+)
+
+sh_binary(
+    name = "update_golden_snapshot",
+    srcs = [":gen_update_script"],
+    data = ["//database/tools:generate_golden_export"],
+)
+
 rust_library(
     name = "oak_private_memory_database",
     srcs = glob(["*.rs"]),
@@ -49,8 +73,10 @@ rust_library(
 rust_test(
     name = "database_test",
     crate = ":oak_private_memory_database",
+    data = ["testdata/golden_icing_export.pb"],
     deps = [
         "@oak_crates_index//:googletest",
+        "@rules_rust//tools/runfiles",
     ],
 )
 
