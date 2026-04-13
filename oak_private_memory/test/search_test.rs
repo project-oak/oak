@@ -1634,3 +1634,83 @@ fn test_search_memories_v2_filter_tag_and_sort_embedding() -> anyhow::Result<()>
 
     Ok(())
 }
+
+#[gtest]
+fn test_search_memories_v2_exact_name_matching() -> anyhow::Result<()> {
+    let _ = env_logger::builder().filter(None, log::LevelFilter::Trace).try_init();
+
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-exact-name-match-test"))?;
+
+    db.add_memory(
+        &Memory {
+            id: "m1".into(),
+            name: "test_memory.very_long_name.object1".into(),
+            ..Default::default()
+        },
+        "blob1".into(),
+    )?;
+    db.add_memory(
+        &Memory {
+            id: "m2".into(),
+            name: "test_memory.very_long_name.object2".into(),
+            ..Default::default()
+        },
+        "blob2".into(),
+    )?;
+    db.add_memory(
+        &Memory {
+            id: "m3".into(),
+            name: "test_memory.very_long_name.object3".into(),
+            ..Default::default()
+        },
+        "blob3".into(),
+    )?;
+    db.add_memory(
+        &Memory {
+            id: "m4".into(),
+            name: "test_memory.very_long_name.object4".into(),
+            ..Default::default()
+        },
+        "blob4".into(),
+    )?;
+
+    let req = filter_request(name_filter("test_memory.very_long_name.object1"), 10);
+    expect_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob1")]);
+
+    let req = filter_request(name_filter("test_memory.very_long_name.object2"), 10);
+    expect_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob2")]);
+
+    let req = filter_request(name_filter("test_memory.very_long_name.object3"), 10);
+    expect_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob3")]);
+
+    let req = filter_request(name_filter("test_memory.very_long_name.object4"), 10);
+    expect_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob4")]);
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_exact_tag_matching() -> anyhow::Result<()> {
+    let _ = env_logger::builder().filter(None, log::LevelFilter::Trace).try_init();
+
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-exact-tag-match-test"))?;
+
+    db.add_memory(&mem_tagged("m1", &["test_memory.very_long_tag_name.object1"]), "blob1".into())?;
+    db.add_memory(&mem_tagged("m2", &["test_memory.very_long_tag_name.object2"]), "blob2".into())?;
+    db.add_memory(&mem_tagged("m3", &["test_memory.very_long_tag_name.object3"]), "blob3".into())?;
+    db.add_memory(&mem_tagged("m4", &["test_memory.very_long_tag_name.object4"]), "blob4".into())?;
+
+    let req = filter_request(tag_filter("test_memory.very_long_tag_name.object1"), 10);
+    expect_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob1")]);
+
+    let req = filter_request(tag_filter("test_memory.very_long_tag_name.object2"), 10);
+    expect_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob2")]);
+
+    let req = filter_request(tag_filter("test_memory.very_long_tag_name.object3"), 10);
+    expect_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob3")]);
+
+    let req = filter_request(tag_filter("test_memory.very_long_tag_name.object4"), 10);
+    expect_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob4")]);
+
+    Ok(())
+}

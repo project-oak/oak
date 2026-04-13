@@ -384,7 +384,7 @@ impl IcingMetaDatabase {
                     .set_name(TAG_NAME.as_bytes())
                     .set_data_type_string(
                         icing::term_match_type::Code::ExactOnly.into(),
-                        icing::string_indexing_config::tokenizer_type::Code::Plain.into(),
+                        icing::string_indexing_config::tokenizer_type::Code::Verbatim.into(),
                     )
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Repeated.into(),
@@ -406,7 +406,7 @@ impl IcingMetaDatabase {
                     .set_name(NAME_NAME.as_bytes())
                     .set_data_type_string(
                         icing::term_match_type::Code::ExactOnly.into(),
-                        icing::string_indexing_config::tokenizer_type::Code::Plain.into(),
+                        icing::string_indexing_config::tokenizer_type::Code::Verbatim.into(),
                     )
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
@@ -476,7 +476,7 @@ impl IcingMetaDatabase {
                     .set_name(TAG_NAME.as_bytes())
                     .set_data_type_string(
                         icing::term_match_type::Code::ExactOnly.into(),
-                        icing::string_indexing_config::tokenizer_type::Code::Plain.into(),
+                        icing::string_indexing_config::tokenizer_type::Code::Verbatim.into(),
                     )
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Repeated.into(),
@@ -498,7 +498,7 @@ impl IcingMetaDatabase {
                     .set_name(NAME_NAME.as_bytes())
                     .set_data_type_string(
                         icing::term_match_type::Code::ExactOnly.into(),
-                        icing::string_indexing_config::tokenizer_type::Code::Plain.into(),
+                        icing::string_indexing_config::tokenizer_type::Code::Verbatim.into(),
                     )
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
@@ -1771,11 +1771,12 @@ impl IcingMetaDatabase {
         field_name: &str,
         value: &str,
     ) -> anyhow::Result<icing::SearchSpecProto> {
-        let query_string = format!("({field_name}:{value})");
+        let query_string = format!("({field_name}:\"{value}\")");
         let search_spec = icing::SearchSpecProto {
             query: Some(query_string),
             enabled_features: vec![
                 "NUMERIC_SEARCH".to_string(),
+                "VERBATIM_SEARCH".to_string(),
                 icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
             ],
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
