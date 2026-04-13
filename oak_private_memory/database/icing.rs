@@ -597,6 +597,13 @@ impl IcingMetaDatabase {
         ground_truth.migrate(base_dir.as_str())?;
 
         let icing_search_engine = Self::initialize_icing_database(base_dir.as_str())?;
+        // Ensure schema is up-to-date after import (handles schema migrations).
+        let schema = Self::create_schema()?;
+        let result_proto = icing_search_engine.set_schema(&schema)?;
+        ensure!(
+            result_proto.status.context("set_schema in import failed")?.code
+                == Some(icing::status_proto::Code::Ok.into())
+        );
         Ok(Self { icing_search_engine, base_dir, applied_operations: vec![] })
     }
 
@@ -2293,6 +2300,50 @@ mod tests {
         );
         let (result, _) = imported_db.get_memories_by_tag("export_tag", 10, PageToken::Start)?;
         assert_that!(result, unordered_elements_are![eq(&blob_id1)]);
+        Ok(())
+    }
+
+    /// Verifies that `import` applies the schema after restoring ground truth
+    /// files, so that memories with views/embeddings survive the round-trip and
+    /// the imported database is fully functional (searchable and writable).
+    #[gtest]
+    fn import_applies_schema_and_preserves_views() -> anyhow::Result<()> {
+        // --- Set up a DB with both plain and view-bearing memories. ---
+        let mut original_db = IcingMetaDatabase::new(tempdir())?;
+
+        // Plain memory (metadata schema only).
+        let (plain_mid, plain_bid) = add_test_memory(&mut original_db, "plain");
+
+        // Memory with an embedding view (LLM view schema).
+        let view_mem = mem_with_view("view_mem", &["vtag"], "v1", &[1.0, 0.0, 0.0]);
+        original_db.add_memory(&view_mem, "view_blob".into())?;
+
+        // --- Export and re-import. ---
+        let exported = original_db.export()?.encode_to_vec();
+        drop(original_db);
+
+        let mut imported_db = IcingMetaDatabase::import(tempdir(), exported.as_slice())?;
+
+        // 1. Plain memory metadata is intact.
+        expect_that!(imported_db.get_blob_id_by_memory_id(plain_mid)?, eq(&Some(plain_bid)));
+
+        // 2. Tag search still works (requires metadata schema).
+        let (tag_results, _) = imported_db.get_memories_by_tag("vtag", 10, PageToken::Start)?;
+        assert_that!(tag_results, unordered_elements_are![eq(&"view_blob".to_string())]);
+
+        // 3. Embedding search still works (requires LLM view schema).
+        let query = embedding_query(&[1.0, 0.0, 0.0]);
+        let (search_results, _) = imported_db.search(&query, 10, PageToken::Start)?;
+        let blob_ids: Vec<String> =
+            search_results.items.iter().map(|r| r.blob_id.clone()).collect();
+        assert_that!(blob_ids, unordered_elements_are![eq(&"view_blob".to_string())]);
+
+        // 4. Writing new memories after import succeeds (schema must be set).
+        let new_mem = mem_with_view("new_mem", &["new_tag"], "v_new", &[0.0, 1.0, 0.0]);
+        imported_db.add_memory(&new_mem, "new_blob".into())?;
+        let (new_results, _) = imported_db.get_memories_by_tag("new_tag", 10, PageToken::Start)?;
+        assert_that!(new_results, unordered_elements_are![eq(&"new_blob".to_string())]);
+
         Ok(())
     }
 
