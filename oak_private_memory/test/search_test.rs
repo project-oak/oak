@@ -1714,3 +1714,18 @@ fn test_search_memories_v2_exact_tag_matching() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[gtest]
+fn test_search_memories_v2_tag_with_double_quote() -> anyhow::Result<()> {
+    let _ = env_logger::builder().filter(None, log::LevelFilter::Trace).try_init();
+
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-tag-with-quote-test"))?;
+
+    db.add_memory(&mem_tagged("m1", &["tag_with_\"_quote"]), "blob1".into())?;
+    db.add_memory(&mem_tagged("m2", &["normal_tag"]), "blob2".into())?;
+
+    let req = filter_request(tag_filter("tag_with_\"_quote"), 10);
+    expect_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob1")]);
+
+    Ok(())
+}

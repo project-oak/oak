@@ -1778,7 +1778,8 @@ impl IcingMetaDatabase {
         field_name: &str,
         value: &str,
     ) -> anyhow::Result<icing::SearchSpecProto> {
-        let query_string = format!("({field_name}:\"{value}\")");
+        let escaped_value = value.replace('"', "\\\"");
+        let query_string = format!("({field_name}:\"{escaped_value}\")");
         let search_spec = icing::SearchSpecProto {
             query: Some(query_string),
             enabled_features: vec![
