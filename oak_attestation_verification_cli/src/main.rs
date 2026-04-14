@@ -27,7 +27,10 @@ use std::{
 use anyhow::anyhow;
 use clap::Parser;
 use oak_proto_rust::{
-    attestation::{CERTIFICATE_BASED_ATTESTATION_ID, CONFIDENTIAL_SPACE_ATTESTATION_ID},
+    attestation::{
+        CERTIFICATE_BASED_ATTESTATION_ID, CONFIDENTIAL_SPACE_ATTESTATION_ID,
+        RESTRICTED_KERNEL_ATTESTATION_ID,
+    },
     oak::{
         Variant,
         attestation::v1::{
@@ -141,6 +144,19 @@ fn process_attestation(
                 attestation_timestamp,
                 &find_single_event(endorsed_evidence)?,
                 &find_single_endorsement(endorsed_evidence)?,
+            ),
+            _ => Err(anyhow!("Found no reference values")),
+        },
+        RESTRICTED_KERNEL_ATTESTATION_ID => match reference_values {
+            Some(ReferenceValues {
+                r#type:
+                    Some(reference_values::Type::OakRestrictedKernel(
+                        oak_restricted_kernel_reference_values,
+                    )),
+            }) => VerificationReport::restricted_kernel(
+                oak_restricted_kernel_reference_values,
+                attestation_timestamp,
+                endorsed_evidence,
             ),
             _ => Err(anyhow!("Found no reference values")),
         },

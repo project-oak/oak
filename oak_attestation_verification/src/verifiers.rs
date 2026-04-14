@@ -96,6 +96,16 @@ impl BaseAmdSevSnpVerifier {
     }
 }
 
+pub struct RestrictedKernelVerificationReport {
+    pub session_binding_public_key: Vec<u8>,
+}
+
+impl RestrictedKernelVerificationReport {
+    pub fn into_session_binding_public_key(self) -> anyhow::Result<Vec<u8>> {
+        Ok(self.session_binding_public_key)
+    }
+}
+
 /// Attestation verifier that verifies an attestation rooted in AMD SEV-SNP.
 pub struct AmdSevSnpDiceAttestationVerifier {
     base_verifier: BaseAmdSevSnpVerifier,
@@ -112,6 +122,18 @@ impl AmdSevSnpDiceAttestationVerifier {
     ) -> Self {
         let base_verifier = BaseAmdSevSnpVerifier { platform_policy, firmware_policy };
         Self { base_verifier, event_policies, clock }
+    }
+
+    pub fn report(
+        &self,
+        evidence: &Evidence,
+        endorsements: &Endorsements,
+    ) -> anyhow::Result<RestrictedKernelVerificationReport> {
+        let _results = self.verify(evidence, endorsements)?;
+        let extracted_evidence = crate::extract_evidence(evidence)?;
+        Ok(RestrictedKernelVerificationReport {
+            session_binding_public_key: extracted_evidence.signing_public_key,
+        })
     }
 }
 

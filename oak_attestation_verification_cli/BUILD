@@ -34,6 +34,7 @@ rust_binary(
         "//oak_proto_rust",
         "//oak_session",
         "//oak_time",
+        "//util/digest:oak_digest",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:p256",

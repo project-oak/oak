@@ -16,14 +16,15 @@
 
 use std::fmt::Write;
 
-use anyhow::anyhow;
+use anyhow::{Context, anyhow};
 use oak_attestation_gcp::{
     jwt::verification::{AttestationTokenVerificationReport, CertificateReport, IssuerReport},
     policy::ConfidentialSpaceVerificationReport,
     policy_generator::confidential_space_policy_from_reference_values,
 };
 use oak_attestation_verification::{
-    SessionBindingPublicKeyPolicy, SessionBindingPublicKeyVerificationReport,
+    RestrictedKernelVerificationReport, SessionBindingPublicKeyPolicy,
+    SessionBindingPublicKeyVerificationReport,
 };
 use oak_crypto::certificate::certificate_verifier::{
     CertificateVerificationReport, CertificateVerifier,
@@ -31,7 +32,10 @@ use oak_crypto::certificate::certificate_verifier::{
 use oak_crypto_tink::signature_verifier::SignatureVerifier;
 use oak_proto_rust::oak::{
     Variant,
-    attestation::v1::{CertificateBasedReferenceValues, ConfidentialSpaceReferenceValues},
+    attestation::v1::{
+        CertificateBasedReferenceValues, ConfidentialSpaceReferenceValues,
+        OakRestrictedKernelReferenceValues,
+    },
     session::v1::SessionBinding,
 };
 use oak_session::session_binding::{SessionBindingVerifier, SignatureBindingVerifierBuilder};
@@ -44,6 +48,7 @@ use crate::print::print_indented;
 pub enum VerificationReport {
     CertificateBased(SessionBindingPublicKeyVerificationReport),
     ConfidentialSpace(ConfidentialSpaceVerificationReport),
+    RestrictedKernel(RestrictedKernelVerificationReport),
 }
 
 impl VerificationReport {
@@ -77,6 +82,42 @@ impl VerificationReport {
         Ok(VerificationReport::ConfidentialSpace(report))
     }
 
+    pub fn restricted_kernel(
+        reference_values: &OakRestrictedKernelReferenceValues,
+        attestation_timestamp: Instant,
+        endorsed_evidence: &oak_proto_rust::oak::session::v1::EndorsedEvidence,
+    ) -> anyhow::Result<VerificationReport> {
+        use oak_attestation_verification::create_amd_verifier;
+        use oak_proto_rust::oak::attestation::v1::{
+            Endorsements, ReferenceValues, reference_values,
+        };
+
+        let evidence = endorsed_evidence.evidence.as_ref().context("missing evidence")?;
+        let default_endorsements = Endorsements::default();
+        let endorsements = endorsed_evidence.endorsements.as_ref().unwrap_or(&default_endorsements);
+
+        let full_rvs = ReferenceValues {
+            r#type: Some(reference_values::Type::OakRestrictedKernel(reference_values.clone())),
+        };
+
+        let clock = oak_time::clock::FixedClock::at_instant(attestation_timestamp);
+        use oak_proto_rust::oak::attestation::v1::TeePlatform;
+        let root_layer = evidence.root_layer.as_ref().context("missing root layer evidence")?;
+        let report = match root_layer.platform() {
+            TeePlatform::AmdSevSnp => {
+                let verifier =
+                    create_amd_verifier(clock, &full_rvs).context("creating AMD verifier")?;
+                verifier.report(evidence, endorsements)?
+            }
+            TeePlatform::IntelTdx => {
+                anyhow::bail!("Restricted Kernel verification on Intel TDX is not yet supported")
+            }
+            _ => anyhow::bail!("Unsupported TEE platform or missing root layer evidence"),
+        };
+
+        Ok(VerificationReport::RestrictedKernel(report))
+    }
+
     pub fn print(
         &self,
         writer: &mut impl Write,
@@ -90,6 +131,9 @@ impl VerificationReport {
             }
             VerificationReport::CertificateBased(report) => {
                 print_certificate_based_attestation_report(writer, indent, report)?;
+            }
+            VerificationReport::RestrictedKernel(report) => {
+                print_restricted_kernel_attestation_report(writer, indent, report)?;
             }
         }
 
@@ -119,6 +163,9 @@ impl VerificationReport {
             VerificationReport::CertificateBased(report) => {
                 Ok(report.into_session_binding_public_key().map(|_| ())?)
             }
+            VerificationReport::RestrictedKernel(report) => {
+                Ok(report.into_session_binding_public_key().map(|_| ())?)
+            }
         }
     }
 
@@ -128,6 +175,9 @@ impl VerificationReport {
                 report.session_binding_public_key.clone()
             }
             VerificationReport::CertificateBased(report) => {
+                report.session_binding_public_key.clone()
+            }
+            VerificationReport::RestrictedKernel(report) => {
                 report.session_binding_public_key.clone()
             }
         }
@@ -172,6 +222,22 @@ fn print_certificate_verification_report(
             Ok(()) => print_indented!(writer, indent, "✅ is fresh")?,
         }
     }
+    Ok(())
+}
+
+fn print_restricted_kernel_attestation_report(
+    writer: &mut impl Write,
+    indent: usize,
+    _report: &RestrictedKernelVerificationReport,
+) -> std::fmt::Result {
+    print_indented!(writer, indent, "🛡️ Oak Restricted Kernel Attestation:")?;
+    let indent = indent + 1;
+    print_indented!(writer, indent, "Root Layer:")?;
+    print_indented!(writer, indent + 1, "✅ verified successfully")?;
+    print_indented!(writer, indent, "Kernel Layer:")?;
+    print_indented!(writer, indent + 1, "✅ verified successfully")?;
+    print_indented!(writer, indent, "Application Layer:")?;
+    print_indented!(writer, indent + 1, "✅ verified successfully")?;
     Ok(())
 }
 
@@ -610,6 +676,78 @@ Nj98VHCkMOChdP0NoY0+ASi3S9WesDHql/SS3TeVKIW0W7VRIYDz51rU
                 "❌ failed to verify: could not verify endorsement: endorsement verification error",
                 "🔐 Session binding:",
                 "✅ verified successfully",
+            ],
+        );
+    }
+
+    #[test]
+    fn test_restricted_kernel_report_check_success() {
+        let report =
+            RestrictedKernelVerificationReport { session_binding_public_key: vec![1, 2, 3] };
+        let verification_report = VerificationReport::RestrictedKernel(report);
+        assert!(verification_report.check().is_ok());
+    }
+
+    #[test]
+    fn test_print_restricted_kernel_report_success() {
+        let mut signing_key = SigningKey::from_str(SIGNING_KEY).unwrap();
+        let handshake_signature: Signature = signing_key.sign(HANDSHAKE_HASH);
+
+        let report = RestrictedKernelVerificationReport {
+            session_binding_public_key: signing_key.verifying_key().to_sec1_bytes().to_vec(),
+        };
+
+        let mut writer = String::new();
+        VerificationReport::RestrictedKernel(report)
+            .print(
+                &mut writer,
+                INDENT,
+                HANDSHAKE_HASH,
+                Some(&session_binding(&handshake_signature.to_bytes())),
+            )
+            .unwrap();
+
+        assert_eq_trimmed_lines(
+            &writer,
+            &[
+                "🛡️ Oak Restricted Kernel Attestation:",
+                "Root Layer:",
+                "✅ verified successfully",
+                "Kernel Layer:",
+                "✅ verified successfully",
+                "Application Layer:",
+                "✅ verified successfully",
+                "🔐 Session binding:",
+                "✅ verified successfully",
+            ],
+        );
+    }
+
+    #[test]
+    fn test_print_restricted_kernel_report_session_binding_failure() {
+        let signing_key = SigningKey::from_str(SIGNING_KEY).unwrap();
+
+        let report = RestrictedKernelVerificationReport {
+            session_binding_public_key: signing_key.verifying_key().to_sec1_bytes().to_vec(),
+        };
+
+        let mut writer = String::new();
+        VerificationReport::RestrictedKernel(report)
+            .print(&mut writer, INDENT, HANDSHAKE_HASH, Some(&session_binding(&[0u8; 64])))
+            .unwrap();
+
+        assert_eq_trimmed_lines(
+            &writer,
+            &[
+                "🛡️ Oak Restricted Kernel Attestation:",
+                "Root Layer:",
+                "✅ verified successfully",
+                "Kernel Layer:",
+                "✅ verified successfully",
+                "Application Layer:",
+                "✅ verified successfully",
+                "🔐 Session binding:",
+                "❌ failed to verify: could not parse signature",
             ],
         );
     }

@@ -65,7 +65,8 @@ pub use util::decode_event_proto;
 pub use verifiers::{
     AmdSevSnpDiceAttestationVerifier, AmdSevSnpTransparentDiceAttestationVerifier,
     EventLogVerifier, InsecureAttestationVerifier, IntelTdxAttestationVerifier,
-    create_amd_verifier, create_insecure_verifier, create_intel_tdx_verifier,
+    RestrictedKernelVerificationReport, create_amd_verifier, create_insecure_verifier,
+    create_intel_tdx_verifier,
 };
 
 /// Verifies a signed endorsement against a reference value.
