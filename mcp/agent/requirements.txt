@@ -4,9 +4,6 @@
 #
 #    pip-compile --extra-index-url=https://pypi.org/simple/ --generate-hashes --output-file=requirements.txt requirements.in
 #
---index-url https://us-python.pkg.dev/artifact-foundry-prod/ah-3p-staging-python/simple/
---extra-index-url https://pypi.org/simple/
-
 a2a-sdk[http-server]==0.3.25 \
     --hash=sha256:2fce38faea82eb0b6f9f9c2bcf761b0d78612c80ef0e599b50d566db1b2654b5 \
     --hash=sha256:afda85bab8d6af0c5d15e82f326c94190f6be8a901ce562d045a338b7127242f
@@ -2155,9 +2152,9 @@ python-dotenv==1.0.1 \
     #   google-adk
     #   litellm
     #   pydantic-settings
-python-multipart==0.0.22 \
-    --hash=sha256:2b2cd894c83d21bf49d702499531c7bafd057d730c201782048f7945d82de155 \
-    --hash=sha256:7340bef99a7e0032613f56dc36027b959fd3b30a787ed62d310e951f7c3a3a58
+python-multipart==0.0.26 \
+    --hash=sha256:08fadc45918cd615e26846437f50c5d6d23304da32c341f289a617127b081f17 \
+    --hash=sha256:c0b169f8c4484c13b0dcf2ef0ec3a4adb255c4b7d18d8e420477d2b1dd03f185
     # via mcp
 pyyaml==6.0.3 \
     --hash=sha256:00c4bdeba853cc34e7dd471f16b4114f4162dc03e6b7afcc2128711f0eca823c \
