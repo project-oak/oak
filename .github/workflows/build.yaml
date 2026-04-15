@@ -17,6 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         buildconfig:
+          - buildconfigs/endorscope_cli.sh
           - buildconfigs/key_xor_test_app.sh
           - buildconfigs/oak_containers_agent.sh
           - buildconfigs/oak_containers_kernel.sh

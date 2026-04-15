@@ -9,6 +9,9 @@ import 'copy_helpers.just'
 default:
     @just --list github
 
+endorscope_cli: \
+    (copy-binary "tr/endorscope_cli" "endorscope_cli")
+
 key_xor_test_app: \
     (copy-binary "enclave_apps/key_xor_test_app" "key_xor_test_app")
 
