@@ -29,18 +29,12 @@ pub struct WasmtimeConfig {
     pub pooling_strategy: ::core::option::Option<
         wasmtime_config::PoolingAllocationConfig,
     >,
-    /// <https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.static_memory_maximum_size>
-    #[prost(uint64, optional, tag = "3")]
-    pub static_memory_maximum_size: ::core::option::Option<u64>,
-    /// <https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.static_memory_guard_size>
+    /// <https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.memory_guard_size>
     #[prost(uint64, optional, tag = "4")]
-    pub static_memory_guard_size: ::core::option::Option<u64>,
-    /// <https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.dynamic_memory_guard_size>
-    #[prost(uint64, optional, tag = "5")]
-    pub dynamic_memory_guard_size: ::core::option::Option<u64>,
-    /// <https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.dynamic_memory_reserved_for_growth>
+    pub memory_guard_size: ::core::option::Option<u64>,
+    /// <https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.memory_reservation_for_growth>
     #[prost(uint64, optional, tag = "6")]
-    pub dynamic_memory_reserved_for_growth: ::core::option::Option<u64>,
+    pub memory_reservation_for_growth: ::core::option::Option<u64>,
     /// <https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.memory_init_cow>
     #[prost(bool, optional, tag = "7")]
     pub memory_init_cow: ::core::option::Option<bool>,

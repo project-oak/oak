@@ -972,7 +972,9 @@ crate.spec(
     features = ["alloc_ref"],
     package = "linked_list_allocator",
     repositories = ALL_REPOSITORIES,
-    version = "0.10.5",
+    # We need to update to a more recent rust nightly to upgrade this crate.
+    # See https://github.com/rust-osdev/linked-list-allocator/pull/90
+    version = "=0.10.5",
 )
 crate.annotation(
     crate = "linked_list_allocator",
@@ -1781,27 +1783,28 @@ crate.spec(
         "cache",
         "cranelift",
         "gc",
+        "gc-drc",
         "parallel-compilation",
         "pooling-allocator",
         "runtime",
     ],
     package = "wasmtime",
     repositories = ALL_STD,
-    version = "25.0.3",
+    version = "29.0.0",
 )
 crate.spec(
     default_features = True,
     features = [],
     package = "wasmtime-wasi",
     repositories = ALL_STD,
-    version = "25.0.3",
+    version = "29.0.0",
 )
 crate.spec(
     default_features = True,
     features = [],
     package = "wasmtime-wasi-http",
     repositories = ALL_STD,
-    version = "25.0.3",
+    version = "29.0.0",
 )
 crate.spec(
     default_features = True,
