@@ -7,3 +7,6 @@
 bazel-*
 # Local additional settings and overrides.
 /.local.bazelrc
+
+# Direnv
+.direnv/
