@@ -294,12 +294,16 @@ rust_test(
 rust_test(
     name = "server_e2e_test",
     crate = ":server_e2e_test_lib",
+    # Tracking: b/5034099
+    flaky = True,
 )
 
 rust_test(
     name = "server_e2e_test_containers",
     crate = ":server_e2e_test_lib",
     env = {"OAK_E2E_BACKEND": "container"},
+    # Tracking: b/5034099
+    flaky = True,
     tags = ["requires-kvm"],
 )
 

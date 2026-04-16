@@ -87,6 +87,8 @@ rust_test_suite(
         "//oak_containers/system_image:oak_containers_system_image",
         "//stage0_bin",
     ],
+    # Tracking: b/5034099
+    flaky = True,
     # Linux-only: integration test that requires QEMU, kernel, system image.
     target_compatible_with = ["@platforms//os:linux"],
     deps = [

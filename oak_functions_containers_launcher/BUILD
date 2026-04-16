@@ -91,6 +91,8 @@ rust_test(
         "//oak_functions_containers_app:bundle",
         "//oak_functions_launcher:mock_lookup_data",
     ],
+    # Tracking: b/5034099
+    flaky = True,
     shard_count = 5,
     deps = [
         "//oak_client",
