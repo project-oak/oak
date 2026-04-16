@@ -65,11 +65,15 @@ struct TlsIdentity {
 };
 
 // A custom certificate verifier callback.
-// Takes the full DER-encoded certificate chain as input.
-// Normal validation is performed first; if it succeeds, this callback is
-// invoked.
+// Takes the full DER-encoded certificate chain and the result of standard
+// BoringSSL verification (error_code).
+// This callback is invoked regardless of whether standard verification succeeded or failed.
+// - If standard verification succeeded, error_code is X509_V_OK (0).
+// - If standard verification failed, error_code contains the specific failure reason.
+// The callback can return absl::OkStatus() to approve the certificate (overriding
+// any standard verification failure), or a non-OK status to reject it.
 using CustomCertVerifier =
-    std::function<absl::Status(const std::vector<std::string>& cert_chain)>;
+    std::function<absl::Status(const std::vector<std::string>& cert_chain, int error_code)>;
 
 // Provider interface that returns a TlsIdentity.
 // Called each time a new session is created on the context.
@@ -90,8 +94,9 @@ struct ServerContextConfig {
   // will be required.
   std::optional<std::string> client_trust_anchor_path;
 
-  // Optional custom certificate verifier. If provided, standard verification
-  // will occur first, followed by the custom verification logic.
+  // Optional custom certificate verifier. If provided, it will be called with
+  // the result of standard verification, allowing it to override failures or
+  // add additional checks.
   std::optional<CustomCertVerifier> custom_cert_verifier;
 };
 
@@ -105,8 +110,9 @@ struct ClientContextConfig {
   // request a certificate for verification.
   std::unique_ptr<TlsIdentityProvider> tls_identity_provider;
 
-  // Optional custom certificate verifier. If provided, standard verification
-  // will occur first, followed by the custom verification logic.
+  // Optional custom certificate verifier. If provided, it will be called with
+  // the result of standard verification, allowing it to override failures or
+  // add additional checks.
   std::optional<CustomCertVerifier> custom_cert_verifier;
 };
 

@@ -42,6 +42,7 @@ rust_test(
     deps = [
         ":oak_session_tls",
         "@oak_crates_index//:futures",
+        "@oak_crates_index//:rustls",
         "@oak_crates_index//:rustls-pemfile",
         "@oak_crates_index//:rustls-pki-types",
         "@oak_crates_index//:tokio",

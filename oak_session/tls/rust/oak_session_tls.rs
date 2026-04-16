@@ -129,13 +129,21 @@ where
 
 /// Custom certificate verification logic that will be run in addition to
 /// standard verification.
+///
+/// The `verify` method is called with the result of standard verification,
+/// allowing it to make decisions based on whether standard verification
+/// succeeded or failed, and with what specific error.
 pub trait CustomCertVerifier: Send + Sync + std::fmt::Debug {
-    /// Verify the certificate chain. Returns Ok(()) if the certificate is
-    /// valid.
+    /// Verify the certificate chain.
+    ///
+    /// `verify_result` contains the result of standard verification.
+    /// Returns Ok(()) if the certificate should be accepted (overriding any
+    /// standard verification failure), or Err(String) to reject it.
     fn verify(
         &self,
         end_entity: &CertificateDer<'_>,
         intermediates: &[CertificateDer<'_>],
+        verify_result: Result<(), &rustls::Error>,
     ) -> Result<(), String>;
 }
 
@@ -147,8 +155,9 @@ pub struct ServerContextConfig {
     /// Optional trust anchor for the client.
     /// If set, client verification will be required.
     pub client_trust_anchor_der: Option<CertificateDer<'static>>,
-    /// Optional custom certificate verifier. If provided, standard verification
-    /// will occur first, followed by the custom verification logic.
+    /// Optional custom certificate verifier. If provided, it will be called
+    /// with the result of standard verification, allowing it to override
+    /// failures or add additional checks.
     pub custom_cert_verifier: Option<Box<dyn CustomCertVerifier>>,
 }
 
@@ -159,8 +168,9 @@ pub struct ClientContextConfig {
     /// If provided, called each time a new session is created to get the
     /// client's TLS identity. Enables mTLS mode.
     pub tls_identity_provider: Option<Box<dyn TlsIdentityProvider>>,
-    /// Optional custom certificate verifier. If provided, standard verification
-    /// will occur first, followed by the custom verification logic.
+    /// Optional custom certificate verifier. If provided, it will be called
+    /// with the result of standard verification, allowing it to override
+    /// failures or add additional checks.
     pub custom_cert_verifier: Option<Box<dyn CustomCertVerifier>>,
 }
 
@@ -179,17 +189,28 @@ impl ServerCertVerifier for DelegatingServerCertVerifier {
         ocsp_response: &[u8],
         now: UnixTime,
     ) -> Result<ServerCertVerified, rustls::Error> {
-        let verified = self.inner.verify_server_cert(
+        let verified_res = self.inner.verify_server_cert(
             end_entity,
             intermediates,
             server_name,
             ocsp_response,
             now,
-        )?;
-        self.custom
-            .verify(end_entity, intermediates)
-            .map_err(|e| rustls::Error::General(format!("Custom verification failed: {}", e)))?;
-        Ok(verified)
+        );
+
+        let verify_result = verified_res.as_ref().map(|_| ());
+
+        let custom_result = self.custom.verify(end_entity, intermediates, verify_result);
+
+        if custom_result.is_ok() {
+            return verified_res.or_else(|_| Ok(ServerCertVerified::assertion()));
+        }
+
+        verified_res?;
+
+        Err(rustls::Error::General(format!(
+            "Custom verification failed: {}",
+            custom_result.unwrap_err()
+        )))
     }
 
     fn verify_tls12_signature(
@@ -240,11 +261,22 @@ impl ClientCertVerifier for DelegatingClientCertVerifier {
         intermediates: &[CertificateDer<'_>],
         now: UnixTime,
     ) -> Result<ClientCertVerified, rustls::Error> {
-        let verified = self.inner.verify_client_cert(end_entity, intermediates, now)?;
-        self.custom
-            .verify(end_entity, intermediates)
-            .map_err(|e| rustls::Error::General(format!("Custom verification failed: {}", e)))?;
-        Ok(verified)
+        let verified_res = self.inner.verify_client_cert(end_entity, intermediates, now);
+
+        let verify_result = verified_res.as_ref().map(|_| ());
+
+        let custom_result = self.custom.verify(end_entity, intermediates, verify_result);
+
+        if custom_result.is_ok() {
+            return verified_res.or_else(|_| Ok(ClientCertVerified::assertion()));
+        }
+
+        verified_res?;
+
+        Err(rustls::Error::General(format!(
+            "Custom verification failed: {}",
+            custom_result.unwrap_err()
+        )))
     }
 
     fn verify_tls12_signature(

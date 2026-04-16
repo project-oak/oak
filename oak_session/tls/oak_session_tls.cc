@@ -51,19 +51,21 @@ int GetCustomVerifierExIndex() {
 }
 
 int VerifyCallback(X509_STORE_CTX* ctx, void* arg) {
-  // Run standard BoringSSL validation first.
   int ok = X509_verify_cert(ctx);
-  if (ok <= 0) return ok;
 
   SSL* ssl = static_cast<SSL*>(
       X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx()));
-  if (!ssl) return 1;
+  if (!ssl) return ok;
 
   CustomCertVerifier* verifier = static_cast<CustomCertVerifier*>(
       SSL_get_ex_data(ssl, GetCustomVerifierExIndex()));
-  if (!verifier) return 1;
+  if (!verifier) return ok;
+
+  int err = X509_STORE_CTX_get_error(ctx);
 
   STACK_OF(X509)* chain = X509_STORE_CTX_get0_chain(ctx);
+  if (!chain) return ok;
+
   std::vector<std::string> cert_chain;
   for (size_t i = 0; i < sk_X509_num(chain); ++i) {
     X509* cert = sk_X509_value(chain, i);
@@ -76,9 +78,11 @@ int VerifyCallback(X509_STORE_CTX* ctx, void* arg) {
   }
 
   // Execute custom validation
-  absl::Status status = (*verifier)(cert_chain);
+  absl::Status status = (*verifier)(cert_chain, err);
   if (!status.ok()) {
-    X509_STORE_CTX_set_error(ctx, X509_V_ERR_APPLICATION_VERIFICATION);
+    if (ok > 0) {
+      X509_STORE_CTX_set_error(ctx, X509_V_ERR_APPLICATION_VERIFICATION);
+    }
     return 0;
   }
 

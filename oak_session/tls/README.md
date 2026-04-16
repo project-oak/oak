@@ -39,18 +39,23 @@ scenarios.
 
 ## Custom Certificate Verification
 
-In advanced scenarios, such as when enforcing attestation properties or custom
-X.509 extensions, applications can provide extra verification logic.
+In advanced scenarios, such as when enforcing attestation properties (e.g.,
+DICE) or custom X.509 extensions, applications can provide extra verification
+logic.
 
 You can configure an optional `CustomCertVerifier` on the connection options
 when creating a context. For C++, this is a std::function callback; for Rust, it
 is a Trait implementation.
 
-This custom verification is **additive**. Standard TLS validation (e.g., trust
-anchor verification, signature validation, and expiry checks) always executes
-first. If standard validation fails, the connection is instantly rejected. Only
-after standard validation succeeds does the library pass the certificate chain
-to your custom verifier. If your custom verifier subsequently fails, the
-connection is aborted. This ensures that application-specific validation safely
-supplements, rather than dangerously overrides, the underlying baseline
-cryptography constraints (like OpenSSL and Rustls).
+The custom verifier is called with the full certificate chain and the result of
+the standard TLS validation (e.g., trust anchor verification, signature
+validation, and expiry checks). This allows the custom verifier to:
+
+1. Add additional checks after successful standard verification.
+2. Override specific standard verification failures (e.g., accepting self-signed
+   certificates that are not in the trust store but are verified via attestation
+   evidence).
+
+The custom verifier receives the standard verification result (as an error code
+in C++, or a `Result` in Rust) and must return a status indicating whether to
+accept or reject the certificate.
