@@ -1727,10 +1727,9 @@ crate.spec(
 crate.spec(
     default_features = True,
     features = ["embedded-io"],
-    git = "https://github.com/rcore-os/virtio-drivers.git",
     package = "virtio-drivers",
     repositories = ONLY_NO_STD,
-    rev = "dd8772498d581ae8d5644806c0072d3dc6f94118",
+    version = "0.13.0",
 )
 crate.spec(
     default_features = True,

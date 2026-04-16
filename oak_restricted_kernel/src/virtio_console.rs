@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use alloc::{string::String, vec::Vec};
+use alloc::{boxed::Box, collections::VecDeque, string::String, vec::Vec};
 use core::{
     alloc::{Allocator, Layout},
     ptr::NonNull,
@@ -25,12 +25,12 @@ use aml::{
     resource::{MemoryRangeDescriptor, Resource},
 };
 use anyhow::anyhow;
-use embedded_io::Read;
+use bitflags::bitflags;
 use log::info;
 use spinning_top::Spinlock;
 use virtio_drivers::{
     BufferDirection, Hal, PAGE_SIZE,
-    device::console::VirtIOConsole,
+    queue::VirtQueue,
     transport::{DeviceType, Transport, mmio::MmioTransport},
 };
 use x86_64::{PhysAddr, VirtAddr};
@@ -40,6 +40,182 @@ use crate::{
     acpi::{Acpi, AcpiDevice, VIRTIO_MMIO},
     mm::Translator,
 };
+
+/// The number of buffer descriptors in each of the queues. For now we only
+/// support one buffer for each queue.
+const QUEUE_SIZE: usize = 1;
+/// The id of the receive queue.
+const RX_QUEUE_ID: u16 = 0;
+/// The id of the transmit queue.
+const TX_QUEUE_ID: u16 = 1;
+
+bitflags! {
+    /// Minimal features needed for the console device.
+    #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+    struct ConsoleFeatures: u64 {
+        const VERSION_1             = 1 << 32;
+        const ACCESS_PLATFORM       = 1 << 33;
+    }
+}
+
+/// Simple driver implementation for a virtio-console device that only supports
+/// a single port and no configuration.
+///
+/// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-39000010>.
+struct Console<'a, H: Hal, T: Transport, A: Allocator> {
+    /// The transport for configuring the device.
+    transport: T,
+    /// The virtqueue for receiving bytes.
+    rx_queue: VirtQueue<H, QUEUE_SIZE>,
+    /// The virtqueue for transmitting bytes.
+    tx_queue: VirtQueue<H, QUEUE_SIZE>,
+    /// A single read buffer.
+    rx_buffer: Box<[u8; PAGE_SIZE], &'a A>,
+    /// Token for the receive queue.
+    rx_token: u16,
+    /// A single write buffer.
+    tx_buffer: Box<[u8; PAGE_SIZE], &'a A>,
+    /// Data that has been received from the queue but not yet read.
+    pending_data: Option<VecDeque<u8>>,
+}
+
+impl<'a, H: Hal, T: Transport, A: Allocator> Console<'a, H, T, A> {
+    fn new(mut transport: T, alloc: &'a A) -> anyhow::Result<Self> {
+        transport.begin_init(ConsoleFeatures::VERSION_1.union(ConsoleFeatures::ACCESS_PLATFORM));
+        let mut rx_queue = VirtQueue::new(&mut transport, RX_QUEUE_ID, false, false)?;
+        let tx_queue = VirtQueue::new(&mut transport, TX_QUEUE_ID, false, false)?;
+
+        transport.finish_init();
+
+        let mut rx_buffer = Box::new_in([0; PAGE_SIZE], alloc);
+        let tx_buffer = Box::new_in([0; PAGE_SIZE], alloc);
+
+        // Set the receive buffer to be ready to receive messages.
+        //
+        // SAFETY: the buffer lives as long as the queue and there are no pending
+        // requests in the queue.
+        let rx_token = unsafe { rx_queue.add(&[], &mut [rx_buffer.as_mut().as_mut_slice()]) }?;
+        if rx_queue.should_notify() {
+            transport.notify(RX_QUEUE_ID);
+        }
+
+        Ok(Self {
+            transport,
+            rx_queue,
+            tx_queue,
+            rx_buffer,
+            rx_token,
+            tx_buffer,
+            pending_data: None,
+        })
+    }
+
+    /// Reads the next available bytes from the receive queue, if any are
+    /// available.
+    fn read_bytes(&mut self) -> Option<VecDeque<u8>> {
+        // Read the buffer if it has been used.
+        if self.rx_token == self.rx_queue.peek_used()? {
+            // SAFETY: This is the same buffer that was used when calling `add` and it has
+            // now been used.
+            let len = unsafe {
+                self.rx_queue
+                    .pop_used(self.rx_token, &[], &mut [self.rx_buffer.as_mut_slice()])
+                    .expect("receive queue is misconfigured")
+            } as usize;
+            assert!(len <= self.rx_buffer.len());
+            let mut result = VecDeque::with_capacity(len);
+            result.extend(&self.rx_buffer[..len]);
+
+            // Reset the receive buffer to be ready for the next message.
+            //
+            // SAFETY: the buffer lives as long as the queue and there are no pending
+            // requests in the queue.
+            self.rx_token =
+                unsafe { self.rx_queue.add(&[], &mut [self.rx_buffer.as_mut().as_mut_slice()]) }
+                    .expect("receive queue is misconfigured");
+            if self.rx_queue.should_notify() {
+                self.transport.notify(RX_QUEUE_ID);
+            }
+            Some(result)
+        } else {
+            panic!("receive queue is misconfigured");
+        }
+    }
+
+    /// Writes the data to the transmit queue.
+    ///
+    /// Returns the number of bytes written, if any.
+    fn write_bytes(&mut self, data: &[u8]) -> anyhow::Result<usize> {
+        if data.is_empty() {
+            return Ok(0);
+        }
+
+        // We have to copy the data into the shared write buffer.
+        let len = data.len().min(self.tx_buffer.len());
+        self.tx_buffer.as_mut()[..len].copy_from_slice(&data[..len]);
+        self.tx_queue.add_notify_wait_pop(
+            &[&self.tx_buffer[..len]],
+            &mut [],
+            &mut self.transport,
+        )?;
+        Ok(len)
+    }
+
+    /// Tries once to fill the destination with as much data as is currently
+    /// available, either in the pending buffer (if data was left over from
+    /// the previous read), or from the next available buffer in the queue
+    /// if there was no data in the pending buffer.
+    ///
+    /// If data is read from the queue and not fully used the remainder is
+    /// stored back into the pending buffer.
+    ///
+    /// Returns the number of bytes read if any data was available to read.
+    fn read_partial(&mut self, dest: &mut [u8]) -> Option<usize> {
+        let mut source = match self.pending_data.take() {
+            Some(data) => data,
+            None => self.read_bytes()?,
+        };
+        let len = dest.len();
+        let mut position = 0;
+        while position < len
+            && let Some(byte) = source.pop_front()
+        {
+            dest[position] = byte;
+            position += 1;
+        }
+        if !source.is_empty() {
+            self.pending_data.replace(source);
+        }
+        Some(position)
+    }
+}
+
+impl<H: Hal, T: Transport, A: Allocator> oak_channel::Read for Console<'_, H, T, A> {
+    fn read_exact(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
+        let len = data.len();
+        let mut count = 0;
+        while count < len {
+            count += self.read_partial(&mut data[count..]).unwrap_or(0);
+        }
+        Ok(())
+    }
+}
+
+impl<H: Hal, T: Transport, A: Allocator> oak_channel::Write for Console<'_, H, T, A> {
+    fn write_all(&mut self, data: &[u8]) -> anyhow::Result<()> {
+        let mut start = 0;
+        let data_len = data.len();
+        while start < data_len {
+            let count = self.write_bytes(&data[start..])?;
+            start += count;
+        }
+        Ok(())
+    }
+    fn flush(&mut self) -> anyhow::Result<()> {
+        // We always flush on write, so do nothing.
+        Ok(())
+    }
+}
 
 struct OakHal;
 
@@ -120,16 +296,16 @@ unsafe impl Hal for OakHal {
 }
 
 #[repr(transparent)]
-pub struct MmioConsoleChannel<'a> {
-    inner: Spinlock<VirtIOConsole<OakHal, MmioTransport<'a>>>,
+pub struct MmioConsoleChannel<'a, A: Allocator> {
+    inner: Spinlock<Console<'a, OakHal, MmioTransport<'a>, A>>,
 }
 
 // Safety: for now, this is safe as we don't have threads in our kernel.
 // TODO(#3531): this will most likely break once we do add threads, though.
-unsafe impl Sync for MmioConsoleChannel<'_> {}
-unsafe impl Send for MmioConsoleChannel<'_> {}
+unsafe impl<A: Allocator> Sync for MmioConsoleChannel<'_, A> {}
+unsafe impl<A: Allocator> Send for MmioConsoleChannel<'_, A> {}
 
-impl oak_channel::Read for MmioConsoleChannel<'_> {
+impl<A: Allocator> oak_channel::Read for MmioConsoleChannel<'_, A> {
     fn read_exact(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         let mut console = self.inner.lock();
         console.read_exact(data).map_err(|err| {
@@ -138,13 +314,13 @@ impl oak_channel::Read for MmioConsoleChannel<'_> {
     }
 }
 
-impl oak_channel::Write for MmioConsoleChannel<'_> {
+impl<A: Allocator> oak_channel::Write for MmioConsoleChannel<'_, A> {
     fn write_all(&mut self, data: &[u8]) -> anyhow::Result<()> {
         let mut console = self.inner.lock();
 
         for chunk in data.chunks(PAGE_SIZE) {
             console
-                .send_bytes(chunk)
+                .write_all(chunk)
                 .map_err(|err| anyhow!("Virtio console write error: {:?}", err))?;
         }
 
@@ -175,7 +351,10 @@ fn find_memory_range(device: &AcpiDevice, ctx: &mut AmlContext) -> Option<(PhysA
     None
 }
 
-pub fn get_console_channel<'a>(acpi: &mut Acpi) -> MmioConsoleChannel<'a> {
+pub fn get_console_channel<'a, A: Allocator>(
+    acpi: &mut Acpi,
+    alloc: &'a A,
+) -> MmioConsoleChannel<'a, A> {
     let devices = acpi.devices().unwrap();
 
     let virtio_devices: Vec<&AcpiDevice> = devices
@@ -218,7 +397,7 @@ pub fn get_console_channel<'a>(acpi: &mut Acpi) -> MmioConsoleChannel<'a> {
         );
         return MmioConsoleChannel {
             inner: Spinlock::new(
-                VirtIOConsole::<OakHal, _>::new(transport).expect("error initializing console"),
+                Console::<OakHal, _, _>::new(transport, alloc).expect("error initializing console"),
             ),
         };
     }
