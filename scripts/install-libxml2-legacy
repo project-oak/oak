@@ -1,0 +1,24 @@
+#!bin/bash
+#
+# Install a legacy version of libxml2 (2.12.x) which provides libxml2.so.2.
+#
+# Bazel LLVM toolchain is currently unable to get libxml2.so.2 from nixpkgs.
+# This requires a system wide installation to "bazel build" directly in
+# your host machine. Alternatively, run bazel under docker:
+#   scripts/docker_run nix develop --command bazel build ...
+#
+# This script is just provided as reference on what the workaround looks like.
+
+LIBXML2_VERSION="2.12.9"
+
+wget https://download.gnome.org/sources/libxml2/2.12/libxml2-${LIBXML2_VERSION}.tar.xz
+tar -xf ./libxml2-${LIBXML2_VERSION}.tar.xz
+cd libxml2-${LIBXML2_VERSION}/
+
+./configure --prefix=/usr/local/libxml2-legacy --without-python
+make -j$(nproc)
+sudo make install
+
+echo "/usr/local/libxml2-legacy/lib" | sudo tee /etc/ld.so.conf.d/libxml2-legacy.conf
+
+sudo ldconfig

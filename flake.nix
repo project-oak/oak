@@ -186,6 +186,8 @@
                 unset TMPDIR
 
                 export BAZELISK_VERIFY_SHA256=${if stdenv.isDarwin then "cb6d2f19ad92157e7186f64151e665c1b0c3bacaa690784e66f446f1b7660140" else "61d89402f0368e64b6c827be5de79d8e65382e8124c3cbb97325611a1851392e"}
+
+                echo "You need libxml2.so.2 to build some Bazel targets. It isn't provided by nix flakes. See scripts/install-libxml2-legacy for details."
               '';
               packages = [
                 autoconf
