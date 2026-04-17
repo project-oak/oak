@@ -20,7 +20,6 @@
 #include "absl/status/status_matchers.h"
 #include "absl/strings/substitute.h"
 #include "cc/containers/hello_world_enclave_app/app_service.h"
-#include "cc/containers/sdk/standalone/oak_standalone.h"
 #include "cc/ffi/rust_bytes.h"
 #include "cc/oak_session/client_session.h"
 #include "gmock/gmock.h"

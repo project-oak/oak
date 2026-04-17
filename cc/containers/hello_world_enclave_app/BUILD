@@ -58,7 +58,6 @@ cc_test(
     srcs = ["standalone_test.cc"],
     deps = [
         ":app_service",
-        "//cc/containers/sdk/standalone:oak_standalone",
         "//cc/oak_session:client_session",
         "//oak_containers/examples/hello_world/proto:hello_world_cc_grpc",
         "@com_google_absl//absl/log:check",
@@ -75,7 +74,6 @@ cc_binary(
     deps = [
         ":app_service",
         "//cc/attestation/verification:insecure_attestation_verifier",
-        "//cc/containers/sdk/standalone:oak_standalone",
         "//cc/oak_session:client_session",
         "//oak_containers/examples/hello_world/proto:hello_world_cc_grpc",
         "@com_github_google_benchmark//:benchmark",

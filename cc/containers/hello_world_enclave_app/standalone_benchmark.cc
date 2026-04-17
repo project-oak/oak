@@ -22,7 +22,6 @@
 #include "absl/strings/substitute.h"
 #include "benchmark/benchmark.h"
 #include "cc/containers/hello_world_enclave_app/app_service.h"
-#include "cc/containers/sdk/standalone/oak_standalone.h"
 #include "cc/oak_session/client_session.h"
 #include "grpcpp/server.h"
 #include "grpcpp/server_builder.h"

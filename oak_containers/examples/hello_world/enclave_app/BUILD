@@ -58,7 +58,6 @@ rust_test(
         "//oak_crypto",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
-        "//oak_sdk/standalone:oak_sdk_standalone",
         "//oak_session",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:futures",
