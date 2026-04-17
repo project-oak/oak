@@ -572,13 +572,6 @@ crate.spec(
 crate.spec(
     default_features = True,
     features = [],
-    package = "assert-json-diff",
-    repositories = ALL_STD,
-    version = "2.0.2",
-)
-crate.spec(
-    default_features = True,
-    features = [],
     package = "assertables",
     repositories = ALL_STD,
     version = "7.0.1",
