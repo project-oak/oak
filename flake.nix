@@ -23,15 +23,6 @@
               allowUnfree = true; # needed to get android stuff to compile
             };
           };
-          # Bazel LLVM toolchain requires libxml2.so.2, but nixpkgs provides libxml2.so.16.
-          # This override allows feeding the correct libxml2 to Bazel (further down).
-          libxml2_compat = pkgs.libxml2.overrideAttrs (oldAttrs: rec {
-            version = "2.13.4";
-            src = pkgs.fetchurl {
-              url = "https://download.gnome.org/sources/libxml2/2.13/libxml2-${version}.tar.xz";
-              sha256 = "sha256-ZdBC4cgBAkPmF++wKv2iC4XCFgrNv7y1smuAzsZRVlA=";
-            };
-          });
           # Create a bazelisk wrapper that normalizes PATH before invoking
           # bazelisk. This prevents Bazel analysis cache invalidation caused
           # by different host shells (e.g. IDE terminals vs interactive
@@ -190,9 +181,6 @@
                 export GRADLE_OPTS="-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdk}/libexec/android-sdk/build-tools/28.0.3/aapt2"
                 export PKG_CONFIG_PATH="${pkgs.openssl.dev}/lib/pkgconfig"
 
-                # Use specific libxml2 (libxml2.so.2) required by the LLVM toolchain.
-                export LD_LIBRARY_PATH="${libxml2_compat.out}/lib:$LD_LIBRARY_PATH"
-
                 # Prevent issues when trying to do nix builds inside of a nix shell.
                 # https://github.com/NixOS/nix/issues/262
                 unset TMPDIR
@@ -204,7 +192,7 @@
                 autogen
                 automake
                 jdk17_headless
-                libxml2_compat
+                libxml2
                 bazelisk-as-bazel
                 androidSdk
                 bazel-buildtools
