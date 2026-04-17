@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-#![feature(c_size_t)]
-
 use clap::Parser;
 use http::Uri;
 use oak_containers_agent::metrics::{MetricsConfig, OakObserver};

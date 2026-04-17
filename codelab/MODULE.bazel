@@ -10,7 +10,7 @@ bazel_dep(name = "protobuf", version = "30.0", repo_name = "com_google_protobuf"
 bazel_dep(name = "grpc", version = "1.72.0", repo_name = "com_github_grpc_grpc")
 bazel_dep(name = "grpc-java", version = "1.71.0", repo_name = "io_grpc_grpc_java")
 bazel_dep(name = "rules_shell", version = "0.6.1")
-bazel_dep(name = "rules_rust", version = "0.68.1")
+bazel_dep(name = "rules_rust", version = "0.70.0")
 bazel_dep(name = "toolchains_llvm", version = "1.6.0")
 
 # Depend on Oak for shared toolchains and crates.

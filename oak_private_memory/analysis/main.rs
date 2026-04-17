@@ -130,8 +130,7 @@ fn print_limit_analysis(limit_mb: u32, initial_size: usize, average_size_per_mem
     let limit_bytes = limit_mb as usize * 1024 * 1024;
     if limit_bytes > initial_size {
         let available_size = limit_bytes - initial_size;
-        let supported_memories =
-            if average_size_per_memory > 0 { available_size / average_size_per_memory } else { 0 };
+        let supported_memories = available_size.checked_div(average_size_per_memory).unwrap_or(0);
         println!(
             "With a {}MB limit, the database can support approximately {} memories.",
             limit_mb, supported_memories

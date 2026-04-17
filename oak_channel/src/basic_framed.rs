@@ -53,14 +53,10 @@ pub fn receive_raw<C: Channel + ?Sized>(channel: &mut C) -> Result<vec::Vec<u8>>
         u32::from_le_bytes(buf)
     };
     let mut payload = vec![0; payload_len as usize];
-    let mut chunks_mut = payload.array_chunks_mut::<MAX_SIZE>();
+    let mut chunks_mut = payload.chunks_mut(MAX_SIZE);
 
     for chunk in chunks_mut.by_ref() {
         read_chunk(channel, chunk)?;
-    }
-    let remainder = chunks_mut.into_remainder();
-    if !remainder.is_empty() {
-        read_chunk(channel, remainder)?;
     }
 
     Ok(payload)
@@ -83,11 +79,10 @@ pub fn send_raw<C: Channel + ?Sized>(channel: &mut C, payload: &[u8]) -> Result<
     };
 
     // The kernel expects data to be transmitted in chunks of one page.
-    let mut chunks = payload.array_chunks::<MAX_SIZE>();
+    let mut chunks = payload.chunks(MAX_SIZE);
     for chunk in chunks.by_ref() {
         write_chunk(chunk)?;
     }
-    write_chunk(chunks.remainder())?;
 
     Ok(())
 }

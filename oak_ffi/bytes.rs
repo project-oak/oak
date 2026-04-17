@@ -154,7 +154,9 @@ pub unsafe extern "C" fn free_rust_bytes_contents(bytes: RustBytes) {
     if bytes.data.is_null() {
         return;
     }
-    drop(unsafe { Box::from_raw(std::slice::from_raw_parts_mut(bytes.data as *mut u8, bytes.len)) })
+    drop(unsafe {
+        Box::from_raw(std::ptr::slice_from_raw_parts_mut(bytes.data as *mut u8, bytes.len))
+    })
 }
 
 #[cfg(test)]

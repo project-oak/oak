@@ -1553,12 +1553,10 @@ impl IcingMetaDatabase {
         sort: &EmbeddingSort,
         search_spec: &mut icing::SearchSpecProto,
     ) -> anyhow::Result<icing::ScoringSpecProto> {
-        if let Some(query) = &search_spec.query {
-            if query.contains("getEmbeddingParameter") {
-                bail!(
-                    "Sorting and filtering by embedding at the same time currently not implemented"
-                );
-            }
+        if let Some(query) = &search_spec.query
+            && query.contains("getEmbeddingParameter")
+        {
+            bail!("Sorting and filtering by embedding at the same time currently not implemented");
         }
 
         let embedding = sort.embedding.as_ref().context("EmbeddingSort.embedding is required")?;
@@ -2012,19 +2010,17 @@ impl IcingMetaDatabase {
                     // already exists in the new base, delete it first. This
                     // mirrors the handler-level semantics where a name
                     // identifies a unique memory.
-                    if let Some(name) = metadata.name() {
-                        if let Ok(Some((existing_id, _))) = new_db.get_memory_metadata_by_name(name)
-                        {
-                            let _ = new_db.delete_memories(&[existing_id]);
-                        }
+                    if let Some(name) = metadata.name()
+                        && let Ok(Some((existing_id, _))) = new_db.get_memory_metadata_by_name(name)
+                    {
+                        let _ = new_db.delete_memories(&[existing_id]);
                     }
                     // Also handle ID-based upsert: if the memory ID already
                     // exists, delete it first to clear stale views.
-                    if let Some(memory_id) = metadata.memory_id() {
-                        if let Ok(Some(_)) = new_db.get_blob_id_by_memory_id(memory_id.to_string())
-                        {
-                            let _ = new_db.delete_memories(&[memory_id.to_string()]);
-                        }
+                    if let Some(memory_id) = metadata.memory_id()
+                        && let Ok(Some(_)) = new_db.get_blob_id_by_memory_id(memory_id.to_string())
+                    {
+                        let _ = new_db.delete_memories(&[memory_id.to_string()]);
                     }
                     new_db.put_memory_with_views(metadata.clone(), views.clone())
                 }
@@ -2569,7 +2565,7 @@ mod tests {
 
         // First concurrent changer import and first changer removes B, adds E
         let mut db2 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
-        db2.delete_memories(&[mid_b.clone()])?;
+        db2.delete_memories(std::slice::from_ref(&mid_b))?;
         let (_mid_e, bid_e) = add_test_memory(&mut db2, "E");
 
         // Second concurrent changer import and first changer removes B and C, add F
@@ -2703,7 +2699,7 @@ mod tests {
 
         // First concurrent changer import and first changer removes B, adds E
         let mut db2 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
-        db2.delete_memories(&[mid_b.clone()])?;
+        db2.delete_memories(std::slice::from_ref(&mid_b))?;
         let (_mid_e, _bid_e) = add_test_memory(&mut db2, "E");
 
         // First concurrent changer is "written back" first.
@@ -2770,7 +2766,7 @@ mod tests {
             db.get_view_ids_by_memory_id(mid.clone()),
             ok(unordered_elements_are![eq(&"view1"), eq(&"view2")])
         );
-        db.delete_memories(&[mid.clone()])?;
+        db.delete_memories(std::slice::from_ref(&mid))?;
         assert_that!(db.get_view_ids_by_memory_id(mid), ok(is_empty()));
         Ok(())
     }
@@ -3060,7 +3056,7 @@ mod tests {
         let (results, _) = db.get_memories_by_tag("test_tag", 10, PageToken::Start)?;
         expect_that!(results, contains(eq(&bid)));
 
-        db.delete_memories(&[mid.clone()])?;
+        db.delete_memories(std::slice::from_ref(&mid))?;
 
         expect_that!(db.get_blob_id_by_memory_id(mid)?, eq(&None));
         let (results, _) = db.get_memories_by_tag("test_tag", 10, PageToken::Start)?;

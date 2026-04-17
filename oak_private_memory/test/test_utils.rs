@@ -221,6 +221,7 @@ pub async fn start_container_server() -> Result<(
 }
 
 /// Represents the active test backend and its associated resources.
+#[allow(clippy::large_enum_variant)]
 pub enum TestBackend {
     /// Server is running as a local task in the host process.
     Host {

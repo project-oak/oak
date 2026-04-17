@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#![feature(assert_matches)]
 
 use oak_attestation_explain::{HumanReadableExplanation, HumanReadableTitle};
 use oak_attestation_verification::extract_evidence;

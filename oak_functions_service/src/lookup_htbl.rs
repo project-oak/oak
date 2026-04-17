@@ -336,7 +336,7 @@ impl LookupHtbl {
     }
 
     /// Return an iterator that can be used to iterate through k/v pairs.
-    pub fn iter(&self) -> LookupHtblIter {
+    pub fn iter(&self) -> LookupHtblIter<'_> {
         LookupHtblIter { htbl: self, table_index: 0 }
     }
 }

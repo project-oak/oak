@@ -37,7 +37,7 @@ impl Source {
 unsafe impl FlexSource for Source {
     unsafe fn alloc(&mut self, min_size: usize) -> Option<NonNull<[u8]>> {
         // Ensure that we're allocating page-sized chunks of memory.
-        let size = if min_size % Self::PAGE_SIZE != 0 {
+        let size = if !min_size.is_multiple_of(Self::PAGE_SIZE) {
             Self::PAGE_SIZE * ((min_size / Self::PAGE_SIZE) + 1)
         } else {
             min_size

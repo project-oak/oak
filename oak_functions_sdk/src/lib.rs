@@ -15,8 +15,6 @@
 //
 
 #![no_std]
-#![feature(never_type)]
-#![feature(result_flattening)]
 #![doc = core::include_str!("../README.md")]
 
 extern crate alloc;

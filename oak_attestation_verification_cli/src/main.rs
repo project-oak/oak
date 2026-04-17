@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-#![feature(try_blocks)]
-
 mod print;
 mod report;
 

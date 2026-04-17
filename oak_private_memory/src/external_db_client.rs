@@ -222,7 +222,7 @@ impl DataBlobHandler for ExternalDbClient {
             "data_blobs and ids must have the same length"
         );
         // TOOD: b/412698203 - Ideally we should have a rpc call that does batch add.
-        for (data_blob, id) in data_blobs.into_iter().zip(ids.into_iter()) {
+        for (data_blob, id) in data_blobs.into_iter().zip(ids) {
             result.push(self.add_blob(data_blob, id).await?);
         }
         Ok(result)

@@ -19,8 +19,6 @@
 //! This binary launches the benchmark enclave app, sends benchmark commands,
 //! and collects results using the micro_rpc Benchmark service.
 
-#![feature(never_type)]
-
 use std::time::Instant;
 
 use anyhow::Result;

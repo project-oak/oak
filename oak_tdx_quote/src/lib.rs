@@ -511,7 +511,7 @@ impl<'a> QeReportCertificationData<'a> {
     }
 
     /// Parses the enclave report body.
-    pub fn parse_enclave_report_body(&self) -> Result<EnclaveReportBody, TdxQuoteError> {
+    pub fn parse_enclave_report_body(&self) -> Result<EnclaveReportBody<'_>, TdxQuoteError> {
         let (_, result) = EnclaveReportBody::parse(self.report_body)?;
         Ok(result)
     }

@@ -220,14 +220,14 @@ impl CustomCertVerifier for MockVerifier {
         _intermediates: &[CertificateDer<'_>],
         verify_result: Result<(), &rustls::Error>,
     ) -> Result<(), String> {
-        if let Some(expect_fail) = self.expect_inner_fail {
-            if expect_fail != verify_result.is_err() {
-                return Err(format!(
-                    "Expected inner fail: {}, got: {}",
-                    expect_fail,
-                    verify_result.is_err()
-                ));
-            }
+        if let Some(expect_fail) = self.expect_inner_fail
+            && expect_fail != verify_result.is_err()
+        {
+            return Err(format!(
+                "Expected inner fail: {}, got: {}",
+                expect_fail,
+                verify_result.is_err()
+            ));
         }
         if self.fail {
             return Err("Mock validation failed".to_string());
@@ -481,9 +481,8 @@ impl AsyncServer {
                     |frame| {
                         let tx = from_server_tls_tx.clone();
                         async move {
-                            tx.send(frame).map_err(|_| {
-                                std::io::Error::new(std::io::ErrorKind::Other, "send failed")
-                            })
+                            tx.send(frame)
+                                .map_err(|_| std::io::Error::other("send failed"))
                         }
                     },
                     {
@@ -555,10 +554,7 @@ async fn do_handshake(
         .new_initialized_session(
             |frame| {
                 let tx = server.to_server_tls_tx.clone();
-                async move {
-                    tx.send(frame)
-                        .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "send failed"))
-                }
+                async move { tx.send(frame).map_err(|_| std::io::Error::other("send failed")) }
             },
             {
                 let rx = rx.clone();

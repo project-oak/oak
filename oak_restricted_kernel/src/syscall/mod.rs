@@ -65,7 +65,7 @@ pub fn enable_syscalls(
 
     GsData::setup();
 
-    LStar::write(VirtAddr::new(syscall_entrypoint as usize as u64));
+    LStar::write(VirtAddr::new(syscall_entrypoint as *const () as usize as u64));
     unsafe {
         Efer::update(|flags| flags.set(EferFlags::SYSTEM_CALL_EXTENSIONS, true));
     }
@@ -219,7 +219,7 @@ impl GsData {
 ///
 /// For the list of system calls that are supported, see the
 /// `oak_restricted_kernel_interface` crate.
-#[naked]
+#[unsafe(naked)]
 extern "C" fn syscall_entrypoint() {
     // When user code uses `SYSCALL`, the following happens (abridged):
     //  - RIP of the instruction following the SYSCALL will be in RCX
@@ -241,128 +241,126 @@ extern "C" fn syscall_entrypoint() {
     //
     // See SYSCALL and SYSRET in AMD64 Architecture Programmer's Manual, Volume 3
     // for more details.
-    unsafe {
-        naked_asm! {
-            // Switch to kernel GS.
-            "swapgs",
+    naked_asm! {
+        // Switch to kernel GS.
+        "swapgs",
 
-            // Save user general-purpose registers to user stack.
-            // rax is not saved as it holds the syscall identifier.
-            "push rbx",
-            "push rcx",
-            "push rdx",
-            "push rsi",
-            "push rdi",
-            "push rbp",
-            "push r8",
-            "push r9",
-            "push r10",
-            "push r11", // the syscall instruction saved user RFLAGS into r11
-            "push r12",
-            "push r13",
-            "push r14",
-            "push r15",
+        // Save user general-purpose registers to user stack.
+        // rax is not saved as it holds the syscall identifier.
+        "push rbx",
+        "push rcx",
+        "push rdx",
+        "push rsi",
+        "push rdi",
+        "push rbp",
+        "push r8",
+        "push r9",
+        "push r10",
+        "push r11", // the syscall instruction saved user RFLAGS into r11
+        "push r12",
+        "push r13",
+        "push r14",
+        "push r15",
 
-            // Save user AVX registers to user stack.
-            // AVX registers (e.g., ymm0) are not saved using 'push' because they are 256 bits wide
-            // (or 512 bits in AVX-512) and 'push' is designed for pushing 16-bit, 32-bit, or 64-bit values.
-            // Additionally, AVX instructions often prefer 32-byte aligned memory access, which may not
-            // be guaranteed when using 'push' to place values on the stack.
-            "sub rsp, 512",
-            "vmovups [rsp + 0*32], ymm0",
-            "vmovups [rsp + 1*32], ymm1",
-            "vmovups [rsp + 2*32], ymm2",
-            "vmovups [rsp + 3*32], ymm3",
-            "vmovups [rsp + 4*32], ymm4",
-            "vmovups [rsp + 5*32], ymm5",
-            "vmovups [rsp + 6*32], ymm6",
-            "vmovups [rsp + 7*32], ymm7",
-            "vmovups [rsp + 8*32], ymm8",
-            "vmovups [rsp + 9*32], ymm9",
-            "vmovups [rsp + 10*32], ymm10",
-            "vmovups [rsp + 11*32], ymm11",
-            "vmovups [rsp + 12*32], ymm12",
-            "vmovups [rsp + 13*32], ymm13",
-            "vmovups [rsp + 14*32], ymm14",
-            "vmovups [rsp + 15*32], ymm15",
+        // Save user AVX registers to user stack.
+        // AVX registers (e.g., ymm0) are not saved using 'push' because they are 256 bits wide
+        // (or 512 bits in AVX-512) and 'push' is designed for pushing 16-bit, 32-bit, or 64-bit values.
+        // Additionally, AVX instructions often prefer 32-byte aligned memory access, which may not
+        // be guaranteed when using 'push' to place values on the stack.
+        "sub rsp, 512",
+        "vmovups [rsp + 0*32], ymm0",
+        "vmovups [rsp + 1*32], ymm1",
+        "vmovups [rsp + 2*32], ymm2",
+        "vmovups [rsp + 3*32], ymm3",
+        "vmovups [rsp + 4*32], ymm4",
+        "vmovups [rsp + 5*32], ymm5",
+        "vmovups [rsp + 6*32], ymm6",
+        "vmovups [rsp + 7*32], ymm7",
+        "vmovups [rsp + 8*32], ymm8",
+        "vmovups [rsp + 9*32], ymm9",
+        "vmovups [rsp + 10*32], ymm10",
+        "vmovups [rsp + 11*32], ymm11",
+        "vmovups [rsp + 12*32], ymm12",
+        "vmovups [rsp + 13*32], ymm13",
+        "vmovups [rsp + 14*32], ymm14",
+        "vmovups [rsp + 15*32], ymm15",
 
-            // Save user stack pointer to GsData.
-            "mov r15, gs:[{OFFSET_CURRENT_PID}]",
-            "shl r15, {POINTER_SIZE_SHIFT}", // Multiply by size of VirtAddr
-            "add r15, {OFFSET_USER_STACK_POINTERS}",
-            "mov gs:[r15], rsp",
+        // Save user stack pointer to GsData.
+        "mov r15, gs:[{OFFSET_CURRENT_PID}]",
+        "shl r15, {POINTER_SIZE_SHIFT}", // Multiply by size of VirtAddr
+        "add r15, {OFFSET_USER_STACK_POINTERS}",
+        "mov gs:[r15], rsp",
 
-             // Switch to kernel stack.
-            "mov rsp, gs:[{OFFSET_KERNEL_STACK_POINTER}]",
+         // Switch to kernel stack.
+        "mov rsp, gs:[{OFFSET_KERNEL_STACK_POINTER}]",
 
-            // Shuffle around register values to match sysv calling convention, and escape into
-            // proper Rust code from the assembly.
-            "sub rsp, 8",
-            "push r9",
-            "mov r9, r8",
-            "mov r8, r10",
-            "mov rcx, rdx",
-            "mov rdx, rsi",
-            "mov rsi, rdi",
-            "mov rdi, rax",
-            "call {HANDLER}",
-            "pop r9",
-            "add rsp, 8",
+        // Shuffle around register values to match sysv calling convention, and escape into
+        // proper Rust code from the assembly.
+        "sub rsp, 8",
+        "push r9",
+        "mov r9, r8",
+        "mov r8, r10",
+        "mov rcx, rdx",
+        "mov rdx, rsi",
+        "mov rsi, rdi",
+        "mov rdi, rax",
+        "call {HANDLER}",
+        "pop r9",
+        "add rsp, 8",
 
-            // Re-calculate offset of the user stack pointer, the current pid may have changed.
-            "mov r15, gs:[{OFFSET_CURRENT_PID}]",
-            "shl r15, {POINTER_SIZE_SHIFT}", // Multiply by size of VirtAddr
-            "add r15, {OFFSET_USER_STACK_POINTERS}",
+        // Re-calculate offset of the user stack pointer, the current pid may have changed.
+        "mov r15, gs:[{OFFSET_CURRENT_PID}]",
+        "shl r15, {POINTER_SIZE_SHIFT}", // Multiply by size of VirtAddr
+        "add r15, {OFFSET_USER_STACK_POINTERS}",
 
-            // Restore user stack pointer from GsData.
-            "mov rsp, gs:[r15]",
+        // Restore user stack pointer from GsData.
+        "mov rsp, gs:[r15]",
 
-            // Restore user AVX registers from user stack.
-            "vmovups ymm15, [rsp + 15*32]",
-            "vmovups ymm14, [rsp + 14*32]",
-            "vmovups ymm13, [rsp + 13*32]",
-            "vmovups ymm12, [rsp + 12*32]",
-            "vmovups ymm11, [rsp + 11*32]",
-            "vmovups ymm10, [rsp + 10*32]",
-            "vmovups ymm9, [rsp + 9*32]",
-            "vmovups ymm8, [rsp + 8*32]",
-            "vmovups ymm7, [rsp + 7*32]",
-            "vmovups ymm6, [rsp + 6*32]",
-            "vmovups ymm5, [rsp + 5*32]",
-            "vmovups ymm4, [rsp + 4*32]",
-            "vmovups ymm3, [rsp + 3*32]",
-            "vmovups ymm2, [rsp + 2*32]",
-            "vmovups ymm1, [rsp + 1*32]",
-            "vmovups ymm0, [rsp + 0*32]",
-            "add rsp, 512",
+        // Restore user AVX registers from user stack.
+        "vmovups ymm15, [rsp + 15*32]",
+        "vmovups ymm14, [rsp + 14*32]",
+        "vmovups ymm13, [rsp + 13*32]",
+        "vmovups ymm12, [rsp + 12*32]",
+        "vmovups ymm11, [rsp + 11*32]",
+        "vmovups ymm10, [rsp + 10*32]",
+        "vmovups ymm9, [rsp + 9*32]",
+        "vmovups ymm8, [rsp + 8*32]",
+        "vmovups ymm7, [rsp + 7*32]",
+        "vmovups ymm6, [rsp + 6*32]",
+        "vmovups ymm5, [rsp + 5*32]",
+        "vmovups ymm4, [rsp + 4*32]",
+        "vmovups ymm3, [rsp + 3*32]",
+        "vmovups ymm2, [rsp + 2*32]",
+        "vmovups ymm1, [rsp + 1*32]",
+        "vmovups ymm0, [rsp + 0*32]",
+        "add rsp, 512",
 
-            // Restore user general-purpose registers from user stack.
-            "pop r15",
-            "pop r14",
-            "pop r13",
-            "pop r12",
-            "pop r11", // the sysret instruction will copy r11 into RFLAGS
-            "pop r10",
-            "pop r9",
-            "pop r8",
-            "pop rbp",
-            "pop rdi",
-            "pop rsi",
-            "pop rdx",
-            "pop rcx",
-            "pop rbx",
-            // rax is not restored as it holds the syscall return value.
+        // Restore user general-purpose registers from user stack.
+        "pop r15",
+        "pop r14",
+        "pop r13",
+        "pop r12",
+        "pop r11", // the sysret instruction will copy r11 into RFLAGS
+        "pop r10",
+        "pop r9",
+        "pop r8",
+        "pop rbp",
+        "pop rdi",
+        "pop rsi",
+        "pop rdx",
+        "pop rcx",
+        "pop rbx",
+        // rax is not restored as it holds the syscall return value.
 
-            // Restore user GS.
-            "swapgs",
+        // Restore user GS.
+        "swapgs",
 
-            // Back to user code in Ring 3.
-            "sysretq",
-            HANDLER = sym syscall_handler,
-            OFFSET_KERNEL_STACK_POINTER = const(offset_of!(GsData, kernel_sp)),
-            OFFSET_USER_STACK_POINTERS = const(offset_of!(GsData, user_stack_pointers)),
-            OFFSET_CURRENT_PID = const(offset_of!(GsData, current_pid)),
-            POINTER_SIZE_SHIFT = const(core::mem::size_of::<VirtAddr>().trailing_zeros()),
-        }
+        // Back to user code in Ring 3.
+        "sysretq",
+        HANDLER = sym syscall_handler,
+        OFFSET_KERNEL_STACK_POINTER = const(offset_of!(GsData, kernel_sp)),
+        OFFSET_USER_STACK_POINTERS = const(offset_of!(GsData, user_stack_pointers)),
+        OFFSET_CURRENT_PID = const(offset_of!(GsData, current_pid)),
+        POINTER_SIZE_SHIFT = const(core::mem::size_of::<VirtAddr>().trailing_zeros()),
     }
 }

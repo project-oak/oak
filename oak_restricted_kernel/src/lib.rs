@@ -32,8 +32,6 @@
 #![no_std]
 #![feature(abi_x86_interrupt)]
 #![feature(allocator_api)]
-#![feature(array_chunks)]
-#![feature(naked_functions)]
 #![feature(c_size_t)]
 #![feature(never_type)]
 

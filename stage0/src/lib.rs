@@ -15,7 +15,6 @@
 //
 
 #![cfg_attr(not(test), no_std)]
-#![feature(int_roundings)]
 #![feature(allocator_api)]
 #![feature(slice_ptr_get)]
 #![allow(static_mut_refs)]
@@ -321,10 +320,10 @@ pub fn rust64_start<P: hal::Platform + hal::FirmwarePlatform>() -> ! {
     // First copy the size of the encoded proto in Little Endian format. Then copy
     // the actual EventLog.
     event_log.extend_from_slice(serialized_event_log.as_bytes());
-    let event_log_data = event_log.leak();
+    let event_log_data = event_log.leak().as_ptr() as usize;
     // Reserve memory containing Eventlog Data.
     zero_page.insert_e820_entry(BootE820Entry::new(
-        event_log_data.as_bytes().as_ptr() as usize,
+        event_log_data,
         PAGE_SIZE,
         E820EntryType::RESERVED,
     ));
@@ -362,7 +361,7 @@ pub fn rust64_start<P: hal::Platform + hal::FirmwarePlatform>() -> ! {
     // and only use the new DICE_DATA_ATTESTATION_PARAM arg with the serialized
     // attester.
     let extra = format!(
-        "--{DICE_DATA_CMDLINE_PARAM}={attestation_data:p} --{EVENTLOG_CMDLINE_PARAM}={event_log_data:p} --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_attestation_data_length}"
+        "--{DICE_DATA_CMDLINE_PARAM}={attestation_data:p} --{EVENTLOG_CMDLINE_PARAM}={event_log_data:#x} --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_attestation_data_length}"
     );
     let extra = if cfg!(feature = "cmdline_with_serialized_attestation_data") {
         format!("{extra} --{DICE_DATA_ATTESTATION_PARAM}={encoded_attestation_proto_data:p}")

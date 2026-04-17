@@ -15,7 +15,7 @@
 //
 
 use alloc::string::ToString;
-use core::assert_matches::assert_matches;
+use core::assert_matches;
 
 use mockall::*;
 use nist_pulse_verifier::__mock_MockApiGetter_ApiGetter::__get::Expectation;

@@ -371,7 +371,7 @@ impl Rsdt {
     pub fn get_entry_pair_mut(
         &mut self,
         signature: &[u8; 4],
-    ) -> ResultStaticErr<Option<RsdtEntryPairMut>> {
+    ) -> ResultStaticErr<Option<RsdtEntryPairMut<'_>>> {
         self.validate()?;
         let maybe_found: Option<Result<RsdtEntryPairMut, &str>> =
             self.entry_headers_mut().find(|hdr_or_err| match hdr_or_err {
@@ -391,7 +391,7 @@ impl Rsdt {
         self.header.update_checksum();
     }
 
-    fn entry_headers_mut(&mut self) -> impl Iterator<Item = ResultStaticErr<RsdtEntryPairMut>> {
+    fn entry_headers_mut(&mut self) -> impl Iterator<Item = ResultStaticErr<RsdtEntryPairMut<'_>>> {
         self.entries_arr_mut().iter_mut().map(|addr| {
             let header_ptr = *addr as usize as *mut DescriptionHeader;
             check_ptr_aligned(header_ptr);
@@ -435,7 +435,9 @@ impl Rsdt {
             return Err("Invalid signature for RSDT table");
         }
 
-        if (self.header.length as usize - size_of::<DescriptionHeader>()) % size_of::<u32>() != 0 {
+        if !(self.header.length as usize - size_of::<DescriptionHeader>())
+            .is_multiple_of(size_of::<u32>())
+        {
             return Err("RSDT invalid: entries size not a multiple of pointer size");
         }
 
@@ -550,7 +552,7 @@ impl Xsdt {
     }
 
     /// Returns an iterator over the entry pointers in this XSDT, validated.
-    pub fn entry_ptrs(&self) -> impl Iterator<Item = ResultStaticErr<&XsdtEntryPtr>> {
+    pub fn entry_ptrs(&self) -> impl Iterator<Item = ResultStaticErr<&XsdtEntryPtr<'_>>> {
         self.entries_arr().iter().map(|xsdt_ptr| {
             xsdt_ptr.validate()?;
             Ok(xsdt_ptr)
@@ -567,7 +569,7 @@ impl Xsdt {
     pub fn get_entry_mut(
         &mut self,
         signature: &[u8; 4],
-    ) -> ResultStaticErr<Option<&mut XsdtEntryPtr>> {
+    ) -> ResultStaticErr<Option<&mut XsdtEntryPtr<'_>>> {
         self.validate()?;
         let maybe_found = self.entries_arr_mut().iter_mut().find_map(|xsdt_entry_ptr| {
             match xsdt_entry_ptr.validate() {
@@ -588,7 +590,7 @@ impl Xsdt {
         }
     }
 
-    fn entries_arr(&self) -> &[XsdtEntryPtr] {
+    fn entries_arr(&self) -> &[XsdtEntryPtr<'_>] {
         let entries_base_ptr =
             (self as *const _ as usize + size_of::<DescriptionHeader>()) as *const XsdtEntryPtr;
         check_ptr_aligned(entries_base_ptr);
@@ -603,7 +605,7 @@ impl Xsdt {
         }
     }
 
-    fn entries_arr_mut(&mut self) -> &mut [XsdtEntryPtr] {
+    fn entries_arr_mut(&mut self) -> &mut [XsdtEntryPtr<'_>] {
         let entries_base_ptr =
             (self as *const _ as usize + size_of::<DescriptionHeader>()) as *mut XsdtEntryPtr;
         check_ptr_aligned(entries_base_ptr);
@@ -625,7 +627,8 @@ impl Xsdt {
             return Err("Invalid signature for XSDT table");
         }
 
-        if (self.header.length as usize - size_of::<DescriptionHeader>()) % size_of::<usize>() != 0
+        if !(self.header.length as usize - size_of::<DescriptionHeader>())
+            .is_multiple_of(size_of::<usize>())
         {
             return Err("XSDT invalid: entries size not a multiple of pointer size");
         }

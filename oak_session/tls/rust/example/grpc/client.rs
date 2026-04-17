@@ -81,10 +81,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let tx_send = tx.clone();
                 async move {
                     if tx_send.send(TlsSessionRequest { frame }).await.is_err() {
-                        return Err(std::io::Error::new(
-                            std::io::ErrorKind::Other,
-                            "failed to send frame",
-                        ));
+                        return Err(std::io::Error::other("failed to send frame"));
                     }
                     Ok(())
                 }
@@ -95,7 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     match stream.lock().await.message().await {
                         Ok(Some(resp)) => Ok(Some(resp.frame)),
                         Ok(None) => Ok(None),
-                        Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other, e)),
+                        Err(e) => Err(std::io::Error::other(e)),
                     }
                 }
             },

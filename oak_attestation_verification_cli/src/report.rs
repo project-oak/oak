@@ -40,6 +40,7 @@ use p256::ecdsa::VerifyingKey;
 
 use crate::print::print_indented;
 
+#[allow(clippy::large_enum_variant)]
 pub enum VerificationReport {
     CertificateBased(SessionBindingPublicKeyVerificationReport),
     ConfidentialSpace(ConfidentialSpaceVerificationReport),

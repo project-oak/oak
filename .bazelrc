@@ -45,6 +45,11 @@ common --@rules_rust//rust/settings:toolchain_generated_sysroot=True
 # control. (See: https://github.com/bazelbuild/rules_rust/pull/3120)
 common --@rules_rust//rust/settings:lto=manual
 
+# Newer versions of rustc performs internal symbol mangling.
+# We need to set this flag to link to allocator libraries in FFI code.
+# See https://github.com/bazelbuild/rules_rust/pull/3403
+common --@rules_rust//rust/settings:experimental_use_allocator_libraries_with_mangled_symbols
+
 # Required to enable building the openssl Rust crate. See
 # https://nixos.wiki/wiki/Rust#Building_Rust_crates_that_require_external_system_libraries
 # for more information.

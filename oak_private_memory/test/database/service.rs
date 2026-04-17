@@ -57,10 +57,10 @@ impl SealedMemoryDatabaseServiceTestImpl {
         let mut db = self.metadata_database.lock().await;
 
         // Check if the provided version matches the currently stored version.
-        if let Some(existing_blob) = db.get(id.as_str()) {
-            if existing_blob.version != blob.version {
-                return false;
-            }
+        if let Some(existing_blob) = db.get(id.as_str())
+            && existing_blob.version != blob.version
+        {
+            return false;
         }
 
         // Trivial versioning mechanism: just append a 1 for each version increment.

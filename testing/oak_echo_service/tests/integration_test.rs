@@ -14,7 +14,6 @@
 // limitations under the License.
 //
 
-#![feature(assert_matches)]
 #![feature(never_type)]
 #![feature(unwrap_infallible)]
 

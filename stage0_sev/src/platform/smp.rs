@@ -47,7 +47,7 @@ pub fn start_ap<P: Platform>(
     // connection to actual seconds.
     for _ in 1..(1 << 15) {
         // Safety: SSE2 is supported in all 64-bit processors.
-        unsafe { _mm_pause() };
+        _mm_pause();
     }
     // We assume that we're not going to call start_ap() concurrently, so there is
     // no race condition here. Which should be true, as we don't have threads
@@ -61,7 +61,7 @@ pub fn start_ap<P: Platform>(
     // SIPI again if the core hasn't started
     for _ in 1..(1 << 20) {
         // Safety: SSE2 is supported in all 64-bit processors.
-        unsafe { _mm_pause() };
+        _mm_pause();
         if LIVE_AP_COUNT.load(Ordering::SeqCst) > current_live_count {
             // it's alive!
             break;
@@ -139,7 +139,7 @@ pub fn bootstrap_aps<P: Platform>(rsdp: &Rsdp) -> Result<(), &'static str> {
             break;
         }
         // Safety: SSE2 is supported in all 64-bit processors.
-        unsafe { _mm_pause() };
+        _mm_pause();
     }
     log::info!(
         "Expected number of APs: {}, started number of APs: {}",

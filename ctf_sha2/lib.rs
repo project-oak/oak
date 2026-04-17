@@ -17,8 +17,6 @@
 //! Contains the [`Arbiter`] claim implementation and all supporting
 //! verification logic for the CTF SHA-2 challenge.
 
-#![feature(try_blocks)]
-
 use anyhow::Context;
 use arbiter_rust_proto::oak::ctf_sha2::arbiter::{
     ArbiterInput, AttestedSignature, arbiter_input::TeeProof,

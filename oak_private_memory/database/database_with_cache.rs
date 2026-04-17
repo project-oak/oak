@@ -260,7 +260,7 @@ impl DatabaseWithCache {
 
         let results = memories
             .into_iter()
-            .zip(search_results.items.into_iter())
+            .zip(search_results.items)
             .map(|(mut memory, item)| {
                 let score = item.score;
                 let view_scores = item.view_scores;
@@ -377,13 +377,11 @@ impl DatabaseWithCache {
 
             if !mask.include_fields.contains(&(MemoryField::Content as i32)) {
                 memory.content = None;
-            } else if !mask.include_content_fields.is_empty() {
-                if let Some(content_struct) = memory.content.as_mut() {
-                    // Filter the 'contents' map based on 'include_content_fields'.
-                    content_struct
-                        .contents
-                        .retain(|key, _| mask.include_content_fields.contains(key));
-                }
+            } else if !mask.include_content_fields.is_empty()
+                && let Some(content_struct) = memory.content.as_mut()
+            {
+                // Filter the 'contents' map based on 'include_content_fields'.
+                content_struct.contents.retain(|key, _| mask.include_content_fields.contains(key));
             }
         }
     }

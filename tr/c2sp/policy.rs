@@ -336,7 +336,7 @@ impl Policy {
     /// node.
     fn satisfies(&self, verified_keys: &[&NoteVerifyingKey], quorum: &Quorum) -> bool {
         match quorum {
-            Quorum::Witness(witness_key) => verified_keys.iter().any(|k| *k == witness_key),
+            Quorum::Witness(witness_key) => verified_keys.contains(&witness_key),
             Quorum::Group { k, members } => {
                 members
                     .iter()

@@ -122,7 +122,7 @@ impl TdvfDescriptor {
 /// Measure a tdvf section using MEM.PAGE.ADD on each page. If the section has
 /// MR.EXTEND attribute set, measure the page content with MR.EXTEND.
 fn measure_section(section: &TdvfSection, hasher: &mut Sha384, stage0_bin: &[u8]) {
-    assert!(section.memory_size % PAGE_SIZE == 0);
+    assert!(section.memory_size.is_multiple_of(PAGE_SIZE));
 
     // MEM.PAGE.ADD for every page.
     for i in 0..section.memory_size / PAGE_SIZE {

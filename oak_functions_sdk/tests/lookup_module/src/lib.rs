@@ -16,9 +16,7 @@
 
 //! Oak Functions ABI test.
 
-#![feature(assert_matches)]
-
-use core::assert_matches::assert_matches;
+use core::assert_matches;
 use std::collections::HashMap;
 
 use anyhow::anyhow;

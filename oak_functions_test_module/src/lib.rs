@@ -16,7 +16,6 @@
 
 //! Oak Functions test module.
 
-#![feature(never_type)]
 #![feature(unwrap_infallible)]
 
 use core::sync::atomic::{AtomicBool, Ordering};

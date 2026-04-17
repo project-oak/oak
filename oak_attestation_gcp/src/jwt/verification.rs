@@ -206,26 +206,27 @@ pub fn report_attestation_token(
     let mut issuer = Box::new(root.clone());
     let mut issuer_report = None;
     for base64_der in token.header().x509_chain.iter().rev() {
-        issuer_report = Some(
-            try {
-                let certificate = Box::new(Certificate::from_der(
+        issuer_report = Some(try {
+            let certificate = Box::new(
+                Certificate::from_der(
                     &STANDARD
                         .decode(base64_der)
                         .map_err(AttestationVerificationError::X509Base64DecodeError)?,
-                )?);
-                let validity = verify_certificate_validity(certificate.as_ref(), current_time);
-                let verification = verify_certificate(issuer.as_ref(), certificate.as_ref());
-                issuer = certificate;
-                CertificateReport {
-                    validity,
-                    verification,
-                    issuer_report: Box::new(match issuer_report {
-                        Some(issuer_report) => IssuerReport::OtherCertificate(issuer_report),
-                        None => IssuerReport::Root,
-                    }),
-                }
-            },
-        );
+                )
+                .map_err(AttestationVerificationError::X509DerDecodeError)?,
+            );
+            let validity = verify_certificate_validity(certificate.as_ref(), current_time);
+            let verification = verify_certificate(issuer.as_ref(), certificate.as_ref());
+            issuer = certificate;
+            CertificateReport {
+                validity,
+                verification,
+                issuer_report: Box::new(match issuer_report {
+                    Some(issuer_report) => IssuerReport::OtherCertificate(issuer_report),
+                    None => IssuerReport::Root,
+                }),
+            }
+        });
     }
     let issuer_report = issuer_report.unwrap_or(Err(AttestationVerificationError::EmptyX509Chain));
 
@@ -235,7 +236,12 @@ pub fn report_attestation_token(
         verification: try {
             // See https://cloud.google.com/confidential-computing/confidential-vm/docs/token-claims#token_items:
             // "Confidential VM supports the RS256 algorithm".
-            token.verify_with_key(&CertificateAlgorithm::rs256(issuer.as_ref())?)?
+            token
+                .verify_with_key(
+                    &CertificateAlgorithm::rs256(issuer.as_ref())
+                        .map_err(AttestationVerificationError::X509VerificationError)?,
+                )
+                .map_err(AttestationVerificationError::JWTError)?
         },
         issuer_report,
     }
@@ -341,7 +347,7 @@ fn verify_token_validity(
 
 #[cfg(test)]
 mod tests {
-    use core::assert_matches::assert_matches;
+    use core::assert_matches;
     use std::fs;
 
     use googletest::prelude::*;

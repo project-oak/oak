@@ -70,8 +70,7 @@ fn assert_success(result: anyhow::Result<AttestationResults>) {
 
 // Helper which asserts failure of the verification call.
 fn assert_failure(result: anyhow::Result<AttestationResults>) {
-    if result.is_ok() {
-        let proto = result.as_ref().unwrap();
+    if let Ok(proto) = &result {
         eprintln!("======================================");
         eprintln!("code={} reason={}", proto.status, proto.reason);
         eprintln!("======================================");

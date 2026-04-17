@@ -487,42 +487,42 @@ verify_unpopulated_tcb_version_failure! {
 }
 
 fn manipulate_boot_loader(rv: &mut Option<TcbVersionReferenceValue>) {
-    if let Some(stripped) = rv {
-        if let Some(tcb_version_reference_value::Type::Minimum(m)) = &mut stripped.r#type {
-            m.boot_loader = 256;
-        }
+    if let Some(tcb_version_reference_value::Type::Minimum(m)) =
+        rv.as_mut().and_then(|s| s.r#type.as_mut())
+    {
+        m.boot_loader = 256;
     }
 }
 
 fn manipulate_microcode(rv: &mut Option<TcbVersionReferenceValue>) {
-    if let Some(stripped) = rv {
-        if let Some(tcb_version_reference_value::Type::Minimum(m)) = &mut stripped.r#type {
-            m.microcode = 256;
-        }
+    if let Some(tcb_version_reference_value::Type::Minimum(m)) =
+        rv.as_mut().and_then(|s| s.r#type.as_mut())
+    {
+        m.microcode = 256;
     }
 }
 
 fn manipulate_tee(rv: &mut Option<TcbVersionReferenceValue>) {
-    if let Some(stripped) = rv {
-        if let Some(tcb_version_reference_value::Type::Minimum(m)) = &mut stripped.r#type {
-            m.tee = 256;
-        }
+    if let Some(tcb_version_reference_value::Type::Minimum(m)) =
+        rv.as_mut().and_then(|s| s.r#type.as_mut())
+    {
+        m.tee = 256;
     }
 }
 
 fn manipulate_snp(rv: &mut Option<TcbVersionReferenceValue>) {
-    if let Some(stripped) = rv {
-        if let Some(tcb_version_reference_value::Type::Minimum(m)) = &mut stripped.r#type {
-            m.snp = 256;
-        }
+    if let Some(tcb_version_reference_value::Type::Minimum(m)) =
+        rv.as_mut().and_then(|s| s.r#type.as_mut())
+    {
+        m.snp = 256;
     }
 }
 
 fn manipulate_fmc(rv: &mut Option<TcbVersionReferenceValue>) {
-    if let Some(stripped) = rv {
-        if let Some(tcb_version_reference_value::Type::Minimum(m)) = &mut stripped.r#type {
-            m.fmc = 256;
-        }
+    if let Some(tcb_version_reference_value::Type::Minimum(m)) =
+        rv.as_mut().and_then(|s| s.r#type.as_mut())
+    {
+        m.fmc = 256;
     }
 }
 

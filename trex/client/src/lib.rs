@@ -51,8 +51,6 @@
 //!
 //! [tr]: https://project-oak.github.io/oak/tr/endorsement/v1
 
-#![feature(exit_status_error)]
-
 use anyhow::{Context, Result, anyhow};
 use async_trait::async_trait;
 use intoto::statement::DefaultStatement;

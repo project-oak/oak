@@ -77,7 +77,11 @@ fn load_segment(
     let target = unsafe { slice::from_raw_parts_mut::<u8>(start_address.as_mut_ptr(), size) };
 
     // Zero out the target in case the file content is shorter than the target.
-    target.fill(0);
+    // Using manual `for` loop rather than fill to avoid the compiler's intrinsic
+    // function which uses an indirect call via the PLT.
+    for item in &mut *target {
+        *item = 0;
+    }
 
     // Manually copy between slices to avoid the compiler's intrinsic memcpy which
     // uses an indirect call via the PLT.

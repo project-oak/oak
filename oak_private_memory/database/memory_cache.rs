@@ -90,8 +90,7 @@ impl MemoryCache {
 
         if !missing_ids.is_empty() {
             let encrypted_blobs = self.db_client.get_blobs(&missing_ids, false).await?;
-            for (blob_id, encrypted_blob_opt) in missing_ids.iter().zip(encrypted_blobs.into_iter())
-            {
+            for (blob_id, encrypted_blob_opt) in missing_ids.iter().zip(encrypted_blobs) {
                 if let Some(encrypted_blob) = encrypted_blob_opt {
                     let decrypted_data =
                         decrypt(&self.dek, &encrypted_blob.nonce, &encrypted_blob.data)?;

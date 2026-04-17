@@ -89,14 +89,13 @@ pub fn setup_high_allocator(zero_page: &mut ZeroPage) -> Result<(), &'static str
         let entry = zero_page
             .e820_table()
             .iter()
-            .filter(|&entry| {
+            .rfind(|&entry| {
                 // We're only interested in (a) entries that are regular memory and (b) that
                 // start below the 1G mark, with enough space for a 1M chunk.
                 entry.entry_type() == Some(E820EntryType::RAM)
                     && entry.addr() < (0x4000_0000 - HIGH_MEM_SIZE)
                     && entry.size() >= HIGH_MEM_SIZE
             })
-            .next_back()
             .ok_or("could not find memory for ACPI tables")?;
         let mem_end = core::cmp::min(0x4000_0000, entry.addr() + entry.size());
         mem_end - HIGH_MEM_SIZE

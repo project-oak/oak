@@ -444,10 +444,11 @@ pub fn change_page_state(page: Page<Size4KiB>, state: PageAssignment) -> Result<
 pub fn revalidate_page(page: Page<Size4KiB>) -> Result<(), &'static str> {
     if sev_status().contains(SevStatus::SEV_ENABLED) {
         let counter = AtomicUsize::new(0);
-        if let Err(err) = page.pvalidate(&counter) {
-            if err != InstructionError::ValidationStatusNotUpdated {
+        match page.pvalidate(&counter) {
+            Err(err) if err != InstructionError::ValidationStatusNotUpdated => {
                 return Err("shared page revalidation failed");
             }
+            _ => {}
         }
     }
     Ok(())

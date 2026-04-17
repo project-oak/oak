@@ -80,10 +80,7 @@ impl TlsOverGrpc for MyTlsOverGrpc {
                         let tx = tx_clone.clone();
                         async move {
                             if tx.send(Ok(TlsSessionResponse { frame })).await.is_err() {
-                                return Err(std::io::Error::new(
-                                    std::io::ErrorKind::Other,
-                                    "failed to send frame",
-                                ));
+                                return Err(std::io::Error::other("failed to send frame"));
                             }
                             Ok(())
                         }
@@ -94,7 +91,7 @@ impl TlsOverGrpc for MyTlsOverGrpc {
                             match stream.lock().await.message().await {
                                 Ok(Some(req)) => Ok(Some(req.frame)),
                                 Ok(None) => Ok(None),
-                                Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other, e)),
+                                Err(e) => Err(std::io::Error::other(e)),
                             }
                         }
                     },
@@ -266,9 +263,9 @@ mod tests {
                 move |frame| {
                     let tx = tx_clone.clone();
                     async move {
-                        tx.send(TlsSessionRequest { frame }).await.map_err(|_| {
-                            std::io::Error::new(std::io::ErrorKind::Other, "send failed")
-                        })
+                        tx.send(TlsSessionRequest { frame })
+                            .await
+                            .map_err(|_| std::io::Error::other("send failed"))
                     }
                 },
                 move || {
@@ -277,7 +274,7 @@ mod tests {
                         match stream.lock().await.message().await {
                             Ok(Some(resp)) => Ok(Some(resp.frame)),
                             Ok(None) => Ok(None),
-                            Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other, e)),
+                            Err(e) => Err(std::io::Error::other(e)),
                         }
                     }
                 },

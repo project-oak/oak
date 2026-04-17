@@ -14,9 +14,5 @@
 // limitations under the License.
 //
 
-#![feature(never_type)]
-#![feature(result_flattening)]
-#![feature(array_chunks)]
-
 pub mod channel;
 pub mod launcher;

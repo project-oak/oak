@@ -42,7 +42,7 @@ impl crate::Platform for Base {
 
     fn cpuid(leaf: u32) -> CpuidResult {
         // Safety: all CPUs we care about are modern enough to support CPUID.
-        unsafe { __cpuid(leaf) }
+        __cpuid(leaf)
     }
 
     unsafe fn mmio<S: PageSize>(base_address: x86_64::PhysAddr) -> Self::Mmio<S> {

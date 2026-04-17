@@ -282,8 +282,8 @@ bazel_dep(name = "rules_java", version = "8.14.0")
 ##### Rust Toolchain Setup #####
 
 bazel_dep(name = "rules_shell", version = "0.6.1")
-bazel_dep(name = "rules_rust", version = "0.68.1")
-bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.68.1")
+bazel_dep(name = "rules_rust", version = "0.70.0")
+bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.70.0")
 
 # All Rust toolchains are configured in //bazel/rust:extensions.bzl
 # which reads the version and SHA256s from //bazel/rust:defs.bzl
@@ -965,9 +965,7 @@ crate.spec(
     features = ["alloc_ref"],
     package = "linked_list_allocator",
     repositories = ALL_REPOSITORIES,
-    # We need to update to a more recent rust nightly to upgrade this crate.
-    # See https://github.com/rust-osdev/linked-list-allocator/pull/90
-    version = "=0.10.5",
+    version = "0.10.6",
 )
 crate.annotation(
     crate = "linked_list_allocator",

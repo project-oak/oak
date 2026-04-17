@@ -34,27 +34,25 @@ use crate::{shutdown, snp::CPUID_PAGE};
 
 static IDT: Spinlock<InterruptDescriptorTable> = Spinlock::new(InterruptDescriptorTable::new());
 
-#[naked]
+#[unsafe(naked)]
 extern "x86-interrupt" fn general_protection_fault_handler(_: InterruptStackFrame, _: u64) {
-    unsafe {
-        naked_asm! {
-            "push %rax",            // save old rax value
-            "mov 16(%rsp), %rax",   // rax = rsp + 16 (address of the return RIP)
-            "cmpw $0x320F, (%rax)", // is RIP pointing to 0x320F (RDMSR)?
-            "jne 2f",               // if not, jump to label 2
-            "add $2, %rax",         // increment rax by 2 (size of RDMSR instruction)
-            "add $24, %rsp",        // drop the saved RAX, error code, and Return IP
-            "push %rax",            // put Return IP back on the stack for iretq
-            "xor %rax, %rax",       // zero out RAX
-            "xor %rdx, %rdx",       // zero out RDX
-            "iretq",                // and go back claiming we've executed the RDMSR
-            "2:",                   // it wasn't because of `rdmsr`
-            "pop %rax",             // restore old rax value. We're now back at the initial state.
-            "jmp {}",               // Let the Rust code take care of it. We jmp instead of call, as the
-                                    // Rust function will call `iretq` instead of `ret` at the end.
-            sym general_protection_fault_handler_inner,
-            options(att_syntax)
-        }
+    naked_asm! {
+        "push %rax",            // save old rax value
+        "mov 16(%rsp), %rax",   // rax = rsp + 16 (address of the return RIP)
+        "cmpw $0x320F, (%rax)", // is RIP pointing to 0x320F (RDMSR)?
+        "jne 2f",               // if not, jump to label 2
+        "add $2, %rax",         // increment rax by 2 (size of RDMSR instruction)
+        "add $24, %rsp",        // drop the saved RAX, error code, and Return IP
+        "push %rax",            // put Return IP back on the stack for iretq
+        "xor %rax, %rax",       // zero out RAX
+        "xor %rdx, %rdx",       // zero out RDX
+        "iretq",                // and go back claiming we've executed the RDMSR
+        "2:",                   // it wasn't because of `rdmsr`
+        "pop %rax",             // restore old rax value. We're now back at the initial state.
+        "jmp {}",               // Let the Rust code take care of it. We jmp instead of call, as the
+                                // Rust function will call `iretq` instead of `ret` at the end.
+        sym general_protection_fault_handler_inner,
+        options(att_syntax)
     }
 }
 
@@ -295,7 +293,8 @@ pub fn init_idt_early() {
 
     // there is no vector 20
 
-    let vc_handler_address = VirtAddr::new(vmm_communication_exception_handler as usize as u64);
+    let vc_handler_address =
+        VirtAddr::new(vmm_communication_exception_handler as *const () as usize as u64);
     // Safety: we are passing a valid address of a function with the correct
     // signature.
     unsafe {

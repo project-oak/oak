@@ -44,7 +44,6 @@ use oak_proto_rust::oak::{
     },
 };
 use prost_types::{Duration, Timestamp};
-use serde_json::json;
 
 macro_rules! json {
     ($($json:tt)+) => {{

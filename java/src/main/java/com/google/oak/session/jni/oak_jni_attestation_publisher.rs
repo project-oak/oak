@@ -64,7 +64,10 @@ impl JNIAttestationPublisher {
         Ok(Self { jni_vm: env.get_java_vm()?, jni_instance: env.new_global_ref(local_instance)? })
     }
 
-    fn convert_map<M: prost::Message>(&self, rust_map: &BTreeMap<String, M>) -> Result<JObject> {
+    fn convert_map<M: prost::Message>(
+        &self,
+        rust_map: &BTreeMap<String, M>,
+    ) -> Result<JObject<'_>> {
         let mut attached = self.jni_vm.attach_current_thread()?;
         let map: JObject = attached.new_object("java/util/HashMap", "()V", &[])?;
         let jmap: JMap = attached.get_map(&map)?;

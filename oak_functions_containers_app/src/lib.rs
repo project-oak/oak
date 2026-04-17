@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-#![feature(c_size_t)]
-
 use std::{
     error::Error,
     sync::{Arc, OnceLock},

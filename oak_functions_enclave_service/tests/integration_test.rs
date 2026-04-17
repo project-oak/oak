@@ -14,14 +14,13 @@
 // limitations under the License.
 //
 
-#![feature(assert_matches)]
 #![feature(never_type)]
 #![feature(unwrap_infallible)]
 
 extern crate alloc;
 
 use alloc::sync::Arc;
-use core::assert_matches::assert_matches;
+use core::assert_matches;
 
 use oak_client::verifier::extract_encryption_public_key;
 use oak_crypto::encryptor::ClientEncryptor;

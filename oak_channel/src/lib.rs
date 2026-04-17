@@ -16,7 +16,6 @@
 
 #![no_std]
 #![allow(rustdoc::private_intra_doc_links)]
-#![feature(array_chunks)]
 
 #[cfg(feature = "std")]
 extern crate std;

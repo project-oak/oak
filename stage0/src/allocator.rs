@@ -81,7 +81,7 @@ unsafe impl<const N: usize> Allocator for BumpAllocator<N> {
         let storage_ptr = inner.storage.as_mut_ptr() as *mut u8;
 
         // We may need to allocate extra bytes to ensure proper alignment in memory.
-        let align = if (storage_ptr as usize + offset) % layout.align() > 0 {
+        let align = if !(storage_ptr as usize + offset).is_multiple_of(layout.align()) {
             layout.align() - ((storage_ptr as usize + offset) % layout.align())
         } else {
             0

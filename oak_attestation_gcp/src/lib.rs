@@ -14,9 +14,8 @@
 // limitations under the License.
 //
 
-#![feature(assert_matches)]
-#![feature(box_patterns)]
 #![feature(try_blocks)]
+#![cfg_attr(test, feature(box_patterns))]
 
 extern crate alloc;
 

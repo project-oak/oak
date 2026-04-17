@@ -66,11 +66,11 @@ pub struct SealedMemorySessionHandler {
 impl Drop for SealedMemorySessionHandler {
     fn drop(&mut self) {
         info!("Dropping handler and sending session context to persistence service");
-        if let Some(context) = self.session_context.get_mut().take() {
-            if let Err(e) = self.persistence_tx.send(context) {
-                self.metrics.inc_persistence_enqueue_failures();
-                warn!("Failed to send session context to persistence service: {}", e);
-            }
+        if let Some(context) = self.session_context.get_mut().take()
+            && let Err(e) = self.persistence_tx.send(context)
+        {
+            self.metrics.inc_persistence_enqueue_failures();
+            warn!("Failed to send session context to persistence service: {}", e);
         }
     }
 }
@@ -127,13 +127,13 @@ impl SealedMemorySessionHandler {
                 .get_memory_by_name(&memory.name, &None)
                 .await
                 .into_internal_error("failed to check for existing named memory")?;
-            if let Some(existing_memory) = existing_memory {
-                if existing_memory.id != memory.id {
-                    return Err(tonic::Status::invalid_argument(format!(
-                        "Existing memory with name {}, existing {} -> new {}",
-                        memory.name, existing_memory.id, memory.id
-                    )));
-                }
+            if let Some(existing_memory) = existing_memory
+                && existing_memory.id != memory.id
+            {
+                return Err(tonic::Status::invalid_argument(format!(
+                    "Existing memory with name {}, existing {} -> new {}",
+                    memory.name, existing_memory.id, memory.id
+                )));
             }
         }
 

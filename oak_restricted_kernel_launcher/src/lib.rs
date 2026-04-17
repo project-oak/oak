@@ -14,10 +14,6 @@
 // limitations under the License.
 //
 
-#![feature(never_type)]
-#![feature(result_flattening)]
-#![feature(array_chunks)]
-
 use oak_launcher_utils::{
     channel::{self},
     launcher,

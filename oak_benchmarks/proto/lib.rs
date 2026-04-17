@@ -20,7 +20,6 @@
 // TODO: b/333064338 - Remove this crate once we've stopped using cargo.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![feature(never_type)]
 
 macro_rules! include_proto {
     ($package: tt) => {

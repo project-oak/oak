@@ -31,7 +31,7 @@
           };
           rustToolchain =
             # This should be kept in sync with the value in bazel/rust/defs.bzl
-            pkgs.rust-bin.nightly."2025-03-01".default.override {
+            pkgs.rust-bin.nightly."2026-04-11".default.override {
               extensions = [
                 "clippy"
                 "llvm-tools-preview"

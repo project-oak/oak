@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-extern crate test;
-
 use alloc::{rc::Rc, sync::Arc, vec::Vec};
 use core::cell::Cell;
 
