@@ -158,6 +158,16 @@ jobs:
           ls -la "${{ steps.attest.outputs.bundle-path }}"
           cat "${{ steps.attest.outputs.bundle-path }}"
 
+      # Upload binary and provenance to GitHub.
+      - name: Upload to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.parse.outputs.package-name }}
+          path: |
+            ${{ steps.parse.outputs.subject-paths }}
+            ${{ steps.attest.outputs.bundle-path }}
+          retention-days: 7
+
       # Upload binary and provenance to GCS.
       - name: Upload
         id: upload
