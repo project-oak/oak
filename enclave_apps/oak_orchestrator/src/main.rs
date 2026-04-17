@@ -24,7 +24,7 @@ use alloc::vec::Vec;
 use core::fmt::Write;
 
 use oak_dice::evidence::Stage0DiceData;
-use oak_restricted_kernel_interface::{syscall, DERIVED_KEY_FD, DICE_DATA_FD, EVENT_LOG_FD};
+use oak_restricted_kernel_interface::{DERIVED_KEY_FD, DICE_DATA_FD, EVENT_LOG_FD, syscall};
 use oak_restricted_kernel_orchestrator::AttestedApp;
 use oak_restricted_kernel_sdk::channel::FileDescriptorChannel;
 use zerocopy::{FromZeros, IntoBytes};
@@ -61,7 +61,7 @@ static LOGGER: OrchestratorLogger = OrchestratorLogger {};
 // The orchestrator uses a custom logging implementation, hence the
 // #[oak_restricted_kernel_sdk::entrypoint] is not used. The allocator,
 // handlers, etc are declared explicitly.
-#[no_mangle]
+#[unsafe(no_mangle)]
 fn _start() {
     oak_restricted_kernel_sdk::utils::log::set_logger(&LOGGER).expect("failed to set logger");
     oak_restricted_kernel_sdk::utils::log::set_max_level(
@@ -130,7 +130,9 @@ fn entrypoint() {
     let pid =
         syscall::unstable_create_proccess(attested_app.initial_data.application_bytes.as_bytes())
             .expect("failed to create app process");
-    log::warn!("Orchestrator has been awoken! This only happens if the enclave app uses unstable syscalls.");
+    log::warn!(
+        "Orchestrator has been awoken! This only happens if the enclave app uses unstable syscalls."
+    );
     for _ in 0..1 {
         log::info!("Zzz... (Hitting snooze, resuming the app)");
         let _ = syscall::unstable_switch_proccess(pid);

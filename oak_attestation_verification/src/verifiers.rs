@@ -24,18 +24,19 @@ use oak_attestation_verification_types::{
     policy::{EventPolicy, Policy},
     verifier::AttestationVerifier,
 };
+use oak_digest::Sha384;
 use oak_proto_rust::oak::{
-    attestation::v1::{
-        attestation_results::Status, reference_values, AttestationResults, Endorsements,
-        EventAttestationResults, EventLog, Evidence, ReferenceValues,
-    },
     Variant,
+    attestation::v1::{
+        AttestationResults, Endorsements, EventAttestationResults, EventLog, Evidence,
+        ReferenceValues, attestation_results::Status, reference_values,
+    },
 };
 use oak_tdx_quote::TdxQuoteWrapper;
 use oak_time::{Clock, Instant};
-use sha2::{Digest, Sha384};
 
 use crate::{
+    IntelTdxPolicy,
     intel::RtmrEmulator,
     policy::{
         application::ApplicationPolicy,
@@ -46,8 +47,7 @@ use crate::{
         system::SystemPolicy,
     },
     results::get_initial_measurement,
-    verifier::{verify_dice_chain, EventLogType},
-    IntelTdxPolicy,
+    verifier::{EventLogType, verify_dice_chain, verify_user_data_certificate},
 };
 
 // Base AMD SEV-SNP verifier that validates AMD SEV-SNP platform authenticity
@@ -169,10 +169,24 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
     }
 }
 
+/// Attestation verifier that verifies a transparent attestation (i.e. an
+/// attestation with a transparent event log) rooted in AMD SEV-SNP.
 pub struct AmdSevSnpTransparentDiceAttestationVerifier {
     base_verifier: BaseAmdSevSnpVerifier,
     event_policies: Vec<Box<dyn EventPolicy>>,
     clock: Arc<dyn Clock>,
+}
+
+impl AmdSevSnpTransparentDiceAttestationVerifier {
+    pub fn new(
+        platform_policy: AmdSevSnpPolicy,
+        firmware_policy: Box<dyn EventPolicy>,
+        event_policies: Vec<Box<dyn EventPolicy>>,
+        clock: Arc<dyn Clock>,
+    ) -> Self {
+        let base_verifier = BaseAmdSevSnpVerifier { platform_policy, firmware_policy };
+        Self { base_verifier, event_policies, clock }
+    }
 }
 
 impl AttestationVerifier for AmdSevSnpTransparentDiceAttestationVerifier {
@@ -189,10 +203,11 @@ impl AttestationVerifier for AmdSevSnpTransparentDiceAttestationVerifier {
             .context("verifying platform policy")?;
 
         // Verify DICE chain integrity.
-        // The output argument is ommited because last layer's certificate authority key
-        // is not used to sign anything.
-        let _ = verify_dice_chain(evidence, EventLogType::TransparentEventLog)
-            .context("verifying DICE chain")?;
+        // The output argument is recorded because it can be used to verify the
+        // `Evidence.signed_user_data_certificate` structure.
+        let last_layer_verifying_key =
+            verify_dice_chain(evidence, EventLogType::TransparentEventLog)
+                .context("verifying DICE chain")?;
 
         let firmware_results = self
             .base_verifier
@@ -215,6 +230,17 @@ impl AttestationVerifier for AmdSevSnpTransparentDiceAttestationVerifier {
             .context("verifying event log")?;
 
             event_attestation_results.extend(results);
+        }
+
+        // Attestation has been verified. We now verify the signed user data
+        // certificate, if present.
+        if !evidence.signed_user_data_certificate.is_empty() {
+            let user_data_result = verify_user_data_certificate(
+                &evidence.signed_user_data_certificate,
+                &last_layer_verifying_key,
+            )
+            .context("verifying signed user data certificate")?;
+            event_attestation_results.push(user_data_result);
         }
 
         Ok(AttestationResults {
@@ -283,7 +309,7 @@ impl AttestationVerifier for IntelTdxAttestationVerifier {
         // Verify integrity of the event log.
         let mut rtmr_2 = RtmrEmulator::new();
         for entry in event_log.encoded_events.as_slice().iter() {
-            rtmr_2.extend(&Sha384::digest(entry.as_slice()).into());
+            rtmr_2.extend(&Sha384::from_contents(entry.as_slice()).into());
         }
         anyhow::ensure!(rtmr_2.get_state() == expected, "event log integrity check failed");
 

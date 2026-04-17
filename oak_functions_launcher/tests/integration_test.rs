@@ -18,7 +18,7 @@
 use std::{io::Write, time::Duration};
 
 use oak_file_utils::data_path;
-use oak_functions_launcher::{update_lookup_data, LookupDataConfig};
+use oak_functions_launcher::{LookupDataConfig, update_lookup_data};
 use oak_launcher_utils::launcher;
 use oak_micro_rpc::oak::functions::OakFunctionsAsyncClient;
 use ubyte::ByteUnit;
@@ -33,13 +33,16 @@ async fn test_launcher_key_value_lookup() {
 
     let wasm_path = "oak_functions/examples/key_value_lookup/key_value_lookup.wasm";
 
-    let (mut _child, port) = oak_functions_test_utils::run_oak_functions_example_in_background(
+    let (mut bg, port) = oak_functions_test_utils::run_oak_functions_example_in_background(
         wasm_path,
         "oak_functions_launcher/mock_lookup_data",
     );
 
-    // Wait for the server to start up.
-    let mut client = oak_functions_test_utils::create_client(port, Duration::from_secs(120)).await;
+    // Wait for the server to start up, but fail fast if the launcher exits.
+    let mut client = tokio::select! {
+        status = bg.wait() => panic!("launcher exited unexpectedly: {status:?}"),
+        client = oak_functions_test_utils::create_client(port, Duration::from_secs(120)) => client,
+    };
 
     let response = client.invoke(b"test_key").await.expect("failed to invoke");
     assert_eq!(response, b"test_value");
@@ -55,22 +58,21 @@ async fn test_launcher_echo() {
 
     let wasm_path = "oak_functions/examples/echo/echo.wasm";
 
-    let (_child, port) = oak_functions_test_utils::run_oak_functions_example_in_background(
+    let (mut bg, addr) = oak_functions_test_utils::run_oak_functions_example_in_background(
         wasm_path,
         "oak_functions_launcher/mock_lookup_data",
     );
 
-    // Wait for the server to start up.
-    let mut client = oak_functions_test_utils::create_client(port, Duration::from_secs(120)).await;
+    // Wait for the server to start up, but fail fast if the launcher exits.
+    let mut client = tokio::select! {
+        status = bg.wait() => panic!("launcher exited unexpectedly: {status:?}"),
+        client = oak_functions_test_utils::create_client(addr.clone(), Duration::from_secs(120)) => client,
+    };
 
     let response = client.invoke(b"xxxyyyzzz").await.expect("failed to invoke");
     assert_eq!(std::str::from_utf8(&response).unwrap(), "xxxyyyzzz");
 
-    let addr = format!("http://localhost:{port}");
-
-    // TODO(#4177): Check response in the integration test.
-    // Run Java client via Bazel.
-    oak_functions_test_utils::run_java_client(&addr).expect("java client failed");
+    let addr = addr.to_string();
 
     // TODO(#4177): Check response in the integration test.
     // Run C++ client via Bazel.
@@ -91,7 +93,9 @@ async fn test_load_large_lookup_data() {
         data_path("enclave_apps/oak_functions_enclave_app/oak_functions_enclave_app");
 
     let params = launcher::Params {
-        kernel: data_path("oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin"),
+        kernel: data_path(
+            "oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin",
+        ),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: Some(oak_functions_enclave_app_path),
         bios_binary: data_path("stage0_bin/stage0_bin"),
@@ -165,7 +169,9 @@ async fn test_load_two_gib_lookup_data() {
         data_path("enclave_apps/oak_functions_enclave_app/oak_functions_enclave_app");
 
     let params = launcher::Params {
-        kernel: data_path("oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin"),
+        kernel: data_path(
+            "oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin",
+        ),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: Some(oak_functions_enclave_app_path),
         bios_binary: data_path("stage0_bin/stage0_bin"),

@@ -28,7 +28,7 @@
 //! #![feature(asm_sym)]
 //!
 //! use oak_sev_guest::interrupts::{
-//!     mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame,
+//!     MutableInterruptStackFrame, mutable_interrupt_handler_with_error_code,
 //! };
 //!
 //! mutable_interrupt_handler_with_error_code!(

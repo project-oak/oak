@@ -21,12 +21,12 @@ use core::{
 };
 
 use oak_stage0::{
-    disable_pic8259, hal::Platform, Lapic, LocalApicFlags, Madt, ProcessorLocalApic,
-    ProcessorLocalX2Apic, Rsdp,
+    Lapic, LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp, disable_pic8259,
+    hal::Platform,
 };
-use x86_64::{structures::paging::Size4KiB, PhysAddr};
+use x86_64::{PhysAddr, structures::paging::Size4KiB};
 
-extern "C" {
+unsafe extern "C" {
     #[link_name = "ap_start"]
     static AP_START: c_void;
 }
@@ -34,8 +34,8 @@ extern "C" {
 // This symbol will be referenced from outside Rust, from the AP bootstrap code,
 // to denote that an AP has become alive. It's in a special magic section as we
 // have to ensure it's in the first 64K fo memory (or: the first segment).
-#[no_mangle]
-#[link_section = ".ap_bss"]
+#[unsafe(no_mangle)]
+#[unsafe(link_section = ".ap_bss")]
 static LIVE_AP_COUNT: AtomicU32 = AtomicU32::new(0);
 
 pub fn start_ap<P: Platform>(

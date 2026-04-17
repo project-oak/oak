@@ -200,7 +200,7 @@ where
     T: PortRead,
 {
     unsafe fn try_read(&mut self) -> Result<T, &'static str> {
-        Ok(self.read())
+        Ok(unsafe { self.read() })
     }
 }
 
@@ -209,7 +209,7 @@ where
     T: PortWrite,
 {
     unsafe fn try_write(&mut self, value: T) -> Result<(), &'static str> {
-        self.write(value);
+        unsafe { self.write(value) };
         Ok(())
     }
 }
@@ -270,8 +270,8 @@ where
 {
     unsafe fn try_read(&mut self) -> Result<T, &'static str> {
         match self {
-            PortWrapper::Raw(port) => port.try_read(),
-            PortWrapper::Ghcb(port) => port.try_read(),
+            PortWrapper::Raw(port) => unsafe { port.try_read() },
+            PortWrapper::Ghcb(port) => unsafe { port.try_read() },
         }
     }
 }
@@ -283,8 +283,8 @@ where
 {
     unsafe fn try_write(&mut self, value: T) -> Result<(), &'static str> {
         match self {
-            PortWrapper::Raw(port) => port.try_write(value),
-            PortWrapper::Ghcb(port) => port.try_write(value),
+            PortWrapper::Raw(port) => unsafe { port.try_write(value) },
+            PortWrapper::Ghcb(port) => unsafe { port.try_write(value) },
         }
     }
 }

@@ -1,0 +1,76 @@
+#
+# Copyright 2026 The Project Oak Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+package(
+    default_visibility = ["//visibility:public"],
+    licenses = ["notice"],
+)
+
+rust_library(
+    name = "benchmark",
+    srcs = [
+        "cpu/hashing.rs",
+        "cpu/mod.rs",
+        "lib.rs",
+        "memory/alloc_churn.rs",
+        "memory/array_update.rs",
+        "memory/hashmap.rs",
+        "memory/mod.rs",
+        "service.rs",
+        "timer.rs",
+    ],
+    crate_features = [],
+    deps = [
+        "//oak_benchmarks/proto:oak_benchmark_proto_rust",
+        "//oak_benchmarks/proto:service",
+        "@oak_crates_index//:hashbrown",
+        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:sha3",
+    ],
+)
+
+rust_library(
+    name = "benchmark_std",
+    srcs = [
+        "cpu/hashing.rs",
+        "cpu/mod.rs",
+        "lib.rs",
+        "memory/alloc_churn.rs",
+        "memory/array_update.rs",
+        "memory/hashmap.rs",
+        "memory/mod.rs",
+        "service.rs",
+        "tests.rs",
+        "timer.rs",
+    ],
+    crate_features = ["std"],
+    crate_name = "benchmark",
+    deps = [
+        "//oak_benchmarks/proto:oak_benchmark_proto_rust",
+        "//oak_benchmarks/proto:service",
+        "@oak_crates_index//:hashbrown",
+        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:sha3",
+    ],
+)
+
+rust_test(
+    name = "benchmark_test",
+    crate = ":benchmark_std",
+    crate_features = ["std"],
+)

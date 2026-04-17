@@ -27,6 +27,8 @@ namespace {
 
 using ::oak::attestation::v1::AmdSevSnpEndorsement;
 using ::oak::attestation::v1::ApplicationEndorsement;
+using ::oak::attestation::v1::CbLayer1TransparentEndorsement;
+using ::oak::attestation::v1::CbLayer2TransparentEndorsement;
 using ::oak::attestation::v1::ContainerEndorsement;
 using ::oak::attestation::v1::FirmwareEndorsement;
 using ::oak::attestation::v1::KernelEndorsement;
@@ -55,9 +57,11 @@ TYPED_TEST_P(VariantTest, Inverse) {
 
 REGISTER_TYPED_TEST_SUITE_P(VariantTest, Inverse);
 
-using TestTypes = testing::Types<AmdSevSnpEndorsement, FirmwareEndorsement,
-                                 KernelEndorsement, SystemEndorsement,
-                                 ContainerEndorsement, ApplicationEndorsement>;
+using TestTypes =
+    testing::Types<AmdSevSnpEndorsement, FirmwareEndorsement, KernelEndorsement,
+                   SystemEndorsement, ContainerEndorsement,
+                   ApplicationEndorsement, CbLayer1TransparentEndorsement,
+                   CbLayer2TransparentEndorsement>;
 
 INSTANTIATE_TYPED_TEST_SUITE_P(TypedTestSuite, VariantTest, TestTypes);
 

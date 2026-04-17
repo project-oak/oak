@@ -217,16 +217,18 @@ pub unsafe fn rmpquery(
     let permissions: u64;
     let page_size: u64;
     let result: u64;
-    asm!(
-        // As the assembler doesn't recognize RMPQUERY (F3 0F 01 FD) yet, we use the REP (F3)
-        // modifier on RDPRU (0F 01 FD) instruction to get the same result.
-        "rep rdpru",
-        in("rax") page_guest_physical_address,
-        out("rdx") permissions,
-        out("rcx") page_size,
-        lateout("rax") result,
-        options(nomem, nostack)
-    );
+    unsafe {
+        asm!(
+            // As the assembler doesn't recognize RMPQUERY (F3 0F 01 FD) yet, we use the REP (F3)
+            // modifier on RDPRU (0F 01 FD) instruction to get the same result.
+            "rep rdpru",
+            in("rax") page_guest_physical_address,
+            out("rdx") permissions,
+            out("rcx") page_size,
+            lateout("rax") result,
+            options(nomem, nostack)
+        );
+    }
 
     if result == 0 {
         Ok((

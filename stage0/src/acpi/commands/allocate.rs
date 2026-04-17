@@ -25,7 +25,7 @@ use zerocopy::{Immutable, IntoBytes};
 
 use super::{Invoke, Pad, RomfileName};
 use crate::{
-    acpi::{files::Files, Zone},
+    acpi::{Zone, files::Files},
     fw_cfg::Firmware,
     pci::PciWindows,
 };

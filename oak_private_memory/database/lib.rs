@@ -14,14 +14,19 @@
 // limitations under the License.
 #![feature(negative_impls)]
 
-mod database_with_cache;
+pub mod clock;
+pub mod database_with_cache;
 pub mod encryption;
 pub mod icing;
-mod memory_cache;
+pub mod memory_cache;
 
 pub use crate::{
+    clock::{Clock, SystemClock, system_time_to_timestamp},
     database_with_cache::DatabaseWithCache,
-    icing::{IcingMetaDatabase, IcingTempDir, PageToken},
+    icing::{
+        IcingMetaDatabase, IcingTempDir, PageToken, PendingLlmViewMetadata, PendingMetadata,
+        calculate_memory_icing_size,
+    },
 };
 
 // The unique id for a memory, responding to `struct Memory`.

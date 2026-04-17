@@ -21,7 +21,7 @@ use log::info;
 use oak_file_utils::data_path;
 use tonic::transport::Endpoint;
 use tonic_service::oak::ctf_sha2::enclave::{
-    flag_digest_service_client::FlagDigestServiceClient, GenerateFlagDigestRequest,
+    GenerateFlagDigestRequest, flag_digest_service_client::FlagDigestServiceClient,
 };
 
 #[derive(Parser, Debug)]
@@ -48,6 +48,7 @@ pub fn launcher_args(
         system_image,
         container_bundle,
         application_config: Vec::new(),
+        extra_guest_to_host_ports: Vec::new(),
         qemu_params: oak_containers_launcher::QemuParams {
             vmm_binary,
             stage0_binary,

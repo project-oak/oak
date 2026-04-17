@@ -16,7 +16,7 @@
 use core::{iter::Iterator, mem::MaybeUninit};
 
 use crate::{serial, serial::Debug};
-#[no_mangle]
+#[unsafe(no_mangle)]
 static mut TD_HOB_START: MaybeUninit<HandoffInfoTable> = MaybeUninit::uninit(); // Keep named as in layout.ld
 
 const EFI_HOB_TYPE_HANDOFF: u16 = 0x0001;

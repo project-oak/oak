@@ -19,14 +19,13 @@ use alloc::{format, sync::Arc};
 use micro_rpc::{Status, Vec};
 use oak_functions_abi::Request;
 use oak_proto_rust::oak::functions::{
-    extend_next_lookup_data_request::Data, AbortNextLookupDataResponse, Empty,
-    ExtendNextLookupDataRequest, ExtendNextLookupDataResponse, FinishNextLookupDataRequest,
-    FinishNextLookupDataResponse, InitializeRequest, LookupDataChunk, LookupDataEntry,
-    ReserveRequest, ReserveResponse,
+    AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
+    FinishNextLookupDataRequest, FinishNextLookupDataResponse, InitializeRequest, LookupDataChunk,
+    LookupDataEntry, ReserveRequest, ReserveResponse, extend_next_lookup_data_request::Data,
 };
 use prost::Message;
 
-use crate::{logger::StandaloneLogger, lookup::LookupDataManager, Handler, Observer};
+use crate::{Handler, Observer, logger::StandaloneLogger, lookup::LookupDataManager};
 
 pub struct OakFunctionsInstance<H: Handler> {
     lookup_data_manager: Arc<LookupDataManager<128>>,

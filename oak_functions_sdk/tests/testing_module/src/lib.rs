@@ -16,7 +16,7 @@
 
 //! Oak Functions ABI test for Testing Extension.
 
-#[cfg_attr(not(test), no_mangle)]
+#[cfg_attr(not(test), unsafe(no_mangle))]
 pub extern "C" fn main() {
     // Read the message to echo from the request.
     let request = oak_functions_sdk::read_request().expect("couldn't read request body");

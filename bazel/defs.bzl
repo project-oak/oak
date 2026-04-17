@@ -17,6 +17,8 @@
 
 load("//bazel/private:oci_runtime_bundle.bzl", _oci_runtime_bundle = "oci_runtime_bundle")
 
+# DEPRECATED: Use `app_bundle` from `//oak_containers/app_base:defs.bzl` instead.
+# This will be removed in a future release.
 oci_runtime_bundle = _oci_runtime_bundle
 
 def any_platform(platform_list):

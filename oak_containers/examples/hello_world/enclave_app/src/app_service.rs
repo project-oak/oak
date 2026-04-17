@@ -27,14 +27,14 @@ use oak_hello_world_proto::oak::containers::example::enclave_application_server:
 };
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
 use oak_session::{
+    ServerSession, Session,
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
     handshake::HandshakeType,
-    ServerSession, Session,
 };
 use tokio::net::TcpListener;
-use tokio_stream::{wrappers::TcpListenerStream, Stream, StreamExt};
+use tokio_stream::{Stream, StreamExt, wrappers::TcpListenerStream};
 
 use crate::app::HelloWorldApplicationHandler;
 

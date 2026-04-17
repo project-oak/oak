@@ -21,7 +21,7 @@ use std::{error::Error, pin::Pin, sync::Arc};
 use anyhow::Context;
 use oak_attestation::public_key::{PublicKeyAttester, PublicKeyEndorser};
 use oak_attestation_types::{attester::Attester, endorser::Endorser};
-use oak_functions_service::{instance::OakFunctionsInstance, Handler};
+use oak_functions_service::{Handler, instance::OakFunctionsInstance};
 use oak_grpc::oak::functions::standalone::oak_functions_session_server::{
     OakFunctionsSession, OakFunctionsSessionServer,
 };
@@ -30,20 +30,20 @@ use oak_proto_rust::{
     oak::{
         attestation::v1::ConfidentialSpaceEndorsement,
         functions::{
-            extend_next_lookup_data_request::Data,
-            standalone::{OakSessionRequest, OakSessionResponse},
             ExtendNextLookupDataRequest, FinishNextLookupDataRequest, InitializeRequest,
             LookupDataChunk, ReserveRequest,
+            extend_next_lookup_data_request::Data,
+            standalone::{OakSessionRequest, OakSessionResponse},
         },
     },
 };
 use oak_session::{
+    ServerSession, Session,
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
     handshake::HandshakeType,
     session_binding::{SessionBinder, SignatureBinder},
-    ServerSession, Session,
 };
 use p256::ecdsa::{SigningKey, VerifyingKey};
 use tokio::io::{AsyncRead, AsyncWrite};

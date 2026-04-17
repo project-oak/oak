@@ -24,7 +24,7 @@ use crate::endorsement::verify_binary_endorsement;
 
 #[test]
 fn test_verify_binary_endorsement_success() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
 
     let result = verify_binary_endorsement(
         d.make_valid_time().into_unix_millis(),
@@ -39,7 +39,7 @@ fn test_verify_binary_endorsement_success() {
 
 #[test]
 fn test_verify_binary_endorsement_fails_with_empty_signature() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
 
     let result = verify_binary_endorsement(
         d.make_valid_time().into_unix_millis(),
@@ -64,7 +64,7 @@ fn test_verify_binary_endorsement_fails_with_empty_signature() {
 
 #[test]
 fn test_verify_binary_endorsement_fails_with_invalid_signature() {
-    let mut d = EndorsementData::load();
+    let mut d = EndorsementData::load_for_rekor_verification();
 
     d.signature[0] ^= 1;
 
@@ -91,7 +91,7 @@ fn test_verify_binary_endorsement_fails_with_invalid_signature() {
 
 #[test]
 fn test_verify_binary_endorsement_fails_with_empty_endorser_public_key() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
 
     let result = verify_binary_endorsement(
         d.make_valid_time().into_unix_millis(),
@@ -116,7 +116,7 @@ fn test_verify_binary_endorsement_fails_with_empty_endorser_public_key() {
 
 #[test]
 fn test_verify_binary_endorsement_fails_with_invalid_endorser_public_key() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
 
     let result = verify_binary_endorsement(
         d.make_valid_time().into_unix_millis(),
@@ -132,7 +132,7 @@ fn test_verify_binary_endorsement_fails_with_invalid_endorser_public_key() {
 
 #[test]
 fn test_verify_binary_endorsement_fails_with_invalid_rekor_public_key() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
 
     let result = verify_binary_endorsement(
         d.make_valid_time().into_unix_millis(),
@@ -148,7 +148,7 @@ fn test_verify_binary_endorsement_fails_with_invalid_rekor_public_key() {
 
 #[test]
 fn test_verify_binary_endorsement_fails_with_rekor_key_but_no_log_entry() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
 
     let result = verify_binary_endorsement(
         d.make_valid_time().into_unix_millis(),
@@ -163,7 +163,7 @@ fn test_verify_binary_endorsement_fails_with_rekor_key_but_no_log_entry() {
 
 #[test]
 fn test_verify_binary_endorsement_succeeds_with_no_rekor_key() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
 
     let result = verify_binary_endorsement(
         d.make_valid_time().into_unix_millis(),

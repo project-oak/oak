@@ -13,24 +13,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use oak_grpc_utils::{generate_grpc_code, CodegenOptions, ExternPath};
+use oak_grpc_utils::{CodegenOptions, ExternPath, generate_grpc_code};
+
+macro_rules! pathbufs {
+    ( $( $x:expr ),* $(,)? ) => {
+        &[ $( std::path::PathBuf::from($x) ),* ]
+    }
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let included_protos = oak_proto_build_utils::get_common_proto_path("../..");
 
     // Generate gRPC code for Orchestrator services.
     generate_grpc_code(
-        &[
+        pathbufs!(
             "../../proto/containers/interfaces.proto",
             "../../proto/containers/orchestrator_crypto.proto",
-            "../../proto/containers/hostlib_key_provisioning.proto",
             "../../proto/session/service_streaming.proto",
             "../../proto/oak_debug/service/oak_debug.proto",
             "../../proto/oak_functions/service/oak_functions.proto",
             "../../proto/oak_functions/standalone/oak_functions_session.proto",
             "../../proto/oak_verity/oak_verity.proto",
             "../../third_party/google/profile.proto",
-        ],
+        ),
         &included_protos,
         CodegenOptions {
             build_client: true,

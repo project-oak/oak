@@ -23,12 +23,15 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_servic
 use sealed_memory_rust_proto::oak::private_memory::{
     DataBlob, DeleteBlobsRequest, DeleteBlobsResponse, MetadataBlob, ReadDataBlobRequest,
     ReadDataBlobResponse, ReadMetadataBlobRequest, ReadMetadataBlobResponse,
-    ReadUnencryptedDataBlobRequest, ReadUnencryptedDataBlobResponse, ResetDatabaseRequest,
-    ResetDatabaseResponse, WriteDataBlobRequest, WriteDataBlobResponse, WriteMetadataBlobRequest,
-    WriteMetadataBlobResponse, WriteUnencryptedDataBlobRequest, WriteUnencryptedDataBlobResponse,
+    ReadMetadataBlobStreamRequest, ReadMetadataBlobStreamResponse, ReadUnencryptedDataBlobRequest,
+    ReadUnencryptedDataBlobResponse, ResetDatabaseRequest, ResetDatabaseResponse,
+    WriteDataBlobRequest, WriteDataBlobResponse, WriteMetadataBlobRequest,
+    WriteMetadataBlobResponse, WriteMetadataBlobStreamRequest, WriteMetadataBlobStreamResponse,
+    WriteUnencryptedDataBlobRequest, WriteUnencryptedDataBlobResponse,
+    read_metadata_blob_stream_response, write_metadata_blob_stream_request,
 };
 use tokio::{net::TcpListener, sync::Mutex};
-use tokio_stream::wrappers::TcpListenerStream;
+use tokio_stream::{StreamExt, wrappers::TcpListenerStream};
 
 pub struct SealedMemoryDatabaseServiceTestImpl {
     pub database: Mutex<HashMap<String, DataBlob>>,
@@ -140,6 +143,70 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
         }
     }
 
+    type ReadMetadataBlobStreamStream = std::pin::Pin<
+        Box<
+            dyn tokio_stream::Stream<Item = Result<ReadMetadataBlobStreamResponse, tonic::Status>>
+                + Send,
+        >,
+    >;
+
+    async fn write_metadata_blob_stream(
+        &self,
+        request: tonic::Request<tonic::Streaming<WriteMetadataBlobStreamRequest>>,
+    ) -> Result<tonic::Response<WriteMetadataBlobStreamResponse>, tonic::Status> {
+        let mut stream = request.into_inner();
+        let mut full_blob = Vec::new();
+        let mut version = String::new();
+        let mut id = String::new();
+
+        while let Some(request) = stream.next().await {
+            let request = request?;
+            match request.request {
+                Some(write_metadata_blob_stream_request::Request::MetadataBlob(metadata)) => {
+                    version = metadata.version;
+                    if let Some(data_blob) = metadata.data_blob {
+                        id = data_blob.id;
+                        full_blob.extend_from_slice(&data_blob.blob);
+                    }
+                }
+                Some(write_metadata_blob_stream_request::Request::Chunk(chunk)) => {
+                    full_blob.extend_from_slice(&chunk);
+                }
+                None => {}
+            }
+        }
+
+        let added = self
+            .add_metadata_blob_inner(
+                id.clone(),
+                MetadataBlob { data_blob: Some(DataBlob { id, blob: full_blob }), version },
+            )
+            .await;
+        if !added {
+            Err(tonic::Status::failed_precondition("metadata blob version mismatch"))
+        } else {
+            Ok(tonic::Response::new(WriteMetadataBlobStreamResponse {}))
+        }
+    }
+
+    async fn read_metadata_blob_stream(
+        &self,
+        request: tonic::Request<ReadMetadataBlobStreamRequest>,
+    ) -> Result<tonic::Response<Self::ReadMetadataBlobStreamStream>, tonic::Status> {
+        let request = request.into_inner();
+        let blob = self.get_metdata_blob_inner(&request.id).await;
+
+        if let Some(blob) = blob {
+            let response = ReadMetadataBlobStreamResponse {
+                response: Some(read_metadata_blob_stream_response::Response::MetadataBlob(blob)),
+            };
+            let stream = tokio_stream::iter(vec![Ok(response)]);
+            Ok(tonic::Response::new(Box::pin(stream)))
+        } else {
+            Err(tonic::Status::not_found("Blob not found"))
+        }
+    }
+
     async fn write_unencrypted_data_blob(
         &self,
         request: tonic::Request<WriteUnencryptedDataBlobRequest>,
@@ -182,7 +249,9 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
         let request = request.into_inner();
         let mut db = self.database.lock().await;
         for id in request.ids {
-            db.remove(&id);
+            if db.remove(&id).is_none() {
+                return Err(tonic::Status::not_found(format!("Blob {} not found", id)));
+            }
         }
         Ok(tonic::Response::new(DeleteBlobsResponse {}))
     }

@@ -27,6 +27,7 @@ rust_binary(
     srcs = ["unattested_nn_encryption_and_decryption.rs"],
     deps = [
         "//falsify",
+        "//falsify/native",
         "//oak_session:oak_session_testing",
         "@oak_crates_index//:clap",
     ],

@@ -27,9 +27,9 @@ use oak_channel::basic_framed::receive_raw;
 use oak_channel::basic_framed::send_raw;
 use oak_dice::evidence::Stage0DiceData;
 use oak_proto_rust::oak::{
+    RawDigest,
     attestation::v1::{ApplicationLayerData, EventLog},
     restricted_kernel::InitialData,
-    RawDigest,
 };
 use oak_restricted_kernel_interface::initial_data::{
     INITIAL_DATA_HEADER_SIZE, INITIAL_DATA_V1_HEADER,

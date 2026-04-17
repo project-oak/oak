@@ -20,6 +20,7 @@ syntax = "proto3";
 package oak.attestation.v1;
 
 import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 import "proto/attestation/tcb_version.proto";
 import "proto/digest.proto";
@@ -38,6 +39,9 @@ enum KeyType {
   // An overview of key formats can be found at:
   // https://www.iana.org/assignments/cose/cose.xhtml#algorithms
   KEY_TYPE_ECDSA_P256_SHA256 = 1;
+
+  // RSA key with SHA-256 hashing.
+  KEY_TYPE_RSA_SHA2_256 = 2;
 }
 
 message VerifyingKey {
@@ -94,6 +98,65 @@ message VerifyingKeyReferenceValue {
   }
 }
 
+// Reference value for verifying a C2SP tlog-proof.
+// See: https://c2sp.org/tlog-proof
+message C2SPTLogProofReferenceValue {
+  reserved 1;
+
+  // The sigsum policy specifying trusted log keys and witness quorum.
+  // Must contain at least one `log` line and a `quorum` line.
+  // See:
+  // https://git.glasklar.is/sigsum/core/sigsum-go/-/blob/main/doc/policy.md
+  string policy = 2;
+}
+
+// Reference value for verifying a PES confirmation.
+message PesReferenceValue {
+  // The PES service's public verifying key(s) used to verify the PES signature.
+  //
+  // The PES confirmation is expected to contain the `key_id` of the key used
+  // for signing. During verification, the `key_id` extracted from the PES
+  // confirmation can be used to locate the correct key.
+  //
+  // This field is a set to support key rotation. During transition period,
+  // multiple keys can be listed here so that both old and new endorsements
+  // remain verifiable.
+  VerifyingKeySet key_set = 1;
+}
+
+// Encapsulates parameters related to verification of receipts from
+// t-log-like setups. If nothing should be verified, then this needs to be
+// disclaimed by
+//   tlog { strategy { skip {} } }
+// NEXT_ID: 8
+message TLogReferenceValues {
+  // Specifies how to aggegrate verification results from individual t-logs.
+  // Must be populated - rejected if empty.
+  oneof strategy {
+    // Doesn't verify anything, no matter what is populated.
+    SkipVerification skip = 1;
+
+    // Requires that ALL of the populated t-log verifications pass. If none
+    // of the verifications is populated, then this is equivalent to `skip`,
+    // but exploiting this is discouraged.
+    google.protobuf.Empty all = 2;
+
+    // Requires that ANY (at least one) of the populated t-log verifications
+    // pass. If none of the verifications is populated, then this will
+    // always fail.
+    google.protobuf.Empty any = 3;
+  }
+
+  // Verifies Rekor inclusion. Ignored if not populated.
+  VerifyingKeySet rekor = 5;
+
+  // Verifies C2SP t-log proof. Ignored if not populated.
+  C2SPTLogProofReferenceValue c2sp = 6;
+
+  // Verifies PES confirmation. Ignored if not populated.
+  PesReferenceValue pes = 7;
+}
+
 // Specifies a list of claim types. Claims are assertions about artifacts made
 // by the endorsing entity. An overview of the claims maintained by Oak can be
 // found at: https://github.com/project-oak/oak/tree/main/docs/tr/claim
@@ -102,6 +165,7 @@ message ClaimReferenceValue {
 }
 
 // Verifies the transparency log entry, including signatures and the digest.
+// NEXT_ID: 7
 message EndorsementReferenceValue {
   // The endorser's public verifying key for signature verification. The
   // attestation verification requires that all endorsements need to be
@@ -129,7 +193,18 @@ message EndorsementReferenceValue {
   ClaimReferenceValue required_claims = 4;
 
   // Verifies the Rekor log entry, if present and requested.
-  VerifyingKeyReferenceValue rekor = 5;
+  // DEPRECATED - use TLogReferenceValues instead. The deprecated
+  // approach is equivalent to
+  //
+  // tlog {
+  //    strategy { all {} }
+  //    rekor { <the VerifyingKeySet> }
+  // }
+  VerifyingKeyReferenceValue rekor = 5 [deprecated = true];
+
+  // Verifies any t-log-like setups associated with the endorsement.
+  // Leaving this empty is rejected.
+  TLogReferenceValues tlog = 6;
 }
 
 message BinaryReferenceValue {
@@ -407,6 +482,25 @@ message CBReferenceValues {
   repeated EventReferenceValues layers = 5;
 }
 
+message CbLayer1TransparentReferenceValues {
+  BinaryReferenceValue runtime_agent = 1 [deprecated = true];
+  BinaryReferenceValue runtime_agent_binary = 2;
+  BinaryReferenceValue userspace = 3;
+}
+
+message CbLayer2TransparentReferenceValues {
+  BinaryReferenceValue binary_mpm = 1;
+}
+
+// Verifies a transparent CB evidence, i.e. uses the `transparent_event_log`
+// branch in the associated `Evidence` proto.
+message CbTransparentReferenceValues {
+  RootLayerReferenceValues root_layer = 1;
+  KernelLayerReferenceValues kernel_layer = 2;
+  CbLayer1TransparentReferenceValues layer1 = 3;
+  CbLayer2TransparentReferenceValues layer2 = 4;
+}
+
 message CertificateBasedReferenceValues {
   CertificateAuthorityReferenceValue ca = 1;
 }
@@ -442,6 +536,7 @@ message ReferenceValues {
     CBReferenceValues cb = 3 [deprecated = true];
     CertificateBasedReferenceValues certificate_based = 4;
     ConfidentialSpaceReferenceValues confidential_space = 5;
+    CbTransparentReferenceValues cbt = 6;
   }
 }
 

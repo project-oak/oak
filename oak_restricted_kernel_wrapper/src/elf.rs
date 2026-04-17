@@ -16,11 +16,11 @@
 
 use core::slice;
 
-use elf::{abi::PT_LOAD, endian::AnyEndian, segment::ProgramHeader, ElfBytes};
+use elf::{ElfBytes, abi::PT_LOAD, endian::AnyEndian, segment::ProgramHeader};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType, Ramdisk};
 use x86_64::{
-    structures::paging::{PageSize, Size1GiB, Size2MiB},
     PhysAddr, VirtAddr,
+    structures::paging::{PageSize, Size1GiB, Size2MiB},
 };
 
 // We assume Stage 0 created an identity map for the first 1GiB of memory.

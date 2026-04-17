@@ -46,7 +46,7 @@ kt_jvm_library(
         "*.kt",
     ]),
     deps = [
-        "@com_google_code_gson_gson",
+        "@maven//:com_google_code_gson_gson",
     ],
 )
 
@@ -57,6 +57,6 @@ kt_android_library(
         "*.kt",
     ]),
     deps = [
-        "@com_google_code_gson_gson",
+        "@maven//:com_google_code_gson_gson",
     ],
 )

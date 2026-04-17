@@ -318,8 +318,8 @@ pub mod rfc3339 {
 
     use chrono::{DateTime, SecondsFormat, Utc};
     use serde::{
-        de::{self, Visitor},
         Deserializer, Serializer,
+        de::{self, Visitor},
     };
 
     use super::Instant;

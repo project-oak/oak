@@ -18,7 +18,7 @@ use bitflags::bitflags;
 use strum::FromRepr;
 use x86_64::PhysAddr;
 
-use crate::{hal::Msr, Platform};
+use crate::{Platform, hal::Msr};
 
 bitflags! {
     /// Flags in the APIC Base Address Register (MSR 0x1B)
@@ -149,7 +149,7 @@ impl MTRRDefType {
         let reserved = old_flags.bits() & !MTRRDefTypeFlags::all().bits();
         let new_value = reserved | flags.bits() | (default_type as u64);
         let mut msr = Self::MSR;
-        msr.write::<P>(new_value);
+        unsafe { msr.write::<P>(new_value) };
     }
 }
 
@@ -168,7 +168,7 @@ impl X2ApicIdRegister {
     /// # Safety
     ///   - X2ApicIdRegister must be present on this system.
     pub unsafe fn apic_id<P: Platform>() -> u32 {
-        (Self::MSR.read::<P>() & 0xFFFF_FFFF) as u32
+        unsafe { (Self::MSR.read::<P>() & 0xFFFF_FFFF) as u32 }
     }
 }
 
@@ -183,7 +183,7 @@ impl X2ApicVersionRegister {
     /// # Safety
     ///   - X2ApicVersionRegister must be present on this system.
     pub unsafe fn read<P: Platform>() -> (bool, u8, u8) {
-        let val = Self::MSR.read::<P>();
+        let val = unsafe { Self::MSR.read::<P>() };
 
         (
             val & (1 << 31) > 0,            // EAS
@@ -218,7 +218,7 @@ impl X2ApicSpuriousInterruptRegister {
     /// # Safety
     ///   - X2ApicSpuriousInterruptRegister must be present on this system.
     pub unsafe fn read<P: Platform>() -> (SpuriousInterruptFlags, u8) {
-        let val = Self::MSR.read::<P>();
+        let val = unsafe { Self::MSR.read::<P>() };
 
         (SpuriousInterruptFlags::from_bits_truncate((val & 0xFFFF_FF00) as u32), (val & 0xFF) as u8)
     }
@@ -278,7 +278,7 @@ impl X2ApicErrorStatusRegister {
     ///   - X2ApicIdRegister must be present on this system.
     #[allow(unused)]
     pub unsafe fn read<P: Platform>() -> ApicErrorFlags {
-        let val = Self::MSR.read::<P>();
+        let val = unsafe { Self::MSR.read::<P>() };
         ApicErrorFlags::from_bits_truncate(val.try_into().unwrap())
     }
 
@@ -286,13 +286,13 @@ impl X2ApicErrorStatusRegister {
     ///   - X2ApicIdRegister must be present on this system.
     pub unsafe fn write<P: Platform>(val: ApicErrorFlags) {
         let mut msr = Self::MSR;
-        msr.write::<P>(val.bits() as u64)
+        unsafe { msr.write::<P>(val.bits() as u64) }
     }
 
     /// # Safety
     ///   - X2ApicIdRegister must be present on this system.
     pub unsafe fn clear<P: Platform>() {
-        Self::write::<P>(ApicErrorFlags::empty())
+        unsafe { Self::write::<P>(ApicErrorFlags::empty()) }
     }
 }
 

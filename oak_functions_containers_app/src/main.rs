@@ -16,25 +16,22 @@
 use std::{
     error::Error,
     fmt::Display,
-    net::{IpAddr, Ipv4Addr, SocketAddr},
+    net::{IpAddr, Ipv6Addr, SocketAddr},
     num::{NonZeroU16, NonZeroU32},
 };
 
 use anyhow::Context;
 use clap::Parser;
-use oak_containers_agent::{
-    metrics::{MetricsConfig, OakObserver},
-    set_error_handler,
-};
+use oak_containers_agent::metrics::{MetricsConfig, OakObserver};
 use oak_crypto::encryption_key::AsyncEncryptionKeyHandle;
 use oak_functions_containers_app::serve as app_serve;
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
 use oak_proto_rust::oak::functions::config::{
-    application_config::CommunicationChannel, ApplicationConfig, TcpCommunicationChannel,
-    WasmtimeConfig,
+    ApplicationConfig, TcpCommunicationChannel, WasmtimeConfig,
+    application_config::CommunicationChannel,
 };
 use oak_sdk_containers::{
-    default_orchestrator_channel, InstanceEncryptionKeyHandle, OrchestratorClient,
+    InstanceEncryptionKeyHandle, OrchestratorClient, default_orchestrator_channel,
 };
 use prost::Message;
 use tokio::{
@@ -52,7 +49,7 @@ static ALLOCATOR: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(default_value = "http://10.0.2.100:8080")]
+    #[arg(env, default_value = "http://10.0.2.100:8080")]
     launcher_addr: String,
 }
 
@@ -85,13 +82,24 @@ where
     .await
 }
 
+mod otel_logging {
+    use tracing_subscriber::{filter::filter_fn, fmt::Layer, prelude::*};
+
+    // Writes any opentelemetry errors to stderr.
+    pub fn init() {
+        let opentelemetry_layer = Layer::new()
+            .with_writer(std::io::stderr.with_max_level(tracing::Level::WARN))
+            .with_filter(filter_fn(|metadata| metadata.target().starts_with("opentelemetry")));
+
+        tracing_subscriber::registry().with(opentelemetry_layer).init();
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    // Use eprintln here, as normal logging would go through the OTLP connection,
-    // which may no longer be valid.
-    set_error_handler(|err| eprintln!("oak_functions_containers_app: OTLP error: {}", err))?;
+    otel_logging::init();
 
     // This is a hack to get _some_ logging out of the binary, and should be
     // replaced with proper OTLP logging (or logging to journald, or something) in
@@ -111,7 +119,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         excluded_metrics: None,
     };
 
-    let oak_observer = oak_containers_agent::metrics::init_metrics(metrics_config);
+    let oak_observer = oak_containers_agent::metrics::init_metrics(
+        metrics_config,
+        tokio::runtime::Handle::current(),
+    );
 
     let orchestrator_channel =
         default_orchestrator_channel().await.context("failed to create channel to orchestrator")?;
@@ -143,7 +154,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         CommunicationChannel::TcpChannel(config) => {
             let port = NonZeroU16::new(config.port.try_into()?)
                 .map_or(OAK_FUNCTIONS_CONTAINERS_APP_PORT, Into::into);
-            let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port);
+            let addr = SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), port);
             let listener = TcpListener::bind(addr).await?;
             tokio::spawn(serve(
                 addr,

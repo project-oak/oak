@@ -32,8 +32,8 @@ const STAGE1_DICE_DATA_PATH: &str = "/oak/dice";
 /// The file is also overwritten with zeros to ensure it cannot be reused by
 /// another process.
 #[allow(deprecated)]
-pub fn load_stage1_dice_data<A: Attester + Serializable + ApplicationKeysAttester>(
-) -> anyhow::Result<A> {
+pub fn load_stage1_dice_data<A: Attester + Serializable + ApplicationKeysAttester>()
+-> anyhow::Result<A> {
     load_stage1_dice_data_from_path(STAGE1_DICE_DATA_PATH)
 }
 

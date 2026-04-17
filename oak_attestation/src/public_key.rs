@@ -26,8 +26,8 @@ use alloc::{string::ToString, vec};
 use anyhow::Result;
 use oak_attestation_types::{attester::Attester, endorser::Endorser};
 use oak_proto_rust::oak::{
-    attestation::v1::{Endorsements, Event, EventLog, Evidence, SessionBindingPublicKeyData},
     Variant,
+    attestation::v1::{Endorsements, Event, EventLog, Evidence, SessionBindingPublicKeyData},
 };
 use p256::ecdsa::VerifyingKey;
 use prost::Message;

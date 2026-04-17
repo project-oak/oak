@@ -21,26 +21,20 @@ use std::{
 use anyhow::anyhow;
 use bytes::BytesMut;
 use futures::{FutureExt, Stream};
-use oak_grpc::oak::containers::{
-    launcher_server::{Launcher, LauncherServer},
-    v1::hostlib_key_provisioning_server::{HostlibKeyProvisioning, HostlibKeyProvisioningServer},
-};
+use oak_grpc::oak::containers::launcher_server::{Launcher, LauncherServer};
 use oak_proto_rust::oak::{
     attestation::v1::{Endorsements, Evidence},
-    containers::{
-        v1::{GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole},
-        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
-    },
+    containers::{GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest},
 };
 use opentelemetry_proto::tonic::{
     collector::{
         logs::v1::{
-            logs_service_server::{LogsService, LogsServiceServer},
             ExportLogsServiceRequest, ExportLogsServiceResponse,
+            logs_service_server::{LogsService, LogsServiceServer},
         },
         metrics::v1::{
-            metrics_service_server::{MetricsService, MetricsServiceServer},
             ExportMetricsServiceRequest, ExportMetricsServiceResponse,
+            metrics_service_server::{MetricsService, MetricsServiceServer},
         },
     },
     common::v1::any_value::Value,
@@ -52,7 +46,7 @@ use tokio::{
 };
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_vsock::VsockListener;
-use tonic::{transport::Server, Request, Response, Status};
+use tonic::{Request, Response, Status, transport::Server};
 
 // Most gRPC implementations limit message sizes to 4MiB. Let's stay
 // comfortably below that by limiting responses to 3MiB.
@@ -87,10 +81,12 @@ impl Launcher for LauncherServerImplementation {
         let mut reader = BufReader::new(system_image_file);
 
         let response_stream = async_stream::try_stream! {
-            while let mut buffer = BytesMut::with_capacity(MAX_RESPONSE_SIZE) && reader.read_buf(&mut buffer).await? > 0 {
+            let mut buffer = BytesMut::with_capacity(MAX_RESPONSE_SIZE);
+            while reader.read_buf(&mut buffer).await? > 0 {
                 yield GetImageResponse {
                     image_chunk: buffer.freeze()
                 };
+                buffer = BytesMut::with_capacity(MAX_RESPONSE_SIZE);
             }
         };
 
@@ -106,10 +102,12 @@ impl Launcher for LauncherServerImplementation {
         let mut reader = BufReader::new(container_bundle_file);
 
         let response_stream = async_stream::try_stream! {
-            while let mut buffer = BytesMut::with_capacity(MAX_RESPONSE_SIZE) && reader.read_buf(&mut buffer).await? > 0 {
+            let mut buffer = BytesMut::with_capacity(MAX_RESPONSE_SIZE);
+            while reader.read_buf(&mut buffer).await? > 0 {
                 yield GetImageResponse {
                     image_chunk: buffer.freeze()
                 };
+                buffer = BytesMut::with_capacity(MAX_RESPONSE_SIZE);
             }
         };
 
@@ -178,28 +176,6 @@ impl Launcher for LauncherServerImplementation {
 }
 
 #[tonic::async_trait]
-impl HostlibKeyProvisioning for LauncherServerImplementation {
-    async fn get_key_provisioning_role(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<GetKeyProvisioningRoleResponse>, tonic::Status> {
-        // TODO(#4442): Implement setting Hostlib Key Provisioning role via an input
-        // argument.
-        Ok(tonic::Response::new(GetKeyProvisioningRoleResponse {
-            role: KeyProvisioningRole::Leader.into(),
-        }))
-    }
-
-    async fn get_group_keys(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<GetGroupKeysResponse>, tonic::Status> {
-        // TODO(#4442): Implement sending group keys to the orchestrator.
-        Err(tonic::Status::unimplemented("Key Provisioning is not implemented"))
-    }
-}
-
-#[tonic::async_trait]
 impl MetricsService for LauncherServerImplementation {
     async fn export(
         &self,
@@ -256,7 +232,7 @@ impl LogsService for LauncherServerImplementation {
 #[allow(clippy::too_many_arguments)]
 pub async fn new(
     listener: TcpListener,
-    vsock_listener: VsockListener,
+    vsock_listener: Option<VsockListener>,
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
     application_config: Vec<u8>,
@@ -277,7 +253,6 @@ pub async fn new(
     let mut tcp_shutdown = shutdown.clone();
     let tcp_server = Server::builder()
         .add_service(LauncherServer::from_arc(server_impl.clone()))
-        .add_service(HostlibKeyProvisioningServer::from_arc(server_impl.clone()))
         .add_service(MetricsServiceServer::from_arc(server_impl.clone()))
         .add_service(LogsServiceServer::from_arc(server_impl.clone()))
         .serve_with_incoming_shutdown(
@@ -285,14 +260,21 @@ pub async fn new(
             tcp_shutdown.changed().map(|_| ()),
         );
 
-    let mut virtio_shutdown = shutdown.clone();
-    let virtio_server = Server::builder()
-        .add_service(LauncherServer::from_arc(server_impl.clone()))
-        .add_service(HostlibKeyProvisioningServer::from_arc(server_impl.clone()))
-        .serve_with_incoming_shutdown(
-            vsock_listener.incoming(),
-            virtio_shutdown.changed().map(|_| ()),
-        );
+    let virtio_server = async {
+        if let Some(vsock_listener) = vsock_listener {
+            let mut virtio_shutdown = shutdown.clone();
+            Server::builder()
+                .add_service(LauncherServer::from_arc(server_impl.clone()))
+                .add_service(LogsServiceServer::from_arc(server_impl.clone()))
+                .serve_with_incoming_shutdown(
+                    vsock_listener.incoming(),
+                    virtio_shutdown.changed().map(|_| ()),
+                )
+                .await
+        } else {
+            Ok(())
+        }
+    };
 
     tokio::try_join!(tcp_server, virtio_server)
         .map(|((), ())| ())

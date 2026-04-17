@@ -27,12 +27,13 @@ use sha2::{Digest, Sha256};
 use strum::FromRepr;
 
 use crate::{
+    Madt, ZeroPage,
     acpi_tables::{
-        DescriptionHeader, MultiprocessorWakeup, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp,
+        DescriptionHeader, Fadt, InterruptSourceOverride, IoApic, LocalApicNmi,
+        MultiprocessorWakeup, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp,
     },
     fw_cfg::FwCfg,
     pci::PciWindows,
-    Madt, ZeroPage,
 };
 
 mod commands;
@@ -46,7 +47,7 @@ type LowMemoryAllocator = linked_list_allocator::LockedHeap;
 static LOW_MEMORY_ALLOCATOR: LowMemoryAllocator = LowMemoryAllocator::empty();
 
 /// EDBA is 128 KiB (0x2_0000).
-#[link_section = ".ebda"]
+#[unsafe(link_section = ".ebda")]
 static mut EBDA: [MaybeUninit<u8>; 0x2_0000] = [MaybeUninit::uninit(); 0x2_0000];
 
 /// How much memory to reserve for ACPI tables in "high" memory.
@@ -230,6 +231,18 @@ fn print_system_data_table_entries<'a>(
                             MultiprocessorWakeup::from_header_cast(madt_entry)?
                         );
                     }
+                    IoApic::STRUCTURE_TYPE => {
+                        log::info!("    -> I/O APIC: {:?}", IoApic::new(madt_entry)?);
+                    }
+                    InterruptSourceOverride::STRUCTURE_TYPE => {
+                        log::info!(
+                            "    -> Interrupt Source Override: {:?}",
+                            InterruptSourceOverride::new(madt_entry)?
+                        );
+                    }
+                    LocalApicNmi::STRUCTURE_TYPE => {
+                        log::info!("    -> Local APIC NMI: {:?}", LocalApicNmi::new(madt_entry)?);
+                    }
                     _ => {
                         log::info!(
                             "    -> Unknown structure, type = {}",
@@ -238,6 +251,12 @@ fn print_system_data_table_entries<'a>(
                     }
                 }
             }
+        }
+        // FADT is always guaranteed in the RSDT/XSDT as per ACPI spec:
+        // https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html#overview-of-the-system-description-table-architecture
+        if header.signature == *Fadt::SIGNATURE {
+            let fadt = Fadt::new(header)?;
+            log::info!("FADT: {:?}", fadt);
         }
     }
     Ok(())

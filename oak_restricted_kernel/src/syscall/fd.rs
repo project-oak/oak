@@ -16,7 +16,7 @@
 
 use alloc::{
     boxed::Box,
-    collections::{btree_map::Entry, BTreeMap},
+    collections::{BTreeMap, btree_map::Entry},
     slice,
 };
 use core::{

@@ -111,8 +111,8 @@ impl<L: Allocator, H: Allocator> Deref for File<'_, '_, L, H> {
 impl<L: Allocator, H: Allocator> DerefMut for File<'_, '_, L, H> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self {
-            Self::Low(ref mut file) => file.borrow_mut(),
-            Self::High(ref mut file) => file.borrow_mut(),
+            Self::Low(file) => file.borrow_mut(),
+            Self::High(file) => file.borrow_mut(),
             #[cfg(test)]
             Self::Fake(data) => {
                 // Safety: any non-null pointer can be turned into a zero-length slice, as you

@@ -30,13 +30,13 @@ cargo_build_script(
     build_script_env = {
         "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
         "DESCRIPTOR_PROTO_PATH": "$(location @com_google_protobuf//:descriptor_proto_srcs)",
-        "OAK_PROTO_PATH": "$(location @oak//proto/session:session.proto)",
     },
     data = [
         "//proto:database.proto",
         "//proto:sealed_memory.proto",
         "@com_google_protobuf//:descriptor_proto_srcs",
         "@com_google_protobuf//:well_known_type_protos",
+        "@googleapis//google/rpc:status.proto",
         "@oak//proto:digest.proto",
         "@oak//proto:validity.proto",
         "@oak//proto:variant.proto",
@@ -57,6 +57,7 @@ cargo_build_script(
         "@oak//oak_grpc_utils",
         "@oak//oak_proto_build_utils",
         "@oak_crates_index//:prost-build",
+        "@rules_rust//tools/runfiles",
     ],
 )
 
@@ -73,5 +74,6 @@ rust_library(
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:tonic",
+        "@oak_crates_index//:tonic-prost",
     ],
 )

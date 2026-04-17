@@ -18,7 +18,7 @@ use core::ops::{BitAnd, Not};
 
 use bitvec::{order::Lsb0, prelude::BitArray};
 use x86_64::structures::paging::{
-    frame::PhysFrameRange, page::PageSize, FrameAllocator, FrameDeallocator, PhysFrame,
+    FrameAllocator, FrameDeallocator, PhysFrame, frame::PhysFrameRange, page::PageSize,
 };
 
 /// Basic frame allocator implementation that keeps track of PageSize-sized
@@ -156,11 +156,7 @@ impl<S: PageSize, const N: usize> BitmapAllocator<S, N> {
     }
 
     fn frame(&self, frame_idx: usize) -> Option<PhysFrame<S>> {
-        if self.valid.len() <= frame_idx {
-            None
-        } else {
-            Some(self.range.start + frame_idx as u64)
-        }
+        if self.valid.len() <= frame_idx { None } else { Some(self.range.start + frame_idx as u64) }
     }
 
     fn frame_idx(&self, frame: PhysFrame<S>) -> Option<usize> {
@@ -215,7 +211,7 @@ mod tests {
     use std::{format, prelude::rust_2021::*, vec};
 
     use assertables::*;
-    use x86_64::{structures::paging::Size4KiB, PhysAddr};
+    use x86_64::{PhysAddr, structures::paging::Size4KiB};
 
     use super::*;
 

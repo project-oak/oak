@@ -25,8 +25,8 @@ use std::sync::Arc;
 use lazy_static::lazy_static;
 use oak_containers_agent::metrics::OakObserver;
 use opentelemetry::{
-    metrics::{Counter, Histogram, ObservableGauge},
     KeyValue, Value,
+    metrics::{Counter, Gauge, Histogram},
 };
 use prost::Name;
 use sealed_memory_rust_proto::prelude::v1::*;
@@ -63,7 +63,27 @@ pub struct Metrics {
     // Number of failures when decrypting database.
     db_decryption_failures: Counter<u64>,
     // Queue size of the in the database persist queue.
-    db_persist_queue_size: ObservableGauge<u64>,
+    db_persist_queue_size: Gauge<u64>,
+    // Optimize latency.
+    db_optimize_latency: Histogram<u64>,
+    // Speed of saving the database (KB/ms).
+    db_save_speed: Histogram<u64>,
+    // Speed of loading the database (KB/ms).
+    db_load_speed: Histogram<u64>,
+    // Latency of fetching the metadata blob from external DB during key sync.
+    key_sync_db_fetch_latency: Histogram<u64>,
+    // Latency of decrypting the database during key sync.
+    key_sync_decrypt_latency: Histogram<u64>,
+    // Number of operations that failed to replay during a database rebase.
+    db_rebase_operation_failures: Counter<u64>,
+    // Number of failures when cleaning expired memories.
+    db_cleanup_failures: Counter<u64>,
+    // Number of TLS handshake failures.
+    tls_handshake_failures: Counter<u64>,
+    // Number of TLS data receive errors.
+    tls_receive_failures: Counter<u64>,
+    // Number of failures when enqueueing a session for persistence.
+    persistence_enqueue_failures: Counter<u64>,
 }
 
 /// The possible metrics request types.
@@ -74,6 +94,9 @@ enum RequestMetricNameInner {
     SealedMemoryRequest(String),
     Handshake,
     Total,
+    DecryptionFailure,
+    DeserializationFailure,
+    EmptyTlsFrame,
 }
 
 #[derive(Clone, Debug)]
@@ -85,12 +108,12 @@ impl Metrics {
             .meter
             .u64_counter("rpc_count")
             .with_description("Total number of RPCs received by the private memory server.")
-            .init();
+            .build();
         let rpc_failure_count = observer
             .meter
             .u64_counter("rpc_failure_count")
             .with_description("Number of RPCs that failed.")
-            .init();
+            .build();
         let rpc_latency = observer
             .meter
             .u64_histogram("rpc_latency")
@@ -98,82 +121,143 @@ impl Metrics {
             .with_unit("ms")
             // Update the version of opentelemetry to support custom buckets.
             //.with_boundaries(vec![0, 100, 200, 300, 400, 500, 1000, 2000, 5000, 50000])
-            .init();
+            .build();
         let db_size = observer
             .meter
             .u64_histogram("db_size")
             .with_description("Size of the database in bytes.")
             .with_unit("By")
-            .init();
+            .build();
         let db_init_latency = observer
             .meter
             .u64_histogram("db_init_latency")
             .with_description("Latency of Icing database initialization.")
             .with_unit("ms")
-            .init();
+            .build();
         let db_cleanup_latency = observer
             .meter
             .u64_histogram("db_cleanup_latency")
             .with_description("Latency of expired memories cleanup operation.")
             .with_unit("ms")
-            .init();
+            .build();
         let db_cleanup_count = observer
             .meter
             .u64_histogram("db_cleanup_count")
             .with_description("Number of expired memories cleaned up during cleanup operation.")
-            .init();
+            .build();
         let db_persist_latency = observer
             .meter
             .u64_histogram("db_persist_latency")
             .with_description("Latency of persisting the database.")
             .with_unit("ms")
-            .init();
+            .build();
         let db_persist_latency_with_retries = observer
             .meter
             .u64_histogram("db_persist_latency_with_retries")
             .with_description("Latency of persisting the database including all retry attempts.")
             .with_unit("ms")
-            .init();
+            .build();
         let db_persist_attempts = observer
             .meter
             .u64_histogram("db_persist_attempts")
             .with_description("Number of attempts before metadata persist succeeds.")
-            .init();
+            .build();
         let db_connect_retries = observer
             .meter
             .u64_counter("db_connect_retries")
             .with_description("Number of retries when connecting to the database.")
-            .init();
+            .build();
 
         let db_persist_failures = observer
             .meter
             .u64_counter("db_persist_failures")
             .with_description("Number of failures when persisting the database.")
-            .init();
+            .build();
 
         let db_decryption_failures = observer
             .meter
             .u64_counter("db_decryption_failures")
             .with_description("Number of failures when decrypting the database.")
-            .init();
+            .build();
 
         let db_persist_queue_size = observer
             .meter
-            .u64_observable_gauge("db_persist_queue_size")
+            .u64_gauge("db_persist_queue_size")
             .with_description("Number of items in the database persist queue.")
-            .init();
+            .build();
 
         let decrypt_dek_failures = observer
             .meter
             .u64_counter("decrypt_dek_failures")
             .with_description("Number of failures when decrypting the DEK.")
-            .init();
+            .build();
 
         let user_info_deserialization_failures = observer
             .meter
             .u64_counter("user_info_deserialization_failures")
             .with_description("Number of failures when deserializing user info.")
-            .init();
+            .build();
+
+        let db_optimize_latency = observer
+            .meter
+            .u64_histogram("db_optimize_latency")
+            .with_description("Latency of optimizing the database.")
+            .with_unit("ms")
+            .build();
+        let db_save_speed = observer
+            .meter
+            .u64_histogram("db_save_speed")
+            .with_description("Speed of saving the database.")
+            .with_unit("KB/ms")
+            .build();
+        let db_load_speed = observer
+            .meter
+            .u64_histogram("db_load_speed")
+            .with_description("Speed of loading the database.")
+            .with_unit("KB/ms")
+            .build();
+        let key_sync_db_fetch_latency = observer
+            .meter
+            .u64_histogram("key_sync_db_fetch_latency")
+            .with_description("Latency of fetching metadata blob from external DB.")
+            .with_unit("ms")
+            .build();
+        let key_sync_decrypt_latency = observer
+            .meter
+            .u64_histogram("key_sync_decrypt_latency")
+            .with_description("Latency of decrypting the database.")
+            .with_unit("ms")
+            .build();
+
+        let db_rebase_operation_failures = observer
+            .meter
+            .u64_counter("db_rebase_operation_failures")
+            .with_description("Number of operations that failed to replay during DB rebase.")
+            .build();
+
+        let db_cleanup_failures = observer
+            .meter
+            .u64_counter("db_cleanup_failures")
+            .with_description("Number of failures when cleaning expired memories.")
+            .build();
+
+        let tls_handshake_failures = observer
+            .meter
+            .u64_counter("tls_handshake_failures")
+            .with_description("Number of TLS handshake failures.")
+            .build();
+
+        let tls_receive_failures = observer
+            .meter
+            .u64_counter("tls_receive_failures")
+            .with_description("Number of TLS data receive errors.")
+            .build();
+
+        let persistence_enqueue_failures = observer
+            .meter
+            .u64_counter("persistence_enqueue_failures")
+            .with_description("Number of failures enqueueing sessions for persistence.")
+            .build();
 
         // Initialize the total count to 0 to trigger the metric registration.
         // Otherwise, the metric will only show up once it has been incremented.
@@ -181,7 +265,7 @@ impl Metrics {
         rpc_failure_count.add(0, &[KeyValue::new("request_type", "total")]);
         rpc_latency.record(1, &[KeyValue::new("request_type", "test")]);
         db_size.record(1, &[]);
-        db_init_latency.record(1, &[]);
+        db_init_latency.record(1, &[KeyValue::new("db_size_bucket", "0-100KB")]);
         db_cleanup_latency.record(0, &[]);
         db_cleanup_count.record(0, &[]);
         db_persist_latency.record(1, &[]);
@@ -192,7 +276,15 @@ impl Metrics {
         decrypt_dek_failures.add(0, &[]);
         user_info_deserialization_failures.add(0, &[]);
         db_decryption_failures.add(0, &[]);
-        db_persist_queue_size.observe(0, &[]);
+        db_persist_queue_size.record(0, &[]);
+        db_optimize_latency.record(1, &[]);
+        key_sync_db_fetch_latency.record(0, &[]);
+        key_sync_decrypt_latency.record(0, &[]);
+        db_rebase_operation_failures.add(0, &[]);
+        db_cleanup_failures.add(0, &[]);
+        tls_handshake_failures.add(0, &[]);
+        tls_receive_failures.add(0, &[]);
+        persistence_enqueue_failures.add(0, &[]);
         observer.register_metric(rpc_count.clone());
         observer.register_metric(rpc_failure_count.clone());
         observer.register_metric(rpc_latency.clone());
@@ -201,12 +293,22 @@ impl Metrics {
         observer.register_metric(db_cleanup_latency.clone());
         observer.register_metric(db_cleanup_count.clone());
         observer.register_metric(db_persist_latency.clone());
+        observer.register_metric(db_persist_latency_with_retries.clone());
+        observer.register_metric(db_persist_attempts.clone());
         observer.register_metric(db_connect_retries.clone());
         observer.register_metric(db_persist_failures.clone());
         observer.register_metric(decrypt_dek_failures.clone());
         observer.register_metric(user_info_deserialization_failures.clone());
         observer.register_metric(db_decryption_failures.clone());
         observer.register_metric(db_persist_queue_size.clone());
+        observer.register_metric(db_optimize_latency.clone());
+        observer.register_metric(key_sync_db_fetch_latency.clone());
+        observer.register_metric(key_sync_decrypt_latency.clone());
+        observer.register_metric(db_rebase_operation_failures.clone());
+        observer.register_metric(db_cleanup_failures.clone());
+        observer.register_metric(tls_handshake_failures.clone());
+        observer.register_metric(tls_receive_failures.clone());
+        observer.register_metric(persistence_enqueue_failures.clone());
         Self {
             rpc_count,
             rpc_failure_count,
@@ -224,6 +326,16 @@ impl Metrics {
             user_info_deserialization_failures,
             db_decryption_failures,
             db_persist_queue_size,
+            db_optimize_latency,
+            db_save_speed,
+            db_load_speed,
+            key_sync_db_fetch_latency,
+            key_sync_decrypt_latency,
+            db_rebase_operation_failures,
+            db_cleanup_failures,
+            tls_handshake_failures,
+            tls_receive_failures,
+            persistence_enqueue_failures,
         }
     }
 
@@ -255,28 +367,32 @@ impl Metrics {
 
     /// Record the time it took to save the DB.
     pub fn record_db_save_speed(&self, speed: u64) {
-        // Round up as 1ms.
+        // Round up as 1.
         let speed = std::cmp::max(1, speed);
 
-        self.rpc_latency
-            .record(speed, &[opentelemetry::KeyValue::new("request_type", "db_save_kb_per_ms")]);
+        self.db_save_speed.record(speed, &[]);
+    }
+
+    /// Record the time it took to optimize the DB.
+    pub fn record_db_optimize_latency(&self, latency: u64) {
+        self.db_optimize_latency.record(latency, &[]);
     }
 
     /// Record the time it took to load the DB.
     pub fn record_db_load_speed(&self, speed: u64) {
-        // Round up as 1ms.
+        // Round up as 1.
         let speed = std::cmp::max(1, speed);
 
-        self.rpc_latency
-            .record(speed, &[opentelemetry::KeyValue::new("request_type", "db_save_kb_per_ms")]);
+        self.db_load_speed.record(speed, &[]);
     }
 
     pub fn record_db_size(&self, size: u64) {
         self.db_size.record(size, &[]);
     }
 
-    pub fn record_db_init_latency(&self, latency: u64) {
-        self.db_init_latency.record(latency, &[]);
+    pub fn record_db_init_latency(&self, latency: u64, db_size_bucket: &str) {
+        self.db_init_latency
+            .record(latency, &[KeyValue::new("db_size_bucket", db_size_bucket.to_string())]);
     }
 
     pub fn record_db_cleanup_latency(&self, latency: u64) {
@@ -320,7 +436,55 @@ impl Metrics {
     }
 
     pub fn record_db_persist_queue_size(&self, max: u64) {
-        self.db_persist_queue_size.observe(max, &[]);
+        self.db_persist_queue_size.record(max, &[]);
+    }
+
+    pub fn record_key_sync_db_fetch_latency(&self, latency_ms: u64) {
+        self.key_sync_db_fetch_latency.record(latency_ms, &[]);
+    }
+
+    pub fn record_key_sync_decrypt_latency(&self, latency_ms: u64) {
+        self.key_sync_decrypt_latency.record(latency_ms, &[]);
+    }
+
+    pub fn inc_db_rebase_operation_failures(&self, count: u64) {
+        self.db_rebase_operation_failures.add(count, &[]);
+    }
+
+    pub fn inc_db_cleanup_failures(&self) {
+        self.db_cleanup_failures.add(1, &[]);
+    }
+
+    pub fn inc_tls_handshake_failures(&self) {
+        self.tls_handshake_failures.add(1, &[]);
+    }
+
+    pub fn inc_tls_receive_failures(&self) {
+        self.tls_receive_failures.add(1, &[]);
+    }
+
+    pub fn inc_persistence_enqueue_failures(&self) {
+        self.persistence_enqueue_failures.add(1, &[]);
+    }
+}
+
+/// Buckets a database size (in bytes) into a human-readable label for use as
+/// a metric attribute. Uses 10MB increments up to 100MB.
+pub fn bucket_db_size(size_bytes: usize) -> &'static str {
+    const MB: usize = 1_048_576;
+    match size_bytes {
+        0..=102_400 => "0-100KB",
+        102_401..=10_485_760 => "100KB-10MB",
+        _n if _n <= 20 * MB => "10MB-20MB",
+        _n if _n <= 30 * MB => "20MB-30MB",
+        _n if _n <= 40 * MB => "30MB-40MB",
+        _n if _n <= 50 * MB => "40MB-50MB",
+        _n if _n <= 60 * MB => "50MB-60MB",
+        _n if _n <= 70 * MB => "60MB-70MB",
+        _n if _n <= 80 * MB => "70MB-80MB",
+        _n if _n <= 90 * MB => "80MB-90MB",
+        _n if _n <= 100 * MB => "90MB-100MB",
+        _ => "100MB+",
     }
 }
 
@@ -350,6 +514,9 @@ impl From<RequestMetricName> for Value {
             RequestMetricNameInner::SealedMemoryRequest(variant) => variant.into(),
             RequestMetricNameInner::Handshake => "Handshake".into(),
             RequestMetricNameInner::Total => "total".into(),
+            RequestMetricNameInner::DecryptionFailure => "DecryptionFailure".into(),
+            RequestMetricNameInner::DeserializationFailure => "DeserializationFailure".into(),
+            RequestMetricNameInner::EmptyTlsFrame => "EmptyTlsFrame".into(),
         }
     }
 }
@@ -363,6 +530,18 @@ impl RequestMetricName {
         RequestMetricName(RequestMetricNameInner::Handshake)
     }
 
+    pub fn decryption_failure() -> RequestMetricName {
+        RequestMetricName(RequestMetricNameInner::DecryptionFailure)
+    }
+
+    pub fn deserialization_failure() -> RequestMetricName {
+        RequestMetricName(RequestMetricNameInner::DeserializationFailure)
+    }
+
+    pub fn empty_tls_frame() -> RequestMetricName {
+        RequestMetricName(RequestMetricNameInner::EmptyTlsFrame)
+    }
+
     pub fn new_sealed_memory_request(
         variant: &sealed_memory_request::Request,
     ) -> RequestMetricName {
@@ -370,11 +549,16 @@ impl RequestMetricName {
             sealed_memory_request::Request::UserRegistrationRequest(r) => get_name(r),
             sealed_memory_request::Request::KeySyncRequest(r) => get_name(r),
             sealed_memory_request::Request::AddMemoryRequest(r) => get_name(r),
+            #[allow(deprecated)]
             sealed_memory_request::Request::GetMemoriesRequest(r) => get_name(r),
             sealed_memory_request::Request::ResetMemoryRequest(r) => get_name(r),
             sealed_memory_request::Request::GetMemoryByIdRequest(r) => get_name(r),
+            sealed_memory_request::Request::GetMemoryByNameRequest(r) => get_name(r),
             sealed_memory_request::Request::SearchMemoryRequest(r) => get_name(r),
             sealed_memory_request::Request::DeleteMemoryRequest(r) => get_name(r),
+            sealed_memory_request::Request::GetMemoriesByIdRequest(r) => get_name(r),
+            sealed_memory_request::Request::SearchMemoriesRequest(r) => get_name(r),
+            sealed_memory_request::Request::GetDatabaseMetricsRequest(r) => get_name(r),
         }))
     }
 }

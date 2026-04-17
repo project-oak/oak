@@ -16,6 +16,7 @@
 
 use log::{info, warn};
 use rmcp::{
+    ErrorData, RoleServer, ServerHandler,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
     model::{
         CallToolResult, Content, Implementation, InitializeRequestParam, InitializeResult,
@@ -24,7 +25,7 @@ use rmcp::{
     schemars,
     serde_json::json,
     service::RequestContext,
-    tool, tool_handler, tool_router, ErrorData, RoleServer, ServerHandler,
+    tool, tool_handler, tool_router,
 };
 use serde::Deserialize;
 

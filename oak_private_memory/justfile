@@ -1,18 +1,39 @@
-presubmit: style build-and-test
+presubmit: verify-bazelisk format style build-and-test
+
+verify-bazelisk:
+    rm -r ~/.cache/bazelisk
+    bazel --version
 
 build-and-test-and-copy: style build-and-test private-memory-server private-memory-enclave-app
 
 build-and-test:
-    # For some reason, proto/... is broken.
     bazel test  -c opt //...:all -- -//third_party/...
 
 style:
-    # For some reason, proto/... is broken.
     bazel build -c opt --keep_going --config=rustfmt --config=clippy "$@" //...:all -- -//third_party/...
 
+format-rust:
+    bazel run --config=rustfmt @rules_rust//:rustfmt
+
+# Run the oak_lint_runner on changed files in this directory.
+[working-directory: '..']
+format base="main":
+    nix develop --command ./tools/lint-runner/scripts/format_changed {{base}}
+
+# Run the oak_lint_runner on all files in this directory.
+[working-directory: '..']
+format-all:
+    nix develop --command ./tools/lint-runner/scripts/format_all
+
+# Run the oak_lint_runner tool from the root directory.
+# Note: file paths should be relative to the root directory (e.g., oak_private_memory/src/main.rs).
+[working-directory: '..']
+oak_lint_runner *args:
+    cd tools/lint-runner && bazel run //:oak_lint_runner -- {{args}}
+
 private-memory-server: (copy-artifact "private_memory_server" "private_memory_server")
-private-memory-enclave-app: (copy-artifact "bundle.tar" "private_memory_enclave_app")
-private-memory-enclave-bundle-tar: (copy-artifact "bundle.tar" "private_memory_enclave_bundle.tar")
+private-memory-enclave-app: (copy-artifact "bundle" "private_memory_enclave_app")
+private-memory-enclave-bundle-tar: (copy-artifact "bundle" "private_memory_enclave_bundle.tar")
 
 # This matches the logic in the parent copy-artifact rule.
 # See comment there for more details.

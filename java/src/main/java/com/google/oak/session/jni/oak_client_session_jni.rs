@@ -1,3 +1,19 @@
+//
+// Copyright 2025 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 // We are not actually no_std because the jni crate is pulling it in, but at
 // least this enforces that this lib isn't using anything from the std lib
 
@@ -7,12 +23,12 @@ use alloc::{boxed::Box, format};
 use core::{fmt::Debug, ptr::null_mut};
 
 use jni::{
+    JNIEnv,
     objects::{JByteArray, JClass},
     sys::{jboolean, jbyteArray, jlong},
-    JNIEnv,
 };
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionResponse};
-use oak_session::{config::SessionConfigBuilder, ClientSession, ProtocolEngine, Session};
+use oak_session::{ClientSession, ProtocolEngine, Session, config::SessionConfigBuilder};
 use prost::Message;
 
 fn oak_exception<Error: Debug>(mut env: JNIEnv, message: &str, err: Error) {
@@ -20,7 +36,7 @@ fn oak_exception<Error: Debug>(mut env: JNIEnv, message: &str, err: Error) {
         .expect(message);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_OakClientSession_nativeCreateClientSession(
     env: JNIEnv,
     _class: JClass,
@@ -39,7 +55,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativeCreateClie
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_OakClientSession_nativePutIncomingMessage(
     env: JNIEnv,
     _class: JClass,
@@ -74,7 +90,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativePutIncomin
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_OakClientSession_nativeGetOutgoingMessage(
     env: JNIEnv,
     _class: JClass,
@@ -99,7 +115,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativeGetOutgoin
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_OakClientSession_nativeIsSessionOpen(
     _env: JNIEnv,
     _class: JClass,
@@ -110,7 +126,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativeIsSessionO
     session.is_open() as jboolean
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_OakClientSession_nativeRead(
     env: JNIEnv,
     _class: JClass,
@@ -134,7 +150,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativeRead(
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_OakClientSession_nativeWrite(
     env: JNIEnv,
     _class: JClass,
@@ -165,7 +181,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativeWrite(
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_OakClientSession_nativeGetSessionBindingToken(
     env: JNIEnv,
     _class: JClass,
@@ -197,7 +213,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativeGetSession
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_OakClientSession_nativeClose(
     _env: JNIEnv,
     _class: JClass,

@@ -27,8 +27,10 @@ use tokio_vsock::VsockStream;
 use tonic::transport::Endpoint;
 use tower::service_fn;
 
+pub type OakFunctionsClient = GrpcOakFunctionsClient<tonic::transport::channel::Channel>;
+
 pub struct UntrustedApp {
-    pub oak_functions_client: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
+    pub oak_functions_client: OakFunctionsClient,
     pub launcher: Launcher,
 }
 
@@ -102,10 +104,7 @@ impl UntrustedApp {
     }
 }
 
-async fn setup_periodic_update(
-    mut client: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
-    config: LookupDataConfig,
-) {
+async fn setup_periodic_update(mut client: OakFunctionsClient, config: LookupDataConfig) {
     // Only set periodic update if an interval is given.
     let mut interval =
         tokio::time::interval(config.update_interval.expect("No update interval given."));
@@ -118,7 +117,7 @@ async fn setup_periodic_update(
 }
 
 async fn update_lookup_data(
-    client: &mut GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
+    client: &mut OakFunctionsClient,
     config: &LookupDataConfig,
 ) -> anyhow::Result<()> {
     log::info!("updating lookup data");

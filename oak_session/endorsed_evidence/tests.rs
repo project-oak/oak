@@ -16,17 +16,17 @@ use std::{boxed::Box, string::ToString, sync::Arc};
 
 use googletest::prelude::*;
 use oak_session::{
-    aggregators::PassThrough, attestation::AttestationType, config::SessionConfig,
-    handshake::HandshakeType, ClientSession, ServerSession,
+    ClientSession, ServerSession, aggregators::PassThrough, attestation::AttestationType,
+    config::SessionConfig, handshake::HandshakeType,
 };
 use oak_session_endorsed_evidence::{
     EndorsedEvidenceBindableAssertionGenerator, EndorsedEvidenceBoundAssertionVerifier,
 };
 use oak_session_testing::{
-    create_failing_mock_session_binding_verifier_provider, create_failing_mock_verifier,
-    create_mock_attester, create_mock_binder, create_mock_endorser,
+    HandshakeFollowup, create_failing_mock_session_binding_verifier_provider,
+    create_failing_mock_verifier, create_mock_attester, create_mock_binder, create_mock_endorser,
     create_mock_session_binding_verifier_provider, create_passing_mock_verifier, do_attest,
-    do_handshake, invoke_hello_world, HandshakeFollowup,
+    do_handshake, invoke_hello_world,
 };
 
 const ATTESTER_ID: &str = "ATTESTER_ID";

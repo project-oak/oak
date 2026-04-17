@@ -14,17 +14,16 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//:default_visibility"],
     licenses = ["notice"],
 )
 
-rust_binary(
-    name = "arbiter",
-    testonly = True,
-    srcs = ["arbiter.rs"],
+rust_library(
+    name = "ctf_sha2",
+    srcs = ["lib.rs"],
     deps = [
         "//ctf_sha2/proto:arbiter_rust_proto",
         "//falsify",
@@ -35,8 +34,6 @@ rust_binary(
         "//oak_time",
         "//tr/key_util",
         "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:clap",
-        "@oak_crates_index//:env_logger",
         "@oak_crates_index//:hex",
         "@oak_crates_index//:jwt",
         "@oak_crates_index//:log",
@@ -47,9 +44,21 @@ rust_binary(
     ],
 )
 
+rust_binary(
+    name = "arbiter",
+    testonly = True,
+    srcs = ["bin/main.rs"],
+    deps = [
+        ":ctf_sha2",
+        "//falsify/native",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:env_logger",
+    ],
+)
+
 rust_test(
     name = "arbiter_tests",
-    crate = ":arbiter",
+    crate = ":ctf_sha2",
     deps = [
         "//oak_attestation_verification",
         "//oak_dice",

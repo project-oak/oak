@@ -17,7 +17,7 @@
 load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
-load("//bazel:defs.bzl", "oci_runtime_bundle")
+load("//oak_containers/app_base:defs.bzl", "app_bundle")
 
 package(
     default_visibility = ["//:internal"],
@@ -124,7 +124,7 @@ pkg_tar(
 
 oci_image(
     name = "oak_functions_standalone_image",
-    base = "@distroless_cc_debian12",
+    base = "@distroless_cc_debian12_linux_amd64",
     entrypoint = ["/usr/local/bin/oak_functions_standalone"],
     exposed_ports = ["8080/tcp"],
     # https://cloud.google.com/confidential-computing/confidential-space/docs/create-customize-workloads#launch_policies
@@ -139,13 +139,13 @@ oci_image(
     tars = [":oak_functions_standalone_tar"],
 )
 
+app_bundle(
+    name = "bundle",
+    binary = ":oak_functions_standalone",
+)
+
 oci_load(
     name = "oak_functions_standalone_load_image",
     image = ":oak_functions_standalone_image",
     repo_tags = ["oak_functions_standalone:latest"],
-)
-
-oci_runtime_bundle(
-    name = "bundle",
-    image = ":oak_functions_standalone_image",
 )

@@ -34,6 +34,7 @@ pub trait ResponsePacking {
 macro_rules! impl_packing {
     (Request => $name:ident) => {
         impl RequestUnpacking for $name {
+            #[allow(deprecated)]
             fn from_request(x: SealedMemoryRequest) -> Option<Self> {
                 match x.request {
                     Some(sealed_memory_request::Request::$name(request)) => Some(request),
@@ -41,6 +42,7 @@ macro_rules! impl_packing {
                 }
             }
 
+            #[allow(deprecated)]
             fn into_request(self) -> SealedMemoryRequest {
                 SealedMemoryRequest {
                     request: Some(sealed_memory_request::Request::$name(self)),
@@ -52,6 +54,7 @@ macro_rules! impl_packing {
 
     (Response => $name:ident) => {
         impl ResponsePacking for $name {
+            #[allow(deprecated)]
             fn from_response(x: SealedMemoryResponse) -> Option<Self> {
                 match x.response {
                     Some(sealed_memory_response::Response::$name(response)) => Some(response),
@@ -59,48 +62,10 @@ macro_rules! impl_packing {
                 }
             }
 
+            #[allow(deprecated)]
             fn into_response(self) -> SealedMemoryResponse {
                 SealedMemoryResponse {
                     response: Some(sealed_memory_response::Response::$name(self)),
-                    request_id: 0,
-                }
-            }
-        }
-    };
-    (Request => DeleteMemoryRequest) => {
-        impl RequestUnpacking for DeleteMemoryRequest {
-            fn from_request(x: SealedMemoryRequest) -> Option<Self> {
-                match x.request {
-                    Some(sealed_memory_request::Request::DeleteMemoryRequest(request)) => {
-                        Some(request)
-                    }
-                    _ => None,
-                }
-            }
-
-            fn into_request(self) -> SealedMemoryRequest {
-                SealedMemoryRequest {
-                    request: Some(sealed_memory_request::Request::DeleteMemoryRequest(self)),
-                    request_id: 0,
-                }
-            }
-        }
-    };
-
-    (Response => DeleteMemoryResponse) => {
-        impl ResponsePacking for DeleteMemoryResponse {
-            fn from_response(x: SealedMemoryResponse) -> Option<Self> {
-                match x.response {
-                    Some(sealed_memory_response::Response::DeleteMemoryResponse(response)) => {
-                        Some(response)
-                    }
-                    _ => None,
-                }
-            }
-
-            fn into_response(self) -> SealedMemoryResponse {
-                SealedMemoryResponse {
-                    response: Some(sealed_memory_response::Response::DeleteMemoryResponse(self)),
                     request_id: 0,
                 }
             }
@@ -112,6 +77,7 @@ impl_packing!(Request => GetMemoriesRequest);
 impl_packing!(Request => ResetMemoryRequest);
 impl_packing!(Request => KeySyncRequest);
 impl_packing!(Request => GetMemoryByIdRequest);
+impl_packing!(Request => GetMemoryByNameRequest);
 impl_packing!(Request => SearchMemoryRequest);
 impl_packing!(Request => UserRegistrationRequest);
 impl_packing!(Request => DeleteMemoryRequest);
@@ -122,6 +88,13 @@ impl_packing!(Response => ResetMemoryResponse);
 impl_packing!(Response => InvalidRequestResponse);
 impl_packing!(Response => KeySyncResponse);
 impl_packing!(Response => GetMemoryByIdResponse);
+impl_packing!(Response => GetMemoryByNameResponse);
 impl_packing!(Response => SearchMemoryResponse);
 impl_packing!(Response => DeleteMemoryResponse);
 impl_packing!(Response => UserRegistrationResponse);
+impl_packing!(Request => GetMemoriesByIdRequest);
+impl_packing!(Response => GetMemoriesByIdResponse);
+impl_packing!(Request => SearchMemoriesRequest);
+impl_packing!(Response => SearchMemoriesResponse);
+impl_packing!(Request => GetDatabaseMetricsRequest);
+impl_packing!(Response => GetDatabaseMetricsResponse);

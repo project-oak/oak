@@ -15,6 +15,7 @@
 //
 
 use oak_channel::client::{ClientChannelHandle, RequestEncoder};
+use tokio::sync::mpsc;
 
 /// Singleton responsible for sending requests, and receiving responses over the
 /// underlying communication channel with the baremetal runtime.
@@ -23,6 +24,9 @@ pub struct Connector {
     request_encoder: RequestEncoder,
 }
 
+type ResponseResult = Result<Vec<u8>, micro_rpc::Status>;
+type ResponseSender = mpsc::UnboundedSender<ResponseResult>;
+
 impl Connector {
     /// Spawn an instance of the [`Connector`] in a seperate task, and return a
     /// cloneable [`ConnectorHandle`] for it.
@@ -30,8 +34,8 @@ impl Connector {
         // A message based communication channel that permits other parts of the
         // untrusted launcher to send requests to the task that handles communicating
         // with the runtime and receive responses.
-        let (request_dispatcher, mut request_receiver) =
-            bmrng::unbounded_channel::<Vec<u8>, Result<Vec<u8>, micro_rpc::Status>>();
+        let (request_sender, mut request_receiver) =
+            mpsc::unbounded_channel::<(Vec<u8>, ResponseSender)>();
 
         // Spawn task to handle communicating with the runtime and receiving responses.
         tokio::spawn(async move {
@@ -39,20 +43,20 @@ impl Connector {
                 inner: ClientChannelHandle::new(inner),
                 request_encoder: RequestEncoder::default(),
             };
-            while let Ok((request, response_dispatcher)) = request_receiver.recv().await {
+            while let Some((request, response_sender)) = request_receiver.recv().await {
                 // At the moment requests are sent sequentially, and in FIFO order. The next
                 // request is sent only once a response to the previous message
                 // has been implemented. TODO(#2848): Implement message
                 // prioritization, and non sequential invocations.
                 let response = connector.invoke(request.as_ref());
-                response_dispatcher.respond(response).unwrap();
+                response_sender.send(response).unwrap();
             }
         });
 
-        ConnectorHandle { request_dispatcher }
+        ConnectorHandle { request_sender }
     }
 
-    fn invoke(&mut self, request: &[u8]) -> Result<Vec<u8>, micro_rpc::Status> {
+    fn invoke(&mut self, request: &[u8]) -> ResponseResult {
         let request_message = self.request_encoder.encode_request(request);
         let request_message_invocation_id = request_message.invocation_id;
         self.inner
@@ -78,18 +82,27 @@ impl Connector {
 /// via an MPSC request-response channel.
 #[derive(Clone)]
 pub struct ConnectorHandle {
-    request_dispatcher:
-        bmrng::unbounded::UnboundedRequestSender<Vec<u8>, Result<Vec<u8>, micro_rpc::Status>>,
+    request_sender: mpsc::UnboundedSender<(Vec<u8>, ResponseSender)>,
 }
 
 #[async_trait::async_trait]
 impl micro_rpc::AsyncTransport for ConnectorHandle {
     type Error = micro_rpc::Status;
     async fn invoke(&mut self, request_bytes: &[u8]) -> Result<Vec<u8>, Self::Error> {
-        self.request_dispatcher.send_receive(request_bytes.to_vec()).await.map_err(|err| {
+        let (response_sender, mut response_receiver) =
+            mpsc::unbounded_channel::<Result<Vec<u8>, micro_rpc::Status>>();
+
+        self.request_sender.send((request_bytes.to_vec(), response_sender)).map_err(|err| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,
-                format!("failed when invoking the request_dispatcher: {}", err),
+                format!("failed to send request: {}", err),
+            )
+        })?;
+
+        response_receiver.recv().await.ok_or_else(|| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::Internal,
+                "failed to receive response from connector".to_string(),
             )
         })?
     }

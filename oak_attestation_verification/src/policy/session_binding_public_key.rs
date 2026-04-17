@@ -26,11 +26,11 @@ use oak_crypto::{
 use oak_proto_rust::{
     certificate::SESSION_BINDING_PUBLIC_KEY_PURPOSE_ID,
     oak::{
+        Variant,
         attestation::v1::{
             EventAttestationResults, SessionBindingPublicKeyData,
             SessionBindingPublicKeyEndorsement,
         },
-        Variant,
     },
 };
 use oak_time::Instant;
@@ -64,13 +64,13 @@ impl SessionBindingPublicKeyVerificationReport {
 
 #[derive(thiserror::Error, Debug)]
 pub enum SessionBindingPublicKeyVerificationError {
-    #[error("Missing field: {0}")]
+    #[error("missing field: {0}")]
     MissingField(&'static str),
-    #[error("Failed to decode proto: {0}")]
+    #[error("could not decode proto: {0}")]
     ProtoDecodeError(#[from] anyhow::Error),
-    #[error("Failed to decode Variant: {0}")]
+    #[error("could not decode variant: {0}")]
     VariantDecodeError(&'static str),
-    #[error("Certificate verification failed: {0}")]
+    #[error("certificate verification failed: {0}")]
     CertificateVerificationError(#[from] CertificateVerificationError),
 }
 
@@ -148,16 +148,19 @@ impl<V: Verifier> Policy<[u8]> for SessionBindingPublicKeyPolicy<V> {
 #[cfg(test)]
 mod tests {
     use alloc::sync::Arc;
-    use core::assert_matches::assert_matches;
 
     use oak_attestation_verification_results::unique_session_binding_public_key;
     use oak_attestation_verification_types::verifier::AttestationVerifier;
     use oak_proto_rust::oak::{
+        Validity,
         attestation::v1::{
             CertificateAuthorityEndorsement, Endorsements, Event, EventLog, Evidence,
         },
-        crypto::v1::{Certificate, CertificatePayload, SignatureInfo, SubjectPublicKeyInfo},
-        Validity,
+        crypto::v1::{
+            Certificate, CertificatePayload,
+            SerializedPayloadType::PayloadTypeSerializedCertificate, SignatureInfo,
+            SubjectPublicKeyInfo,
+        },
     };
     use oak_time::clock::FixedClock;
     use prost::Message;
@@ -228,6 +231,7 @@ mod tests {
         Certificate {
             serialized_payload,
             signature_info: Some(SignatureInfo { signature: signature.to_vec() }),
+            serialized_payload_type: PayloadTypeSerializedCertificate.into(),
         }
     }
 
@@ -387,7 +391,7 @@ mod tests {
 
         let result = policy.report(TEST_TIME, event, endorsement);
 
-        assert_matches!(
+        assert!(matches!(
             result,
             Ok(SessionBindingPublicKeyVerificationReport {
                 endorsement: Ok(CertificateVerificationReport {
@@ -397,7 +401,7 @@ mod tests {
                 }),
                 ..
             })
-        );
+        ));
     }
 
     #[test]
@@ -422,7 +426,10 @@ mod tests {
 
         let result = policy.report(TEST_TIME, &incorrect_event, &endorsement);
 
-        assert_matches!(result, Err(SessionBindingPublicKeyVerificationError::ProtoDecodeError(_)));
+        assert!(matches!(
+            result,
+            Err(SessionBindingPublicKeyVerificationError::ProtoDecodeError(_))
+        ));
     }
 
     #[test]
@@ -440,10 +447,10 @@ mod tests {
 
         let result = policy.report(TEST_TIME, &event, &incorrect_endorsement);
 
-        assert_matches!(
+        assert!(matches!(
             result,
             Err(SessionBindingPublicKeyVerificationError::VariantDecodeError(_))
-        );
+        ));
     }
 
     #[test]
@@ -460,12 +467,12 @@ mod tests {
 
         let result = policy.report(TEST_TIME, &event, &empty_ca_endorsement);
 
-        assert_matches!(
+        assert!(matches!(
             result,
             Err(SessionBindingPublicKeyVerificationError::MissingField(
                 "SessionBindingPublicKeyEndorsement.ca_endorsement"
             ))
-        );
+        ));
     }
 
     #[test]
@@ -480,7 +487,7 @@ mod tests {
 
         let result = policy.report(TEST_TIME, &incorrect_key, &endorsement);
 
-        assert_matches!(
+        assert!(matches!(
             result,
             Ok(SessionBindingPublicKeyVerificationReport {
                 endorsement: Ok(CertificateVerificationReport {
@@ -490,7 +497,7 @@ mod tests {
                 }),
                 ..
             })
-        );
+        ));
     }
 
     #[test]
@@ -505,12 +512,12 @@ mod tests {
 
         let result = policy.report(TEST_TIME, &event_empty_key, &endorsement);
 
-        assert_matches!(
+        assert!(matches!(
             result,
             Err(SessionBindingPublicKeyVerificationError::MissingField(
                 "SessionBindingPublicKeyData.session_binding_public_key"
             ))
-        );
+        ));
     }
 
     #[test]
@@ -526,7 +533,7 @@ mod tests {
 
         let result = policy.report(TEST_TIME, &event, &invalid_signature);
 
-        assert_matches!(
+        assert!(matches!(
             result,
             Ok(SessionBindingPublicKeyVerificationReport {
                 endorsement: Ok(CertificateVerificationReport {
@@ -536,7 +543,7 @@ mod tests {
                 }),
                 ..
             })
-        );
+        ));
     }
 
     #[test]
@@ -558,10 +565,10 @@ mod tests {
 
         // Check that the policy correctly extracts the public key.
         let results = result.unwrap();
-        assert!(results.event_attestation_results.len() == 1);
+        assert_eq!(results.event_attestation_results.len(), 1);
         let extracted_public_key = unique_session_binding_public_key(&results);
         assert!(extracted_public_key.is_ok());
-        assert!(*extracted_public_key.unwrap() == TEST_PUBLIC_KEY);
+        assert_eq!(*extracted_public_key.unwrap(), TEST_PUBLIC_KEY);
     }
 
     #[test]

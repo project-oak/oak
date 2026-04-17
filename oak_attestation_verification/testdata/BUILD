@@ -43,6 +43,10 @@ filegroup(
         # Public key of the Rekor instance hosted by sigstore.dev. It is downloaded
         # from https://rekor.sigstore.dev/api/v1/log/publicKey.
         "rekor_public_key.pem",
+        # RSA signature of the endorsement, signed by the PES.
+        "endorsement_rsa.json.sig",
+        # Public key of the PES.
+        "pes_public_key.pem",
     ],
 )
 

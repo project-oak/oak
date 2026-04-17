@@ -35,12 +35,12 @@ use core::{arch::naked_asm, ffi::c_void, mem::offset_of, ptr::addr_of_mut};
 use oak_channel::Channel;
 use oak_restricted_kernel_interface::{Errno, Syscall};
 use x86_64::{
+    PhysAddr, VirtAddr,
     registers::{
         control::Efer,
         model_specific::{EferFlags, GsBase, KernelGsBase, LStar},
     },
     structures::paging::PhysFrame,
-    PhysAddr, VirtAddr,
 };
 
 use self::{
@@ -150,13 +150,17 @@ impl GsData {
     ///
     /// Safety: this function must only be called once syscalls have been setup.
     pub unsafe fn register_process(process_pml4: PhysFrame) -> anyhow::Result<usize> {
-        let free_pid = GS_DATA.user_pml4s.iter().position(|&frame| frame.start_address().is_null());
+        #[allow(static_mut_refs)]
+        let free_pid =
+            unsafe { GS_DATA.user_pml4s.iter().position(|&frame| frame.start_address().is_null()) };
         match free_pid {
             None => Err(anyhow::Error::msg(
                 "all slots for processes are occupied, no more processes can be registered",
             )),
             Some(pid) => {
-                GS_DATA.user_pml4s[pid] = process_pml4;
+                unsafe {
+                    GS_DATA.user_pml4s[pid] = process_pml4;
+                }
                 Ok(pid)
             }
         }
@@ -166,7 +170,7 @@ impl GsData {
     ///
     /// Safety: this function must only be called once syscalls have been setup.
     pub unsafe fn get_current_pid() -> usize {
-        GS_DATA.current_pid
+        unsafe { GS_DATA.current_pid }
     }
 
     /// Set the current process ID in the GsData instance in the GS register and
@@ -176,19 +180,26 @@ impl GsData {
     /// Changes the root page table, so addresses in userspace will be invalid.
     /// Caller must ensure those side effects are okay.
     pub unsafe fn set_current_pid(pid: usize) -> Result<(), anyhow::Error> {
-        GS_DATA
-            .user_pml4s
-            .get(pid)
-            .ok_or(anyhow::Error::msg("Invalid PID: out of range"))?
-            .start_address()
-            .is_null()
-            .then(|| {
-                Err::<(), anyhow::Error>(anyhow::Error::msg("Invalid PID: not an active process"))
-            })
-            .transpose()?;
+        #[allow(static_mut_refs)]
+        unsafe {
+            GS_DATA
+                .user_pml4s
+                .get(pid)
+                .ok_or(anyhow::Error::msg("Invalid PID: out of range"))?
+                .start_address()
+                .is_null()
+                .then(|| {
+                    Err::<(), anyhow::Error>(anyhow::Error::msg(
+                        "Invalid PID: not an active process",
+                    ))
+                })
+                .transpose()?;
+        }
         // Safety: the new page table maintains the same mappings for kernel space.
-        crate::PAGE_TABLES.lock().replace(GS_DATA.user_pml4s[pid]);
-        GS_DATA.current_pid = pid;
+        unsafe {
+            crate::PAGE_TABLES.lock().replace(GS_DATA.user_pml4s[pid]);
+            GS_DATA.current_pid = pid;
+        }
         Ok(())
     }
 }

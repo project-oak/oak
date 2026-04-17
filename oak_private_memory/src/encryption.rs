@@ -14,10 +14,10 @@
 // limitations under the License.
 
 use aes_gcm_siv::{
-    aead::{Aead, AeadCore, KeyInit, OsRng},
     Aes256GcmSiv, Key, Nonce,
+    aead::{Aead, AeadCore, KeyInit, OsRng},
 };
-use anyhow::{anyhow, Error};
+use anyhow::{Error, anyhow};
 
 pub fn generate_nonce() -> Vec<u8> {
     Aes256GcmSiv::generate_nonce(&mut OsRng).to_vec()

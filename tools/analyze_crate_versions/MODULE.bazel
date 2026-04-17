@@ -1,0 +1,64 @@
+module(name = "analyze_crate_versions")
+
+bazel_dep(name = "rules_rust", version = "0.68.1")
+bazel_dep(name = "platforms", version = "1.0.0")
+
+# Rust toolchain — use a recent stable toolchain for dev tools.
+rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
+rust.toolchain(edition = "2021")
+use_repo(rust, "rust_toolchains")
+
+register_toolchains("@rust_toolchains//:all")
+
+# Crate dependencies — managed via crate.spec().
+crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
+crate.spec(
+    package = "anyhow",
+    version = "1.0",
+)
+crate.spec(
+    features = ["derive"],
+    package = "clap",
+    version = "4.4",
+)
+crate.spec(
+    package = "colored",
+    version = "2.1",
+)
+crate.spec(
+    package = "regex",
+    version = "1.10",
+)
+crate.spec(
+    package = "semver",
+    version = "1.0",
+)
+crate.spec(
+    features = ["derive"],
+    package = "serde",
+    version = "1.0",
+)
+crate.spec(
+    package = "serde_json",
+    version = "1.0",
+)
+crate.spec(
+    package = "tree-sitter",
+    version = "0.20",
+)
+crate.spec(
+    package = "tree-sitter-python",
+    version = "0.20",
+)
+crate.spec(
+    package = "chrono",
+    version = "0.4",
+)
+crate.spec(
+    package = "ureq",
+    version = "2.9",
+)
+crate.from_specs(
+    name = "crates",
+)
+use_repo(crate, "crates")

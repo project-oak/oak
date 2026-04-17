@@ -20,16 +20,16 @@ use std::{
 
 use anyhow::Context;
 use oak_grpc::oak::containers::v1::orchestrator_crypto_client::OrchestratorCryptoClient;
-use oak_proto_rust::oak::containers::v1::{KeyOrigin, SignRequest};
-use oak_sdk_containers::{default_orchestrator_channel, OrchestratorClient};
-use p256::ecdsa::{signature::SignatureEncoding, Signature};
-use rand::{rngs::StdRng, CryptoRng, RngCore, SeedableRng};
+use oak_proto_rust::oak::containers::v1::SignRequest;
+use oak_sdk_containers::{OrchestratorClient, default_orchestrator_channel};
+use p256::ecdsa::{Signature, signature::SignatureEncoding};
+use rand::{CryptoRng, RngCore, SeedableRng, rngs::StdRng};
 use sha2::{Digest, Sha256};
 use tokio::{net::TcpListener, sync::Mutex};
-use tonic::{transport::Server, Request, Response, Status};
+use tonic::{Request, Response, Status, transport::Server};
 use tonic_service::oak::ctf_sha2::enclave::{
-    flag_digest_service_server::{FlagDigestService, FlagDigestServiceServer},
     GenerateFlagDigestRequest, GenerateFlagDigestResponse,
+    flag_digest_service_server::{FlagDigestService, FlagDigestServiceServer},
 };
 
 const ENCLAVE_APP_PORT: u16 = 8080;
@@ -77,7 +77,7 @@ impl FlagDigestService for FlagDigestServiceImpl {
     ) -> Result<Response<GenerateFlagDigestResponse>, Status> {
         // Generate a secret flag.
         let flag_digest = {
-            let flag = generate_flag(&mut StdRng::from_entropy());
+            let flag = generate_flag(&mut StdRng::from_os_rng());
             let mut hasher = Sha256::new();
             hasher.update(flag);
             hasher.finalize().to_vec()
@@ -85,10 +85,7 @@ impl FlagDigestService for FlagDigestServiceImpl {
 
         // Sign the flag digest.
         let signature = {
-            let sign_req = SignRequest {
-                key_origin: KeyOrigin::Instance as i32,
-                message: flag_digest.clone(),
-            };
+            let sign_req = SignRequest { message: flag_digest.clone() };
             let sign_response = self
                 .crypto_client
                 .clone()

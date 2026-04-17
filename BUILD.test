@@ -1,0 +1,9 @@
+package(
+    default_visibility = ["//visibility:public"],
+    licenses = ["notice"],
+)
+
+sh_binary(
+    name = "dummy",
+    srcs = ["dummy.sh"],
+)

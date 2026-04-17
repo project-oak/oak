@@ -28,7 +28,7 @@ use std::{
     task::Poll,
 };
 
-use command_group::stdlib::CommandGroup;
+use http::uri::Uri;
 use oak_client::verifier::InsecureAttestationVerifier;
 use oak_file_utils::data_path;
 use oak_functions_abi::Response;
@@ -167,17 +167,15 @@ macro_rules! arg {
 pub fn run_oak_functions_containers_example_in_background(
     wasm_path: impl AsRef<Path>,
     lookup_data_path: impl AsRef<Path>,
-    communication_channel: impl AsRef<OsStr>,
-) -> (BackgroundHandle, u16) {
+    communication_channel: &str,
+    uri: Uri,
+) -> BackgroundHandle {
     eprintln!("using Wasm module {:?}", wasm_path.as_ref());
-
-    let port = portpicker::pick_unused_port().expect("failed to pick a port");
-    eprintln!("using port {}", port);
 
     let wasm_path = data_path(wasm_path);
     let launch_bin =
         data_path("oak_functions_containers_launcher/oak_functions_containers_launcher");
-    let qemu = which::which("qemu-system-x86_64").unwrap();
+    let qemu = which::which("qemu-system-x86_64").expect("QEMU binary not found");
     let stage0_bin = data_path("stage0_bin/stage0_bin");
     let kernel = data_path("oak_containers/kernel/bzImage");
     let initrd = data_path("oak_containers/stage1_bin/stage1.cpio");
@@ -188,34 +186,120 @@ pub fn run_oak_functions_containers_example_in_background(
     let memory_size = "2G";
     let virtio_guest_cid = nix::unistd::gettid();
 
-    let child = std::process::Command::new(launch_bin)
-        .args(vec![
-            arg!("--vmm-binary=", qemu),
-            arg!("--stage0-binary=", stage0_bin),
-            arg!("--kernel=", kernel),
-            arg!("--initrd=", initrd),
-            arg!("--system-image=", system_image),
-            arg!("--container-bundle=", container_bundle),
-            arg!("--ramdrive-size=", ramdrive_size.to_string()),
-            arg!("--memory-size=", memory_size),
-            arg!("--wasm=", wasm_path),
-            arg!("--port=", port.to_string()),
-            arg!("--lookup-data=", lookup_data_path),
-            arg!("--virtio-guest-cid=", virtio_guest_cid.to_string()),
-            arg!("--communication-channel=", communication_channel),
-        ])
-        .group_spawn()
-        .expect("didn't start oak functions containers launcher");
+    let mut args: Vec<OsString> = vec![
+        "--map-root-user".into(), // run as root in the namespace so we can create TAP device
+    ];
+    let mut commands: Vec<OsString> = vec![];
 
-    (BackgroundHandle(child), port)
+    if communication_channel.starts_with("tap") {
+        // TAP network gets a network namespace, so that we could have a `oak0`
+        // interface.
+        args.push("--net".into()); // create a new network namespace
+        commands.push("ip link set lo up".into());
+        commands.push("ip tuntap add dev oak0 mode tap".into());
+        commands.push("ip addr flush dev oak0".into());
+
+        if communication_channel == "tap" {
+            commands.push("ip addr add 10.0.2.100/24 dev oak0".into());
+        } else {
+            commands.push("ip addr add fdd2:a994:f3c5:1:10:0:2:64/64 dev oak0 nodad".into());
+        }
+        commands.push("ip link set dev oak0 up".into());
+    }
+    if communication_channel == "virtio-vsock" {
+        // virtio-vsock: you only get a loopback interface. Ideally, not even that.
+        args.push("--net".into());
+        commands.push("ip link set lo up".into());
+    }
+
+    // This is a rather inconvenient way of doing it, but `write!` and `format!`
+    // don't know how to deal with OsString-s.
+    let mut cmd: OsString = OsString::new();
+    cmd.push(launch_bin);
+    cmd.push(" --vmm-binary=");
+    cmd.push(qemu);
+    cmd.push(" --stage0-binary=");
+    cmd.push(stage0_bin);
+    cmd.push(" --kernel=");
+    cmd.push(kernel);
+    cmd.push(" --initrd=");
+    cmd.push(initrd);
+    cmd.push(" --system-image=");
+    cmd.push(system_image);
+    cmd.push(" --container-bundle=");
+    cmd.push(container_bundle);
+    cmd.push(format!(" --ramdrive-size={ramdrive_size}"));
+    cmd.push(format!(" --memory-size={memory_size}"));
+    cmd.push(" --wasm=");
+    cmd.push(wasm_path);
+    cmd.push(format!(" --port={uri}"));
+    cmd.push(" --lookup-data=");
+    cmd.push(lookup_data_path);
+    cmd.push(format!(" --virtio-guest-cid={virtio_guest_cid}"));
+    cmd.push(format!(" --communication-channel={communication_channel}"));
+    commands.push(cmd);
+    let commands = commands.join(OsStr::new(";"));
+
+    args.push("bash".into());
+    args.push("-c".into());
+    args.push(commands);
+
+    let mut cmd = tokio::process::Command::new(
+        which::which("unshare").expect("could not find `unshare` binary"),
+    );
+    cmd.args(args);
+    cmd.process_group(0);
+    cmd.kill_on_drop(true);
+    BackgroundHandle::spawn(cmd, "oak functions containers launcher")
 }
 
-/// A wrapper around a child process that kills it when its dropped.
-pub struct BackgroundHandle(pub command_group::GroupChild);
+/// A wrapper around a child process that kills it (and its entire process
+/// group) when dropped.
+///
+/// Uses [`tokio::process::Command`] internally so that the child's exit status
+/// can be awaited asynchronously via [`wait`](Self::wait).
+///
+/// # Example
+///
+/// Use [`wait`](Self::wait) in a `tokio::select!` to detect early exits:
+/// ```ignore
+/// let mut bg = run_oak_functions_containers_example_in_background(...);
+/// tokio::select! {
+///     status = bg.wait() => panic!("exited unexpectedly: {status:?}"),
+///     result = some_async_operation() => result,
+/// }
+/// ```
+pub struct BackgroundHandle {
+    /// The child process.
+    child: tokio::process::Child,
+    /// Process group leader PID, used to kill the entire group on drop.
+    pgid: nix::unistd::Pid,
+}
+
+impl BackgroundHandle {
+    /// Spawns the command, creating a new process group.
+    ///
+    /// The caller must have called `cmd.process_group(0)` and
+    /// `cmd.kill_on_drop(true)` before passing `cmd` here.
+    fn spawn(mut cmd: tokio::process::Command, name: &str) -> Self {
+        let child = cmd.spawn().unwrap_or_else(|e| panic!("didn't start {name}: {e}"));
+        let pid = child.id().expect("failed to get child PID");
+        let pgid = nix::unistd::Pid::from_raw(pid as i32);
+        Self { child, pgid }
+    }
+
+    /// Waits for the child process to exit.
+    ///
+    /// This is an async method designed for use with `tokio::select!` to race
+    /// the child's exit against other async operations.
+    pub async fn wait(&mut self) -> std::io::Result<std::process::ExitStatus> {
+        self.child.wait().await
+    }
+}
 
 impl std::ops::Drop for BackgroundHandle {
     fn drop(&mut self) {
-        self.0.kill().expect("Couldn't kill command group")
+        let _ = nix::sys::signal::killpg(self.pgid, nix::sys::signal::Signal::SIGKILL);
     }
 }
 
@@ -224,7 +308,7 @@ impl std::ops::Drop for BackgroundHandle {
 pub fn run_oak_functions_example_in_background(
     wasm_path: &str,
     lookup_data_path: &str,
-) -> (BackgroundHandle, u16) {
+) -> (BackgroundHandle, Uri) {
     eprintln!("using Wasm module {}", wasm_path);
 
     let port = portpicker::pick_unused_port().expect("failed to pick a port");
@@ -235,39 +319,28 @@ pub fn run_oak_functions_example_in_background(
         "oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin",
     );
 
-    let child =
-        std::process::Command::new(data_path("oak_functions_launcher/oak_functions_launcher"))
-            .args(vec![
-                arg!("--bios-binary=", stage0_bin),
-                arg!("--kernel=", kernel),
-                arg!(
-                    "--vmm-binary=",
-                    which::which("qemu-system-x86_64").unwrap().to_str().unwrap()
-                ),
-                arg!(
-                    "--app-binary=",
-                    data_path("enclave_apps/oak_functions_enclave_app/oak_functions_enclave_app")
-                ),
-                arg!("--initrd=", data_path("enclave_apps/oak_orchestrator/oak_orchestrator")),
-                arg!("--wasm=", wasm_path),
-                arg!("--lookup-data=", lookup_data_path),
-                arg!("--port=", port.to_string()),
-                arg!("--memory-size=", "256M"),
-            ])
-            .stdout(Stdio::piped())
-            .group_spawn()
-            .expect("didn't start oak functions launcher");
+    let mut cmd =
+        tokio::process::Command::new(data_path("oak_functions_launcher/oak_functions_launcher"));
+    cmd.args(vec![
+        arg!("--bios-binary=", stage0_bin),
+        arg!("--kernel=", kernel),
+        arg!("--vmm-binary=", which::which("qemu-system-x86_64").unwrap().to_str().unwrap()),
+        arg!(
+            "--app-binary=",
+            data_path("enclave_apps/oak_functions_enclave_app/oak_functions_enclave_app")
+        ),
+        arg!("--initrd=", data_path("enclave_apps/oak_orchestrator/oak_orchestrator")),
+        arg!("--wasm=", wasm_path),
+        arg!("--lookup-data=", lookup_data_path),
+        arg!("--port=", port.to_string()),
+        arg!("--memory-size=", "256M"),
+    ]);
+    cmd.stdout(Stdio::piped());
+    cmd.process_group(0);
+    cmd.kill_on_drop(true);
 
-    (BackgroundHandle(child), port)
-}
-
-pub fn run_java_client(addr: &str) -> std::io::Result<std::process::Output> {
-    std::process::Command::new(
-        PathBuf::from("java/src/main/java/com/google/oak/client/oak_functions_client")
-            .join("oak_functions_client"),
-    )
-    .arg(addr)
-    .output()
+    let bg = BackgroundHandle::spawn(cmd, "oak functions launcher");
+    (bg, format!("http://localhost:{port}").try_into().unwrap())
 }
 
 pub fn run_cc_client(addr: &str, request: &str) -> std::io::Result<std::process::Output> {
@@ -287,17 +360,14 @@ pub fn skip_test() -> bool {
 ///
 /// It will give up completely after `connection_timeout`
 pub async fn create_client(
-    port: u16,
+    uri: Uri,
     connection_timeout: std::time::Duration,
 ) -> OakFunctionsClient {
     let interval = std::time::Duration::from_secs(5);
     let attempts = connection_timeout.div_duration_f32(interval) as u32;
     for _ in 1..attempts {
-        let client_result = OakFunctionsClient::new(
-            &format!("http://localhost:{port}"),
-            &InsecureAttestationVerifier {},
-        )
-        .await;
+        let client_result =
+            OakFunctionsClient::new(uri.clone(), &InsecureAttestationVerifier {}).await;
 
         match client_result {
             Ok(client) => return client,

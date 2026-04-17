@@ -34,6 +34,7 @@ rust_library(
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:tonic",
+        "@oak_crates_index//:tonic-prost",
     ],
 )
 
@@ -54,12 +55,10 @@ cargo_build_script(
         "//proto/attestation:endorsement.proto",
         "//proto/attestation:eventlog.proto",
         "//proto/attestation:evidence.proto",
-        "//proto/containers:hostlib_key_provisioning.proto",
         "//proto/containers:interfaces.proto",
         "//proto/containers:orchestrator_crypto.proto",
         "//proto/crypto:certificate.proto",
         "//proto/crypto:crypto.proto",
-        "//proto/key_provisioning:key_provisioning.proto",
         "//proto/micro_rpc:options.proto",
         "//proto/oak_debug/service:oak_debug.proto",
         "//proto/oak_functions/service:oak_functions.proto",

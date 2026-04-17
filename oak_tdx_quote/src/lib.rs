@@ -38,7 +38,7 @@ use nom::{
     error::ErrorKind,
     number::complete::{le_u16, le_u32, le_u64},
 };
-use strum_macros::FromRepr;
+use strum::FromRepr;
 use thiserror::Error;
 
 const QUOTE_HEADER_SIZE: usize = 48;

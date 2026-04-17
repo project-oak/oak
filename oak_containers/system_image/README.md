@@ -14,11 +14,12 @@ every run, since it changes very infrequently.
 
 For more information on updating the base image, see `base/README.md`.
 
-## Sysroot
+# Sysroot
 
-We use this to get a full, consistent set of libraries, tools and compilers, and
-extract them to make a sysroot that's used by our CC toolchain. This image is
-not used to run anything at the moment.
+The sysroot provides the libraries and headers used by our CC toolchain. It is
+built using `rules_distroless` to ensure reproducibility.
+
+For more details, see [oak_containers/sysroot](../sysroot/README.md).
 
 # Current Issues/Improvements
 

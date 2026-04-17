@@ -17,7 +17,7 @@
 use std::path::PathBuf;
 
 use anyhow::Context;
-use goblin::elf::{program_header::PT_LOAD, Elf};
+use goblin::elf::{Elf, program_header::PT_LOAD};
 use log::{debug, info};
 use sha2::{Digest, Sha256};
 use x86_64::PhysAddr;

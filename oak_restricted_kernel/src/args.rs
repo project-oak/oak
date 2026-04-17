@@ -38,7 +38,10 @@ impl Args {
         // Safety: `Args::args()` can only be called after `init_args` is called.
         // Ostensibly, we could cache this in a Lazy as well, but that's
         // probably not worth it.
-        unsafe { ARGS.as_str() }
+        #[allow(static_mut_refs)]
+        unsafe {
+            ARGS.as_str()
+        }
     }
 
     // Returns the value of the given command line argument.
@@ -59,9 +62,11 @@ pub fn init_args(args: &CStr) -> core::result::Result<Args, &str> {
         .map_err(|core::str::Utf8Error { .. }| "kernel arguments are not valid UTF-8")?;
     // Safety: this is called once early in the initialization process from a single
     // thread, so there will not be any concurrent writes.
+    #[allow(static_mut_refs)]
     unsafe { ARGS.try_push_str(args) }
         .map_err(|arrayvec::CapacityError { .. }| "kernel arguments too long")?;
     // Safety: we've just populated ARGS, successfully, in the line just above.
+    #[allow(static_mut_refs)]
     Ok(Args { args: LazyCell::new(|| split_args(unsafe { ARGS.as_str() })) })
 }
 

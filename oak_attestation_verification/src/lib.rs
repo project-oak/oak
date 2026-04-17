@@ -15,8 +15,6 @@
 //
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![feature(assert_matches)]
-#![feature(let_chains)]
 
 extern crate alloc;
 
@@ -65,9 +63,9 @@ pub use policy::{
 pub use rekor::log_entry::verify_rekor_log_entry; // Exported utility function.
 pub use util::decode_event_proto;
 pub use verifiers::{
+    AmdSevSnpDiceAttestationVerifier, AmdSevSnpTransparentDiceAttestationVerifier,
+    EventLogVerifier, InsecureAttestationVerifier, IntelTdxAttestationVerifier,
     create_amd_verifier, create_insecure_verifier, create_intel_tdx_verifier,
-    AmdSevSnpDiceAttestationVerifier, EventLogVerifier, InsecureAttestationVerifier,
-    IntelTdxAttestationVerifier,
 };
 
 /// Verifies a signed endorsement against a reference value.

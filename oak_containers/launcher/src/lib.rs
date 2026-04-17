@@ -12,23 +12,20 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-#![feature(let_chains)]
+//
 
 mod qemu;
 mod server;
 
 use std::{
     fmt::Display,
-    net::{IpAddr, Ipv4Addr, SocketAddr},
+    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
 };
 
 use anyhow::Context;
 use clap::{Parser, ValueEnum};
-use oak_grpc::oak::key_provisioning::v1::key_provisioning_client::KeyProvisioningClient;
 use oak_proto_rust::oak::{
-    attestation::v1::{endorsements, Endorsements, Evidence, OakContainersEndorsements},
-    key_provisioning::v1::{GetGroupKeysRequest, GetGroupKeysResponse},
+    attestation::v1::{Endorsements, Evidence, OakContainersEndorsements, endorsements},
     session::v1::EndorsedEvidence,
 };
 pub use qemu::{Params as QemuParams, VmType as QemuVmType};
@@ -36,19 +33,35 @@ use tokio::{
     net::TcpListener,
     sync::{oneshot, watch},
     task::JoinHandle,
-    time::{timeout, Duration},
+    time::{Duration, timeout},
 };
-use tokio_vsock::{VsockAddr, VsockListener, VMADDR_CID_HOST};
-use tonic::transport::Channel as TonicChannel;
+use tokio_vsock::{VMADDR_CID_HOST, VsockAddr, VsockListener};
+
+/// IP address for the host on the virtual network.
+const VM_HOST_ADDRESS: IpAddr = IpAddr::V4(Ipv4Addr::new(10, 0, 2, 100));
+
+/// IPv6 address for the host on the virtual network.
+// We use a Unique Local Address from the fd00::/8 block, with a random global
+// id.
+//
+// Global id = d2:a994:f3c5, subnet = 0001, interface id = 10:0:2:64
+// (so that the addresses match the IPv4 ones for ease of understanding)
+#[allow(unused)]
+const VM_HOST_ADDRESS_6: IpAddr =
+    IpAddr::V6(Ipv6Addr::new(0xFDD2, 0xA994, 0xF3C5, 0x0001, 0x0010, 0x0000, 0x0002, 0x00064));
+
+/// Port where the launcher will listen on the virtual network.
+const VM_HOST_PORT: u16 = 8080;
 
 /// The local IP address assigned to the VM guest.
 const VM_LOCAL_ADDRESS: IpAddr = IpAddr::V4(Ipv4Addr::new(10, 0, 2, 15));
 
+/// The local IPv6 address assigned to the VM guest.
+const VM_LOCAL_ADDRESS_6: IpAddr =
+    IpAddr::V6(Ipv6Addr::new(0xFDD2, 0xA994, 0xF3C5, 0x0001, 0x0010, 0x0000, 0x0002, 0x00015));
+
 /// The local port that the VM guest should be listening on.
 const VM_LOCAL_PORT: u16 = 8080;
-
-/// The local port that the Orchestrator should be listening on.
-const VM_ORCHESTRATOR_LOCAL_PORT: u16 = 4000;
 
 /// The local address that will be forwarded by the VMM to the guest's IP
 /// adress.
@@ -63,6 +76,14 @@ pub enum ChannelType {
     #[default]
     Network,
 
+    /// Use TUN/TAP networking with IPv4; assumes there is a `oak0` TAP device
+    /// configured.
+    Tap,
+
+    /// Use TUN/TAP networking with IPv6; assumes there is a `oak0` TAP device
+    /// configured.
+    TapV6,
+
     // Use virtio-vsock.
     VirtioVsock,
 }
@@ -76,6 +97,11 @@ pub struct Args {
     pub container_bundle: std::path::PathBuf,
     #[clap(skip)]
     pub application_config: Vec<u8>,
+
+    /// Extra ports to forward from the guest to the host.
+    #[arg(long, value_delimiter = ',')]
+    pub extra_guest_to_host_ports: Vec<u16>,
+
     #[command(flatten)]
     pub qemu_params: qemu::Params,
 
@@ -96,6 +122,7 @@ pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
 #[derive(Clone)]
 pub enum Channel {
     Network { host_proxy_port: u16, trusted_app_address: Option<SocketAddr> },
+    Tap { host_address: IpAddr, guest_address: IpAddr },
     VirtioVsock { trusted_app_address: Option<VsockAddr> },
 }
 
@@ -113,6 +140,9 @@ impl TryFrom<Channel> for TrustedApplicationAddress {
             Channel::Network { host_proxy_port: _, trusted_app_address } => {
                 trusted_app_address.map(TrustedApplicationAddress::Network)
             }
+            Channel::Tap { guest_address, .. } => Some(TrustedApplicationAddress::Network(
+                SocketAddr::new(guest_address, VM_LOCAL_PORT),
+            )),
             Channel::VirtioVsock { trusted_app_address } => {
                 trusted_app_address.map(TrustedApplicationAddress::VirtioVsock)
             }
@@ -133,28 +163,46 @@ impl Display for TrustedApplicationAddress {
 pub struct Launcher {
     vmm: qemu::Qemu,
     server: JoinHandle<Result<(), anyhow::Error>>,
-    host_orchestrator_proxy_port: u16,
     // Endorsed Attestation Evidence consists of Attestation Evidence (initialized by the
     // Orchestrator) and Attestation Endorsement (initialized by the Launcher).
     endorsed_evidence: Option<EndorsedEvidence>,
     // Receiver that is used to get the Attestation Evidence from the server implementation.
     evidence_receiver: Option<oneshot::Receiver<Evidence>>,
     app_ready_notifier: Option<oneshot::Receiver<()>>,
-    orchestrator_key_provisioning_client: Option<KeyProvisioningClient<TonicChannel>>,
     trusted_app_channel: Channel,
     shutdown: Option<watch::Sender<()>>,
 }
 
 impl Launcher {
     pub async fn create(args: Args) -> Result<Self, anyhow::Error> {
+        if !args.extra_guest_to_host_ports.is_empty()
+            && args.communication_channel != ChannelType::Network
+        {
+            anyhow::bail!(
+                "extra_guest_to_host_ports is only supported for the Network communication channel"
+            );
+        }
         // Let the OS assign an open port for the launcher service.
-        let sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
-        let orchestrator_sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
-        let listener = TcpListener::bind(sockaddr).await?;
-        let port = listener.local_addr()?.port();
+        let sockaddr = match args.communication_channel {
+            ChannelType::Network | ChannelType::VirtioVsock => {
+                SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0)
+            }
+            ChannelType::Tap => SocketAddr::new(VM_HOST_ADDRESS, VM_HOST_PORT),
+            ChannelType::TapV6 => SocketAddr::new(VM_HOST_ADDRESS_6, VM_HOST_PORT),
+        };
+
+        let listener = TcpListener::bind(sockaddr)
+            .await
+            .with_context(|| format!("failed to bind to address {sockaddr}"))?;
+        let port = listener.local_addr().context("failed to get local port")?.port();
+
         // Reuse the same port we got for the TCP socket for vsock.
-        let vsock_listener = VsockListener::bind(VsockAddr::new(VMADDR_CID_HOST, port.into()))
-            .expect("Bind failed. Check if kernel mod vhost_vsock is loaded. Try running `sudo modprobe vhost_vsock` to load it.");
+        let vsock_listener = if args.communication_channel == ChannelType::VirtioVsock {
+            Some(VsockListener::bind(VsockAddr::new(VMADDR_CID_HOST, port.into()))
+            .expect("Bind failed. Check if kernel mod vhost_vsock is loaded. Try running `sudo modprobe vhost_vsock` to load it."))
+        } else {
+            None
+        };
         log::info!("Launcher service listening on port {port}");
         let (evidence_sender, evidence_receiver) = oneshot::channel::<Evidence>();
         let (shutdown_sender, mut shutdown_receiver) = watch::channel::<()>(());
@@ -184,34 +232,41 @@ impl Launcher {
                 let host_proxy_port = TcpListener::bind(sockaddr).await?.local_addr()?.port();
                 Channel::Network { host_proxy_port, trusted_app_address: None }
             }
+            ChannelType::Tap => {
+                Channel::Tap { host_address: VM_HOST_ADDRESS, guest_address: VM_LOCAL_ADDRESS }
+            }
+            ChannelType::TapV6 => {
+                Channel::Tap { host_address: VM_HOST_ADDRESS_6, guest_address: VM_LOCAL_ADDRESS_6 }
+            }
             ChannelType::VirtioVsock => Channel::VirtioVsock { trusted_app_address: None },
         };
 
-        let host_orchestrator_proxy_port =
-            { TcpListener::bind(orchestrator_sockaddr).await?.local_addr()?.port() };
         let vmm = qemu::Qemu::start(
             args.qemu_params,
-            port,
             match trusted_app_channel {
                 Channel::Network { host_proxy_port, trusted_app_address: _ } => {
-                    Some(host_proxy_port)
+                    qemu::Network::Proxy {
+                        launcher_service_port: port,
+                        host_proxy_port: Some(host_proxy_port),
+                        extra_guest_to_host_ports: args.extra_guest_to_host_ports,
+                    }
                 }
-                Channel::VirtioVsock { trusted_app_address: _ } => None,
+                Channel::Tap { host_address, guest_address } => {
+                    qemu::Network::Tap { host_address, guest_address }
+                }
+                Channel::VirtioVsock { .. } => qemu::Network::None { launcher_service_port: port },
             },
-            host_orchestrator_proxy_port,
         )?;
 
         Ok(Self {
             vmm,
             server,
-            host_orchestrator_proxy_port,
             // Attestation Evidence will be sent by the Orchestrator once generated.
             // And after the Evidence is received it will be endorsed by the Launcher (it will
             // provide corresponding hardware manufacturer's certificates).
             endorsed_evidence: None,
             evidence_receiver: Some(evidence_receiver),
             app_ready_notifier: Some(app_notifier_receiver),
-            orchestrator_key_provisioning_client: None,
             trusted_app_channel,
             shutdown: Some(shutdown_sender),
         })
@@ -238,6 +293,7 @@ impl Launcher {
                     trusted_app_address
                         .replace(SocketAddr::new(IpAddr::V4(PROXY_ADDRESS), *host_proxy_port));
                 }
+                Channel::Tap { .. } => {}
                 Channel::VirtioVsock { trusted_app_address } => {
                     trusted_app_address.replace(VsockAddr::new(
                         self.vmm.guest_cid().expect("VMM does not have a guest CID"),
@@ -273,36 +329,6 @@ impl Launcher {
             .ok_or_else(|| anyhow::anyhow!("endorsed evidence is not set"))
     }
 
-    // Gets enclave group keys as part of Key Provisioning.
-    pub async fn get_group_keys(
-        &mut self,
-        request: GetGroupKeysRequest,
-    ) -> anyhow::Result<GetGroupKeysResponse> {
-        if self.orchestrator_key_provisioning_client.is_none() {
-            // Create Orchestrator Key Provisioning gRPC client.
-            let orchestrator_uri =
-                format!("http://127.0.0.1:{}", self.host_orchestrator_proxy_port)
-                    .parse()
-                    .context("couldn't parse orchestrator URI")?;
-            let orchestrator_channel = TonicChannel::builder(orchestrator_uri)
-                .connect()
-                .await
-                .context("couldn't connect to orchestrator")?;
-            self.orchestrator_key_provisioning_client =
-                Some(KeyProvisioningClient::new(orchestrator_channel));
-        }
-
-        let get_group_keys_response = self
-            .orchestrator_key_provisioning_client
-            .clone()
-            .context("couldn't get orchestrator key provisioning client")?
-            .get_group_keys(request)
-            .await
-            .context("couldn't get group keys")?
-            .into_inner();
-        Ok(get_group_keys_response)
-    }
-
     pub async fn wait(&mut self) -> Result<(), anyhow::Error> {
         self.vmm.wait().await?;
         Ok(())
@@ -314,6 +340,10 @@ impl Launcher {
         }
         let _ = self.vmm.kill().await;
         self.server.abort();
+    }
+
+    pub fn subscribe_exit(&self) -> watch::Receiver<Option<std::process::ExitStatus>> {
+        self.vmm.subscribe_exit()
     }
 }
 

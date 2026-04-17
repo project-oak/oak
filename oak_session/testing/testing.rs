@@ -18,7 +18,7 @@ use std::{
     vec::Vec,
 };
 
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use googletest::prelude::*;
 use mockall::mock;
 use oak_attestation_types::{
@@ -33,14 +33,15 @@ use oak_attestation_verification_types::{
 use oak_crypto::verifier::Verifier;
 use oak_proto_rust::oak::{
     attestation::v1::{
-        attestation_results::Status, Assertion, AttestationResults, Endorsements, Evidence,
+        Assertion, AttestationResults, Endorsements, Evidence, attestation_results::Status,
     },
     session::v1::{
-        session_request::Request, session_response::Response, PlaintextMessage, SessionBinding,
-        SessionRequest, SessionResponse,
+        PlaintextMessage, SessionBinding, SessionRequest, SessionResponse,
+        session_request::Request, session_response::Response,
     },
 };
 use oak_session::{
+    ClientSession, ProtocolEngine, ServerSession,
     attestation::AttestationType,
     config::SessionConfig,
     generator::{
@@ -55,9 +56,8 @@ use oak_session::{
         BoundAssertionVerificationError, BoundAssertionVerifier, SessionKeyBoundAssertionVerifier,
         VerifiedBoundAssertion,
     },
-    ClientSession, ProtocolEngine, ServerSession,
 };
-use oak_time::{clock::FixedClock, make_instant, Instant};
+use oak_time::{Instant, clock::FixedClock, make_instant};
 use p256::ecdsa::SigningKey;
 use rand_core::OsRng;
 
@@ -93,17 +93,17 @@ pub fn test_unattested_nn_encryption_and_decryption_inner(message: Vec<u8>) -> a
     // Test client to server communication.
     client_session.write(PlaintextMessage { plaintext: message.clone() })?;
     let encrypted_request =
-        client_session.get_outgoing_message()?.context("No outgoing message")?;
+        client_session.get_outgoing_message()?.context("getting outgoing message")?;
     server_session.put_incoming_message(encrypted_request)?;
-    let decrypted_request = server_session.read()?.context("No incoming message")?;
+    let decrypted_request = server_session.read()?.context("getting incoming message")?;
     assert_eq!(decrypted_request.plaintext, message);
 
     // Test server to client communication.
     server_session.write(PlaintextMessage { plaintext: message.clone() })?;
     let encrypted_response =
-        server_session.get_outgoing_message()?.context("No outgoing message")?;
+        server_session.get_outgoing_message()?.context("getting outgoing message")?;
     client_session.put_incoming_message(encrypted_response)?;
-    let decrypted_response = client_session.read()?.context("No incoming message")?;
+    let decrypted_response = client_session.read()?.context("getting incoming message")?;
     assert_eq!(decrypted_response.plaintext, message);
 
     Ok(())
@@ -156,8 +156,8 @@ pub fn do_attest(
 ) -> anyhow::Result<()> {
     let attest_request = client_session
         .get_outgoing_message()
-        .context("An error occurred while getting the client outgoing message")?
-        .context("No client outgoing message was produced")?;
+        .context("getting client outgoing message")?
+        .context("no client outgoing message was produced")?;
     assert_that!(
         attest_request,
         matches_pattern!(SessionRequest {
@@ -169,8 +169,8 @@ pub fn do_attest(
 
     let attest_response = server_session
         .get_outgoing_message()
-        .context("An error occurred while getting the server outgoing message")?
-        .context("No server outgoing message was produced")?;
+        .context("getting server outgoing message")?
+        .context("no server outgoing message was produced")?;
     assert_that!(
         attest_response,
         matches_pattern!(SessionResponse {
@@ -189,8 +189,8 @@ pub fn do_handshake(
 ) -> anyhow::Result<()> {
     let handshake_request = client_session
         .get_outgoing_message()
-        .context("An error occurred while getting the client outgoing message")?
-        .context("No client outgoing message was produced")?;
+        .context("getting client outgoing message")?
+        .context("no client outgoing message was produced")?;
     assert_that!(
         handshake_request,
         matches_pattern!(SessionRequest {
@@ -201,8 +201,8 @@ pub fn do_handshake(
     server_session.put_incoming_message(handshake_request)?;
     let handshake_response = server_session
         .get_outgoing_message()
-        .context("An error occurred while getting the server outgoing message")?
-        .context("No server outgoing message was produced")?;
+        .context("getting server outgoing message")?
+        .context("no server outgoing message was produced")?;
     assert_that!(
         handshake_response,
         matches_pattern!(SessionResponse {
@@ -215,8 +215,8 @@ pub fn do_handshake(
     if handshake_followup == HandshakeFollowup::Expected {
         let handshake_followup = client_session
             .get_outgoing_message()
-            .context("An error occurred while getting the client followup message")?
-            .context("No client followup message was produced")?;
+            .context("getting client followup message")?
+            .context("no client followup message was produced")?;
         assert_that!(
             handshake_followup,
             matches_pattern!(SessionRequest {
@@ -508,8 +508,8 @@ pub fn create_mock_session_binding_verifier_provider() -> Box<dyn SessionBinding
     Box::new(session_binding_verifier_provider)
 }
 
-pub fn create_failing_mock_session_binding_verifier_provider(
-) -> Box<dyn SessionBindingVerifierProvider> {
+pub fn create_failing_mock_session_binding_verifier_provider()
+-> Box<dyn SessionBindingVerifierProvider> {
     let mut session_binding_verifier = MockTestSessionBindingVerifier::new();
     session_binding_verifier
         .expect_verify_binding()

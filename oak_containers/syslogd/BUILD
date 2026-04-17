@@ -24,6 +24,9 @@ package(
 rust_binary(
     name = "oak_containers_syslogd",
     srcs = glob(["src/**"]),
+    # Linux-only: depends on nix, signal-hook crates and transitively on
+    # //oak_containers/orchestrator which uses procfs and Linux-specific APIs.
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_containers/orchestrator",
         "@oak_crates_index//:anyhow",
@@ -31,12 +34,16 @@ rust_binary(
         "@oak_crates_index//:clap",
         "@oak_crates_index//:nix",
         "@oak_crates_index//:opentelemetry",
+        "@oak_crates_index//:opentelemetry-appender-tracing",
         "@oak_crates_index//:opentelemetry-otlp",
         "@oak_crates_index//:opentelemetry_sdk",
         "@oak_crates_index//:signal-hook",
         "@oak_crates_index//:signal-hook-tokio",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
+        "@oak_crates_index//:tonic",
+        "@oak_crates_index//:tracing",
+        "@oak_crates_index//:tracing-subscriber",
     ],
 )
 

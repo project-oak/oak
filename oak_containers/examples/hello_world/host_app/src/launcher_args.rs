@@ -32,6 +32,7 @@ pub fn launcher_args(
         system_image,
         container_bundle,
         application_config: Vec::new(),
+        extra_guest_to_host_ports: Vec::new(),
         qemu_params: oak_containers_launcher::QemuParams {
             vmm_binary,
             stage0_binary,

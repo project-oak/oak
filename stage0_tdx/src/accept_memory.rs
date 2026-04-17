@@ -17,10 +17,10 @@
 use core::sync::atomic::Ordering;
 
 use x86_64::{
-    structures::paging::{
-        frame::PhysFrameRange, page::NotGiantPageSize, PageSize, PhysFrame, Size2MiB, Size4KiB,
-    },
     PhysAddr,
+    structures::paging::{
+        PageSize, PhysFrame, Size2MiB, Size4KiB, frame::PhysFrameRange, page::NotGiantPageSize,
+    },
 };
 pub mod counters {
     use core::sync::atomic::AtomicUsize;

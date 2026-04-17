@@ -30,6 +30,8 @@ rust_library(
         exclude = ["src/main.rs"],
     ),
     compile_data = [":README.md"],
+    # Linux-only: depends on procfs and nix crates which use Linux-specific APIs.
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:http",
@@ -49,6 +51,8 @@ rust_binary(
     name = "bin/oak_containers_agent",
     srcs = ["src/main.rs"],
     compile_data = [":README.md"],
+    # Linux-only: see :oak_containers_agent above.
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//:default_visibility"],
     deps = [
         ":oak_containers_agent",
@@ -57,11 +61,14 @@ rust_binary(
         "@oak_crates_index//:http",
         "@oak_crates_index//:nix",
         "@oak_crates_index//:opentelemetry",
+        "@oak_crates_index//:opentelemetry-appender-tracing",
         "@oak_crates_index//:opentelemetry-otlp",
         "@oak_crates_index//:opentelemetry_sdk",
         "@oak_crates_index//:procfs",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tower",
+        "@oak_crates_index//:tracing",
+        "@oak_crates_index//:tracing-subscriber",
     ],
 )
 

@@ -39,7 +39,7 @@
           src = ./.;
         in
         {
-          packages = {  };
+          packages = { };
           formatter = pkgs.nixpkgs-fmt;
           # We define a recursive set of shells, so that we can easily create a shell with a subset
           # of the dependencies for specific CI steps, without having to pull everything all the time.
@@ -87,7 +87,7 @@
             };
             # By default create a shell with all the inputs.
             default = pkgs.mkShell {
-              packages = [];
+              packages = [ ];
               inputsFrom = [
                 rust
                 bazelShell

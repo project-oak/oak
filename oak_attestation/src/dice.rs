@@ -16,19 +16,19 @@
 
 use alloc::{string::String, vec, vec::Vec};
 
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use ciborium::Value;
-use coset::{cwt::ClaimName, CborSerializable, CoseKey};
+use coset::{CborSerializable, CoseKey, cwt::ClaimName};
 use oak_attestation_types::{
     attester::Attester,
     transparent_attester::TransparentAttester,
-    util::{encode_length_delimited_proto, try_decode_length_delimited_proto, Serializable},
+    util::{Serializable, encode_length_delimited_proto, try_decode_length_delimited_proto},
 };
 use oak_dice::{
     cert::{
-        cose_key_to_verifying_key, derive_verifying_key_id, generate_ecdsa_key_pair,
+        SHA2_256_ID, cose_key_to_verifying_key, derive_verifying_key_id, generate_ecdsa_key_pair,
         generate_kem_certificate, generate_signing_certificate,
-        get_claims_set_from_certificate_bytes, SHA2_256_ID,
+        get_claims_set_from_certificate_bytes,
     },
     evidence::Stage0DiceData,
 };
@@ -336,6 +336,7 @@ pub fn stage0_dice_data_and_event_log_to_proto(
         application_keys,
         event_log: Some(event_log),
         transparent_event_log: None,
+        signed_user_data_certificate: vec![],
     });
     let certificate_authority = Some(CertificateAuthority {
         eca_private_key: value.layer_1_certificate_authority.eca_private_key
@@ -368,7 +369,15 @@ pub fn evidence_and_event_log_to_proto(
         .map_err(anyhow::Error::msg)
         .context("couldn't decode event log")?;
     let transparent_event_log: Option<EventLog> = None;
-    Ok(Evidence { root_layer, layers, application_keys, event_log, transparent_event_log })
+    let signed_user_data_certificate = vec![];
+    Ok(Evidence {
+        root_layer,
+        layers,
+        application_keys,
+        event_log,
+        transparent_event_log,
+        signed_user_data_certificate,
+    })
 }
 
 fn root_layer_evidence_to_proto(

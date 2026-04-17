@@ -208,11 +208,7 @@ impl AttestationReportData {
     /// https://github.com/LIT-Protocol/sev-snp-utils/blob/2db12052f1daa0b240594cb2e24d73c66d3379a5/src/guest/measure/vcpu_types.rs#L71
     pub fn get_product(&self) -> AmdProduct {
         if self.cpuid_fam_id == 0x1a {
-            if self.cpuid_mod_id == 0x02 {
-                AmdProduct::Turin
-            } else {
-                AmdProduct::Unsupported
-            }
+            if self.cpuid_mod_id == 0x02 { AmdProduct::Turin } else { AmdProduct::Unsupported }
         } else if self.cpuid_fam_id == 0x19 {
             if self.cpuid_mod_id == 0x01 {
                 AmdProduct::Milan

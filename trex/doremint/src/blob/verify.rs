@@ -16,20 +16,19 @@
 
 use anyhow::Result;
 use clap::Parser;
-use digest_util::hex_digest_from_typed_hash;
-use oak_proto_rust::oak::HexDigest;
+use oak_digest::Digest;
 use oak_time::Instant;
 use trex_client::{
-    http::{fetch_index, HttpBlobFetcher, HttpEndorsementIndex},
     EndorsementVerifier,
+    http::{HttpBlobFetcher, HttpEndorsementIndex},
 };
 
 use crate::flags;
 
 #[derive(Parser, Debug)]
 pub struct Verify {
-    #[arg(long, help = "URL to the root of the OCI endorsement repository")]
-    http_index_prefix: String,
+    #[arg(long, help = "URL to the endorsement repository root", required = true)]
+    endorsement_repository_url: String,
 
     #[arg(long, help = "Expected OIDC issuer for the cosign identity")]
     cosign_oidc_issuer: String,
@@ -54,12 +53,10 @@ pub struct Verify {
 
 impl Verify {
     pub async fn run(&self) -> Result<()> {
-        let subject_digest: HexDigest = hex_digest_from_typed_hash(&self.subject_digest)?;
+        let subject_digest = Digest::from_typed_hash(&self.subject_digest)?;
 
-        let image_index = fetch_index(&self.http_index_prefix).await?;
-
-        let index = Box::new(HttpEndorsementIndex::new(Box::new(move || image_index.clone())));
-        let fetcher = Box::new(HttpBlobFetcher::new(self.http_index_prefix.clone()));
+        let fetcher = Box::new(HttpBlobFetcher::new(self.endorsement_repository_url.clone()));
+        let index = Box::new(HttpEndorsementIndex::new(self.endorsement_repository_url.clone()));
 
         let verifier = EndorsementVerifier::new(index, fetcher);
 

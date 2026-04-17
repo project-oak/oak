@@ -1,0 +1,5 @@
+gcp_project_id  = "YOUR_PROJECT_ID"
+instance_name   = "oak-functions-mcp-server-flights"
+lookup_data_url = "https://storage.googleapis.com/oak-functions-standalone-bucket/lookup_data/flights.binarypb"
+tool_config_url = "https://storage.googleapis.com/oak-functions-standalone-bucket/tool_config/service_flights.json"
+image_digest    = "europe-west1-docker.pkg.dev/YOUR_PROJECT_ID/oak-functions-mcp-oc3-demo/oak-functions-mcp@sha256:YOUR_IMAGE_SHA"

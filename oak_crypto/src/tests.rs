@@ -18,9 +18,9 @@ use crate::{
     encryption_key::generate_encryption_key_pair,
     encryptor::{ClientEncryptor, ServerEncryptor},
     hpke::{
+        Serializable,
         aead::{AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES},
         generate_kem_key_pair, generate_random_nonce, setup_base_recipient, setup_base_sender,
-        Serializable,
     },
 };
 

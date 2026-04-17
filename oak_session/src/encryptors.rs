@@ -17,10 +17,10 @@
 //! This module provides an interface and an implementation of the Encryptor,
 //! which handles encrypted communication over a channel.
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::{Context, Error, anyhow};
 use oak_crypto::{
     encryptor::{Encryptor, Payload},
-    noise_handshake::{OrderedCrypter, UnorderedCrypter, NONCE_LEN},
+    noise_handshake::{NONCE_LEN, OrderedCrypter, UnorderedCrypter},
 };
 
 // This is the default implementation of the encryptor to use for the Noise
@@ -76,7 +76,7 @@ impl Encryptor for UnorderedChannelEncryptor {
         let nonce: [u8; NONCE_LEN] = ciphertext
             .nonce
             .as_ref()
-            .unwrap()
+            .context("payload is missing nonce")?
             .clone()
             .try_into()
             .map_err(|e| anyhow!("Failed to extract nonce error: {e:#?}"))?;

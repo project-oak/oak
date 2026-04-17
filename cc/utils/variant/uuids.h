@@ -34,6 +34,10 @@ constexpr absl::string_view kContainerEndorsementUuid =
     "7297a51f-a05d-49a1-afdb-64cdee07862d";
 constexpr absl::string_view kApplicationEndorsementUuid =
     "e84ed714-669d-430a-a60f-8a651e5a5503";
+constexpr absl::string_view kCbLayer1TransparentEndorsementUuid =
+    "8582c4b4-e713-40c7-80c3-42d8fbce5827";
+constexpr absl::string_view kCbLayer2TransparentEndorsementUuid =
+    "cb3c5d82-81cb-4fea-927b-7cb56c1f32d2";
 
 }  // namespace internal
 }  // namespace oak

@@ -24,12 +24,12 @@ use bitflags::bitflags;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 use x86_64::{
-    structures::paging::{PageSize, Size4KiB},
     PhysAddr, VirtAddr,
+    structures::paging::{PageSize, Size4KiB},
 };
 use zerocopy::{FromBytes, IntoBytes};
 
-use crate::{allocator::Shared, hal::Port, BootAllocator};
+use crate::{BootAllocator, allocator::Shared, hal::Port};
 
 // See https://www.qemu.org/docs/master/specs/fw_cfg.html for documentation about the various data structures and constants.
 const FWCFG_PORT_SELECTOR: u16 = 0x510;
@@ -198,11 +198,7 @@ impl<P: crate::Platform> FwCfg<P> {
             fwcfg.dma_enabled = true;
         }
 
-        if signature == SIGNATURE {
-            Ok(fwcfg)
-        } else {
-            Err("QEMU fw_cfg device not available")
-        }
+        if signature == SIGNATURE { Ok(fwcfg) } else { Err("QEMU fw_cfg device not available") }
     }
 
     /// Returns an iterator over the files in the fw_cfg system.
@@ -382,11 +378,7 @@ impl<P: crate::Platform> FwCfg<P> {
     /// Returns `None` if the kernel size is 0.
     pub fn get_setup_file(&mut self) -> Option<DirEntry> {
         let size = self.read_setup_size().expect("couldn't read setup size");
-        if size == 0 {
-            None
-        } else {
-            Some(DirEntry::new_for_selector(size, FwCfgItems::SetupData))
-        }
+        if size == 0 { None } else { Some(DirEntry::new_for_selector(size, FwCfgItems::SetupData)) }
     }
 
     fn write_selector(&mut self, selector: u16) -> Result<(), &'static str> {

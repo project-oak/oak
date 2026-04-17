@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use jwt::{algorithm::VerifyingAlgorithm, AlgorithmType};
+use jwt::{AlgorithmType, algorithm::VerifyingAlgorithm};
 use x509_cert::Certificate;
 use x509_verify::{Signature, VerifyInfo, VerifyingKey};
 

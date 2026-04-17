@@ -19,11 +19,11 @@ use anyhow::{Context, Result};
 use futures::channel::mpsc;
 use oak_hello_world_proto::oak::containers::example::enclave_application_client::EnclaveApplicationClient;
 use oak_session::{
+    Session,
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
     handshake::HandshakeType,
-    Session,
 };
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
@@ -102,6 +102,8 @@ async fn test_noise() {
     let app_config_len = APPLICATION_CONFIG.len();
     assert_eq!(
         String::from_utf8(result).unwrap(),
-        format!("Hello from the enclave, standalone user! Btw, the app has a config with a length of {app_config_len} bytes."),
+        format!(
+            "Hello from the enclave, standalone user! Btw, the app has a config with a length of {app_config_len} bytes."
+        ),
     );
 }

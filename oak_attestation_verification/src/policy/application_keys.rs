@@ -16,10 +16,10 @@
 
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
+    Variant,
     attestation::v1::{
         ApplicationKeysData, ApplicationKeysReferenceValues, EventAttestationResults,
     },
-    Variant,
 };
 use oak_time::Instant;
 

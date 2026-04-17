@@ -14,10 +14,8 @@
 # limitations under the License.
 #
 
-load("@rules_oci//oci:defs.bzl", "oci_image")
-load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
-load("//bazel:defs.bzl", "oci_runtime_bundle")
+load("//oak_containers/app_base:defs.bzl", "app_bundle")
 
 package(
     default_visibility = ["//:internal"],
@@ -40,6 +38,7 @@ LIB_DEPS = [
     "@oak_crates_index//:anyhow",
     "@oak_crates_index//:http",
     "@oak_crates_index//:opentelemetry",
+    "@oak_crates_index//:opentelemetry_sdk",
     "@oak_crates_index//:ouroboros",
     "@oak_crates_index//:prost",
     "@oak_crates_index//:tempfile",
@@ -89,6 +88,7 @@ APP_DEPS = [
     "@oak_crates_index//:clap",
     "@oak_crates_index//:log",
     "@oak_crates_index//:opentelemetry",
+    "@oak_crates_index//:opentelemetry-appender-tracing",
     "@oak_crates_index//:opentelemetry-otlp",
     "@oak_crates_index//:opentelemetry_sdk",
     "@oak_crates_index//:prost",
@@ -97,6 +97,8 @@ APP_DEPS = [
     "@oak_crates_index//:tonic",
     "@oak_crates_index//:tokio",
     "@oak_crates_index//:tokio-stream",
+    "@oak_crates_index//:tracing",
+    "@oak_crates_index//:tracing-subscriber",
     "@oak_crates_index//:tokio-vsock",
 ]
 
@@ -149,44 +151,19 @@ rust_test(
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
         "@oak_crates_index//:opentelemetry",
+        "@oak_crates_index//:opentelemetry_sdk",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",
     ],
 )
 
-pkg_tar(
-    name = "tar",
-    srcs = [":oak_functions_containers_app"],
-    package_dir = "/usr/local/bin",
-)
-
-oci_image(
-    name = "image",
-    base = "@distroless_cc_debian12",
-    entrypoint = ["/usr/local/bin/oak_functions_containers_app"],
-    tars = [":tar"],
-)
-
-oci_runtime_bundle(
+app_bundle(
     name = "bundle",
-    image = ":image",
+    binary = ":oak_functions_containers_app",
 )
 
-pkg_tar(
-    name = "tar_insecure",
-    srcs = [":oak_functions_containers_app_insecure"],
-    package_dir = "/usr/local/bin",
-)
-
-oci_image(
-    name = "image_insecure",
-    base = "@distroless_cc_debian12",
-    entrypoint = ["/usr/local/bin/oak_functions_containers_app_insecure"],
-    tars = [":tar_insecure"],
-)
-
-oci_runtime_bundle(
+app_bundle(
     name = "bundle_insecure",
-    image = ":image_insecure",
+    binary = ":oak_functions_containers_app_insecure",
 )

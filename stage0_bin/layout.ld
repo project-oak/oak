@@ -61,6 +61,7 @@ HIDDEN(SEV_SECTION_KERNEL_HASHES = 0x10);
  */
 PHDRS
 {
+    bda PT_LOAD;
     boot PT_LOAD;
     ap_text PT_LOAD;
     ap_bss PT_LOAD;
@@ -73,6 +74,7 @@ PHDRS
     text PT_LOAD;
     descriptors PT_LOAD;
     text16 PT_LOAD;
+    sev_metadata PT_LOAD;
     guid_tables PT_LOAD;
     descriptors PT_LOAD;
     reset_vector PT_LOAD;
@@ -88,6 +90,12 @@ SECTIONS {
      *
      * These sections have to be marked NOLOAD, otherwise you risk ending up with a 4GB BIOS image.
      */
+
+    /* BIOS Data Area (BDA) - 256 bytes at 0x400.*/
+    .bda 0x400 (NOLOAD) : {
+        KEEP(*(.bda))
+    } > ram_low : bda
+    ASSERT(. <= 0x500, "BDA overflow")
 
     .boot 0x1000 (NOLOAD) : {
         KEEP(*(.boot))
@@ -291,28 +299,12 @@ SECTIONS {
     gdt_desc_offset = ADDR(.gdt_desc) & 0xFFFF;
     idt_desc_offset = ADDR(.idt_desc) & 0xFFFF;
 
-    /* GUIDed tables have to *end* at 0x20 from the end of the file.
-     * Documentation about the GUID table format can be found in QEMU docs:
-     * https://github.com/qemu/qemu/blob/master/docs/specs/sev-guest-firmware.rst
-     * and EDK2 source code:
-     * https://github.com/tianocore/edk2/blob/master/OvmfPkg/ResetVector/Ia16/ResetVectorVtf0.asm
-     *
-     * Unfortunately it doesn't look like `SIZEOF()` works here, so we have to keep track of the data
-     * structure size by hand to ensure that it ends at the correct location in memory.
-     */
-    .guid_tables TOP - 0x20 - (16             /* AMD SEV header       <--------|     */
-                                  + 4*12      /* AMD SEV metadata sections     |     */
-                                  + 26        /* AMD SEV kernel hashes block   |     */
-                                  + 22        /* AMD SEV metadata offset block |     */
-                                  + 22        /* AMD SEV-ES reset block              */
-                                  + 18        /* footer */) : {
-        /* SEV metadata. This data structure is not part of the GUIDed tables, but it makes sense to have
-         * them together at the end of the file, thus we put them in the .guid_tables section along with
-         * the GUIDed tables themselves. The data structure is defined in the EDK2 source:
-         * https://github.com/tianocore/edk2/blob/master/OvmfPkg/ResetVector/X64/OvmfSevMetadata.asm
-         *
-         * Size: header is 16 bytes + a number of 12-byte sections.
-         */
+    /* SEV metadata. The data structure is defined in the EDK2 source:
+    * https://github.com/tianocore/edk2/blob/master/OvmfPkg/ResetVector/X64/OvmfSevMetadata.asm
+    *
+    * Size: header is 16 bytes + a number of 12-byte sections.
+    */
+    .sev_metadata ALIGN(16) : {
         HIDDEN(sev_guided_structure_start = .);
         /* Header: uint32 signature ("ASEV"), uint32 length, uint32 version, uint32 number of sections */
         BYTE(0x41) BYTE(0x53) BYTE(0x45) BYTE(0x56)
@@ -354,6 +346,22 @@ SECTIONS {
         LONG(0x1000)
         LONG(SEV_SECTION_KERNEL_HASHES)
         HIDDEN(sev_guided_structure_end = .);
+    } > bios : sev_metadata
+
+    /* GUIDed tables have to *end* at 0x20 from the end of the file.
+     * Documentation about the GUID table format can be found in QEMU docs:
+     * https://github.com/qemu/qemu/blob/master/docs/specs/sev-guest-firmware.rst
+     * and EDK2 source code:
+     * https://github.com/tianocore/edk2/blob/master/OvmfPkg/ResetVector/Ia16/ResetVectorVtf0.asm
+     *
+     * Unfortunately it doesn't look like `SIZEOF()` works here, so we have to keep track of the data
+     * structure size by hand to ensure that it ends at the correct location in memory.
+     */
+    .guid_tables TOP - 0x20 - (22             /* AMD SEV metadata offset block       */
+                                  + 22        /* AMD SEV-ES reset block              */
+                                  + 26        /* AMD SEV kernel hashes block   |     */
+                                  + 18        /* footer */) : {
+
 
         /*
          * This is where the GUIDed tables actually start.

@@ -26,9 +26,11 @@ rust_library(
     srcs = glob(["*.rs"]),
     deps = [
         "//oak_proto_rust",
+        "//tr/c2sp",
         "//tr/intoto",
         "//tr/rekor",
         "//tr/verify_endorsement",
+        "//util/digest:oak_digest",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:ureq",

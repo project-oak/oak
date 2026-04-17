@@ -212,15 +212,16 @@ pub fn mr_td_measurement(stage0_bin: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use hex::ToHex;
-    use oak_file_utils::data_path;
 
     use super::*;
 
     #[test]
     fn test_mr_td_is_measured_correctly() {
-        const STAGE0_BIN_PATH: &str =
-            "external/_main~_repo_rules~stage0_tdx_bin_for_test/file/stage0_tdx_bin_for_test";
-        let stage0_bin = std::fs::read(data_path(STAGE0_BIN_PATH)).unwrap();
+        let r = runfiles::Runfiles::create().expect("could not initialize runfiles");
+        let stage0_bin_path =
+            runfiles::rlocation!(r, "stage0_tdx_bin_for_test/file/stage0_tdx_bin_for_test")
+                .expect("could not find stage0_tdx_bin_for_test");
+        let stage0_bin = std::fs::read(stage0_bin_path).unwrap();
         let mr_td = mr_td_measurement(&stage0_bin);
         assert_eq!(mr_td.len(), 48);
         let expected_hash_str = "7e63acc88a8870e33957754f12913d7a533178e171c26e58b91f6674ecb5e091b76d0cd742e703f97d7c54451e64fd00";

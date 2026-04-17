@@ -69,9 +69,42 @@ pub(crate) struct VerifyFileArgs {
 
     #[arg(
         long,
-        help = "Path to the log entry, if the endorsement signature has been committed to a transparency log."
+        help = "Path to the Rekor log entry, if the endorsement signature has been committed to Rekor."
     )]
-    log_entry: Option<PathBuf>,
+    rekor_log_entry: Option<PathBuf>,
+
+    #[arg(
+        long,
+        help = "Path to the C2SP t-log proof, if the endorsement signature has been committed there."
+    )]
+    c2sp_tlog_proof: Option<PathBuf>,
+
+    #[arg(
+        long,
+        help = "Path to the confirmation from PES, if the endorsement signature has been committed there."
+    )]
+    pes_confirmation: Option<PathBuf>,
+
+    #[arg(
+        long,
+        help = "Public key to verify Rekor log entries, as PEM. Can be empty. Default is to verify Rekor inclusion.",
+        default_value = get_rekor_v1_public_key_pem(),
+    )]
+    rekor_public_key: String,
+
+    #[arg(
+        long,
+        help = "C2SP policy to verify C2SP t-log proofs. Empty by default, so no verification happens.",
+        default_value = ""
+    )]
+    c2sp_policy: String,
+
+    #[arg(
+        long,
+        help = "Reference value for verifying a PES confirmation. Empty by default, so no verification happens.",
+        default_value = ""
+    )]
+    pes_ref_value: String,
 }
 
 /// Subcommand for verifying an endorsement from a remote content addressable
@@ -95,10 +128,24 @@ pub(crate) struct VerifyRemoteArgs {
 
     #[arg(
         long,
-        help = "Public key to verify Rekor log entries, as PEM. Set empty to disable verification, e.g. when log entries are not available by design.",
+        help = "Public key to verify Rekor log entries, as PEM. Can be empty. Default is to verify Rekor inclusion.",
         default_value = get_rekor_v1_public_key_pem(),
     )]
     rekor_public_key: String,
+
+    #[arg(
+        long,
+        help = "C2SP policy to verify C2SP t-log proofs. Empty by default, so no verification happens.",
+        default_value = ""
+    )]
+    c2sp_policy: String,
+
+    #[arg(
+        long,
+        help = "Reference value for verifying a PES confirmation. Empty by default, so no verification happens.",
+        default_value = ""
+    )]
+    pes_ref_value: String,
 
     #[arg(
         long,
@@ -138,11 +185,7 @@ pub(crate) fn parse_bucket_name(arg: &str) -> Result<String, anyhow::Error> {
 }
 
 pub(crate) fn string_to_option_string(s: String) -> Option<String> {
-    if s.is_empty() {
-        None
-    } else {
-        Some(s)
-    }
+    if s.is_empty() { None } else { Some(s) }
 }
 
 // Parses command line arguments that represent URLs.
@@ -174,11 +217,25 @@ impl VerifyFileArgs {
             .with_context(|| format!("reading endorsement from {}", &self.endorsement.display()))?;
         let signature = fs::read(&self.signature)
             .with_context(|| format!("reading signature from {}", &self.signature.display()))?;
-        let log_entry = match &self.log_entry {
+        let rekor_log_entry = match &self.rekor_log_entry {
             None => None,
             Some(path) => Some(
                 fs::read(path)
-                    .with_context(|| format!("reading log_entry from {}", path.display()))?,
+                    .with_context(|| format!("reading rekor_log_entry from {}", path.display()))?,
+            ),
+        };
+        let c2sp_tlog_proof = match &self.c2sp_tlog_proof {
+            None => None,
+            Some(path) => Some(
+                fs::read(path)
+                    .with_context(|| format!("reading C2SP t-log proof from {}", path.display()))?,
+            ),
+        };
+        let pes_confirmation = match &self.pes_confirmation {
+            None => None,
+            Some(path) => Some(
+                fs::read(path)
+                    .with_context(|| format!("reading PES confirmation from {}", path.display()))?,
             ),
         };
         let subject = match &self.subject {
@@ -191,34 +248,51 @@ impl VerifyFileArgs {
             fs::read_to_string(&self.endorser_public_key).with_context(|| {
                 format!("reading endorser public key from {}", self.endorser_public_key.display())
             })?;
-        let rekor_public_key =
-            log_entry.as_ref().map(|_| get_rekor_v1_public_key_pem().to_string());
 
         Ok(Package {
             endorsement,
             signature,
-            log_entry,
+            rekor_log_entry,
+            c2sp_tlog_proof,
+            pes_confirmation,
             subject,
             endorser_public_key,
-            rekor_public_key,
+            rekor_public_key: string_to_option_string(self.rekor_public_key.clone()),
+            c2sp_policy: string_to_option_string(self.c2sp_policy.clone()),
+            pes_ref_value: string_to_option_string(self.pes_ref_value.clone()),
         })
     }
 }
 
 /// Verifies an endorsement package from local files.
-pub(crate) fn verify_file(current_time: Instant, p: VerifyFileArgs) {
+pub(crate) fn verify_file(current_time: Instant, claim_types: Vec<String>, p: VerifyFileArgs) {
     let package = p.load().expect("Failed to load endorsement");
-    display_verify_result(package.verify(current_time.into_unix_millis()));
+    display_verify_result(package.verify(current_time.into_unix_millis(), claim_types));
 }
 
 /// Verifies an endorsement package from a remote content addressable storage.
-pub(crate) fn verify_remote(current_time: Instant, p: VerifyRemoteArgs) {
-    let storage = CaStorage { url_prefix: p.url_prefix, fbucket: p.fbucket, ibucket: p.ibucket };
+pub(crate) fn verify_remote(
+    current_time: Instant,
+    claim_types: Vec<String>,
+    p: VerifyRemoteArgs,
+    access_token: Option<String>,
+) {
+    let storage = CaStorage {
+        url_prefix: p.url_prefix,
+        fbucket: p.fbucket,
+        ibucket: p.ibucket,
+        access_token,
+    };
     let loader = EndorsementLoader::new(Box::new(storage));
     let package = loader
-        .load(p.endorsement_hash.as_str(), string_to_option_string(p.rekor_public_key))
+        .load(
+            p.endorsement_hash.as_str(),
+            string_to_option_string(p.rekor_public_key),
+            string_to_option_string(p.c2sp_policy),
+            string_to_option_string(p.pes_ref_value),
+        )
         .expect("Failed to load endorsement");
-    display_verify_result(package.verify(current_time.into_unix_millis()));
+    display_verify_result(package.verify(current_time.into_unix_millis(), claim_types));
 }
 
 /// Verifies an endorsement from a given endorsement loader.

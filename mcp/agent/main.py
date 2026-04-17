@@ -39,18 +39,18 @@ parser.add_argument(
 
 
 if __name__ == "__main__":
-    args = parser.parse_args()
+  args = parser.parse_args()
 
-    agent = create_agent(args.mcp_server_url)
+  agent = create_agent(args.mcp_server_url)
 
-    # Wrap the ADK agent in a Starlette web application, automatically creating the
-    # necessary A2A (Agent-to-Agent) protocol endpoints and generating an agent card
-    # for discovery.
-    # <https://www.starlette.io/>
-    # <https://a2aprotocol.ai/>
-    app = to_a2a(
-        agent=agent,
-        host=args.host,
-        port=args.port,
-    )
-    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+  # Wrap the ADK agent in a Starlette web application, automatically creating the
+  # necessary A2A (Agent-to-Agent) protocol endpoints and generating an agent card
+  # for discovery.
+  # <https://www.starlette.io/>
+  # <https://a2aprotocol.ai/>
+  app = to_a2a(
+      agent=agent,
+      host=args.host,
+      port=args.port,
+  )
+  uvicorn.run(app, host=args.host, port=args.port, log_level="info")

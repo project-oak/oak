@@ -1,0 +1,69 @@
+package oak:cleanroom;
+
+interface ifc {
+    /// Dual-component IFC label: (secrecy, integrity).
+    ///
+    /// Secrecy lists the principals whose authorization is needed to
+    /// release the data.  Integrity lists the principals who vouch
+    /// for the data's correctness.
+    record label {
+        secrecy: list<string>,
+        integrity: list<string>,
+    }
+
+    /// Returns the current (immutable) computation label.
+    get-label: func() -> label;
+
+    /// Reads a named cell value.
+    ///
+    /// The cell's label must flow to the computation's label for the
+    /// read to succeed.  The module's full privilege is applied
+    /// automatically.
+    read-cell: func(name: string) -> option<string>;
+}
+
+interface fs {
+    read-file: func(path: string) -> result<list<u8>, string>;
+    write-file: func(path: string, contents: list<u8>) -> result<_, string>;
+    delete-file: func(path: string) -> result<_, string>;
+    list-directory: func(path: string) -> result<list<string>, string>;
+}
+
+interface http {
+    /// An outgoing HTTP request (no streaming).
+    record http-request {
+        /// HTTP method: GET, POST, PUT, DELETE, etc.
+        method: string,
+        /// Full URL including scheme and path.
+        url: string,
+        /// Request headers as key-value pairs.
+        headers: list<tuple<string, string>>,
+        /// Optional request body.
+        body: option<list<u8>>,
+    }
+
+    /// An HTTP response (no streaming).
+    record http-response {
+        /// HTTP status code (e.g. 200, 404).
+        status: u16,
+        /// Response headers as key-value pairs.
+        headers: list<tuple<string, string>>,
+        /// Response body bytes.
+        body: list<u8>,
+    }
+
+    /// Makes an HTTP request.
+    ///
+    /// IFC enforcement is automatic: the runtime checks that the
+    /// computation label flows to public (with the module's full
+    /// privilege applied) before sending the request.
+    send-request: func(
+        request: http-request,
+    ) -> result<http-response, string>;
+}
+
+world runner {
+    import ifc;
+    import fs;
+    import http;
+}

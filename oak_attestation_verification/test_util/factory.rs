@@ -18,21 +18,21 @@
 /// dependencies.
 use anyhow::Context;
 use oak_proto_rust::oak::{
+    RawDigest,
     attestation::v1::{
+        AmdSevReferenceValues, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
+        BinaryReferenceValue, CbReferenceValues, ContainerLayerEndorsements,
+        ContainerLayerReferenceValues, Digests, Endorsements, Evidence, ExtractedEvidence,
+        InsecureReferenceValues, KernelBinaryReferenceValue, KernelDigests, KernelLayerData,
+        KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersEndorsements,
+        OakContainersReferenceValues, OakRestrictedKernelEndorsements,
+        OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerData, RootLayerEndorsements,
+        RootLayerReferenceValues, SkipVerification, StringLiterals, SystemLayerEndorsements,
+        SystemLayerReferenceValues, TcbVersion, TcbVersionReferenceValue, TextReferenceValue,
         binary_reference_value, endorsements, extracted_evidence::EvidenceValues,
         kernel_binary_reference_value, reference_values, root_layer_data::Report,
-        tcb_version_reference_value, text_reference_value, AmdSevReferenceValues,
-        ApplicationLayerEndorsements, ApplicationLayerReferenceValues, BinaryReferenceValue,
-        CbReferenceValues, ContainerLayerEndorsements, ContainerLayerReferenceValues, Digests,
-        Endorsements, Evidence, ExtractedEvidence, InsecureReferenceValues,
-        KernelBinaryReferenceValue, KernelDigests, KernelLayerData, KernelLayerEndorsements,
-        KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
-        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
-        RootLayerData, RootLayerEndorsements, RootLayerReferenceValues, SkipVerification,
-        StringLiterals, SystemLayerEndorsements, SystemLayerReferenceValues, TcbVersion,
-        TcbVersionReferenceValue, TextReferenceValue,
+        tcb_version_reference_value, text_reference_value,
     },
-    RawDigest,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
 use zerocopy::FromBytes;
@@ -226,9 +226,9 @@ pub fn create_reference_values_for_extracted_evidence(
                 application_layer: Some(ApplicationLayerReferenceValues {
                     binary: Some(BinaryReferenceValue {
                         r#type: Some(binary_reference_value::Type::Digests(Digests {
-                            digests: vec![application
-                                .binary
-                                .expect("no application binary digest")],
+                            digests: vec![
+                                application.binary.expect("no application binary digest"),
+                            ],
                         })),
                     }),
                     // We don't currently specify configuration values for Oak Containers
@@ -278,6 +278,7 @@ pub fn create_reference_values_for_extracted_evidence(
                 }),
             }))
         }
+        #[allow(deprecated)]
         EvidenceValues::Cb(_) => panic!("not yet supported"),
         EvidenceValues::Standalone(_) => panic!("not yet supported"),
     };
@@ -337,9 +338,9 @@ fn kernel_layer_reference_values_from_evidence(
                     digests: vec![kernel_layer.kernel_image.expect("no kernel image digest")],
                 }),
                 setup_data: Some(Digests {
-                    digests: vec![kernel_layer
-                        .kernel_setup_data
-                        .expect("no kernel setup data digest")],
+                    digests: vec![
+                        kernel_layer.kernel_setup_data.expect("no kernel setup data digest"),
+                    ],
                 }),
             })),
         }),
@@ -403,6 +404,7 @@ pub fn get_rk_reference_values(
 
 /// Shorthand to extract CB reference values subtype.
 pub fn get_cb_reference_values(reference_values: &ReferenceValues) -> CbReferenceValues {
+    #[allow(deprecated)]
     let cb_reference_values = match reference_values.r#type.as_ref() {
         Some(reference_values::Type::Cb(cb_reference_values)) => cb_reference_values.clone(),
         _ => panic!("no CB reference values"),

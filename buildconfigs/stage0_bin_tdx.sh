@@ -10,7 +10,7 @@ export BUILD_COMMAND=(
   .#default
   --command
   just
-  github-stage0_bin_tdx
+  github stage0_bin_tdx
 )
 
 export SUBJECT_PATHS=(

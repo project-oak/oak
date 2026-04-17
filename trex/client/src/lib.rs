@@ -14,70 +14,80 @@
 // limitations under the License.
 //
 
+//! Client library for Oak Transparent Release (TR) endorsement verification.
+//!
+//! This crate provides the core abstractions and implementations for looking up
+//! and verifying [Transparent Release][tr] endorsements for software artifacts.
+//!
+//! # Architecture
+//!
+//! The crate is built around a small set of traits that separate index lookups
+//! from blob storage, allowing different backends:
+//!
+//! - **[`EndorsementIndex`]** / **[`BlobFetcher`]** – read-only traits for
+//!   looking up endorsement digests and fetching blob content.
+//! - **[`EndorsementIndexWriter`]** / **[`BlobWriter`]** – extension traits for
+//!   backends that also support writes (e.g. the filesystem backend).
+//!
+//! Two concrete backend implementations are provided:
+//!
+//! | Backend | Module | Use case |
+//! |---------|--------|----------|
+//! | HTTP    | [`http`] | Remote verification against an OCI-like repository served over HTTP |
+//! | Filesystem | [`fs`] | Local endorsement creation and offline verification |
+//!
+//! # Verification workflow
+//!
+//! The main entry point for verification is [`EndorsementVerifier::verify`],
+//! which implements the following steps:
+//!
+//! 1. Look up candidate endorsement statements for the subject digest.
+//! 2. For each candidate, fetch the endorsement blob and its Rekor signature
+//!    bundles from the index.
+//! 3. Verify the Cosign signature (via the [`cosign`] module) against the
+//!    signer's OIDC identity.
+//! 4. Validate the in-toto statement: check the subject digest, validity
+//!    period, and required claims.
+//!
+//! [tr]: https://project-oak.github.io/oak/tr/endorsement/v1
+
 #![feature(exit_status_error)]
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use async_trait::async_trait;
 use intoto::statement::DefaultStatement;
-use oak_proto_rust::oak::HexDigest;
+use oak_digest::Digest;
 use oak_time::Instant;
-use oci_spec::image::Descriptor;
 
 pub mod cosign;
+pub mod fs;
 pub mod http;
 
-pub const OAK_TR_ENDORSEMENT_SUBJECT_DIGEST_ANNOTATION: &str = "oak.tr.endorsement.subject_digest";
-pub const OAK_TR_TYPE_ANNOTATION: &str = "oak.tr.type";
-pub const OAK_TR_ENDORSEMENT_ANNOTATION: &str = "oak.tr.endorsement";
+/// Index name for the subject → endorsement-statement mapping.
+pub const SUBJECT_TO_STATEMENT_INDEX: &str = "z02559989796713244320";
 
-pub const REKOR_HASHED_REKORD_DATA_HASH_ANNOTATION: &str = "rekor.hashedrekord.data_hash";
+/// Index name for the endorsement-statement → signature-bundle mapping.
+pub const STATEMENT_TO_BUNDLE_INDEX: &str = "z05735596614295417312";
 
-pub const OAK_TR_VALUE_SUBJECT: &str = "oak.tr.subject";
-pub const OAK_TR_VALUE_ENDORSEMENT: &str = "oak.tr.endorsement";
-pub const REKOR_TYPE_HASHED_REKORD: &str = "rekor.hashedrekord";
-
-/// Returns true if the descriptor is an Oak endorsement for the given subject
-/// digest.
+/// Parses a newline-separated index body into a list of [`Digest`] values.
 ///
-/// An Oak endorsement is identified by:
-/// 1. `oak.tr.type` annotation set to `oak.tr.endorsement`.
-/// 2. `oak.tr.endorsement.subject_digest` annotation matching the given subject
-///    digest.
-pub fn is_oak_endorsement(entry: &Descriptor, subject_digest: &str) -> bool {
-    let annotations = entry.annotations().clone().unwrap_or_default();
-    annotations.get(OAK_TR_TYPE_ANNOTATION) == Some(&OAK_TR_VALUE_ENDORSEMENT.to_string())
-        && annotations.get(OAK_TR_ENDORSEMENT_SUBJECT_DIGEST_ANNOTATION)
-            == Some(&subject_digest.to_string())
-}
-
-/// Returns true if the descriptor is a hashed Rekor entry (signature) for the
-/// given endorsement digest.
-///
-/// A hashed Rekor entry is identified by:
-/// 1. `oak.tr.type` annotation set to `rekor.hashedrekord`.
-/// 2. `rekor.hashedrekord.data_hash` annotation matching the given endorsement
-///    digest.
-pub fn is_hashed_rekord(entry: &Descriptor, endorsement_digest: &str) -> bool {
-    let annotations = entry.annotations().clone().unwrap_or_default();
-    annotations.get(OAK_TR_TYPE_ANNOTATION) == Some(&REKOR_TYPE_HASHED_REKORD.to_string())
-        && annotations.get(REKOR_HASHED_REKORD_DATA_HASH_ANNOTATION)
-            == Some(&endorsement_digest.to_string())
+/// Each non-empty line is expected to be a typed hash (e.g. `sha256:abcdef…`).
+/// Empty and whitespace-only lines are silently skipped.
+pub fn parse_index(body: &str) -> Result<Vec<Digest>> {
+    body.lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(|line| Digest::from_typed_hash(line.trim()).context("parsing index entry"))
+        .collect()
 }
 
 /// Trait for looking up endorsements and signatures from an index.
 #[async_trait]
 pub trait EndorsementIndex {
     /// Looks up endorsements for the given subject digest.
-    async fn lookup_oak_tr_endorsements(
-        &self,
-        subject_digest: &HexDigest,
-    ) -> Result<Vec<HexDigest>>;
+    async fn lookup_endorsements(&self, subject_digest: &Digest) -> Result<Vec<Digest>>;
     /// Looks up signatures (hashed Rekor entries) for the given endorsement
     /// digest.
-    async fn lookup_rekor_signatures(
-        &self,
-        endorsement_digest: &HexDigest,
-    ) -> Result<Vec<HexDigest>>;
+    async fn lookup_rekor_signatures(&self, endorsement_digest: &Digest) -> Result<Vec<Digest>>;
 }
 
 /// Trait for fetching blob content.
@@ -87,7 +97,24 @@ pub trait BlobFetcher {
     ///
     /// All implementations must confirm that the returned data matches the
     /// input digest.
-    async fn fetch_blob(&self, digest: &HexDigest) -> Result<Vec<u8>>;
+    async fn fetch_blob(&self, digest: &Digest) -> Result<Vec<u8>>;
+}
+
+/// Extension trait for indices that support write operations.
+#[async_trait]
+pub trait EndorsementIndexWriter: EndorsementIndex {
+    /// Adds a mapping from subject → endorsement statement.
+    async fn add_subject_to_statement(&self, subject: &Digest, statement: &Digest) -> Result<()>;
+
+    /// Adds a mapping from statement → signature bundle.
+    async fn add_statement_to_bundle(&self, statement: &Digest, bundle: &Digest) -> Result<()>;
+}
+
+/// Extension trait for blob stores that support write operations.
+#[async_trait]
+pub trait BlobWriter: BlobFetcher {
+    /// Stores a blob and returns its digest.
+    async fn store_blob(&self, content: &[u8]) -> Result<Digest>;
 }
 
 /// Verifier for Oak endorsements.
@@ -119,18 +146,18 @@ impl EndorsementVerifier {
     /// See https://docs.sigstore.dev/cosign/verifying/verify/#keyless-verification-using-openid-connect for more details about the `cert_identity` and `cert_oidc_issuer` parameters.
     pub async fn verify(
         &self,
-        subject_digest: &HexDigest,
+        subject_digest: &Digest,
         valid_at: Instant,
         required_claims: &[String],
         cert_identity: &str,
         cert_oidc_issuer: &str,
     ) -> Result<DefaultStatement> {
-        let subject_digest_str = format!("sha256:{}", subject_digest.sha2_256);
+        let subject_digest_str = subject_digest.to_typed_hash();
         log::info!("Starting verification for subject: {}", subject_digest_str);
 
         let endorsement_digests = self
             .index
-            .lookup_oak_tr_endorsements(subject_digest)
+            .lookup_endorsements(subject_digest)
             .await
             .context("looking up endorsements")?;
 
@@ -142,7 +169,7 @@ impl EndorsementVerifier {
         log::info!("Found {} potential matching endorsement statements", endorsement_digests.len());
 
         for endorsement_digest in endorsement_digests {
-            let endorsement_digest_str = format!("sha256:{}", endorsement_digest.sha2_256);
+            let endorsement_digest_str = endorsement_digest.to_typed_hash();
             log::debug!("Verifying endorsement candidate: {}", endorsement_digest_str);
 
             // Attempt to verify this endorsement candidate.
@@ -176,10 +203,15 @@ impl EndorsementVerifier {
         anyhow::bail!("no valid endorsement found")
     }
 
+    /// Attempts to verify a single endorsement candidate.
+    ///
+    /// Fetches the endorsement blob and its associated Rekor signature bundles,
+    /// then tries each signature until one passes `cosign verify-blob`. On
+    /// success, validates the in-toto statement contents.
     async fn verify_candidate(
         &self,
-        subject_digest: &HexDigest,
-        endorsement_digest: &HexDigest,
+        subject_digest: &Digest,
+        endorsement_digest: &Digest,
         valid_at: Instant,
         required_claims: &[String],
         cert_identity: &str,
@@ -207,7 +239,7 @@ impl EndorsementVerifier {
         let mut last_error = anyhow!("no signatures");
 
         for signature_digest in signature_digests {
-            let signature_digest_str = format!("sha256:{}", signature_digest.sha2_256);
+            let signature_digest_str = signature_digest.to_typed_hash();
             log::debug!("Verifying signature: {}", signature_digest_str);
             let bundle_bytes = self
                 .fetcher
@@ -242,10 +274,15 @@ impl EndorsementVerifier {
         Err(last_error.context("verifying signatures"))
     }
 
+    /// Parses and validates an in-toto endorsement statement.
+    ///
+    /// Checks that the statement's subject matches `subject_digest`, the
+    /// current time falls within the validity window, and all
+    /// `required_claims` are present.
     fn validate_statement(
         &self,
         endorsement_bytes: &[u8],
-        subject_digest: &HexDigest,
+        subject_digest: &Digest,
         valid_at: Instant,
         required_claims: &[String],
     ) -> Result<DefaultStatement> {
@@ -255,12 +292,100 @@ impl EndorsementVerifier {
         let claim_refs: Vec<&str> = required_claims.iter().map(|s| s.as_str()).collect();
 
         // Validate the statement (subject match, validity period, claims).
-        // Note: Statement::validate expects `digest: Option<HexDigest>`.
-        // We need to pass the subject digest we are looking for.
+        // Statement::validate expects `digest: Option<HexDigest>`, so we
+        // convert via the From<Digest> for HexDigest impl.
         statement
-            .validate(Some(subject_digest.clone()), valid_at, &claim_refs)
+            .validate(Some(subject_digest.clone().into()), valid_at, &claim_refs)
             .context("validating endorsement statement")?;
 
         Ok(statement)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct Case {
+        name: &'static str,
+        input: String,
+        expected: Result<Vec<String>, ()>,
+    }
+
+    #[test]
+    fn test_parse_index() {
+        let hash_a = "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
+        let hash_b = "1111111111111111111111111111111111111111111111111111111111111111";
+
+        let cases: Vec<Case> = vec![
+            Case { name: "empty input", input: String::new(), expected: Ok(vec![]) },
+            Case { name: "only empty lines", input: "\n\n\n".into(), expected: Ok(vec![]) },
+            Case {
+                name: "only whitespace lines",
+                input: "  \n  \n\t\n".into(),
+                expected: Ok(vec![]),
+            },
+            Case {
+                name: "single sha256 entry",
+                input: format!("sha256:{hash_a}\n"),
+                expected: Ok(vec![format!("sha2-256:{hash_a}")]),
+            },
+            Case {
+                name: "single sha2-256 entry",
+                input: format!("sha2-256:{hash_a}\n"),
+                expected: Ok(vec![format!("sha2-256:{hash_a}")]),
+            },
+            Case {
+                name: "multiple sha256 entries",
+                input: format!("sha256:{hash_a}\nsha256:{hash_b}\n"),
+                expected: Ok(vec![format!("sha2-256:{hash_a}"), format!("sha2-256:{hash_b}")]),
+            },
+            Case {
+                name: "multiple sha2-256 entries",
+                input: format!("sha2-256:{hash_a}\nsha2-256:{hash_b}\n"),
+                expected: Ok(vec![format!("sha2-256:{hash_a}"), format!("sha2-256:{hash_b}")]),
+            },
+            Case {
+                name: "mixed sha256 and sha2-256",
+                input: format!("sha256:{hash_a}\nsha2-256:{hash_b}\n"),
+                expected: Ok(vec![format!("sha2-256:{hash_a}"), format!("sha2-256:{hash_b}")]),
+            },
+            Case {
+                name: "valid and empty lines interleaved",
+                input: format!("\nsha256:{hash_a}\n\nsha2-256:{hash_b}\n\n"),
+                expected: Ok(vec![format!("sha2-256:{hash_a}"), format!("sha2-256:{hash_b}")]),
+            },
+            Case {
+                name: "trims whitespace",
+                input: format!("  sha2-256:{hash_a}  \n"),
+                expected: Ok(vec![format!("sha2-256:{hash_a}")]),
+            },
+            Case {
+                name: "no trailing newline",
+                input: format!("sha2-256:{hash_a}"),
+                expected: Ok(vec![format!("sha2-256:{hash_a}")]),
+            },
+            Case { name: "invalid entry", input: "not_a_valid_digest\n".into(), expected: Err(()) },
+            Case {
+                name: "valid then invalid",
+                input: format!("sha2-256:{hash_a}\ngarbage\n"),
+                expected: Err(()),
+            },
+        ];
+
+        for case in &cases {
+            let result = parse_index(&case.input);
+            match &case.expected {
+                Ok(expected_hashes) => {
+                    let digests = result
+                        .unwrap_or_else(|e| panic!("{}: expected Ok, got Err: {e}", case.name));
+                    let actual: Vec<String> = digests.iter().map(|d| d.to_typed_hash()).collect();
+                    assert_eq!(&actual, expected_hashes, "{}", case.name);
+                }
+                Err(()) => {
+                    assert!(result.is_err(), "{}: expected Err, got Ok", case.name);
+                }
+            }
+        }
     }
 }

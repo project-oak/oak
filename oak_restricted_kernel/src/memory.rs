@@ -24,16 +24,16 @@ use linked_list_allocator::{Heap, LockedHeap};
 use log::info;
 use spinning_top::Spinlock;
 use x86_64::{
-    structures::paging::{
-        mapper::FlagUpdateError, page::PageRange, FrameAllocator, Page, PageSize, PhysFrame,
-        Size2MiB,
-    },
     VirtAddr,
+    structures::paging::{
+        FrameAllocator, Page, PageSize, PhysFrame, Size2MiB, mapper::FlagUpdateError,
+        page::PageRange,
+    },
 };
 
 use crate::{
-    mm::{Mapper, PageTableFlags},
     FRAME_ALLOCATOR, PAGE_TABLES,
+    mm::{Mapper, PageTableFlags},
 };
 
 #[cfg(not(test))]
@@ -115,7 +115,9 @@ impl GrowableHeap {
         // Get the first 2 MiB of memory for the heap.
         self.extend().unwrap();
 
-        self.heap.init(self.base.start_address().as_mut_ptr(), Size2MiB::SIZE as usize);
+        unsafe {
+            self.heap.init(self.base.start_address().as_mut_ptr(), Size2MiB::SIZE as usize);
+        }
     }
 
     pub fn allocate_first_fit(&mut self, layout: Layout) -> Result<NonNull<u8>, ()> {
@@ -135,7 +137,9 @@ impl GrowableHeap {
     }
 
     pub unsafe fn deallocate(&mut self, ptr: NonNull<u8>, layout: Layout) {
-        self.heap.deallocate(ptr, layout)
+        unsafe {
+            self.heap.deallocate(ptr, layout);
+        }
     }
 }
 
@@ -165,7 +169,9 @@ unsafe impl GlobalAlloc for LockedGrowableHeap {
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: core::alloc::Layout) {
-        self.0.lock().deallocate(NonNull::new_unchecked(ptr), layout)
+        unsafe {
+            self.0.lock().deallocate(NonNull::new_unchecked(ptr), layout);
+        }
     }
 }
 
@@ -194,15 +200,17 @@ pub unsafe fn init_guest_host_heap<S: PageSize, M: Mapper<S>>(
     mapper: &M,
 ) -> Result<LockedHeap, FlagUpdateError> {
     for page in pages {
-        mapper
-            .update_flags(
-                page,
-                PageTableFlags::PRESENT
-                    | PageTableFlags::WRITABLE
-                    | PageTableFlags::GLOBAL
-                    | PageTableFlags::NO_EXECUTE,
-            )?
-            .flush();
+        unsafe {
+            mapper
+                .update_flags(
+                    page,
+                    PageTableFlags::PRESENT
+                        | PageTableFlags::WRITABLE
+                        | PageTableFlags::GLOBAL
+                        | PageTableFlags::NO_EXECUTE,
+                )?
+                .flush();
+        }
     }
 
     info!(
@@ -211,5 +219,7 @@ pub unsafe fn init_guest_host_heap<S: PageSize, M: Mapper<S>>(
         pages.end.start_address().as_u64()
     );
 
-    Ok(LockedHeap::new(pages.start.start_address().as_mut_ptr(), pages.count() * S::SIZE as usize))
+    Ok(unsafe {
+        LockedHeap::new(pages.start.start_address().as_mut_ptr(), pages.count() * S::SIZE as usize)
+    })
 }

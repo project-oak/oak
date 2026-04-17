@@ -16,32 +16,31 @@
 
 use alloc::{string::String, vec::Vec};
 
-use digest_util::hex_digest_from_typed_hash;
 use jwt::Token;
 use oak_attestation_verification::{decode_event_proto, results::set_session_binding_public_key};
 use oak_attestation_verification_types::policy::Policy;
+use oak_digest::{Digest, Sha256};
 use oak_proto_rust::oak::{
-    attestation::v1::{
-        binary_reference_value, BinaryReferenceValue, ConfidentialSpaceEndorsement,
-        EventAttestationResults, SessionBindingPublicKeyData, SignedEndorsement,
-    },
     Variant,
+    attestation::v1::{
+        BinaryReferenceValue, ConfidentialSpaceEndorsement, EventAttestationResults,
+        SessionBindingPublicKeyData, SignedEndorsement, binary_reference_value,
+    },
 };
 use oak_time::Instant;
 use oci_spec::distribution::Reference as OciReference;
-use sha2::{Digest, Sha256};
 use verify_endorsement::verify_endorsement;
 use x509_cert::Certificate;
 
 use crate::{
-    jwt::{
-        verification::{
-            report_attestation_token, AttestationTokenVerificationReport,
-            AttestationVerificationError,
-        },
-        Claims, Header,
-    },
     OAK_SESSION_NOISE_V1_AUDIENCE,
+    jwt::{
+        Claims, Header,
+        verification::{
+            AttestationTokenVerificationReport, AttestationVerificationError,
+            report_attestation_token,
+        },
+    },
 };
 
 #[derive(Debug)]
@@ -80,29 +79,29 @@ impl ConfidentialSpaceVerificationReport {
 
 #[derive(thiserror::Error, Debug)]
 pub enum ConfidentialSpaceVerificationError {
-    #[error("Missing field: {0}")]
+    #[error("missing field: {0}")]
     MissingField(&'static str),
-    #[error("Invalid field: {0}")]
+    #[error("invalid field: {0}")]
     InvalidField(&'static str),
-    #[error("Failed to decode proto: {0}")]
+    #[error("could not decode proto: {0}")]
     ProtoDecodeError(#[from] anyhow::Error),
-    #[error("Failed to decode Variant: {0}")]
+    #[error("could not decode variant: {0}")]
     VariantDecodeError(&'static str),
-    #[error("Failed to parse Token: {0}")]
+    #[error("could not parse token: {0}")]
     TokenParseError(#[from] jwt::error::Error),
-    #[error("Token public key mismatch; expected {expected} but got {actual}")]
+    #[error("token public key mismatch; expected {expected} but got {actual}")]
     TokenClaimPublicKeyMismatch { expected: String, actual: String },
-    #[error("Failed to deserialize nonce: {0}")]
+    #[error("could not deserialize nonce: {0}")]
     NonceDeserializeError(#[from] serde_json::error::Error),
-    #[error("Failed to verify Token: {0}")]
+    #[error("could not verify token: {0}")]
     TokenVerificationError(#[from] AttestationVerificationError),
     #[error("missing workload endorsement")]
     MissingWorkloadEndorsementError,
-    #[error("Failed to parse OCI reference: {0}")]
+    #[error("could not parse OCI reference: {0}")]
     ParseError(#[from] oci_spec::distribution::ParseError),
-    #[error("Failed to verify endorsement: {0}")]
+    #[error("could not verify endorsement: {0}")]
     EndorsementVerificationError(String),
-    #[error("Failed to verify container image reference; {actual} is not prefixed by {prefix}")]
+    #[error("could not verify container image reference; {actual} is not prefixed by {prefix}")]
     EndorsementContainerImageVerifyError { actual: String, prefix: String },
 }
 
@@ -119,7 +118,7 @@ pub(crate) fn verify_endorsement_wrapper(
     let typed_hash = image_reference.digest().ok_or(
         ConfidentialSpaceVerificationError::MissingField("Missing digest in OCI reference"),
     )?;
-    let digest = hex_digest_from_typed_hash(typed_hash)
+    let digest = Digest::from_typed_hash(typed_hash)
         .map_err(|_| IFError("Malformed digest in OCI reference"))?;
 
     match ref_value.r#type.as_ref() {
@@ -127,20 +126,21 @@ pub(crate) fn verify_endorsement_wrapper(
             let statement =
                 verify_endorsement(verification_time.into_unix_millis(), signed_endorsement, val)
                     .map_err(|err| EVError(format!("{err:#}")))?;
-            statement.validate_subject(&digest).map_err(|err| EVError(format!("{err:#}")))
+            statement
+                .validate_subject(&digest.clone().into())
+                .map_err(|err| EVError(format!("{err:#}")))
         }
         Some(binary_reference_value::Type::Skip(_)) => Ok(()),
         Some(binary_reference_value::Type::Digests(digests)) => {
             // We expect the digest to be SHA2-256.
-            if digest.sha2_256.is_empty() {
-                return Err(IFError("Missing SHA2-256 digest in OCI reference"));
-            }
-            let sha2_256_digest = hex::decode(&digest.sha2_256)
-                .map_err(|_| IFError("Malformed digest in OCI reference"))?;
-            if digests.digests.iter().any(|d| d.sha2_256 == sha2_256_digest) {
-                Ok(())
+            if let Digest::Sha256(h) = digest {
+                if digests.digests.iter().any(|d| d.sha2_256 == h.as_ref()) {
+                    Ok(())
+                } else {
+                    Err(EVError("Digest mismatch".to_string()))
+                }
             } else {
-                Err(EVError("Digest mismatch".to_string()))
+                Err(IFError("Missing SHA2-256 digest in OCI reference"))
             }
         }
         None => Err(IFError("Missing reference value type")),
@@ -150,7 +150,7 @@ pub(crate) fn verify_endorsement_wrapper(
 // Workload reference values can either be `EndorsementReferenceValue` protos or
 // a string pointing to the referenced container image.
 pub enum WorkloadReferenceValues {
-    ImageReferenceValue(BinaryReferenceValue),
+    ImageReferenceValue(Box<BinaryReferenceValue>),
     // See https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims#workload-container-claims
     // TODO: b/439861326 - Remove this field once endorsements are supported with Oak Transparent
     // release.
@@ -263,9 +263,9 @@ impl Policy<[u8]> for ConfidentialSpacePolicy {
 
 fn verify_claims_public_key(
     claims: &Claims,
-    expected_public_key: &Vec<u8>,
+    expected_public_key: &[u8],
 ) -> Result<(), ConfidentialSpaceVerificationError> {
-    let public_key_hash = hex::encode(Sha256::digest(expected_public_key));
+    let public_key_hash = Sha256::from_contents(expected_public_key).to_hex();
     if claims.eat_nonce != public_key_hash {
         return Err(ConfidentialSpaceVerificationError::TokenClaimPublicKeyMismatch {
             expected: public_key_hash,
@@ -281,13 +281,13 @@ mod tests {
 
     use oak_file_utils::{read_testdata, read_testdata_string};
     use oak_proto_rust::oak::attestation::v1::{
-        endorsement::Format, Endorsement, Event, Signature, SignedEndorsement,
+        Endorsement, Event, Signature, SignedEndorsement, endorsement::Format,
     };
     use oak_time::make_instant;
     use prost::Message;
     use verify_endorsement::{
         create_endorsement_reference_value, create_signed_endorsement,
-        create_verifying_key_from_pem,
+        create_tlog_reference_values_skip, create_verifying_key_from_pem,
     };
     use x509_cert::der::DecodePem;
 
@@ -316,7 +316,11 @@ mod tests {
     fn create_reference_value(key_id: u32) -> BinaryReferenceValue {
         let developer_public_key_pem = read_testdata_string!("developer_key.pub.pem");
         let developer_public_key = create_verifying_key_from_pem(&developer_public_key_pem, key_id);
-        let endorsement = create_endorsement_reference_value(developer_public_key, None);
+        let endorsement = create_endorsement_reference_value(
+            developer_public_key,
+            Vec::new(),
+            create_tlog_reference_values_skip(),
+        );
         BinaryReferenceValue {
             r#type: Some(binary_reference_value::Type::Endorsement(endorsement)),
         }
@@ -456,7 +460,7 @@ mod tests {
         let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
         let root_certificate = Certificate::from_pem(&root_certificate_pem).unwrap();
         let ref_value = create_reference_value(0);
-        let workload_ref_value = WorkloadReferenceValues::ImageReferenceValue(ref_value);
+        let workload_ref_value = WorkloadReferenceValues::ImageReferenceValue(Box::new(ref_value));
         let policy = ConfidentialSpacePolicy::new(root_certificate, workload_ref_value);
 
         let result = policy.verify(current_time, &event.encode_to_vec(), &endorsement.into());
@@ -483,7 +487,7 @@ mod tests {
         let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
         let root_certificate = Certificate::from_pem(&root_certificate_pem).unwrap();
         let ref_value = create_reference_value(0);
-        let workload_ref_value = WorkloadReferenceValues::ImageReferenceValue(ref_value);
+        let workload_ref_value = WorkloadReferenceValues::ImageReferenceValue(Box::new(ref_value));
         let policy = ConfidentialSpacePolicy::new(root_certificate, workload_ref_value);
 
         let result = policy.report(current_time, &event.encode_to_vec(), &endorsement.into());

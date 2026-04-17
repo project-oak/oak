@@ -19,6 +19,7 @@
 
 use anyhow::Context;
 use clap::Parser;
+use http::uri::Uri;
 use oak_client::verifier::InsecureAttestationVerifier;
 use oak_functions_abi::Request;
 use oak_functions_client::OakFunctionsClient;
@@ -59,9 +60,10 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let opt = Opt::parse();
 
-    let mut client = OakFunctionsClient::new(&opt.uri, &InsecureAttestationVerifier {})
-        .await
-        .context("couldn't create Oak Functions client")?;
+    let mut client =
+        OakFunctionsClient::new(Uri::try_from(opt.uri).unwrap(), &InsecureAttestationVerifier {})
+            .await
+            .context("couldn't create Oak Functions client")?;
 
     if opt.test_large_message {
         // The client should be a able to send a large message without

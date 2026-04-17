@@ -25,7 +25,7 @@ use oak_attestation_verification_types::{
     verifier::AttestationVerifier,
 };
 use oak_proto_rust::oak::attestation::v1::{
-    attestation_results::Status, Assertion, EndorsedEvidenceAssertion,
+    Assertion, EndorsedEvidenceAssertion, attestation_results::Status,
 };
 use oak_time::Instant;
 use prost::Message;

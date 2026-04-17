@@ -26,12 +26,12 @@ bazel run trex/doremint image verify -- \
 use anyhow::Context;
 use clap::Parser;
 use cosign_util::pull_package;
-use digest_util::hex_digest_from_typed_hash;
+use oak_digest::Digest;
 use oak_time_std::instant::now;
-use oci_client::{client::ClientConfig, secrets::RegistryAuth, Client};
+use oci_client::{Client, client::ClientConfig, secrets::RegistryAuth};
 use oci_spec::distribution::Reference;
 
-use crate::flags::{read_pem_file, Claims};
+use crate::flags::{Claims, read_pem_file};
 
 #[derive(Parser, Debug)]
 #[command(about = "Verify an endorsement for a container image")]
@@ -58,11 +58,6 @@ impl VerifyCommand {
         let client = Client::new(ClientConfig::default());
 
         let package = pull_package(&client, &auth, &self.image, &self.endorser_public_key).await?;
-        let statement = package.verify(now().into_unix_millis())?;
-
-        // Need to verify the endorsement subject and the claims as well.
-        let typed_hash = self.image.digest().context("missing digest in OCI reference")?;
-        let digest = hex_digest_from_typed_hash(typed_hash)?;
 
         let claims_vec = self
             .claims
@@ -74,10 +69,15 @@ impl VerifyCommand {
         if claims_vec.is_empty() {
             anyhow::bail!("at least one claim must be provided");
         }
+        let statement = package.verify(now().into_unix_millis(), claims_vec.clone())?;
+
+        // Need to verify the endorsement subject and the claims as well.
+        let typed_hash = self.image.digest().context("missing digest in OCI reference")?;
+        let digest = Digest::from_typed_hash(typed_hash)?;
 
         let claims: Vec<&str> = claims_vec.iter().map(|s| s.as_str()).collect();
         statement
-            .validate(Some(digest), now(), &claims)
+            .validate(Some(digest.into()), now(), &claims)
             .context("validating endorsement statement")?;
 
         println!("Endorsement verified successfully for image {}", self.image);

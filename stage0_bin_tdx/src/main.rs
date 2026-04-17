@@ -23,7 +23,7 @@ use core::panic::PanicInfo;
 use oak_stage0::paging;
 mod asm;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn rust64_start() -> ! {
     oak_stage0::rust64_start::<stage0_tdx::Tdx>()
 }

@@ -71,11 +71,7 @@ impl Bdf {
     /// Returns None if this is the last device on this device.
     pub fn next_device(&self) -> Option<Self> {
         let addr = Self(self.0.checked_add(1 << 3)? & !0b111);
-        if addr.bus() != self.bus() {
-            None
-        } else {
-            Some(addr)
-        }
+        if addr.bus() != self.bus() { None } else { Some(addr) }
     }
 
     /// Returns the next function on the bus, crossing to the next device if
@@ -84,11 +80,7 @@ impl Bdf {
     /// Returns None if this is the last function on this bus.
     pub fn next(&self) -> Option<Self> {
         let addr = Self(self.0.checked_add(1)?);
-        if addr.bus() != self.bus() {
-            None
-        } else {
-            Some(addr)
-        }
+        if addr.bus() != self.bus() { None } else { Some(addr) }
     }
 }
 
@@ -162,11 +154,7 @@ impl PciFunction {
     pub fn new(bdf: Bdf, access: &mut dyn ConfigAccess) -> Result<Option<Self>, &'static str> {
         let func = Self { bdf };
 
-        if func.exists(access)? {
-            Ok(Some(func))
-        } else {
-            Ok(None)
-        }
+        if func.exists(access)? { Ok(Some(func)) } else { Ok(None) }
     }
 
     /// Returns the Vendor ID and Device ID for the address.

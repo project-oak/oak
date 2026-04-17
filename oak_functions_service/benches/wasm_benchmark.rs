@@ -28,14 +28,14 @@ use criterion_macro::criterion;
 use hashbrown::HashMap;
 use oak_functions_abi::Request;
 use oak_functions_service::{
+    Handler,
     logger::StandaloneLogger,
     lookup::LookupDataManager,
-    wasm::{wasmtime::WasmtimeHandler, WasmHandler},
-    Handler,
+    wasm::{WasmHandler, wasmtime::WasmtimeHandler},
 };
 use oak_micro_rpc::oak::functions::testing::TestModuleClient;
 use oak_proto_rust::oak::functions::testing::{
-    lookup_request::Mode, LookupRequest, LookupResponse,
+    LookupRequest, LookupResponse, lookup_request::Mode,
 };
 
 const TEST_MODULE_PATH: &str = "oak_functions_test_module/oak_functions_test_module.wasm";

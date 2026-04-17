@@ -22,12 +22,12 @@ use oak_proto_rust::oak::crypto::v1::EncryptedRequest;
 use zeroize::{Zeroize, Zeroizing};
 
 use crate::{
+    EMPTY_ASSOCIATED_DATA,
     encryptor::ClientEncryptor,
     hpke::{
-        generate_kem_key_pair, setup_base_recipient, Deserializable, PrivateKey, RecipientContext,
-        Serializable, OAK_HPKE_INFO,
+        Deserializable, OAK_HPKE_INFO, PrivateKey, RecipientContext, Serializable,
+        generate_kem_key_pair, setup_base_recipient,
     },
-    EMPTY_ASSOCIATED_DATA,
 };
 
 /// Generates a random encryption key pair and returns an instance of the

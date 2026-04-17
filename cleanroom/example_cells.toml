@@ -1,0 +1,23 @@
+# Cell store for the cleanroom environment.
+#
+# Each [[cell]] defines a named data cell with an IFC label. When a
+# Wasm module reads a cell via `get-cell`, its computation label is
+# automatically tainted with the cell's secrecy and integrity.
+
+[[cell]]
+name      = "user_location"
+value     = "rome"
+secrecy   = ["user_location"]
+integrity = ["alice"]
+
+[[cell]]
+name      = "secret_api_key"
+value     = "top-secret-42"
+secrecy   = ["secret_category"]
+integrity = ["alice"]
+
+[[cell]]
+name      = "google_oauth_token"
+value     = "your-oauth-token-here"
+secrecy   = ["calendar_token"]
+integrity = ["alice"]

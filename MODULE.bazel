@@ -13,22 +13,79 @@ http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "ht
 http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
 
 # https://github.com/bazel-contrib/bazel-lib
-bazel_dep(name = "aspect_bazel_lib", version = "2.17.1")
+bazel_dep(name = "aspect_bazel_lib", version = "2.19.3")
 
 # https://github.com/bazelbuild/bazel-skylib
-bazel_dep(name = "bazel_skylib", version = "1.7.1")
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
 
 # https://github.com/grpc/grpc-java
 bazel_dep(name = "grpc-java", version = "1.71.0", repo_name = "io_grpc_grpc_java")
 
 # https://github.com/bazelbuild/platforms
-bazel_dep(name = "platforms", version = "0.0.11")
+bazel_dep(name = "platforms", version = "1.0.0")
 
 # https://github.com/bazelbuild/rules_cc
-bazel_dep(name = "rules_cc", version = "0.1.1")
+bazel_dep(name = "rules_cc", version = "0.2.14")
+
+# https://github.com/bazel-contrib/toolchains_llvm
+bazel_dep(name = "toolchains_llvm", version = "1.6.0")
+bazel_dep(name = "bazel_features", version = "1.39.0")
+
+llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm", dev_dependency = True)
+llvm.toolchain(
+    name = "llvm_toolchain",
+    # Enable C++ cross-compilation from macOS (aarch64-apple-darwin) to Linux
+    # (x86_64-linux).
+    #
+    # The oak_cc_toolchain_sysroot contains a Debian-based GCC 12 installation.
+    # When cross-compiling with clang + --sysroot, clang cannot automatically
+    # discover GCC's C++ headers (unlike when running natively on Linux).
+    # --gcc-install-dir tells clang exactly where the GCC installation lives
+    # within the sysroot, so it can compute the correct -isystem paths for
+    # libstdc++ headers.
+    #
+    # This path is determined by the sysroot layout:
+    #   external/+_repo_rules2+oak_cc_toolchain_sysroot/usr/lib/gcc/x86_64-linux-gnu/12
+    #
+    # Note: toolchains_llvm's builtin-libc++ stdlib is automatically downgraded
+    # to stdc++ during cross-compilation (see cc_toolchain_config.bzl:250),
+    # so we explicitly set stdlib = "stdc++" to match the sysroot's GCC.
+    #
+    # TODO: b/490855139 - Full cross-compilation of oak_containers from macOS is
+    # blocked by a protobuf exec platform issue: protoc gets compiled as a Linux
+    # ELF binary instead of a macOS binary when using --platforms=//:x86_64-linux,
+    # causing "cannot execute binary file" errors during proto code generation.
+    # This needs to be fixed in the protobuf module's toolchain configuration
+    # to properly respect exec vs target platform separation.
+    extra_cxx_flags = {
+        "linux-x86_64": [
+            "--gcc-install-dir=external/+oak_toolchains+oak_cc_toolchain_sysroot/usr/lib/gcc/x86_64-linux-gnu/12",
+        ],
+    },
+    link_flags = {
+        "none-x86_64": [
+            "-nostdlib",
+        ],
+    },
+    llvm_version = "20.1.0",
+    stdlib = {
+        "linux-x86_64": "stdc++",
+    },
+)
+llvm.sysroot(
+    name = "llvm_toolchain",
+    label = "@oak_cc_toolchain_sysroot//:sysroot",
+    targets = ["linux-x86_64"],
+)
+use_repo(llvm, "llvm_toolchain")
+
+register_toolchains(
+    "@llvm_toolchain//:all",
+    dev_dependency = True,
+)
 
 # https://github.com/grpc/grpc
-bazel_dep(name = "grpc", version = "1.72.0", repo_name = "com_github_grpc_grpc")
+bazel_dep(name = "grpc", version = "1.78.0", repo_name = "com_github_grpc_grpc")
 
 # https://github.com/google/boringssl
 bazel_dep(name = "boringssl", version = "0.20250415.0")
@@ -37,13 +94,13 @@ bazel_dep(name = "boringssl", version = "0.20250415.0")
 bazel_dep(name = "protobuf", version = "30.0", repo_name = "com_google_protobuf")
 
 # https://github.com/google/googletest
-bazel_dep(name = "googletest", version = "1.16.0", repo_name = "com_google_googletest")
+bazel_dep(name = "googletest", version = "1.17.0", repo_name = "com_google_googletest")
 
 # https://github.com/google/re2
-bazel_dep(name = "re2", version = "2024-07-02", repo_name = "com_google_re2")
+bazel_dep(name = "re2", version = "2025-11-05", repo_name = "com_google_re2")
 
 # https://github.com/abseil/abseil-cpp
-bazel_dep(name = "abseil-cpp", version = "20250127.1", repo_name = "com_google_absl")
+bazel_dep(name = "abseil-cpp", version = "20260107.1", repo_name = "com_google_absl")
 
 # https://github.com/bazelbuild/rules_pkg
 bazel_dep(name = "rules_pkg", version = "1.0.1")
@@ -55,7 +112,7 @@ bazel_dep(name = "google_benchmark", version = "1.9.1", repo_name = "com_github_
 bazel_dep(name = "tink_cc", version = "2.4.0", repo_name = "com_github_tink_crypto_tink_cc")
 
 # https://github.com/bazel-contrib/rules_python
-bazel_dep(name = "rules_python", version = "1.4.1", dev_dependency = True)
+bazel_dep(name = "rules_python", version = "1.5.1", dev_dependency = True)
 
 python = use_extension("@rules_python//python/extensions:python.bzl", "python", dev_dependency = True)
 
@@ -81,21 +138,32 @@ register_toolchains("@androidsdk//:sdk-toolchain", "@androidsdk//:all")
 
 bazel_dep(name = "rules_kotlin", version = "2.1.4")
 
-##### Nix pkgs
+##### Build linux kernel with nix
 
 bazel_dep(name = "rules_nixpkgs_core", version = "0.13.0")
 
-nix_repos = use_extension("//bazel/nix:extensions.bzl", "nix_repos")
-use_repo(nix_repos, "nix_linux_kernel", "nix_vanilla_linux_kernel")
+nix_kernels = use_extension("//oak_containers/kernel/internal:extensions.bzl", "nix_kernels")
+nix_kernels.repository(
+    remote = "https://github.com/NixOS/nixpkgs",
+    revision = "nixos-24.05-small",
+    sha256 = "3d46aeea9dc75f3e87e70540c3eeb56c9c3a63baa2af8438f8bfab62a73e7337",
+)
+use_repo(nix_kernels, "nix_linux_kernel", "nix_vanilla_linux_kernel", "nixpkgs")
 
-##### OCI
+##### Container Management
 
 bazel_dep(name = "rules_oci", version = "2.2.6")
 
-oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
+oci = use_extension("@rules_oci//oci:extensions.bzl", "oci", dev_dependency = True)
 
 # This is the base docker image we use to bundle example apps like hello world
 # enclave apps. We don't build these, we pull them from the existing repo.
+#
+# rules_oci generates a platform-specific repo with a `_linux_amd64` suffix
+# from the `platforms` list. BUILD files should reference the platform-specific
+# `@distroless_cc_debian12_linux_amd64` to avoid host-platform matching issues
+# when building on macOS (the multi-platform index only resolves for the host).
+# See https://github.com/bazel-contrib/rules_oci/blob/main/docs/pull.md
 oci.pull(
     name = "distroless_cc_debian12",
     digest = "sha256:6714977f9f02632c31377650c15d89a7efaebf43bab0f37c712c30fc01edb973",
@@ -104,13 +172,21 @@ oci.pull(
 )
 use_repo(oci, "distroless_cc_debian12", "distroless_cc_debian12_linux_amd64")
 
-umoci_toolchain_repo = use_repo_rule("//bazel/tools/umoci:umoci_toolchain.bzl", "_umoci_toolchain_repo")
+oak_toolchains = use_extension("//bazel:extensions.bzl", "oak_toolchains")
+use_repo(oak_toolchains, "oak_cc_toolchain_sysroot", "umoci")
 
-umoci_toolchain_repo(
-    name = "umoci",
+# On macOS, uses system-installed umoci (via Nix). See umoci_toolchain.bzl.
+register_toolchains("@umoci//:umoci_toolchain", "@umoci//:umoci_toolchain_darwin")
+
+bazel_dep(name = "rules_distroless", version = "0.6.1")
+
+apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
+apt.install(
+    name = "oak_containers_app_base",
+    lock = "//oak_containers/app_base:app_base.lock.json",
+    manifest = "//oak_containers/app_base:app_base.yaml",
 )
-
-register_toolchains("@umoci//:umoci_toolchain")
+use_repo(apt, "oak_containers_app_base")
 
 # Run clang-tidy on C++ code with the following command:
 # bazel build //cc/... \
@@ -122,6 +198,27 @@ git_repository(
     remote = "https://github.com/erenon/bazel_clang_tidy.git",
 )
 
+##### Debian Base Image for VM Benchmarks #####
+
+# Debian 12 "nocloud" image for QEMU-based VM benchmarks.
+# This is a minimal Debian image without cloud-init, suitable for local VMs.
+# Pinned to a specific version for reproducibility.
+#
+# To update: check https://cloud.debian.org/images/cloud/bookworm/ for new versions
+# and update the version and SHA512 hash from the SHA512SUMS file.
+DEBIAN_NOCLOUD_VERSION = "20260225-2399"
+
+http_file(
+    name = "debian_nocloud_qcow2",
+    downloaded_file_path = "debian-12-nocloud-amd64.qcow2",
+    # Debian only provides SHA512 checksums, so we use integrity instead of sha256.
+    # From: https://cloud.debian.org/images/cloud/bookworm/{version}/SHA512SUMS
+    integrity = "sha512-6YtfYWpedctbX5BJDSh4QeWSLSQ6RzcdpFwUXyuCRZWx5I4cKZqxn0zPBkJTjldOo5AYV4hdGea8OO74j8iAHA==",
+    url = "https://cloud.debian.org/images/cloud/bookworm/{}/debian-12-nocloud-amd64-{}.qcow2".format(
+        DEBIAN_NOCLOUD_VERSION,
+        DEBIAN_NOCLOUD_VERSION,
+    ),
+)
 ##### Java Dependencies #####
 
 bazel_dep(name = "rules_jvm_external", version = "6.7")
@@ -169,7 +266,6 @@ maven.install(
         "org.bouncycastle:bcprov-jdk18on:1.77",
         "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2",
     ],
-    generate_compat_repositories = True,
     repositories = [
         "https://maven.google.com",
         "https://repo1.maven.org/maven2",
@@ -178,28 +274,67 @@ maven.install(
 use_repo(
     maven,
     "maven",
-    # Unfortunately, we need to list each compat respository name that we want as well.
-    "co_nstant_in_cbor",
-    "com_google_code_gson_gson",
-    "com_google_crypto_tink_tink",
-    "com_google_guava_guava",
-    "com_google_truth_truth",
-    "javax_inject_javax_inject",
-    "junit_junit",
-    "org_bouncycastle_bcprov_jdk18on",
-    "org_jetbrains_kotlin_kotlin_test",
-    "org_mockito_kotlin_mockito_kotlin",
-    "org_mockito_mockito_core",
 )
 
 # https://github.com/bazelbuild/rules_java
-bazel_dep(name = "rules_java", version = "8.9.0")
+bazel_dep(name = "rules_java", version = "8.14.0")
 
 ##### Rust Toolchain Setup #####
 
-bazel_dep(name = "rules_shell", version = "0.5.0")
-bazel_dep(name = "rules_rust", version = "0.61.0")
-bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.61.0")
+bazel_dep(name = "rules_shell", version = "0.6.1")
+bazel_dep(name = "rules_rust", version = "0.68.1")
+bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.68.1")
+
+# All Rust toolchains are configured in //bazel/rust:extensions.bzl
+# which reads the version and SHA256s from //bazel/rust:defs.bzl
+rust_toolchains = use_extension("//bazel/rust:extensions.bzl", "rust_toolchains")
+use_repo(
+    rust_toolchains,
+    # Stdlibs for rebuilt stdlib
+    "stdlibs",
+    # Standard toolchains (for most Rust code)
+    "oak_rust_darwin__aarch64-apple-darwin__nightly",
+    "oak_rust_darwin__wasm32-unknown-unknown__nightly",
+    "oak_rust_darwin__wasm32-wasip2__nightly",
+    "oak_rust_darwin__x86_64-unknown-none__nightly",
+    "oak_rust_linux__wasm32-unknown-unknown__nightly",
+    "oak_rust_linux__wasm32-wasip2__nightly",
+    "oak_rust_linux__x86_64-unknown-linux-gnu__nightly",
+    "oak_rust_linux__x86_64-unknown-none__nightly",
+    # Custom AVX toolchains (for restricted kernel)
+    "rust_noavx_toolchain_repo__x86_64-unknown-linux-gnu__nightly",
+    "rust_noavx_toolchain_repo__x86_64-unknown-none__nightly",
+    "rust_noavx_toolchain_repo_darwin_aarch64__aarch64-apple-darwin__nightly",
+    "rust_noavx_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly",
+    "rust_toolchain_repo__x86_64-unknown-linux-gnu__nightly",
+    "rust_toolchain_repo__x86_64-unknown-none__nightly",
+    "rust_toolchain_repo__x86_64-unknown-none__nightly_tools",
+    "rust_toolchain_repo_darwin_aarch64__aarch64-apple-darwin__nightly",
+    "rust_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly",
+    "rust_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly_tools",
+)
+
+register_toolchains(
+    "//bazel/rust/rebuilt_toolchain:toolchain_rebuilt_x86_64-unknown-none",
+    "//bazel/rust/rebuilt_toolchain:toolchain_rebuilt_x86_64-unknown-none_darwin",
+    "@rust_noavx_toolchain_repo__x86_64-unknown-linux-gnu__nightly//:all",
+    "@rust_noavx_toolchain_repo__x86_64-unknown-none__nightly//:all",
+    "@rust_noavx_toolchain_repo_darwin_aarch64__aarch64-apple-darwin__nightly//:all",
+    "@rust_noavx_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly//:all",
+    "@rust_toolchain_repo__x86_64-unknown-linux-gnu__nightly//:all",
+    "@rust_toolchain_repo__x86_64-unknown-none__nightly//:all",
+    "@rust_toolchain_repo_darwin_aarch64__aarch64-apple-darwin__nightly//:all",
+    "@rust_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly//:all",
+    # Standard toolchains (wasm and fallback)
+    "@oak_rust_linux__wasm32-unknown-unknown__nightly//:all",
+    "@oak_rust_linux__wasm32-wasip2__nightly//:all",
+    "@oak_rust_linux__x86_64-unknown-linux-gnu__nightly//:all",
+    "@oak_rust_linux__x86_64-unknown-none__nightly//:all",
+    "@oak_rust_darwin__wasm32-unknown-unknown__nightly//:all",
+    "@oak_rust_darwin__wasm32-wasip2__nightly//:all",
+    "@oak_rust_darwin__aarch64-apple-darwin__nightly//:all",
+    "@oak_rust_darwin__x86_64-unknown-none__nightly//:all",
+)
 
 ##### rules_foreign_cc packages #####
 
@@ -210,19 +345,19 @@ bazel_dep(name = "rules_foreign_cc", version = "0.15.0")
 # https://android.googlesource.com/platform/external/libcppbor
 git_repository(
     name = "libcppbor",
-    build_file = "@//:third_party/google/libcppbor/BUILD",
+    build_file = "//:third_party/google/libcppbor/BUILD",
     # Head commit on 202505-09
     commit = "b1b998be4ec447f3086e7fd6a7f78eaec66a1c45",
     patches = [
-        "@//:third_party/google/libcppbor/remove_macro.patch",
-        "@//:third_party/google/libcppbor/limits.patch",
+        "//:third_party/google/libcppbor/remove_macro.patch",
+        "//:third_party/google/libcppbor/limits.patch",
     ],
     remote = "https://android.googlesource.com/platform/external/libcppbor",
 )
 
 http_archive(
     name = "cose_lib",
-    build_file = "@//:third_party/BUILD.cose_lib",
+    build_file = "//:third_party/BUILD.cose_lib",
     sha256 = "e41a068b573bb07ed2a50cb3c39ae10995977cad82e24a7873223277e7fdb4e5",
     strip_prefix = "cose-lib-2023.09.08",
     url = "https://github.com/android/cose-lib/archive/refs/tags/v2023.09.08.tar.gz",
@@ -230,31 +365,13 @@ http_archive(
 
 http_archive(
     name = "e2fsprogs",
-    build_file = "@//:third_party/BUILD.e2fsprogs",
+    build_file = "//:third_party/BUILD.e2fsprogs",
     sha256 = "144af53f2bbd921cef6f8bea88bb9faddca865da3fbc657cc9b4d2001097d5db",
     strip_prefix = "e2fsprogs-1.47.0",
     urls = ["https://mirrors.edge.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v1.47.0/e2fsprogs-1.47.0.tar.xz"],
 )
 
 ##### Base Image Files and Sysroot Files #####
-
-# Experimental sysroot for the build toolchain, based on Oak Containers sysimage.
-#
-# Rebuild it using:
-# $ oak_containers/system_image/build-base.sh sysroot
-#
-# Upload it using:
-# $ oak_containers/system_image/push-base.sh sysroot
-#
-# (See oak_containers/system_image/README.md for more details.)
-SYSROOT_SHA256 = "d6f608cf14b27bd4ae68f135b601b86bb9157a1a7a8fc08e43d7ff4ab7a18665"
-
-http_archive(
-    name = "oak_cc_toolchain_sysroot",
-    build_file = "//:toolchain/sysroot.BUILD",
-    sha256 = SYSROOT_SHA256,
-    url = "https://storage.googleapis.com/oak-bins/sysroot/{}.tar.xz".format(SYSROOT_SHA256),
-)
 
 # The binary is used for stage0 tdx measurement test
 # (//tdx_measurement:tdx_measurement_test) only.
@@ -267,7 +384,7 @@ http_file(
     url = "https://storage.googleapis.com/oak-bins/binary/{}/stage0_bin_tdx/binary".format(STAGE0_BIN_TDX_COMMIT),
 )
 
-BASE_IMAGE_SHA256 = "f539ecab633fa0a760ec49e917a0719f2d3ffc1eb6fe7853d518d17699fa035e"
+BASE_IMAGE_SHA256 = "6d118b6ab663c3a4afd2f109d2cab75f17469eca99808b9090d56ae0df05cf9c"
 
 http_file(
     name = "oak_containers_system_image_base",
@@ -284,3 +401,1467 @@ http_file(
     sha256 = NVIDIA_BASE_IMAGE_SHA256,
     url = "https://storage.googleapis.com/oak-bins/nvidia-base-image/{}.tar.xz".format(NVIDIA_BASE_IMAGE_SHA256),
 )
+
+git_repository(
+    name = "jemalloc",
+    build_file = "@oak//bazel:jemalloc.BUILD",
+    # jemalloc pointer for tikv-jemalloc-sys submodule pointer at 0.5.3
+    commit = "e13ca993e8ccb9ba9847cc330696e02839f328f7",
+
+    # Fix an issue when building jemalloc with gcc 10.3 (which is the version we
+    # currently use due to the aspect_gcc target)
+    # There's a target in the Makefile that uses the -MM flag, and
+    # when it does that, it doesn't include the $(CFLAGS).
+    # This results in __GNUC_PREREQ not being defined, which causes compiler
+    # failures.
+    # As a workaround, we patch that line in the Makefile.in to include the CFLAGS.
+    # TODO: b/341166977 Remove this when we can.
+    patch_cmds = ["sed -i '481s/-MM/$(CFLAGS) -MM/' Makefile.in"],
+    remote = "https://github.com/tikv/jemalloc",
+)
+
+load_patched_crates = use_extension("//bazel/crates:extensions.bzl", "load_patched_crates")
+use_repo(
+    load_patched_crates,
+    "prost_types_oak_patched",
+)
+
+aliased_crates_repository = use_extension("//bazel/crates:extensions.bzl", "aliased_crates_repository")
+use_repo(
+    aliased_crates_repository,
+    "oak_crates_index",
+)
+
+###############################################################################
+# Rust Crate Specifications
+#
+# This section defines the external Rust crates used in the project.
+# To maintain compatibility with older Bazel versions, these definitions
+# must remain in the main MODULE.bazel file.
+###############################################################################
+
+crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
+
+inject_repo(crate, "jemalloc")
+
+# Repository Symbolic Names
+# -------------------------
+# These constants represent the different crate indexes used in the project.
+STD = "oak_std_crates_index"
+
+NO_STD = "oak_no_std_crates_index"
+
+NO_STD_NO_AVX = "oak_no_std_no_avx_crates_index"
+
+# Repository Groups
+# -----------------
+# Common combinations of repositories for easier assignment.
+ALL_REPOSITORIES = [
+    STD,
+    NO_STD,
+    NO_STD_NO_AVX,
+]
+
+ALL_NO_STD = [
+    NO_STD,
+    NO_STD_NO_AVX,
+]
+
+ALL_STD = [STD]
+
+ONLY_NO_STD = [NO_STD]
+
+ONLY_NO_STD_NO_AVX = [NO_STD_NO_AVX]
+
+# Repository Definitions
+# ----------------------
+# Define the repositories using the collected specifications.
+
+crate.from_specs(
+    name = STD,
+    supported_platform_triples = [
+        "aarch64-apple-darwin",
+        "wasm32-unknown-unknown",
+        "wasm32-wasip2",
+        "x86_64-unknown-linux-gnu",
+        "x86_64-unknown-none",
+    ],
+)
+use_repo(crate, STD)
+
+crate.from_specs(
+    name = NO_STD,
+    supported_platform_triples = [
+        "aarch64-apple-darwin",
+        "wasm32-unknown-unknown",
+        "wasm32-wasip2",
+        "x86_64-unknown-linux-gnu",
+        "x86_64-unknown-none",
+    ],
+)
+use_repo(crate, NO_STD)
+
+crate.from_specs(
+    name = NO_STD_NO_AVX,
+    supported_platform_triples = [
+        "x86_64-unknown-linux-gnu",
+        "x86_64-unknown-none",
+        "wasm32-unknown-unknown",
+    ],
+)
+use_repo(crate, NO_STD_NO_AVX)
+
+# Crate Specifications and Annotations
+# -------------------------------------
+# This section lists all external crates and their project-specific configurations.
+# Entries are sorted alphabetically by package name.
+#
+# NOTE: These specifications are parsed by a simple Starlark-based parser in
+# bazel/crates/extensions.bzl. To ensure the parser succeeds:
+# 1. Each specification MUST use the `crate.spec(` call.
+# 2. Both `package = "..."` and `repositories = ...` MUST be present within the call.
+# 3. `repositories` MUST be one of the constants: ALL_REPOSITORIES, ALL_NO_STD,
+#    ALL_STD, ONLY_NO_STD, or ONLY_NO_STD_NO_AVX.
+# 4. Do not use nested parentheses within the `crate.spec(...)` arguments.
+
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "acpi",
+    repositories = ALL_REPOSITORIES,
+    version = "5.0.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "aead",
+    repositories = ALL_REPOSITORIES,
+    version = "0.5.1",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "aes",
+        "alloc",
+    ],
+    package = "aes-gcm",
+    repositories = ALL_REPOSITORIES,
+    version = "0.10.3",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "aml",
+    repositories = ALL_REPOSITORIES,
+    version = "0.16.4",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "anyhow",
+    repositories = ALL_REPOSITORIES,
+    version = "1.0.87",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "arrayvec",
+    repositories = ALL_REPOSITORIES,
+    version = "0.7.4",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "assertables",
+    repositories = ALL_STD,
+    version = "7.0.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "async-stream",
+    repositories = ALL_STD,
+    version = "0.3.5",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "async-trait",
+    repositories = ALL_STD,
+    version = "0.1.77",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "atomic_refcell",
+    repositories = ALL_REPOSITORIES,
+    version = "0.1.13",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "http2",
+        "tokio",
+    ],
+    package = "axum",
+    repositories = ALL_STD,
+    version = "0.7.9",
+)
+crate.spec(
+    default_features = False,
+    features = ["alloc"],
+    package = "base64",
+    repositories = ALL_REPOSITORIES,
+    version = "0.21.7",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "bincode",
+    repositories = ALL_STD,
+    version = "1.3.3",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "bitflags",
+    repositories = ALL_REPOSITORIES,
+    version = "2.4.1",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "bitvec",
+    repositories = ALL_REPOSITORIES,
+    version = "1.0.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "bytes",
+    repositories = ALL_STD,
+    version = "1.11.0",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "bytes",
+    repositories = ALL_NO_STD,
+    version = "1.11.0",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "alloc",
+        "serde",
+    ],
+    package = "chrono",
+    repositories = ALL_STD,
+    version = "0.4.31",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "alloc",
+        "serde",
+    ],
+    package = "chrono",
+    repositories = ALL_NO_STD,
+    version = "0.4.31",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "ciborium",
+    repositories = ALL_REPOSITORIES,
+    version = "0.2.1",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "derive",
+        "env",
+    ],
+    package = "clap",
+    repositories = ALL_STD,
+    version = "4.4.17",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "colored",
+    repositories = ALL_STD,
+    version = "2.1.0",
+)
+crate.spec(
+    default_features = True,
+    features = ["tokio"],
+    package = "command-fds",
+    repositories = ALL_STD,
+    version = "0.3.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "command-group",
+    repositories = ALL_STD,
+    version = "5.0.1",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "const-oid",
+    repositories = ALL_REPOSITORIES,
+    version = "0.9.6",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "coset",
+    repositories = ALL_REPOSITORIES,
+    version = "0.3.7",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "criterion",
+    repositories = ALL_STD,
+    version = "0.5.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "criterion-macro",
+    repositories = ALL_STD,
+    version = "0.4.0",
+)
+crate.spec(
+    default_features = False,
+    features = ["alloc"],
+    package = "derive_builder",
+    repositories = ALL_REPOSITORIES,
+    version = "0.20.0",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "der",
+        "pem",
+        "pkcs8",
+        "signing",
+    ],
+    package = "ecdsa",
+    repositories = ALL_REPOSITORIES,
+    version = "0.16.9",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "ed25519-dalek",
+    repositories = ALL_REPOSITORIES,
+    version = "2.2.0",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "elf",
+    repositories = ALL_REPOSITORIES,
+    version = "0.7.4",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "embedded-io",
+    repositories = ONLY_NO_STD,
+    version = "0.6.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "env_logger",
+    repositories = ALL_STD,
+    version = "0.11.2",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "flate2",
+    repositories = ALL_STD,
+    version = "1.1.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "futures",
+    repositories = ALL_STD,
+    version = "0.3.31",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "futures-util",
+    repositories = ALL_STD,
+    version = "0.3.31",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "getrandom",
+    repositories = ALL_STD,
+    version = "0.2.12",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "js",
+        "rdrand",
+    ],
+    package = "getrandom",
+    repositories = ALL_NO_STD,
+    version = "0.2.12",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "elf32",
+        "elf64",
+        "endian_fd",
+    ],
+    package = "goblin",
+    repositories = ALL_REPOSITORIES,
+    version = "0.8.2",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "googletest",
+    repositories = ALL_STD,
+    version = "0.14.2",
+)
+crate.spec(
+    default_features = False,
+    features = ["ahash"],
+    package = "hashbrown",
+    repositories = ALL_REPOSITORIES,
+    version = "0.14.3",
+)
+crate.spec(
+    default_features = False,
+    features = ["alloc"],
+    package = "hex",
+    repositories = ALL_REPOSITORIES,
+    version = "0.4.3",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "hkdf",
+    repositories = ALL_REPOSITORIES,
+    version = "0.12.4",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "hmac",
+    repositories = ALL_REPOSITORIES,
+    version = "0.12.1",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "alloc",
+        "x25519",
+    ],
+    package = "hpke",
+    repositories = ALL_REPOSITORIES,
+    version = "0.11.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "http",
+    repositories = ALL_STD,
+    version = "1.3",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "http-body-util",
+    repositories = ALL_STD,
+    version = "0.1.2",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "humantime-serde",
+    repositories = ALL_STD,
+    version = "1.1.1",
+)
+crate.spec(
+    default_features = True,
+    features = ["full"],
+    package = "hyper",
+    repositories = ALL_STD,
+    version = "1.4.1",
+)
+crate.spec(
+    default_features = True,
+    features = ["full"],
+    package = "hyper-util",
+    repositories = ALL_STD,
+    version = "0.1.7",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "indicatif",
+    repositories = ALL_STD,
+    version = "0.17.8",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "itertools",
+    repositories = ALL_REPOSITORIES,
+    version = "0.13.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "jni",
+    repositories = ALL_STD,
+    version = "0.21.1",
+)
+crate.spec(
+    default_features = True,
+    features = ["openssl"],
+    package = "jwt",
+    repositories = ALL_STD,
+    version = "0.16.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "lazy_static",
+    repositories = ALL_STD,
+    version = "1.4.0",
+)
+crate.spec(
+    default_features = True,
+    features = ["spin_no_std"],
+    package = "lazy_static",
+    repositories = ALL_NO_STD,
+    version = "1.4.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "libm",
+    repositories = ALL_REPOSITORIES,
+    version = "0.2.8",
+)
+crate.spec(
+    default_features = True,
+    features = ["alloc_ref"],
+    package = "linked_list_allocator",
+    repositories = ALL_REPOSITORIES,
+    # We need to update to a more recent rust nightly to upgrade this crate.
+    # See https://github.com/rust-osdev/linked-list-allocator/pull/90
+    version = "=0.10.5",
+)
+crate.annotation(
+    crate = "linked_list_allocator",
+    disable_pipelining = False,
+    repositories = ONLY_NO_STD,
+    rustc_flags = ["--codegen=overflow-checks=false"],
+)
+crate.spec(
+    default_features = True,
+    features = ["arc_lock"],
+    package = "lock_api",
+    repositories = ALL_STD,
+    version = "0.4.11",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "lock_api",
+    repositories = ALL_NO_STD,
+    version = "0.4.11",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "log",
+    repositories = ALL_REPOSITORIES,
+    version = "0.4.20",
+)
+crate.annotation(
+    build_script_env = {"LZMA_API_STATIC": "true"},
+    crate = "lzma-sys",
+    disable_pipelining = False,
+    repositories = ALL_STD,
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "maplit",
+    repositories = ALL_REPOSITORIES,
+    version = "1.0.2",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "mockall",
+    repositories = ALL_REPOSITORIES,
+    version = "0.13.0",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "fs",
+        "mman",
+        "mount",
+        "process",
+        "signal",
+        "term",
+        "ucontext",
+        "user",
+    ],
+    package = "nix",
+    repositories = ALL_STD,
+    version = "0.27.1",
+)
+crate.spec(
+    default_features = False,
+    features = ["alloc"],
+    package = "nom",
+    repositories = ALL_REPOSITORIES,
+    version = "8.0.0",
+)
+crate.spec(
+    default_features = False,
+    features = ["rustls-tls"],
+    package = "oci-client",
+    repositories = ALL_STD,
+    version = "0.15.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "oci-spec",
+    repositories = ALL_STD,
+    version = "0.8.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "once_cell",
+    repositories = ALL_STD,
+    version = "1.19.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "openssl",
+    repositories = ALL_STD,
+    version = "0.10.73",
+)
+crate.spec(
+    default_features = True,
+    features = ["trace"],
+    package = "opentelemetry",
+    repositories = ALL_STD,
+    version = "0.31.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "opentelemetry-appender-tracing",
+    repositories = ALL_STD,
+    version = "0.31.0",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "grpc-tonic",
+        "logs",
+        "metrics",
+        "trace",
+    ],
+    package = "opentelemetry-otlp",
+    repositories = ALL_STD,
+    version = "0.31.0",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "gen-tonic",
+        "logs",
+        "metrics",
+    ],
+    package = "opentelemetry-proto",
+    repositories = ALL_STD,
+    version = "0.31.0",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "logs",
+        "metrics",
+        "rt-tokio",
+        "spec_unstable_metrics_views",
+        "trace",
+    ],
+    package = "opentelemetry_sdk",
+    repositories = ALL_STD,
+    version = "0.31.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "os_pipe",
+    repositories = ALL_STD,
+    version = "1.1.5",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "ouroboros",
+    repositories = ALL_STD,
+    version = "0.18.4",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "alloc",
+        "ecdsa",
+        "pem",
+    ],
+    package = "p256",
+    repositories = ALL_REPOSITORIES,
+    version = "0.13.2",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "ecdsa",
+        "pem",
+    ],
+    package = "p384",
+    repositories = ALL_REPOSITORIES,
+    version = "0.13.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "parking_lot",
+    repositories = ALL_STD,
+    version = "0.12.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "pem",
+    repositories = ALL_STD,
+    version = "3.0.4",
+)
+crate.spec(
+    default_features = False,
+    features = ["alloc"],
+    package = "pkcs8",
+    repositories = ALL_REPOSITORIES,
+    version = "0.10.2",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "port_check",
+    repositories = ALL_STD,
+    version = "0.1.5",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "portpicker",
+    repositories = ALL_STD,
+    version = "0.1.1",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "criterion",
+        "flamegraph",
+        "frame-pointer",
+        "prost-codec",
+    ],
+    package = "pprof",
+    repositories = ALL_STD,
+    version = "0.15.0",
+)
+crate.annotation(
+    crate = "pprof",
+    disable_pipelining = False,
+    patch_args = [
+        "-u",
+        "-p0",
+    ],
+    patches = ["@oak//third_party/pprof:pprof-prost13.patch"],
+    repositories = ALL_STD,
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "primeorder",
+    repositories = ALL_REPOSITORIES,
+    version = "0.13.6",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "procfs",
+    repositories = ALL_STD,
+    version = "0.16.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "proptest",
+    repositories = ALL_STD,
+    version = "1.4.0",
+)
+crate.spec(
+    default_features = False,
+    features = ["derive"],
+    package = "prost",
+    repositories = ALL_STD,
+    version = "0.14.3",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "prost",
+    repositories = ALL_NO_STD,
+    version = "0.14.3",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "prost-build",
+    repositories = ALL_STD,
+    version = "0.14.3",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "prost-derive",
+    repositories = ALL_STD,
+    version = "0.14.3",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "prost-types",
+    repositories = ALL_STD,
+    version = "0.14.3",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "quote",
+    repositories = ALL_STD,
+    version = "1.0.35",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "rand",
+    repositories = ALL_STD,
+    version = "0.9.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "rand_chacha",
+    repositories = ALL_STD,
+    version = "0.3.1",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "rand_chacha",
+    repositories = ALL_NO_STD,
+    version = "0.3.1",
+)
+crate.spec(
+    default_features = False,
+    features = ["getrandom"],
+    package = "rand_core",
+    repositories = ALL_REPOSITORIES,
+    version = "0.6.4",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "regex",
+    repositories = ALL_STD,
+    version = "1.10.2",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "ring",
+        "pem",
+        "x509-parser",
+    ],
+    package = "rcgen",
+    repositories = ALL_STD,
+    version = "0.13.1",
+)
+crate.spec(
+    package = "time-macros",
+    repositories = ALL_STD,
+    version = "=0.2.18",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "std",
+        "string",
+    ],
+    package = "regex-lite",
+    repositories = ALL_STD,
+    version = "0.1.6",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "regex-lite",
+    repositories = ALL_NO_STD,
+    version = "0.1.6",
+)
+crate.spec(
+    default_features = False,
+    features = ["rustls-tls"],
+    package = "reqwest",
+    repositories = ALL_STD,
+    version = "0.12.22",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "rlsf",
+    repositories = ALL_REPOSITORIES,
+    version = "0.2.1",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "base64",
+        "macros",
+        "server",
+        "transport-streamable-http-server",
+        "transport-worker",
+    ],
+    package = "rmcp",
+    repositories = ALL_STD,
+    version = "0.8.1",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "rmcp-macros",
+    repositories = ALL_STD,
+    version = "0.8.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "rpassword",
+    repositories = ALL_STD,
+    version = "7.3.1",
+)
+crate.spec(
+    default_features = False,
+    features = ["sha2"],
+    package = "rsa",
+    repositories = ALL_REPOSITORIES,
+    version = "0.9.6",
+)
+crate.spec(
+    default_features = False,
+    package = "rs_merkle",
+    repositories = ALL_REPOSITORIES,
+    version = "1.5.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "rtnetlink",
+    repositories = ALL_STD,
+    version = "0.14.1",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "ring",
+        "std",
+    ],
+    package = "rustls",
+    repositories = ALL_STD,
+    version = "0.23.36",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "rustls-pemfile",
+    repositories = ALL_STD,
+    version = "2.1.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "rustls-pki-types",
+    repositories = ALL_STD,
+    version = "1.14.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "self_cell",
+    repositories = ALL_REPOSITORIES,
+    version = "1.0.4",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "serde",
+    repositories = ALL_REPOSITORIES,
+    version = "1.0.210",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "serde",
+    repositories = ALL_REPOSITORIES,
+    version = "1.0.228",
+)
+crate.spec(
+    default_features = False,
+    features = ["alloc"],
+    package = "serde_json",
+    repositories = ALL_REPOSITORIES,
+    version = "1.0.111",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "yaml_serde",
+    repositories = ALL_STD,
+    version = "0.10.4",
+)
+crate.annotation(
+    crate = "zmij",
+    rustc_flags = ["--cfg=zmij_no_select_unpredictable"],
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "sha2",
+    repositories = ALL_REPOSITORIES,
+    version = "0.10.8",
+)
+crate.annotation(
+    crate = "sha2",
+    crate_features = ["force-soft"],
+    disable_pipelining = False,
+    repositories = ONLY_NO_STD_NO_AVX,
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "sha3",
+    repositories = ALL_REPOSITORIES,
+    version = "0.10.8",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "signal-hook",
+    repositories = ALL_STD,
+    version = "0.3.17",
+)
+crate.spec(
+    default_features = True,
+    features = ["futures-v0_3"],
+    package = "signal-hook-tokio",
+    repositories = ALL_STD,
+    version = "0.3.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "spinning_top",
+    repositories = ALL_REPOSITORIES,
+    version = "0.3.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "static_assertions",
+    repositories = ALL_REPOSITORIES,
+    version = "1.1.0",
+)
+crate.spec(
+    default_features = False,
+    features = ["derive"],
+    package = "strum",
+    repositories = ALL_REPOSITORIES,
+    version = "0.27.0",
+)
+crate.spec(
+    default_features = True,
+    features = ["full"],
+    package = "syn",
+    repositories = ALL_STD,
+    version = "2.0.48",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "syslog",
+    repositories = ALL_STD,
+    version = "6.1.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "tar",
+    repositories = ALL_STD,
+    version = "0.4.40",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "tempfile",
+    repositories = ALL_STD,
+    version = "3.10.1",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "thiserror",
+    repositories = ALL_REPOSITORIES,
+    version = "2.0.12",
+)
+crate.annotation(
+    build_script_data = ["@jemalloc//:gen_dir"],
+    build_script_env = {"JEMALLOC_OVERRIDE": "$(execpath @jemalloc//:gen_dir)/lib/libjemalloc.a"},
+    crate = "tikv-jemalloc-sys",
+    data = ["@jemalloc//:gen_dir"],
+    disable_pipelining = False,
+    repositories = ALL_STD,
+    deps = ["@jemalloc"],
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "tikv-jemallocator",
+    repositories = ALL_STD,
+    version = "0.5.4",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "fs",
+        "io-std",
+        "io-util",
+        "macros",
+        "net",
+        "parking_lot",
+        "process",
+        "rt",
+        "rt-multi-thread",
+        "signal",
+        "sync",
+        "time",
+    ],
+    package = "tokio",
+    repositories = ALL_STD,
+    version = "1.41.0",
+)
+crate.annotation(
+    crate = "tokio",
+    disable_pipelining = False,
+    repositories = ALL_STD,
+    rustc_flags = ["--cfg=tokio_unstable"],
+)
+crate.spec(
+    default_features = True,
+    features = ["net"],
+    package = "tokio-stream",
+    repositories = ALL_STD,
+    version = "0.1.14",
+)
+crate.spec(
+    default_features = True,
+    features = ["rustls-tls-native-roots"],
+    package = "tokio-tungstenite",
+    repositories = ALL_STD,
+    version = "0.27.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "tokio-util",
+    repositories = ALL_STD,
+    version = "0.7.10",
+)
+crate.spec(
+    default_features = True,
+    features = ["tonic014"],
+    package = "tokio-vsock",
+    repositories = ALL_STD,
+    version = "*",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "toml",
+    repositories = ALL_STD,
+    version = "0.8.12",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "gzip",
+        "tls-webpki-roots",
+    ],
+    package = "tonic",
+    repositories = ALL_STD,
+    version = "0.14.3",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "tonic-prost",
+    repositories = ALL_STD,
+    version = "0.14.3",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "tonic-prost-build",
+    repositories = ALL_STD,
+    version = "0.14.3",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "load-shed",
+        "util",
+    ],
+    package = "tower",
+    repositories = ALL_STD,
+    version = "0.4",
+)
+crate.spec(
+    default_features = True,
+    features = ["trace"],
+    package = "tower-http",
+    repositories = ALL_STD,
+    version = "0.6",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "tracing",
+    repositories = ALL_STD,
+    version = "0.1.40",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "ansi",
+        "fmt",
+        "smallvec",
+        "std",
+    ],
+    package = "tracing-subscriber",
+    repositories = ALL_STD,
+    version = "0.3.22",
+)
+crate.spec(
+    default_features = True,
+    features = ["url"],
+    package = "tungstenite",
+    repositories = ALL_STD,
+    version = "0.27.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "uart_16550",
+    repositories = ALL_REPOSITORIES,
+    version = "0.3.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "ubyte",
+    repositories = ALL_STD,
+    version = "0.10.4",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "ureq",
+    repositories = ALL_STD,
+    version = "2.12.1",
+)
+crate.spec(
+    default_features = True,
+    features = ["serde"],
+    package = "url",
+    repositories = ALL_STD,
+    version = "2.5.2",
+)
+crate.spec(
+    default_features = True,
+    features = ["embedded-io"],
+    git = "https://github.com/rcore-os/virtio-drivers.git",
+    package = "virtio-drivers",
+    repositories = ONLY_NO_STD,
+    rev = "dd8772498d581ae8d5644806c0072d3dc6f94118",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "walkdir",
+    repositories = ALL_STD,
+    version = "2.5.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "waki",
+    repositories = ALL_STD,
+    version = "0.5.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "wasm-bindgen",
+    repositories = ONLY_NO_STD,
+    version = "=0.2.105",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "wasmi",
+    repositories = ALL_STD,
+    version = "0.31.2",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "wasmi",
+    repositories = ALL_NO_STD,
+    version = "0.31.2",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "async",
+        "cache",
+        "cranelift",
+        "gc",
+        "gc-drc",
+        "parallel-compilation",
+        "pooling-allocator",
+        "runtime",
+    ],
+    package = "wasmtime",
+    repositories = ALL_STD,
+    version = "29.0.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "wasmtime-wasi",
+    repositories = ALL_STD,
+    version = "29.0.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "wasmtime-wasi-http",
+    repositories = ALL_STD,
+    version = "29.0.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "wit-bindgen",
+    repositories = ALL_STD,
+    version = "0.33.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "which",
+    repositories = ALL_STD,
+    version = "5.0.0",
+)
+crate.spec(
+    default_features = False,
+    features = ["pem"],
+    package = "x509-cert",
+    repositories = ALL_REPOSITORIES,
+    version = "0.2.5",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "p256",
+        "pem",
+        "rsa",
+        "sha2",
+        "x509",
+    ],
+    package = "x509-verify",
+    repositories = ALL_REPOSITORIES,
+    version = "0.4.8",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "x86_64",
+    repositories = ALL_REPOSITORIES,
+    version = "0.15.2",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "xz2",
+    repositories = ALL_STD,
+    version = "0.1.7",
+)
+crate.spec(
+    default_features = False,
+    features = ["derive"],
+    package = "zerocopy",
+    repositories = ALL_REPOSITORIES,
+    version = "0.8.25",
+)
+crate.spec(
+    default_features = True,
+    features = ["derive"],
+    package = "zeroize",
+    repositories = ALL_REPOSITORIES,
+    version = "1.7.0",
+)
+
+###############################################################################
+# NOTE: Keep crate spec definitions at the end of this file.
+###############################################################################

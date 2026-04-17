@@ -76,17 +76,11 @@ message WasmtimeConfig {
   // https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.allocation_strategy
   PoolingAllocationConfig pooling_strategy = 2;
 
-  // https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.static_memory_maximum_size
-  optional uint64 static_memory_maximum_size = 3;
+  // https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.memory_guard_size
+  optional uint64 memory_guard_size = 4;
 
-  // https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.static_memory_guard_size
-  optional uint64 static_memory_guard_size = 4;
-
-  // https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.dynamic_memory_guard_size
-  optional uint64 dynamic_memory_guard_size = 5;
-
-  // https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.dynamic_memory_reserved_for_growth
-  optional uint64 dynamic_memory_reserved_for_growth = 6;
+  // https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.memory_reservation_for_growth
+  optional uint64 memory_reservation_for_growth = 6;
 
   // https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.memory_init_cow
   optional bool memory_init_cow = 7;

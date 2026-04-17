@@ -16,12 +16,13 @@
 use prost::Message;
 
 use crate::oak::{
-    attestation::v1::{
-        AmdSevSnpEndorsement, ApplicationEndorsement, ConfidentialSpaceEndorsement,
-        ContainerEndorsement, FirmwareEndorsement, KernelEndorsement,
-        SessionBindingPublicKeyEndorsement, SystemEndorsement,
-    },
     Variant,
+    attestation::v1::{
+        AmdSevSnpEndorsement, ApplicationEndorsement, CbLayer1TransparentEndorsement,
+        CbLayer2TransparentEndorsement, ConfidentialSpaceEndorsement, ContainerEndorsement,
+        FirmwareEndorsement, KernelEndorsement, SessionBindingPublicKeyEndorsement,
+        SystemEndorsement,
+    },
 };
 
 impl Variant {
@@ -48,6 +49,10 @@ const SYSTEM_ENDORSEMENT_ID: [u8; 16] =
     [71, 34, 101, 93, 150, 61, 79, 201, 132, 67, 241, 69, 113, 221, 50, 162];
 const APPLICATION_ENDORSEMENT_ID: [u8; 16] =
     [232, 78, 215, 20, 102, 157, 67, 10, 166, 15, 138, 101, 30, 90, 85, 3];
+const CB_LAYER1_TRANSPARENT_ENDORSEMENT_ID: [u8; 16] =
+    [133, 130, 196, 180, 231, 19, 64, 199, 128, 195, 66, 216, 251, 206, 88, 39];
+const CB_LAYER2_TRANSPARENT_ENDORSEMENT_ID: [u8; 16] =
+    [203, 60, 93, 130, 129, 203, 79, 234, 146, 123, 124, 181, 108, 31, 50, 210];
 const CONTAINER_ENDORSEMENT_ID: [u8; 16] =
     [114, 151, 165, 31, 160, 93, 73, 161, 175, 219, 100, 205, 238, 7, 134, 45];
 const SESSION_BINDING_PUBLIC_KEY_ENDORSEMENT_ID: [u8; 16] =
@@ -105,6 +110,20 @@ impl TryFrom<&Variant> for ApplicationEndorsement {
     }
 }
 
+impl TryFrom<&Variant> for CbLayer1TransparentEndorsement {
+    type Error = &'static str;
+    fn try_from(value: &Variant) -> Result<Self, Self::Error> {
+        try_into_message(&CB_LAYER1_TRANSPARENT_ENDORSEMENT_ID, value)
+    }
+}
+
+impl TryFrom<&Variant> for CbLayer2TransparentEndorsement {
+    type Error = &'static str;
+    fn try_from(value: &Variant) -> Result<Self, Self::Error> {
+        try_into_message(&CB_LAYER2_TRANSPARENT_ENDORSEMENT_ID, value)
+    }
+}
+
 impl TryFrom<&Variant> for SessionBindingPublicKeyEndorsement {
     type Error = &'static str;
     fn try_from(value: &Variant) -> Result<Self, Self::Error> {
@@ -137,6 +156,8 @@ impl_try_from_variant_to_option!(KernelEndorsement);
 impl_try_from_variant_to_option!(SystemEndorsement);
 impl_try_from_variant_to_option!(ContainerEndorsement);
 impl_try_from_variant_to_option!(ApplicationEndorsement);
+impl_try_from_variant_to_option!(CbLayer1TransparentEndorsement);
+impl_try_from_variant_to_option!(CbLayer2TransparentEndorsement);
 impl_try_from_variant_to_option!(SessionBindingPublicKeyEndorsement);
 impl_try_from_variant_to_option!(ConfidentialSpaceEndorsement);
 
@@ -173,6 +194,18 @@ impl From<ContainerEndorsement> for Variant {
 impl From<ApplicationEndorsement> for Variant {
     fn from(value: ApplicationEndorsement) -> Self {
         Variant { id: APPLICATION_ENDORSEMENT_ID.to_vec(), value: value.encode_to_vec() }
+    }
+}
+
+impl From<CbLayer1TransparentEndorsement> for Variant {
+    fn from(value: CbLayer1TransparentEndorsement) -> Self {
+        Variant { id: CB_LAYER1_TRANSPARENT_ENDORSEMENT_ID.to_vec(), value: value.encode_to_vec() }
+    }
+}
+
+impl From<CbLayer2TransparentEndorsement> for Variant {
+    fn from(value: CbLayer2TransparentEndorsement) -> Self {
+        Variant { id: CB_LAYER2_TRANSPARENT_ENDORSEMENT_ID.to_vec(), value: value.encode_to_vec() }
     }
 }
 

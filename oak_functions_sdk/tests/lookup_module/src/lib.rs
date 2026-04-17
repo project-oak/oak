@@ -136,7 +136,7 @@ impl TestManager<'static> {
     }
 }
 
-#[cfg_attr(not(test), no_mangle)]
+#[cfg_attr(not(test), unsafe(no_mangle))]
 pub extern "C" fn main() {
     let test_manager = TestManager::new();
     test_manager.run_test().expect("couldn't run test");

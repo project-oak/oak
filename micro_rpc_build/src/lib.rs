@@ -239,7 +239,9 @@ fn generate_server_handler(method: &Method) -> anyhow::Result<Vec<String>> {
         format!("            {method_id} => {{"),
         // We need the angle brackets around the type in order to make sure it works with Rust well
         // known types, e.g. when `google.protobuf.Empty` is replaced by `()`.
-        format!("                let request = <{request_type}>::decode(request.body.as_ref()).map_err(|err| {{"),
+        format!(
+            "                let request = <{request_type}>::decode(request.body.as_ref()).map_err(|err| {{"
+        ),
         format!("                    ::micro_rpc::Status::new_with_message("),
         format!("                        ::micro_rpc::StatusCode::Internal,"),
         format!(

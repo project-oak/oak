@@ -81,7 +81,7 @@ pkg_tar(
 
 oci_image(
     name = "image",
-    base = "@distroless_cc_debian12",
+    base = "@distroless_cc_debian12_linux_amd64",
     entrypoint = ["/usr/local/bin/oak_gcp_examples_echo_enclave_app"],
     exposed_ports = ["8080/tcp"],
     labels = {

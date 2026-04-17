@@ -19,15 +19,15 @@
 use std::sync::Arc;
 
 use jni::{
+    JNIEnv,
     objects::{JClass, JObject, JValue},
     sys::{jlong, jobject},
-    JNIEnv,
 };
 use oak_jni_attestation_publisher::JNIAttestationPublisher;
 use oak_proto_rust::oak::{
+    Variant,
     attestation::v1::{Assertion, Endorsements, EventLog, Evidence},
     session::v1::SessionBinding,
-    Variant,
 };
 use oak_sdk_common::{StaticAttester, StaticEndorser};
 use oak_session::{
@@ -89,7 +89,7 @@ impl SessionBinder for FakeSessionBinder {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_AttestationPublisherTest_nativeCreateServerConfigBuilder(
     mut env: JNIEnv,
     _class: JClass,
@@ -100,6 +100,7 @@ extern "system" fn Java_com_google_oak_session_AttestationPublisherTest_nativeCr
         event_log: Some(EventLog { encoded_events: vec![b"fake event".to_vec()] }),
         layers: vec![],
         transparent_event_log: None,
+        signed_user_data_certificate: vec![],
     };
 
     let endorsement = Variant { id: b"testing".to_vec(), value: b"fake endorsement".to_vec() };
@@ -118,7 +119,7 @@ extern "system" fn Java_com_google_oak_session_AttestationPublisherTest_nativeCr
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_AttestationPublisherTest_nativeCreateClientConfigBuilder(
     mut env: JNIEnv,
     _class: JClass,

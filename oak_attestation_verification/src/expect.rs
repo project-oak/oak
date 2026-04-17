@@ -17,21 +17,18 @@
 // `get_`, while names of functions related to policy-based attestation
 // verification start with `acquire_`.
 
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, vec, vec::Vec};
 
 use anyhow::{Context, Error};
-use digest_util::{
+use intoto::statement::{
+    DefaultStatement, Validity, get_hex_digest_from_statement, parse_statement,
+};
+use oak_digest::{
     hex_to_raw_digest, is_hex_digest_match, raw_digest_from_contents, raw_to_hex_digest,
 };
-use intoto::statement::{
-    get_hex_digest_from_statement, parse_statement, DefaultStatement, Validity,
-};
 use oak_proto_rust::oak::{
+    RawDigest,
     attestation::v1::{
-        binary_reference_value, endorsement::Format, endorsements, expected_digests,
-        expected_values, kernel_binary_reference_value, reference_values,
-        tcb_version_expected_value, tcb_version_reference_value, tdx_tcb_svn_expected_value,
-        tdx_tcb_svn_reference_value, text_expected_value, text_reference_value,
         AmdSevExpectedValues, AmdSevReferenceValues, ApplicationEndorsement,
         ApplicationLayerEndorsements, ApplicationLayerExpectedValues,
         ApplicationLayerReferenceValues, BinaryReferenceValue, CbEndorsements, CbExpectedValues,
@@ -50,8 +47,11 @@ use oak_proto_rust::oak::{
         SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersionExpectedValue,
         TcbVersionReferenceValue, TdxTcbSvnExpectedValue, TdxTcbSvnReferenceValue,
         TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
+        binary_reference_value, endorsement::Format, endorsements, expected_digests,
+        expected_values, kernel_binary_reference_value, reference_values,
+        tcb_version_expected_value, tcb_version_reference_value, tdx_tcb_svn_expected_value,
+        tdx_tcb_svn_reference_value, text_expected_value, text_reference_value,
     },
-    RawDigest,
 };
 use prost::Message;
 use verify_endorsement::{is_firmware_type, is_kernel_type, verify_endorsement};
@@ -85,6 +85,7 @@ pub fn get_expected_values(
                 .context("getting containers expected values")?;
             Ok(ExpectedValues { r#type: Some(expected_values::Type::OakContainers(expected)) })
         }
+        #[allow(deprecated)]
         (Some(endorsements::Type::Cb(ends)), Some(reference_values::Type::Cb(rvs))) => {
             let expected = get_cb_expected_values(now_utc_millis, ends, rvs)
                 .context("getting CB expected values")?;
@@ -94,7 +95,9 @@ pub fn get_expected_values(
         (None, _) => anyhow::bail!("Endorsements are empty"),
         (_, None) => anyhow::bail!("Reference values are empty"),
         (Some(_), Some(_)) => {
-            anyhow::bail!("Getting expected values: mismatch between evidence, endorsements and reference values")
+            anyhow::bail!(
+                "Getting expected values: mismatch between evidence, endorsements and reference values"
+            )
         }
     }
 }
@@ -859,7 +862,7 @@ fn get_kernel_expected_values(
                 .setup_data
                 .ok_or_else(|| anyhow::anyhow!("no setup data digest in kernel attachment"))?;
 
-            let endorsement = endorsement.context("No endorsement provided")?;
+            let endorsement = endorsement.context("no endorsement provided")?;
             let statement = parse_statement(&endorsement.endorsement)
                 .context("parsing endorsement statement")?;
 
@@ -1103,6 +1106,8 @@ fn verify_endorsement_wrapper(
             }),
             signature: Some(Signature { key_id: key.key_id, raw: signature.to_vec() }),
             rekor_log_entry: log_entry.to_vec(),
+            c2sp_tlog_proof: vec![],
+            pes_confirmation: vec![],
         };
 
         let result = verify_endorsement(now_utc_millis, &signed_endorsement, ref_value);

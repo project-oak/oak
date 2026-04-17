@@ -28,7 +28,6 @@ rust_library(
         "src/container_runtime.rs",
         "src/dice.rs",
         "src/ipc_server.rs",
-        "src/key_provisioning.rs",
         "src/launcher_client.rs",
         "src/lib.rs",
         "src/logging.rs",
@@ -38,6 +37,9 @@ rust_library(
     crate_features = [
         "application_keys",
     ],
+    # Linux-only: depends on procfs, nix, syslog, oci-spec crates and
+    # transitively on Linux-specific agent crate.
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_attestation",
         "//oak_attestation_types",
@@ -59,7 +61,9 @@ rust_library(
         "@oak_crates_index//:log",
         "@oak_crates_index//:nix",
         "@oak_crates_index//:oci-spec",
+        "@oak_crates_index//:opentelemetry-appender-tracing",
         "@oak_crates_index//:opentelemetry-otlp",
+        "@oak_crates_index//:opentelemetry_sdk",
         "@oak_crates_index//:p256",
         "@oak_crates_index//:procfs",
         "@oak_crates_index//:prost",
@@ -74,6 +78,8 @@ rust_library(
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tokio-util",
         "@oak_crates_index//:tonic",
+        "@oak_crates_index//:tracing",
+        "@oak_crates_index//:tracing-subscriber",
         "@oak_crates_index//:walkdir",
         "@oak_crates_index//:zeroize",
     ],
@@ -86,11 +92,11 @@ rust_library(
         "src/container_runtime.rs",
         "src/dice.rs",
         "src/ipc_server.rs",
-        "src/key_provisioning.rs",
         "src/launcher_client.rs",
         "src/lib.rs",
         "src/logging.rs",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_attestation",
         "//oak_attestation_types",
@@ -112,7 +118,9 @@ rust_library(
         "@oak_crates_index//:log",
         "@oak_crates_index//:nix",
         "@oak_crates_index//:oci-spec",
+        "@oak_crates_index//:opentelemetry-appender-tracing",
         "@oak_crates_index//:opentelemetry-otlp",
+        "@oak_crates_index//:opentelemetry_sdk",
         "@oak_crates_index//:p256",
         "@oak_crates_index//:procfs",
         "@oak_crates_index//:prost",
@@ -127,6 +135,8 @@ rust_library(
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tokio-util",
         "@oak_crates_index//:tonic",
+        "@oak_crates_index//:tracing",
+        "@oak_crates_index//:tracing-subscriber",
         "@oak_crates_index//:walkdir",
         "@oak_crates_index//:zeroize",
     ],
@@ -144,6 +154,7 @@ rust_test(
     data = [
         "//oak_containers/orchestrator/testdata:test_dice",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_file_utils",
     ],

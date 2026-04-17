@@ -64,7 +64,7 @@ pkg_tar(
 
 oci_image(
     name = "oak_proxy_image",
-    base = "@distroless_cc_debian12",
+    base = "@distroless_cc_debian12_linux_amd64",
     # Docker image starts an Oak Proxy client. Corresponding server URL must be
     # specified in the CMD arguments for the ENTRYPOINT.
     entrypoint = ["/bin/client"],

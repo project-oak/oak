@@ -41,7 +41,7 @@ pub struct Args {
     pub constant_response_size: u32,
 
     #[arg(long, default_value = "8080")]
-    pub port: u16,
+    pub port: String,
 
     /// Path to a Wasm file to be loaded into the enclave and executed by it per invocation. See the documentation for details on its ABI. Ref: <https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md>
     #[arg(

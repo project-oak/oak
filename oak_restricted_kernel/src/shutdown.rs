@@ -18,9 +18,9 @@ use core::arch::asm;
 
 use oak_sev_guest::{
     io::{IoPortFactory, PortFactoryWrapper, PortWrapper, PortWriter},
-    msr::{get_sev_status, request_termination, SevStatus, TerminationReason, TerminationRequest},
+    msr::{SevStatus, TerminationReason, TerminationRequest, get_sev_status, request_termination},
 };
-use x86_64::{instructions::tables::lidt, structures::DescriptorTablePointer, VirtAddr};
+use x86_64::{VirtAddr, instructions::tables::lidt, structures::DescriptorTablePointer};
 
 /// Tries various ways to shut down the machine.
 pub fn shutdown() -> ! {

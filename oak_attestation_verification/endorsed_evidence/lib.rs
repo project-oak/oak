@@ -17,3 +17,6 @@ extern crate alloc;
 
 pub mod assertion_verifier;
 pub mod key_extractor;
+
+#[cfg(test)]
+mod tests;

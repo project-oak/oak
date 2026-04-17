@@ -24,11 +24,12 @@ use oak_crypto::identity_key::{IdentityKey, IdentityKeyHandle};
 use oak_proto_rust::oak::{
     attestation::v1::{Assertion, Endorsements, Evidence},
     session::v1::{
-        session_request::Request, session_response::Response, AttestRequest, AttestResponse,
-        EndorsedEvidence, PlaintextMessage, SessionBinding, SessionRequest, SessionResponse,
+        AttestRequest, AttestResponse, EndorsedEvidence, PlaintextMessage, SessionBinding,
+        SessionRequest, SessionResponse, session_request::Request, session_response::Response,
     },
 };
 use oak_session::{
+    ClientSession, ProtocolEngine, ServerSession, Session,
     aggregators::PassThrough,
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
@@ -38,14 +39,14 @@ use oak_session::{
         AttestationEvidence, AttestationPublisher, DEFAULT_MAX_ATTESTATION_SIZE,
         DEFAULT_MAX_MESSAGE_QUEUE_LEN,
     },
-    ClientSession, ProtocolEngine, ServerSession, Session,
 };
 use oak_session_testing::{
+    HandshakeFollowup, TestAttestationPublisher,
     create_failing_mock_session_binding_verifier_provider, create_failing_mock_verifier,
     create_mock_attester, create_mock_binder, create_mock_endorser, create_mock_key_extractor,
     create_mock_session_binding_verifier_provider, create_mock_session_key_assertion_generator,
     create_passing_mock_session_key_assertion_verifier, create_passing_mock_verifier, do_attest,
-    do_handshake, invoke_hello_world, HandshakeFollowup, TestAttestationPublisher,
+    do_handshake, invoke_hello_world,
 };
 
 const MATCHED_ATTESTER_ID1: &str = "MATCHED_ATTESTER_ID1";

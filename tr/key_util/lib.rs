@@ -26,8 +26,10 @@ use core::{
 
 use anyhow::Ok;
 use ecdsa::signature::Verifier;
+use oak_digest::{Sha2Digest, Sha256Hasher};
 use oak_proto_rust::oak::attestation::v1::{KeyType, Signature, VerifyingKeySet};
-use p256::pkcs8::{der::Decode, DecodePublicKey};
+use p256::pkcs8::{DecodePublicKey, der::Decode};
+use rsa::{Pkcs1v15Sign, RsaPublicKey};
 
 const PUBLIC_KEY_PEM_LABEL: &str = "PUBLIC KEY";
 
@@ -40,7 +42,7 @@ pub fn convert_raw_to_pem(asn1_der_public_key_bytes: &[u8]) -> String {
 
 /// Converts a PEM public key to raw ASN.1 DER bytes.
 pub fn convert_pem_to_raw(public_key_pem: &str) -> anyhow::Result<Vec<u8>> {
-    let (label, key) = p256::pkcs8::Document::from_pem(public_key_pem)
+    let (label, document) = p256::pkcs8::Document::from_pem(public_key_pem)
         .map_err(|e| anyhow::anyhow!("Couldn't interpret PEM: {e}"))?;
 
     anyhow::ensure!(
@@ -48,7 +50,7 @@ pub fn convert_pem_to_raw(public_key_pem: &str) -> anyhow::Result<Vec<u8>> {
         "PEM label {label} is not {PUBLIC_KEY_PEM_LABEL}"
     );
 
-    Ok(key.into_vec())
+    Ok(document.into_vec())
 }
 
 /// Converts ASN.1 DER public key bytes to a [`p256::ecdsa::VerifyingKey`].
@@ -87,6 +89,7 @@ pub fn verify_signature(
     match key.r#type() {
         KeyType::Undefined => anyhow::bail!("Undefined key type"),
         KeyType::EcdsaP256Sha256 => verify_signature_ecdsa(&signature.raw, contents, &key.raw),
+        KeyType::RsaSha2256 => verify_signature_rsa(&signature.raw, contents, &key.raw),
     }
 }
 
@@ -103,6 +106,24 @@ pub fn verify_signature_ecdsa(
 
     key.verify(contents, &sig)
         .map_err(|error| anyhow::anyhow!("couldn't verify signature: {}", error))
+}
+
+/// Verifies the signature over the contents using the RSA public key.
+pub fn verify_signature_rsa(
+    signature_raw: &[u8],
+    contents: &[u8],
+    public_key_der: &[u8],
+) -> anyhow::Result<()> {
+    let public_key = RsaPublicKey::from_public_key_der(public_key_der)
+        .map_err(|error| anyhow::anyhow!("couldn't parse RSA public key: {error}"))?;
+
+    let mut hasher = Sha256Hasher::new();
+    hasher.update(contents);
+    let hashed_contents = hasher.finalize();
+
+    public_key
+        .verify(Pkcs1v15Sign::new::<Sha256Hasher>(), &hashed_contents, signature_raw)
+        .map_err(|error| anyhow::anyhow!("couldn't verify RSA signature: {error}"))
 }
 
 #[cfg(test)]

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use oak_ffi_bytes::{free_rust_bytes_contents, RustBytes};
+use oak_ffi_bytes::{RustBytes, free_rust_bytes_contents};
 
 /// A simple type representing an error. It contains only a message, containing
 /// a stringified representation of a Rust error.
@@ -80,7 +80,7 @@ impl ErrorOrRustBytes {
     /// The `result` field contains a non-null, valid, aligned pointer to a
     /// valid [`RustBytes`] instance.
     pub unsafe fn result_slice(&self) -> &[u8] {
-        (*self.result).as_slice()
+        unsafe { (*self.result).as_slice() }
     }
 }
 
@@ -92,8 +92,10 @@ impl ErrorOrRustBytes {
 ///  * The provided [`Error`] pointer is non-null, valid, and properly aligned.
 ///  * The [`Bytes`] representing the error message is valid.
 ///  * The pointer should not be used anymore after calling this function.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn free_error(error: *const Error) {
-    free_rust_bytes_contents((*error).message);
-    drop(Box::from_raw(error as *mut Error));
+    unsafe {
+        free_rust_bytes_contents((*error).message);
+        drop(Box::from_raw(error as *mut Error));
+    }
 }

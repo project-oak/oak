@@ -18,18 +18,17 @@
 #![feature(int_roundings)]
 #![feature(allocator_api)]
 #![feature(slice_ptr_get)]
-#![feature(let_chains)]
 #![allow(static_mut_refs)]
 
 extern crate alloc;
 
 use alloc::{boxed::Box, format, vec::Vec};
-use core::panic::PanicInfo;
+use core::{mem::MaybeUninit, panic::PanicInfo};
 
 use linked_list_allocator::LockedHeap;
 use oak_attestation_types::{
     transparent_attester::TransparentAttester,
-    util::{encode_length_delimited_proto, try_decode_length_delimited_proto, Serializable},
+    util::{Serializable, encode_length_delimited_proto, try_decode_length_delimited_proto},
 };
 use oak_dice::evidence::{
     DICE_DATA_ATTESTATION_PARAM, DICE_DATA_CMDLINE_PARAM, DICE_DATA_LENGTH_CMDLINE_PARAM,
@@ -37,9 +36,10 @@ use oak_dice::evidence::{
 };
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_proto_rust::oak::attestation::v1::DiceData;
-use oak_stage0_dice::{derive_sealing_cdi, DerivedKey};
+use oak_stage0_dice::{DerivedKey, derive_sealing_cdi};
 use sha2::{Digest, Sha256};
 use x86_64::{
+    PhysAddr, VirtAddr,
     instructions::{hlt, interrupts::int3},
     registers::segmentation::*,
     structures::{
@@ -47,7 +47,6 @@ use x86_64::{
         idt::InterruptDescriptorTable,
         paging::{PageSize, Size1GiB, Size4KiB},
     },
-    PhysAddr, VirtAddr,
 };
 use zerocopy::IntoBytes;
 use zeroize::Zeroize;
@@ -98,6 +97,10 @@ const PAGE_SIZE: usize = Size4KiB::SIZE as usize;
 // Double page size for items larger than the PAGE_SIZE limit.
 const DOUBLE_PAGE_SIZE: usize = PAGE_SIZE * 2;
 
+/// BDA is 256 bytes.
+#[unsafe(link_section = ".bda")]
+static mut BDA: [MaybeUninit<u8>; 0x100] = [MaybeUninit::uninit(); 0x100];
+
 pub fn create_gdt(gdt: &mut GlobalDescriptorTable) -> (SegmentSelector, SegmentSelector) {
     let cs = gdt.append(Descriptor::kernel_code_segment());
     let ds = gdt.append(Descriptor::kernel_data_segment());
@@ -113,11 +116,23 @@ pub fn create_idt(_idt: &mut InterruptDescriptorTable) {}
 /// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page
 ///   tables.
 pub fn rust64_start<P: hal::Platform>() -> ! {
+    // Ensure the BDA is zeroed out, lest some legacy code go looking for some data
+    // from there.
+    //
+    // This needs to happen before we initialize the page tables, as we leave the
+    // lower 4K unmapped when setting up the page tables (so that you'd crash when
+    // dereferencing a null pointer), but the BDA is at the 1K mark.
+    //
+    // Safety: this is the only place where we access the BDA.
+    unsafe {
+        BDA.zeroize();
+    }
     paging::init_page_table_refs::<P>();
 
     P::early_initialize_platform();
     logging::init_logging::<P>();
     log::info!("starting...");
+
     // Safety: we assume there won't be any other hardware devices using the fw_cfg
     // IO ports.
     let mut fwcfg = unsafe { fw_cfg::FwCfg::new(&BOOT_ALLOC) }.expect("fw_cfg device not found!");
@@ -358,7 +373,9 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     // TODO: b/463325402 - Remove eventlog and dice data from kernel command-line
     // and only use the new DICE_DATA_ATTESTATION_PARAM arg with the serialized
     // attester.
-    let extra = format!("--{DICE_DATA_CMDLINE_PARAM}={attestation_data:p} --{EVENTLOG_CMDLINE_PARAM}={event_log_data:p} --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_attestation_data_length}");
+    let extra = format!(
+        "--{DICE_DATA_CMDLINE_PARAM}={attestation_data:p} --{EVENTLOG_CMDLINE_PARAM}={event_log_data:p} --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_attestation_data_length}"
+    );
     let extra = if cfg!(feature = "cmdline_with_serialized_attestation_data") {
         format!("{extra} --{DICE_DATA_ATTESTATION_PARAM}={encoded_attestation_proto_data:p}")
     } else {

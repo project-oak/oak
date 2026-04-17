@@ -4,7 +4,7 @@
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
-source "$SCRIPTS_DIR/common"
+source "${SCRIPTS_DIR}/common"
 
 GIT_STASH_MESSAGE="Stash for git_clean-${RANDOM}"
 
@@ -16,10 +16,9 @@ git stash push --include-untracked -m "${GIT_STASH_MESSAGE}"
 git clean -d --force --force -x --exclude="/.oak_remote_cache_key.json" --exclude="**/client_secret_*.apps.googleusercontent.com.json"
 
 # Count $GIT_STASH_MESSAGE in list of stashes
-STASH_EXIST=$(git stash list | grep "${GIT_STASH_MESSAGE}" -c) 
+STASH_EXIST=$(git stash list | grep "${GIT_STASH_MESSAGE}" -c)
 
 # Restore the previously stashed files, but only if any files were previously stashed.
-if [ "$STASH_EXIST" -gt 0 ] 
-then 
-  git stash pop 
+if [ "${STASH_EXIST}" -gt 0 ]; then
+  git stash pop
 fi

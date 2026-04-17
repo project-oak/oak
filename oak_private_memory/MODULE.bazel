@@ -4,23 +4,92 @@
 #
 # For more details, please check https://github.com/bazelbuild/bazel/issues/18958
 ###############################################################################
-bazel_dep(name = "platforms", version = "0.0.11")
-bazel_dep(name = "aspect_bazel_lib", version = "2.17.1")
-bazel_dep(name = "rules_oci", version = "2.2.6")
-bazel_dep(name = "rules_shell", version = "0.5.0")
-bazel_dep(name = "rules_rust", version = "0.61.0")
+module(name = "oak_private_memory")
 
-oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
-# This is the base docker image we use to bundle example apps like hello world
-# enclave apps. We don't build these, we pull them from the existing repo.
-oci.pull(
-    name = "distroless_cc_debian12",
-    digest = "sha256:6714977f9f02632c31377650c15d89a7efaebf43bab0f37c712c30fc01edb973",
-    image = "gcr.io/distroless/cc-debian12",
-    platforms = ["linux/amd64"],
+git_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+
+http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
+
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "aspect_bazel_lib", version = "2.19.3")
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "bazel_features", version = "1.39.0")
+bazel_dep(name = "googletest", version = "1.16.0", repo_name = "com_google_googletest")
+bazel_dep(name = "grpc", version = "1.72.0", repo_name = "com_github_grpc_grpc")
+bazel_dep(name = "grpc-java", version = "1.71.0", repo_name = "io_grpc_grpc_java")
+bazel_dep(name = "rules_foreign_cc", version = "0.15.0")
+bazel_dep(name = "rules_java", version = "8.14.0")
+bazel_dep(name = "rules_proto", version = "7.1.0")
+bazel_dep(name = "rules_shell", version = "0.6.1")
+bazel_dep(name = "rules_rust", version = "0.68.1")
+bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.68.1")
+bazel_dep(name = "googleapis", version = "0.0.0-20251211-05f65958")
+bazel_dep(name = "toolchains_llvm", version = "1.6.0")
+
+# Depend on Oak for shared toolchains and crates.
+bazel_dep(name = "oak", version = "0.0.0")
+local_path_override(
+    module_name = "oak",
+    path = "..",
 )
-use_repo(oci, "distroless_cc_debian12", "distroless_cc_debian12_linux_amd64")
+
+##### Rust Toolchain Setup #####
+# Use Oak's Rust toolchain to ensure version consistency with the main Oak
+# project. This avoids potential issues from mismatched Rust versions when
+# depending on Oak crates.
+
+oak_rust = use_extension("@oak//bazel/rust:extensions.bzl", "rust_toolchains")
+use_repo(
+    oak_rust,
+    "oak_rust_linux__x86_64-unknown-linux-gnu__nightly",
+)
+
+register_toolchains(
+    "@oak_rust_linux__x86_64-unknown-linux-gnu__nightly//:all",
+)
+
+# Files needed to launch an Oak Containers binary in QEMU
+# Rather than trying to build these ourselves, we will use pre-built versions from Oak.
+http_file(
+    name = "oak_containers_kernel",
+    urls = ["https://storage.googleapis.com/oak-files/sha2-256:ba01156bcc62de73ccf89fba0edf8832147b4d0f19f1baa67d202b2dc073cb28"],
+)
+
+http_file(
+    name = "oak_containers_system_image",
+    urls = ["https://storage.googleapis.com/oak-files/sha2-256:a947a88bc448c3b3cee9ceb5cd9852d6be03992cddb03e2f4935b3895ebd690c"],
+)
+
+http_file(
+    name = "oak_containers_stage0",
+    urls = ["https://storage.googleapis.com/oak-files/sha2-256:a064d89e570363bf6ff33f83c33158da7421b4b7a696d395ea3a1de4ec5e5330"],
+)
+
+http_file(
+    name = "oak_containers_stage1",
+    urls = ["https://storage.googleapis.com/oak-files/sha2-256:b46aa37e1b48e33138ea9e6fd127fb5f3b3cedc1cd1b9b5377bb6031515acb1b"],
+)
+
+oak_toolchains = use_extension("@oak//bazel:extensions.bzl", "oak_toolchains")
+use_repo(oak_toolchains, "oak_cc_toolchain_sysroot", "umoci")
+
+llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm")
+llvm.toolchain(
+    name = "llvm_toolchain",
+    llvm_version = "20.1.0",
+)
+llvm.sysroot(
+    name = "llvm_toolchain",
+    label = "@oak_cc_toolchain_sysroot//:sysroot",
+    targets = ["linux-x86_64"],
+)
+use_repo(llvm, "llvm_toolchain")
+
+register_toolchains("@llvm_toolchain//:all")
+
+register_toolchains("@umoci//:umoci_toolchain")
 
 # Matches the version of protobuf used by Oak.
 bazel_dep(name = "protobuf", version = "30.0", repo_name = "com_google_protobuf")
@@ -36,3 +105,43 @@ python.toolchain(
     is_default = True,
     python_version = "3.11",
 )
+
+http_archive(
+    name = "icu",
+    build_file = "@//third_party/icu:icu.BUILD",
+    # Remove the BUILD files because it will prevent configure_make to find
+    # the files in directories containing the BUILD files.
+    patch_cmds = ["cd source && find . -type f -name \"BUILD.bazel\" -delete"],
+    strip_prefix = "icu",
+    urls = ["https://github.com/unicode-org/icu/releases/download/release-73-1/icu4c-73_1-src.tgz"],
+)
+
+git_repository(
+    name = "icing",
+    build_file = "@//third_party/icing:BUILD.bazel",
+    commit = "c8263cfd12eacefde39cf16b2326fc3ca3fe934f",  # 2025-11-17
+    remote = "https://android.googlesource.com/platform/external/icing",
+)
+
+bazel_dep(name = "cxx.rs", version = "1.0.194")
+
+crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
+crate.spec(
+    package = "cxx",
+    version = "1.0.194",
+)
+crate.spec(
+    package = "aes-gcm-siv",
+    version = "0.11.1",
+)
+crate.spec(
+    package = "rand",
+    version = "0.9.1",
+)
+crate.from_specs(
+    name = "pm_crates",
+)
+use_repo(crate, "oak_std_crates_index", "pm_crates")
+
+acr = use_extension("@oak//bazel/crates:extensions.bzl", "aliased_crates_repository")
+use_repo(acr, "oak_crates_index")

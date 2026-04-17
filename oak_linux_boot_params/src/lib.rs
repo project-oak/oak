@@ -17,7 +17,7 @@
 #![no_std]
 
 use core::{
-    ffi::{c_char, CStr},
+    ffi::{CStr, c_char},
     mem::size_of,
 };
 

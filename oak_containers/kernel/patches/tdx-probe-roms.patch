@@ -1,6 +1,6 @@
-diff '--color=auto' -u -r linux-6.12.25-orig/arch/x86/coco/tdx/tdx.c linux-6.12.25-patch/arch/x86/coco/tdx/tdx.c
---- linux-6.12.25-orig/arch/x86/coco/tdx/tdx.c	2025-04-25 08:48:08.000000000 +0000
-+++ linux-6.12.25-patch/arch/x86/coco/tdx/tdx.c	2025-04-30 13:21:10.258596006 +0000
+74-patch/arch/x86/coco/tdx/tdx.c
+--- linux-6.12.74-orig/arch/x86/coco/tdx/tdx.c	2026-02-19 15:29:56.000000000 +0000
++++ linux-6.12.74-patch/arch/x86/coco/tdx/tdx.c	2026-02-27 15:08:37.102044599 +0000
 @@ -1091,5 +1091,12 @@
  	 */
  	x86_cpuinit.parallel_bringup = false;

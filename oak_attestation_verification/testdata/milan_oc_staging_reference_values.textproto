@@ -19,7 +19,7 @@ oak_containers {
             claim_types: "https://github.com/project-oak/oak/blob/main/docs/tr/claim/66738.md"
             claim_types: "https://github.com/project-oak/oak/blob/main/docs/tr/claim/10271.md"
           }
-          rekor {
+          tlog {
             skip {
             }
           }
@@ -50,7 +50,7 @@ oak_containers {
           claim_types: "https://github.com/project-oak/oak/blob/main/docs/tr/claim/22790.md"
           claim_types: "https://github.com/project-oak/oak/blob/main/docs/tr/claim/98982.md"
         }
-        rekor {
+        tlog {
           skip {
           }
         }
@@ -67,7 +67,7 @@ oak_containers {
         }
         required_claims {
         }
-        rekor {
+        tlog {
           skip {
           }
         }
@@ -99,7 +99,7 @@ oak_containers {
         required_claims {
           claim_types: "https://github.com/project-oak/oak/blob/main/docs/tr/claim/58963.md"
         }
-        rekor {
+        tlog {
           skip {
           }
         }

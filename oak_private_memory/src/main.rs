@@ -17,7 +17,7 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::Context;
-use oak_sdk_containers::{default_orchestrator_channel, OrchestratorClient};
+use oak_sdk_containers::{OrchestratorClient, default_orchestrator_channel};
 use private_memory_server_lib::log::debug;
 use tokio::net::TcpListener;
 
@@ -29,11 +29,31 @@ use tokio::sync::mpsc;
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     private_memory_server_lib::log::init_logging(true);
-    debug!("Logging!");
+    log::info!("Logging!");
+
+    // VERIFICATION: Check /tmp mount status
+    if let Ok(mounts) = std::fs::read_to_string("/proc/mounts") {
+        for line in mounts.lines() {
+            if line.contains("/tmp") {
+                log::info!("VERIFICATION MOUNT: {}", line);
+            }
+        }
+    }
+    if let Ok(output) = std::process::Command::new("df").arg("-h").arg("/tmp").output() {
+        log::info!("VERIFICATION DF: {}", String::from_utf8_lossy(&output.stdout));
+    }
+
     let orchestrator_channel =
         default_orchestrator_channel().await.context("failed to create orchestrator channel")?;
 
     let mut orchestrator_client = OrchestratorClient::create(&orchestrator_channel);
+
+    let session_binder =
+        private_memory_server_lib::session_binder::OrchestratorSessionBinder::create_from_channel(
+            &orchestrator_channel,
+        )
+        .await
+        .context("failed to create session binder")?;
 
     let application_config_bytes = orchestrator_client
         .get_application_config()
@@ -43,6 +63,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let application_config: private_memory_server_lib::app::ApplicationConfig =
         serde_json::from_slice(application_config_bytes.as_slice())
             .expect("Invalid application config");
+
+    // Prefetch endorsed evidence (DICE chain) once at startup.
+    let endorsed_evidence = orchestrator_client
+        .get_endorsed_evidence()
+        .await
+        .context("failed to get endorsed evidence")?;
+
+    let evidence = endorsed_evidence.evidence.context("missing evidence")?;
+    let endorsements = endorsed_evidence.endorsements.context("missing endorsements")?;
+
+    let session_config_factory = attestation::create_orchestrator_session_config_factory(
+        evidence,
+        endorsements,
+        session_binder,
+    );
 
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), ENCLAVE_APP_PORT);
     let listener = TcpListener::bind(addr).await?;
@@ -56,6 +91,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         application_config,
         metrics,
         persistence_tx,
+        session_config_factory,
+        None, // TLS not yet configured in production
+        std::sync::Arc::new(oak_private_memory_database::clock::SystemClock),
     ));
     orchestrator_client.notify_app_ready().await.context("failed to notify that app is ready")?;
     debug!("Private memory is now serving!");

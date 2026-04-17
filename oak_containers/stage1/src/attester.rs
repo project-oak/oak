@@ -15,15 +15,15 @@
 //
 
 use core::{marker::PhantomData, ops::RangeBounds};
-use std::fs::{read_dir, read_to_string, OpenOptions};
+use std::fs::{OpenOptions, read_dir, read_to_string};
 
 use anyhow::Context;
-use nix::sys::mman::{mmap, munmap, MapFlags, ProtFlags};
+use nix::sys::mman::{MapFlags, ProtFlags, mmap, munmap};
 use oak_attestation_types::{attester::Attester, util::Serializable};
 use oak_dice::evidence::STAGE0_DICE_PROTO_MAGIC;
 use x86_64::{
-    structures::paging::{PageSize, Size4KiB},
     PhysAddr,
+    structures::paging::{PageSize, Size4KiB},
 };
 use zeroize::Zeroize;
 

@@ -38,8 +38,8 @@
 
 //use anyhow::{anyhow, bail, Result};
 use bitflags::bitflags;
-use snafu::prelude::*;
 use strum::FromRepr;
+use thiserror::Error;
 use x86_64::{
     registers::model_specific::Msr,
     structures::paging::{PageSize, PhysFrame, Size2MiB, Size4KiB},
@@ -269,7 +269,9 @@ pub struct RegisterGhcbGpaRequest {
 impl RegisterGhcbGpaRequest {
     pub fn new(ghcb_gpa: usize) -> Result<Self, RegisterGhcbGpaError> {
         let ghcb_gpa = ghcb_gpa as u64;
-        ensure!(ghcb_gpa & GHCB_INFO_MASK == 0, AddressNotAlignedSnafu);
+        if ghcb_gpa & GHCB_INFO_MASK != 0 {
+            return Err(RegisterGhcbGpaError::AddressNotAligned);
+        }
         Ok(Self { ghcb_gpa })
     }
 }
@@ -287,25 +289,26 @@ pub struct RegisterGhcbGpaResponse {
     ghcb_gpa: u64,
 }
 
-#[derive(Debug, Snafu)]
+#[derive(Debug, Error)]
 pub enum RegisterGhcbGpaError {
     /// GHCB must be 4KiB-aligned.
+    #[error("GHCB must be 4KiB-aligned")]
     AddressNotAligned,
+    #[error("invalid response")]
     InvalidResponse,
+    #[error("GHCB location not accepted")]
     GhcbLocationNotAccepted,
-    GhcbResponseLocationNotMatchingRequest {
-        response_ghcb_gpa: u64,
-    },
+    #[error("GHCB response location {response_ghcb_gpa} not matching request")]
+    GhcbResponseLocationNotMatchingRequest { response_ghcb_gpa: u64 },
 }
 
 impl TryFrom<u64> for RegisterGhcbGpaResponse {
     type Error = RegisterGhcbGpaError;
     fn try_from(msr_value: u64) -> Result<Self, Self::Error> {
         const REGISTER_GHCB_GPA_RESPONSE_INFO: u64 = 0x013;
-        ensure!(
-            msr_value & GHCB_INFO_MASK == REGISTER_GHCB_GPA_RESPONSE_INFO,
-            InvalidResponseSnafu
-        );
+        if msr_value & GHCB_INFO_MASK != REGISTER_GHCB_GPA_RESPONSE_INFO {
+            return Err(RegisterGhcbGpaError::InvalidResponse);
+        }
         let ghcb_gpa = msr_value & GCHP_DATA_MASK;
         Ok(Self { ghcb_gpa })
     }
@@ -318,11 +321,14 @@ pub fn register_ghcb_location(request: RegisterGhcbGpaRequest) -> Result<(), Reg
     write_protocol_msr_and_exit(request.into());
     let response: RegisterGhcbGpaResponse = read_protocol_msr().try_into()?;
     // Ensure that the registration was successful.
-    ensure!(response.ghcb_gpa != GHCB_LOCATION_NOT_ACCEPTED, GhcbLocationNotAcceptedSnafu);
-    ensure!(
-        response.ghcb_gpa == request_ghcb_gpa,
-        GhcbResponseLocationNotMatchingRequestSnafu { response_ghcb_gpa: response.ghcb_gpa }
-    );
+    if response.ghcb_gpa == GHCB_LOCATION_NOT_ACCEPTED {
+        return Err(RegisterGhcbGpaError::GhcbLocationNotAccepted);
+    }
+    if response.ghcb_gpa != request_ghcb_gpa {
+        return Err(RegisterGhcbGpaError::GhcbResponseLocationNotMatchingRequest {
+            response_ghcb_gpa: response.ghcb_gpa,
+        });
+    }
     Ok(())
 }
 
@@ -565,8 +571,9 @@ bitflags! {
     }
 }
 
-#[derive(Debug, Snafu)]
+#[derive(Debug, Error)]
 pub enum SevStatusError {
+    #[error("invalid value")]
     InvalidValue,
 }
 

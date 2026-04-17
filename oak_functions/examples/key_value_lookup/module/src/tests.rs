@@ -87,15 +87,21 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         }),
     );
 
-    let (_child, server_port) = oak_functions_test_utils::run_oak_functions_example_in_background(
-        wasm_path,
-        lookup_data_file.path().to_str().unwrap(),
-    );
+    let (_child, _server_port, mut client) = runtime.block_on(async {
+        let (child, server_port) =
+            oak_functions_test_utils::run_oak_functions_example_in_background(
+                wasm_path,
+                lookup_data_file.path().to_str().unwrap(),
+            );
 
-    let mut client = runtime.block_on(oak_functions_test_utils::create_client(
-        server_port,
-        std::time::Duration::from_secs(30),
-    ));
+        let client = oak_functions_test_utils::create_client(
+            server_port.clone(),
+            std::time::Duration::from_secs(30),
+        )
+        .await;
+
+        (child, server_port, client)
+    });
 
     let summary = bencher.bench(|bencher| {
         bencher.iter(|| {

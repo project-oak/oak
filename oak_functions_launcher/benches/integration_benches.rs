@@ -52,7 +52,9 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         data_path("enclave_apps/oak_functions_enclave_app/oak_functions_enclave_app");
 
     let params = launcher::Params {
-        kernel: data_path("oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin"),
+        kernel: data_path(
+            "oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin",
+        ),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: Some(oak_functions_enclave_app_path),
         bios_binary: data_path("stage0_bin/stage0_bin"),

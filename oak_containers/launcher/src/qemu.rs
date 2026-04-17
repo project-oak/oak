@@ -16,19 +16,21 @@
 
 use std::{
     io::{BufRead, BufReader},
-    net::Ipv4Addr,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
     os::{fd::AsRawFd, unix::net::UnixStream},
     path::PathBuf,
     process::Stdio,
+    sync::Arc,
 };
 
 use anyhow::Result;
 use clap::Parser;
 use command_fds::CommandFdExt;
 pub use oak_launcher_utils::launcher::VmType;
+use tokio::sync::{Notify, watch};
 use tokio_vsock::VMADDR_CID_HOST;
 
-use crate::path_exists;
+use crate::{VM_HOST_ADDRESS, VM_HOST_PORT, path_exists};
 
 /// Represents parameters used for launching VM instances.
 #[derive(Parser, Clone, Debug, PartialEq)]
@@ -84,18 +86,93 @@ pub struct Params {
     pub vm_type: VmType,
 }
 
+pub enum Network {
+    // Set up a network with the following proxy ports.
+    Proxy {
+        launcher_service_port: u16,
+        host_proxy_port: Option<u16>,
+        extra_guest_to_host_ports: Vec<u16>,
+    },
+
+    // Set up TAP networking.
+    Tap {
+        host_address: IpAddr,
+        guest_address: IpAddr,
+    },
+
+    // Don't set up networking at all (virtio-vsock is assumed).
+    None {
+        launcher_service_port: u16,
+    },
+}
+
+impl Network {
+    /// Port the launcher is listening on, on the interface visible to the
+    /// guest.
+    fn launcher_port(&self) -> u16 {
+        match self {
+            Network::Proxy { .. } => VM_HOST_PORT,
+            Network::Tap { .. } => VM_HOST_PORT,
+            Network::None { launcher_service_port } => *launcher_service_port,
+        }
+    }
+
+    /// Returns the address assigned to the host.
+    fn host_address(&self) -> Option<IpAddr> {
+        match self {
+            Network::Proxy { .. } => Some(crate::VM_HOST_ADDRESS),
+            Network::Tap { host_address, .. } => Some(*host_address),
+            Network::None { .. } => None,
+        }
+    }
+
+    /// Returns the address to be assigned to the guest.
+    fn guest_address(&self) -> Option<IpAddr> {
+        match self {
+            Network::Proxy { .. } => Some(crate::VM_LOCAL_ADDRESS),
+            Network::Tap { guest_address, .. } => Some(*guest_address),
+            Network::None { .. } => None,
+        }
+    }
+
+    /// Returns the address to be assigned to the guest with the correct
+    /// netmask.
+    fn guest_eth0_address(&self) -> Option<String> {
+        match self.guest_address() {
+            Some(IpAddr::V4(guest_address)) => Some(format!("{}/24", guest_address)),
+            Some(IpAddr::V6(guest_address)) => Some(format!("{}/64", guest_address)),
+            None => None,
+        }
+    }
+
+    /// Returns the MAC address to be assigned to the guest network interface.
+    fn guest_eth0_mac(&self) -> String {
+        match self.guest_address() {
+            Some(IpAddr::V4(guest_address)) => {
+                let [a, b, c, d] = guest_address.octets();
+                format!("42:00:{:02x}:{:02x}:{:02x}:{:02x}", a, b, c, d)
+            }
+            Some(IpAddr::V6(guest_address)) => {
+                let [.., a, b, c, d, e] = guest_address.octets();
+                format!("62:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}", a, b, c, d, e)
+            }
+            None => "42:00:0a:00:02:0f".to_string(),
+        }
+    }
+
+    fn is_some(&self) -> bool {
+        !matches!(self, Network::None { .. })
+    }
+}
+
 pub struct Qemu {
-    instance: tokio::process::Child,
+    kill_notify: Arc<Notify>,
+    exit_status: watch::Receiver<Option<std::process::ExitStatus>>,
     guest_cid: Option<u32>,
 }
 
 impl Qemu {
-    pub fn start(
-        params: Params,
-        launcher_service_port: u16,
-        host_proxy_port: Option<u16>,
-        host_orchestrator_proxy_port: u16,
-    ) -> Result<Self> {
+    pub fn start(params: Params, network: Network) -> Result<Self> {
         let mut cmd = tokio::process::Command::new(params.vmm_binary);
         let (guest_socket, host_socket) = UnixStream::pair()?;
         cmd.kill_on_drop(true);
@@ -194,27 +271,57 @@ impl Qemu {
         }
         // Set up the networking. `rombar=0` is so that QEMU wouldn't bother with the
         // `efi-virtio.rom` file, as we're not using EFI anyway.
-        let vm_address = crate::VM_LOCAL_ADDRESS;
-        let vm_orchestrator_port = crate::VM_ORCHESTRATOR_LOCAL_PORT;
-        let host_address = Ipv4Addr::LOCALHOST;
+        let netdev_rules = match network {
+            Network::Proxy {
+                launcher_service_port,
+                host_proxy_port,
+                ref extra_guest_to_host_ports,
+            } => {
+                let vm_address = network.guest_address().unwrap();
+                let host_address = Ipv4Addr::LOCALHOST;
 
-        let mut netdev_rules = vec![
-            "user".to_string(),
-            "id=netdev".to_string(),
-            format!("guestfwd=tcp:10.0.2.100:8080-cmd:nc {host_address} {launcher_service_port}"),
-            format!("hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}"),
-        ];
-        if let Some(host_proxy_port) = host_proxy_port {
-            let vm_port = crate::VM_LOCAL_PORT;
-            netdev_rules.push(format!(
-                "hostfwd=tcp:{host_address}:{host_proxy_port}-{vm_address}:{vm_port}"
-            ));
+                let mut netdev_rules = vec![
+                    "user".to_string(),
+                    "id=netdev".to_string(),
+                    format!(
+                        "guestfwd=tcp:{VM_HOST_ADDRESS}:{VM_HOST_PORT}-cmd:nc {host_address} {launcher_service_port}"
+                    ),
+                ];
+
+                for port in extra_guest_to_host_ports {
+                    netdev_rules.push(format!(
+                        "guestfwd=tcp:{VM_HOST_ADDRESS}:{port}-cmd:nc {host_address} {port}"
+                    ));
+                }
+
+                if let Some(host_proxy_port) = host_proxy_port {
+                    let vm_port = crate::VM_LOCAL_PORT;
+                    netdev_rules.push(format!(
+                        "hostfwd=tcp:{host_address}:{host_proxy_port}-{vm_address}:{vm_port}"
+                    ));
+                };
+
+                netdev_rules
+            }
+            Network::Tap { .. } => vec![
+                "tap".to_string(),
+                "id=netdev".to_string(),
+                "ifname=oak0".to_string(),
+                "script=no".to_string(),
+            ],
+            Network::None { .. } => {
+                // Create a fake network interface just to placate systemd. We don't set up any
+                // forwarding rules so this interface can't be used for anything meaningful.
+                vec!["user".to_string(), "id=netdev".to_string()]
+            }
         };
+
         cmd.args(["-netdev", netdev_rules.join(",").as_str()]);
         cmd.args([
             "-device",
-            "virtio-net-pci,disable-legacy=on,iommu_platform=true,netdev=netdev,romfile=",
+            &format!("virtio-net-pci,disable-legacy=on,iommu_platform=true,netdev=netdev,romfile=,mac={}", network.guest_eth0_mac()),
         ]);
+
         // The CID needs to be globally unique, so we default to the current thread ID
         // (which should be unique on the system). This may have interesting
         // interactions with async code though: if you start two VMMs in the same
@@ -236,18 +343,29 @@ impl Qemu {
         cmd.args(["-initrd", params.initrd.into_os_string().into_string().unwrap().as_str()]);
         let ramdrive_size = params.ramdrive_size;
 
-        let cmdline = vec![
+        let mut cmdline = vec![
             params.telnet_console.map_or_else(|| "", |_| "debug").to_string(),
             "console=ttyS0".to_string(),
             "panic=-1".to_string(),
             "brd.rd_nr=1".to_string(),
             format!("brd.rd_size={ramdrive_size}"),
             "brd.max_part=1".to_string(),
-            format!("ip={vm_address}:::255.255.255.0::eth0:off"),
             "loglevel=7".to_string(),
             "--".to_string(),
-            format!("--launcher-addr=vsock://{VMADDR_CID_HOST}:{launcher_service_port}"),
         ];
+
+        if network.is_some() {
+            cmdline.push(format!("--eth0-address={}", network.guest_eth0_address().unwrap()));
+            cmdline.push(format!(
+                "--launcher-addr=http://{}",
+                SocketAddr::new(network.host_address().unwrap(), network.launcher_port())
+            ));
+        } else {
+            cmdline.push(format!(
+                "--launcher-addr=vsock://{VMADDR_CID_HOST}:{}",
+                network.launcher_port()
+            ));
+        };
 
         cmd.args(["-append", cmdline.join(" ").as_str()]);
 
@@ -266,21 +384,54 @@ impl Qemu {
             });
         }
 
-        let instance = cmd.spawn()?;
+        let mut child = cmd.spawn()?;
+        let kill_notify = Arc::new(Notify::new());
+        let kill_notify_clone = kill_notify.clone();
+        let (exit_status_sender, exit_status_receiver) = watch::channel(None);
 
-        Ok(Self { instance, guest_cid: params.virtio_guest_cid })
+        tokio::spawn(async move {
+            let status = tokio::select! {
+                result = child.wait() => result,
+                _ = kill_notify_clone.notified() => {
+                    let _ = child.start_kill();
+                    child.wait().await
+                }
+            };
+            match status {
+                Ok(status) => {
+                    if !status.success() {
+                        log::error!("QEMU exited with status {status}");
+                    }
+                    let _ = exit_status_sender.send(Some(status));
+                }
+                Err(e) => {
+                    log::error!("failed to wait for QEMU: {e}");
+                }
+            }
+        });
+
+        Ok(Self {
+            kill_notify,
+            exit_status: exit_status_receiver,
+            guest_cid: params.virtio_guest_cid,
+        })
     }
 
     pub async fn kill(&mut self) -> Result<std::process::ExitStatus> {
-        self.instance.start_kill()?;
+        self.kill_notify.notify_one();
         self.wait().await
     }
 
     pub async fn wait(&mut self) -> Result<std::process::ExitStatus> {
-        self.instance.wait().await.map_err(anyhow::Error::from)
+        let mut rx = self.exit_status.clone();
+        rx.wait_for(|s| s.is_some()).await.map(|s| s.unwrap()).map_err(anyhow::Error::from)
     }
 
     pub fn guest_cid(&self) -> Option<u32> {
         self.guest_cid
+    }
+
+    pub fn subscribe_exit(&self) -> watch::Receiver<Option<std::process::ExitStatus>> {
+        self.exit_status.clone()
     }
 }

@@ -15,19 +15,21 @@
 //
 
 use intoto::statement::{
-    make_statement, serialize_statement, DefaultPredicate, DefaultStatement, Statement,
+    DefaultPredicate, DefaultStatement, Statement, make_statement, serialize_statement,
 };
 use oak_proto_rust::oak::{
-    attestation::v1::{
-        binary_reference_value, kernel_binary_reference_value, verifying_key_reference_value,
-        BinaryReferenceValue, ClaimReferenceValue, EndorsementReferenceValue,
-        KernelBinaryReferenceValue, KeyType, SkipVerification, VerifyingKey,
-        VerifyingKeyReferenceValue, VerifyingKeySet,
-    },
     HexDigest,
+    attestation::v1::{
+        BinaryReferenceValue, EndorsementReferenceValue, KernelBinaryReferenceValue,
+        binary_reference_value, kernel_binary_reference_value,
+    },
 };
-use oak_time::{make_instant, Instant};
-use p256::{ecdsa::signature::Signer, pkcs8::EncodePublicKey, NistP256, PublicKey};
+use oak_time::{Instant, make_instant};
+use p256::{NistP256, PublicKey, ecdsa::signature::Signer, pkcs8::EncodePublicKey};
+use verify_endorsement::{
+    create_endorsement_reference_value, create_tlog_reference_values_skip,
+    create_verifying_key_from_raw,
+};
 
 /// A simple fake endorsement for basic generic testing purposes.
 pub fn fake_endorsement(digest: &HexDigest, claim_types: Vec<&str>) -> DefaultStatement {
@@ -88,21 +90,12 @@ pub fn kernel_binary_reference_value_for_endorser_pk(
 fn endorsement_reference_value(public_key: PublicKey) -> EndorsementReferenceValue {
     let endorser_public_key =
         public_key.to_public_key_der().expect("Couldn't convert public key to DER").into_vec();
-    let endorser_key = VerifyingKey {
-        r#type: KeyType::EcdsaP256Sha256.into(),
-        // Can use any valid Key ID, it remains unused with legacy attestation
-        // verification.
-        key_id: 1,
-        raw: endorser_public_key.clone(),
-    };
-    EndorsementReferenceValue {
-        endorser: Some(VerifyingKeySet { keys: [endorser_key].to_vec(), ..Default::default() }),
-        required_claims: Some(ClaimReferenceValue { claim_types: vec![] }),
-        rekor: Some(VerifyingKeyReferenceValue {
-            r#type: Some(verifying_key_reference_value::Type::Skip(SkipVerification {})),
-        }),
-        ..Default::default()
-    }
+    let endorser_key = create_verifying_key_from_raw(&endorser_public_key, 1);
+    create_endorsement_reference_value(
+        endorser_key,
+        Vec::new(),
+        create_tlog_reference_values_skip(),
+    )
 }
 
 pub trait GetValidity {

@@ -1,0 +1,5 @@
+# Workaround for macOS toolchain issues (specific to oak_lint_runner workspace).
+# This file is separate from the root .bazelrc because this is its own workspace.
+# Keep this in sync with the root .bazelrc if the libiconv path changes.
+common --@rules_rust//:extra_rustc_flags=-L/nix/store/6nmmi317rg2bnybndbgc944dpg5cnl5a-libiconv-109.100.2/lib
+common --@rules_rust//:extra_exec_rustc_flags=-L/nix/store/6nmmi317rg2bnybndbgc944dpg5cnl5a-libiconv-109.100.2/lib

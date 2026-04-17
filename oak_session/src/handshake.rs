@@ -88,23 +88,23 @@
 use alloc::{boxed::Box, collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 use core::convert::TryInto;
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::{Context, Error, anyhow};
 use oak_crypto::{
     identity_key::IdentityKeyHandle,
     noise_handshake::{
-        client::HandshakeInitiator, respond_kk, respond_nk, respond_nn, OrderedCrypter, Response,
+        OrderedCrypter, Response, client::HandshakeInitiator, respond_kk, respond_nk, respond_nn,
     },
 };
 use oak_proto_rust::oak::session::v1::{
-    handshake_request, handshake_response, HandshakeRequest, HandshakeResponse,
-    NoiseHandshakeMessage, SessionBinding,
+    HandshakeRequest, HandshakeResponse, NoiseHandshakeMessage, SessionBinding, handshake_request,
+    handshake_response,
 };
 
 use crate::{
+    ProtocolEngine,
     attestation::AttestationState,
     config::HandshakeHandlerConfig,
-    session_binding::{create_session_binding_token, SessionBinder},
-    ProtocolEngine,
+    session_binding::{SessionBinder, create_session_binding_token},
 };
 
 /// Specifies the type of Noise Protocol Framework handshake pattern to be used.
@@ -355,7 +355,9 @@ impl HandshakeHandler for ClientHandshakeHandler {
 
 /// Implements the `ProtocolEngine` for the `ClientHandshakeHandler`, defining
 /// how it exchanges messages with the server during the handshake.
-impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshakeHandler {
+impl ProtocolEngine for ClientHandshakeHandler {
+    type Input = HandshakeResponse;
+    type Output = HandshakeRequest;
     /// Retrieves the next outgoing `HandshakeRequest` to be sent to the server.
     ///
     /// This method is called by the session logic to get the client's messages.
@@ -540,7 +542,9 @@ impl HandshakeHandler for ServerHandshakeHandler {
     }
 }
 
-impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshakeHandler {
+impl ProtocolEngine for ServerHandshakeHandler {
+    type Input = HandshakeRequest;
+    type Output = HandshakeResponse;
     /// Gets the outgoing `HandshakeResponse` to be sent to the client.
     ///
     /// This message is generated after processing the client's initial

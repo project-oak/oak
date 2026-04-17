@@ -57,7 +57,8 @@ async fn run_hello_world_test(container_bundle: std::path::PathBuf) {
     let listener = TcpListener::bind(addr).await.expect("couldn't bind listener");
     let addr = listener.local_addr().expect("couldn't get server addr");
 
-    tokio::spawn(oak_containers_examples_hello_world_host_app::service::create(listener, args));
+    let _service_handle =
+        tokio::spawn(oak_containers_examples_hello_world_host_app::service::create(listener, args));
 
     let url = format!("http://{}:{}", addr.ip(), addr.port());
 
@@ -68,7 +69,6 @@ async fn run_hello_world_test(container_bundle: std::path::PathBuf) {
         .connect()
         .await
         .expect("couldn't connect via gRPC channel");
-
     let mut client = HostApplicationClient::new(channel);
 
     let (mut tx, rx) = futures::channel::mpsc::channel(10);

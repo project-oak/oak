@@ -25,7 +25,6 @@ Google Cloud attestation service to generate endorsements.
    enabled.
 
 2. **gcloud CLI:** Make sure the `gcloud` CLI is installed and configured.
-
    - **Authentication:** Log in to your Google account. Also, create a set of
      application-default credentials for other commands, like cosign, to use:
 

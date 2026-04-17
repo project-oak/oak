@@ -21,30 +21,62 @@ package(
     licenses = ["notice"],
 )
 
+# Custom target to update the golden snapshot without running a test in CI.
+genrule(
+    name = "gen_update_script",
+    outs = ["update_snapshot.sh"],
+    cmd = "cat << 'EOF' > $@\n" +
+          "#!/bin/bash\n" +
+          "set -e\n" +
+          "if [ -z \"$$BUILD_WORKSPACE_DIRECTORY\" ]; then\n" +
+          "  echo \"Error: This script must be run with 'bazel run'\"\n" +
+          "  exit 1\n" +
+          "fi\n" +
+          "# Run the generator and output directly to the source tree\n" +
+          "$$BUILD_WORKSPACE_DIRECTORY/bazel-bin/database/tools/generate_golden_export $$BUILD_WORKSPACE_DIRECTORY/database/testdata/golden_icing_export.pb\n" +
+          "echo \"Updated database/testdata/golden_icing_export.pb\"\n" +
+          "EOF\n" +
+          "chmod +x $@",
+)
+
+sh_binary(
+    name = "update_golden_snapshot",
+    srcs = [":gen_update_script"],
+    data = ["//database/tools:generate_golden_export"],
+)
+
 rust_library(
     name = "oak_private_memory_database",
     srcs = glob(["*.rs"]),
     deps = [
         "//:encryption",
         "//:external_db_client",
-        "//:log",
         "//proto:sealed_memory_rust_proto",
         "//src/icing",
-        "//src/icing/proto:icing_rust_proto",
-        "@cxx.rs//:cxx",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:bytes",
+        "@oak_crates_index//:hex",
+        "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:rand",
+        "@oak_crates_index//:serde",
+        "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tonic",
+        "@pm_crates//:cxx",
+        "@pm_crates//:rand",
     ],
 )
 
 rust_test(
     name = "database_test",
     crate = ":oak_private_memory_database",
+    data = ["testdata/golden_icing_export.pb"],
     deps = [
         "@oak_crates_index//:googletest",
+        "@rules_rust//tools/runfiles",
     ],
 )
 

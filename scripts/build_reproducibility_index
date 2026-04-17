@@ -8,10 +8,10 @@
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
-source "$SCRIPTS_DIR/common"
+source "${SCRIPTS_DIR}/common"
 
 # Convert the input arguments to a list of artifacts that are expected to be reproducibly built.
-readonly REPRODUCIBLE_ARTIFACTS=( "$@" )
+readonly REPRODUCIBLE_ARTIFACTS=("$@")
 
 # Index file containing hashes of the reproducible artifacts, alongside their file names.
 readonly REPRODUCIBILITY_INDEX='./reproducibility_index'
@@ -20,7 +20,6 @@ readonly REPRODUCIBILITY_INDEX='./reproducibility_index'
 echo "" | tee "${REPRODUCIBILITY_INDEX}"
 
 # Regenerate the index file by appending to it decoded base64 digests of the artifacts.
-for encoded in "${REPRODUCIBLE_ARTIFACTS[@]}"
-do
-    echo "${encoded}" | base64 -d | tee -a "${REPRODUCIBILITY_INDEX}"
+for encoded in "${REPRODUCIBLE_ARTIFACTS[@]}"; do
+  echo "${encoded}" | base64 -d | tee -a "${REPRODUCIBILITY_INDEX}"
 done

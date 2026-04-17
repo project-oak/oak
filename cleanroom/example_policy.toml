@@ -1,0 +1,38 @@
+[[principal]]
+name = "bob"
+
+[[principal]]
+name = "caller"
+
+[[principal]]
+name = "secret_category"
+
+[[principal]]
+name = "user_location"
+
+[[principal]]
+name = "to_uppercase_wasm"
+module_digest = "sha256:68753b407310dabdee3f3d350980a07331275e647180dd682316e1523ae3da39"
+
+[[principal]]
+name = "redact_secret_wasm"
+module_digest = "sha256:3539835738eb0f5844072dbda7f491ec4ee4cc20c4ce0a31f6153fe7576ffda9"
+speaks_for = ["secret_category"]
+
+[[principal]]
+name = "weather_wasm"
+module_digest = "sha256:23b7e66de5bc50dac75b2f615696143ec8b0b14e181ad6365653281f03daf180"
+speaks_for = ["user_location"]
+
+[[principal]]
+name = "limited_calendar_wasm"
+module_digest = "sha256:2dd3440b518f4a1e2c14f9d622ea7abf0033fdcc49f4cbcd9c8f52c0bb4f94bd"
+speaks_for = [
+    "calendar_token",
+    "caller",
+]
+
+[[principal]]
+name = "crate_vendor"
+module_digest = "sha256:ac65561b851754636fb59940ea0d39959362738bf49af696dd16444d1f867a78"
+speaks_for = ["caller"]

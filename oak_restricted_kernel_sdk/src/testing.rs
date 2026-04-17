@@ -20,10 +20,10 @@
 use alloc::vec::Vec;
 
 use anyhow::Context;
-use oak_attestation::dice::{evidence_and_event_log_to_proto, DiceAttester};
+use oak_attestation::dice::{DiceAttester, evidence_and_event_log_to_proto};
 use oak_attestation_types::{
     attester::Attester,
-    util::{try_decode_length_delimited_proto, Serializable},
+    util::{Serializable, try_decode_length_delimited_proto},
 };
 use oak_crypto::{
     encryption_key::{EncryptionKey, EncryptionKeyHandle},
@@ -32,8 +32,8 @@ use oak_crypto::{
 };
 use oak_dice::evidence::{RestrictedKernelDiceData, Stage0DiceData, TeePlatform};
 use oak_proto_rust::oak::{
-    attestation::v1::{ApplicationLayerData, EventLog, Evidence},
     RawDigest,
+    attestation::v1::{ApplicationLayerData, EventLog, Evidence},
 };
 use p256::ecdsa::SigningKey;
 use prost::Message;

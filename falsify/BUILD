@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_doc", "rust_doc_test", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
     default_visibility = ["//:internal"],
@@ -23,20 +23,5 @@ package(
 
 rust_library(
     name = "falsify",
-    srcs = glob(["src/**"]),
-    deps = [
-        "@oak_crates_index//:clap",
-        "@oak_crates_index//:serde",
-        "@oak_crates_index//:toml",
-    ],
-)
-
-rust_doc(
-    name = "falsify_doc",
-    crate = ":falsify",
-)
-
-rust_doc_test(
-    name = "falsify_doc_test",
-    crate = ":falsify",
+    srcs = ["lib.rs"],
 )

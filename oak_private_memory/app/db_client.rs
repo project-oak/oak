@@ -18,12 +18,13 @@ use std::net::SocketAddr;
 use anyhow::bail;
 use log::info;
 use metrics::get_global_metrics;
+pub use oak_private_memory_database::database_with_cache::MAX_DECODE_SIZE;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use tokio::sync::RwLock;
 use tonic::transport::{Channel, Endpoint};
+
 const MAX_CONNECT_RETRIES: usize = 5;
 const INITIAL_BACKOFF_MS: u64 = 100;
-pub const MAX_DECODE_SIZE: usize = 100 * 1024 * 1024; // 100 MB
 
 pub struct SharedDbClient {
     database_service_host: SocketAddr,
@@ -77,9 +78,9 @@ impl SharedDbClient {
                 }
             }
 
+            get_global_metrics().inc_db_connect_retries();
             tokio::time::sleep(tokio::time::Duration::from_millis(backoff)).await;
             backoff *= 2;
-            get_global_metrics().inc_db_connect_retries();
         }
         bail!("Failed to connect to database service after {} attempts", MAX_CONNECT_RETRIES);
     }

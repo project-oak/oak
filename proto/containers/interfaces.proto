@@ -46,33 +46,45 @@ service Launcher {
   // Provides stage1 with the Oak system image (which contains the Linux
   // distribution and the orchestrator binary).
   rpc GetOakSystemImage(google.protobuf.Empty)
-      returns (stream GetImageResponse) {}
+      returns (stream GetImageResponse) {
+    // [AUTOMATION]: Internal rpc option goes here.
+  }
 
   // Provides orchestrator with the trusted container image.
   rpc GetContainerBundle(google.protobuf.Empty)
-      returns (stream GetImageResponse) {}
+      returns (stream GetImageResponse) {
+    // [AUTOMATION]: Internal rpc option goes here.
+  }
 
   // This method is used by the orchestrator to load and measure the trusted
   // application config. The orchestrator will later, separately expose this
   // config to the application.
   rpc GetApplicationConfig(google.protobuf.Empty)
-      returns (GetApplicationConfigResponse) {}
+      returns (GetApplicationConfigResponse) {
+    // [AUTOMATION]: Internal rpc option goes here.
+  }
 
   // Provides the orchestrator with the endorsements of the trusted application
   // and the container.
   rpc GetEndorsements(google.protobuf.Empty)
-      returns (oak.attestation.v1.Endorsements) {}
+      returns (oak.attestation.v1.Endorsements) {
+    // [AUTOMATION]: Internal rpc option goes here.
+  }
 
   // Sends Attestation Evidence containing the Attestation Report with
   // corresponding measurements and public keys to the Launcher. This API is
   // called exactly once after the Attestation Evidence is generated. Calling
   // this API a second time will result in an error.
   rpc SendAttestationEvidence(SendAttestationEvidenceRequest)
-      returns (google.protobuf.Empty) {}
+      returns (google.protobuf.Empty) {
+    // [AUTOMATION]: Internal rpc option goes here.
+  }
 
   // Notifies the launcher that the trusted app is ready to serve requests and
   // listening on the pre-arranged port (8080).
-  rpc NotifyAppReady(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+  rpc NotifyAppReady(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    // [AUTOMATION]: Internal rpc option goes here.
+  }
 }
 
 // Defines the service exposed by the orchestrator, that can be invoked by the

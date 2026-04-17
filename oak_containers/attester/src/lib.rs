@@ -24,11 +24,11 @@ use core::convert::TryInto;
 use anyhow::Context;
 use oak_attestation::LayerData;
 #[allow(deprecated)]
-use oak_attestation::{dice::DiceAttester, ApplicationKeysAttester};
+use oak_attestation::{ApplicationKeysAttester, dice::DiceAttester};
 use oak_attestation_tdx::RtmrAttester;
 use oak_attestation_types::{
     attester::Attester,
-    util::{try_decode_length_delimited_proto, Serializable},
+    util::{Serializable, try_decode_length_delimited_proto},
 };
 use oak_proto_rust::oak::attestation::v1::{DiceData, Evidence, TeePlatform};
 use p256::ecdsa::VerifyingKey;

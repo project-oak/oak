@@ -17,28 +17,28 @@
 use alloc::{format, string::String, vec, vec::Vec};
 
 use anyhow::Context;
-use coset::{cbor::Value, cwt::ClaimsSet, CborSerializable, CoseKey, RegisteredLabelWithPrivate};
+use coset::{CborSerializable, CoseKey, RegisteredLabelWithPrivate, cbor::Value, cwt::ClaimsSet};
 use oak_dice::cert::{
-    cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
     ACPI_MEASUREMENT_ID, APPLICATION_KEY_ID, CONTAINER_IMAGE_LAYER_ID,
     ENCLAVE_APPLICATION_LAYER_ID, EVENT_ID, FINAL_LAYER_CONFIG_MEASUREMENT_ID,
     INITRD_MEASUREMENT_ID, KERNEL_COMMANDLINE_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID,
     LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID,
     SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID, TRANSPARENT_EVENT_ID,
+    cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
 };
+use oak_digest::Sha256;
 use oak_proto_rust::oak::{
+    RawDigest,
     attestation::v1::{
-        extracted_evidence::EvidenceValues, root_layer_data::Report, ApplicationKeys,
-        ApplicationLayerData, CbData, ContainerLayerData, Event, EventData, Evidence,
-        ExtractedEvidence, FakeAttestationReport, KernelLayerData, OakContainersData,
+        ApplicationKeys, ApplicationLayerData, CbData, ContainerLayerData, Event, EventData,
+        Evidence, ExtractedEvidence, FakeAttestationReport, KernelLayerData, OakContainersData,
         OakRestrictedKernelData, OrchestratorMeasurements, RootLayerData, RootLayerEvidence,
         Stage0Measurements, Stage1Measurements, SystemLayerData, TeePlatform,
+        extracted_evidence::EvidenceValues, root_layer_data::Report,
     },
-    RawDigest,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
 use prost::Message;
-use sha2::Digest;
 use zerocopy::FromBytes;
 
 use crate::{platform::convert_amd_sev_snp_attestation_report, verifier::EventLogType};
@@ -73,11 +73,14 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
     let root_layer =
         Some(extract_root_values(evidence.root_layer.as_ref().context("no root layer evidence")?)?);
 
-    if let Some(event_log) = &evidence.event_log
-        && !event_log.encoded_events.is_empty()
-    {
-        let decoded_events: Vec<Event> = event_log
-            .encoded_events
+    let encoded_events = evidence
+        .event_log
+        .as_ref()
+        .map(|event_log| event_log.encoded_events.clone())
+        .unwrap_or_default();
+
+    if !encoded_events.is_empty() {
+        let decoded_events: Vec<Event> = encoded_events
             .iter()
             .enumerate()
             .map(|(index, encoded_event)| {
@@ -222,14 +225,15 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
             }
             EvidenceType::CB => {
                 let mut layers = Vec::new();
-                for event in &event_log.encoded_events {
+                for event in encoded_events {
                     layers.push(EventData {
                         event: Some(RawDigest {
-                            sha2_256: sha2::Sha256::digest(event).to_vec(),
+                            sha2_256: Sha256::from_contents(event.as_slice()).into(),
                             ..Default::default()
                         }),
                     });
                 }
+                #[allow(deprecated)]
                 Ok(EvidenceValues::Cb(CbData { root_layer, layers }))
             }
         }
@@ -313,6 +317,7 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
                     })
                     .collect();
                 let layer_values: Vec<EventData> = layer_results?.into_iter().flatten().collect();
+                #[allow(deprecated)]
                 Ok(EvidenceValues::Cb(CbData { root_layer, layers: layer_values }))
             }
         }
@@ -512,14 +517,9 @@ fn extract_layer_data(claims: &ClaimsSet, layer_id: i64) -> anyhow::Result<&Vec<
     claims
         .rest
         .iter()
-        .find_map(|(label, value)| {
-            if let Value::Map(map) = value
-                && label == &target
-            {
-                Some(map)
-            } else {
-                None
-            }
+        .find_map(|(label, value)| match value {
+            Value::Map(map) if label == &target => Some(map),
+            _ => None,
         })
         .context("couldn't find layer values")
 }

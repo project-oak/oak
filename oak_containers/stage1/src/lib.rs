@@ -25,6 +25,7 @@ use std::{
     error::Error,
     fs::{self, create_dir},
     io::ErrorKind,
+    net::IpAddr,
     path::Path,
     str::FromStr,
     time::Instant,
@@ -35,7 +36,7 @@ use clap::Parser;
 use client::LauncherClient;
 use futures_util::TryStreamExt;
 use nix::{
-    mount::{mount, umount, MsFlags},
+    mount::{MsFlags, mount, umount},
     unistd::{chdir, chroot},
 };
 use oak_attestation_types::{attester::Attester, util::Serializable};
@@ -46,6 +47,9 @@ use x86_64::PhysAddr;
 
 #[derive(Parser, Debug)]
 pub struct Args {
+    #[arg(long, value_delimiter = ',')]
+    pub eth0_address: Vec<String>,
+
     #[arg(long, default_value = "http://10.0.2.100:8080")]
     pub launcher_addr: Uri,
 
@@ -60,6 +64,20 @@ pub struct Args {
 
     #[arg(long = "oak-event-log", value_parser = try_parse_phys_addr)]
     pub event_log: PhysAddr,
+}
+
+async fn new_launcher(addr: Uri) -> anyhow::Result<LauncherClient> {
+    let mut error: Option<anyhow::Error> = None;
+    for _ in 0..3 {
+        match LauncherClient::new(addr.clone()).await {
+            Ok(client) => return Ok(client),
+            Err(err) => {
+                error = Some(err);
+            }
+        }
+        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+    }
+    Err(error.unwrap())
 }
 
 pub async fn main<A: Attester + Serializable + 'static>(args: &Args) -> Result<(), Box<dyn Error>> {
@@ -104,9 +122,36 @@ pub async fn main<A: Attester + Serializable + 'static>(args: &Args) -> Result<(
         .read_into_attester()?
     };
 
-    let mut client = LauncherClient::new(args.launcher_addr.clone())
-        .await
-        .context("error creating the launcher client")?;
+    // Configure the network, if requested.
+    let (connection, handle, _) =
+        rtnetlink::new_connection().context("error opening netlink connection")?;
+    tokio::spawn(connection);
+
+    // `ip link show eth0`
+    let mut links = handle.link().get().match_name("eth0".to_string()).execute();
+
+    let link = if let Ok(Some(link)) = links.try_next().await {
+        for address in &args.eth0_address {
+            let (address, prefix_len) = address.split_once('/').context("invalid IP address")?;
+            let address = IpAddr::from_str(address).context("invalid IP address")?;
+            let prefix_len = u8::from_str(prefix_len).context("invalid prefix length")?;
+
+            // `ip addr add`
+            handle.address().add(link.header.index, address, prefix_len).execute().await?;
+        }
+        // `ip link set dev $INDEX up`
+        handle.link().set(link.header.index).up().execute().await?;
+        Some(link)
+    } else {
+        eprintln!("warning: eth0 not found");
+        None
+    };
+
+    // IPv6 addresses may take a moment or two to settle because of DAD, so if it
+    // fails, retry a couple of times.
+    let mut client = new_launcher(args.launcher_addr.clone()).await.with_context(|| {
+        format!("error creating the launcher client to address {}", args.launcher_addr)
+    })?;
 
     let buf = {
         let now = Instant::now();
@@ -157,20 +202,9 @@ pub async fn main<A: Attester + Serializable + 'static>(args: &Args) -> Result<(
 
     // Configure eth0 down, as systemd will want to manage it itself and gets
     // confused if it already has an IP address.
-    {
-        let (connection, handle, _) =
-            rtnetlink::new_connection().context("error opening netlink connection")?;
-        tokio::spawn(connection);
-
-        // `ip link show eth0`
-        let mut links = handle.link().get().match_name("eth0".to_string()).execute();
-
-        if let Some(link) = links.try_next().await? {
-            // `ip link set dev $INDEX down`
-            handle.link().set(link.header.index).down().execute().await?;
-        } else {
-            println!("warning: eth0 not found");
-        }
+    if let Some(link) = link {
+        // `ip link set dev $INDEX down`
+        handle.link().set(link.header.index).down().execute().await?;
     }
 
     // We're not running under Docker, so if the system image has a lingering

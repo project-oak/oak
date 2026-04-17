@@ -15,8 +15,8 @@
 
 use std::collections::HashMap;
 
-use anyhow::{bail, Context};
-use encryption::{decrypt, encrypt, generate_nonce};
+use ::encryption::{decrypt, encrypt, generate_nonce};
+use anyhow::{Context, bail};
 use external_db_client::{BlobId, DataBlobHandler, ExternalDbClient};
 use prost::Message;
 use sealed_memory_rust_proto::prelude::v1::*;
@@ -42,7 +42,7 @@ impl MemoryCache {
 
     fn add_cache_entry(&mut self, blob_id: BlobId, memory: Memory) {
         const MAX_CACHE_SIZE: usize = 5;
-        if self.content_cache.len() > MAX_CACHE_SIZE {
+        if self.content_cache.len() >= MAX_CACHE_SIZE {
             // TODO: b/412698203 - Add eviction to avoid OOM.
             // Avoid OOM.
             self.content_cache.clear();

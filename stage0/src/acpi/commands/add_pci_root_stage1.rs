@@ -24,7 +24,7 @@ use crate::{
         files::Files,
     },
     fw_cfg::Firmware,
-    pci::{read_pci_crs_allowlist, PciWindows},
+    pci::{PciWindows, read_pci_crs_allowlist},
 };
 
 pub const PCI_ROOT_STAGE1_ALLOWLIST_OFFSET_COUNT: usize = 4;

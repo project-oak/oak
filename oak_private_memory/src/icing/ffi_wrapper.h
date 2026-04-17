@@ -234,6 +234,10 @@ class IcingSearchEngine {
         inner_->PersistToDisk((icing::lib::PersistType::Code)persist_type));
   }
 
+  std::unique_ptr<std::vector<uint8_t>> optimize_impl() const {
+    return ProtoToVec(inner_->Optimize());
+  }
+
  private:
   std::unique_ptr<icing::lib::IcingSearchEngine> inner_;
 };
@@ -279,6 +283,14 @@ class PropertyConfigBuilder {
     return *this;
   }
 
+  const PropertyConfigBuilder& set_data_type_joinable_string(
+      int joinable_value_type) const {
+    inner_->SetDataTypeJoinableString(
+        static_cast<icing::lib::JoinableConfig::ValueType::Code>(
+            joinable_value_type));
+    return *this;
+  }
+
   const PropertyConfigBuilder& set_data_type_document(
       rust::Slice<const uint8_t> schema_type,
       bool index_nested_properties) const {
@@ -296,6 +308,13 @@ class PropertyConfigBuilder {
   const PropertyConfigBuilder& set_description(
       rust::Slice<const uint8_t> description) const {
     inner_->SetDescription(RustSliceToString(description));
+    return *this;
+  }
+
+  const PropertyConfigBuilder& set_scorable_type(int32_t scorable_type) const {
+    inner_->SetScorableType(
+        static_cast<icing::lib::PropertyConfigProto::ScorableType::Code>(
+            scorable_type));
     return *this;
   }
 

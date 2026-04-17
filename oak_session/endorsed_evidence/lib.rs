@@ -24,7 +24,7 @@ use alloc::{boxed::Box, string::ToString, sync::Arc};
 use oak_attestation_types::{attester::Attester, endorser::Endorser};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_proto_rust::oak::{
-    attestation::v1::{attestation_results::Status, Assertion},
+    attestation::v1::{Assertion, attestation_results::Status},
     session::v1::{EndorsedEvidence, SessionBinding},
 };
 use oak_session::{

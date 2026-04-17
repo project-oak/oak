@@ -23,7 +23,7 @@ use hex::FromHexError;
 use mockall::automock;
 use oak_proto_rust::oak::crypto::v1::ProofOfFreshness;
 use serde::{Deserialize, Serialize};
-use x509_cert::{der::DecodePem, Certificate};
+use x509_cert::{Certificate, der::DecodePem};
 
 const NIST_WEB_PREFIX: &str = "https://beacon.nist.gov";
 // TODO: b/424736845 - Add support for version 2.1
@@ -31,9 +31,9 @@ const NIST_VERSION: &str = "2.0";
 
 #[derive(thiserror::Error, Debug)]
 pub enum ProofOfFreshnessVerificationError {
-    #[error("OutputValue not found; expected: {expected}, actual: {actual}")]
+    #[error("output value not found; expected: {expected}, actual: {actual}")]
     OutputValueNotFound { expected: String, actual: String },
-    #[error("Invalid hexadecimal: {0}")]
+    #[error("invalid hexadecimal: {0}")]
     InvalidHexadecimal(#[from] FromHexError),
     #[error("API call failed: {0}")]
     ApiCallFailed(#[from] Box<dyn Error>),
@@ -41,9 +41,9 @@ pub enum ProofOfFreshnessVerificationError {
     JsonParsingFailed(#[from] serde_json::Error),
     // Utilize the error string since x509_cert::der::Error requires StdErr support and x509_cert
     // in Oak is used for no-std crates.
-    #[error("Unable to parse certificate: {err}")]
+    #[error("unable to parse certificate: {err}")]
     CertificateParsingFailed { err: String },
-    #[error("Signature verification not implemented")]
+    #[error("signature verification not implemented")]
     SignatureVerificationNotImplemented,
 }
 

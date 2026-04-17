@@ -17,6 +17,8 @@
 //! This module implements the `list` command. It lists all endorsements for a
 //! given endorser key.
 
+use std::collections::HashSet;
+
 use anyhow::Context;
 use clap::Args;
 use endorscope::{
@@ -34,6 +36,12 @@ use verify_endorsement::verify_endorsement;
 use crate::verify::{parse_bucket_name, parse_typed_hash, parse_url, string_to_option_string};
 
 const MPM_CLAIM_TYPE: &str = "https://github.com/project-oak/oak/blob/main/docs/tr/claim/31543.md";
+const FILE_IN_MPM_CLAIM_TYPE: &str =
+    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/31544.md";
+const MPM_VERSION_CLAIM_TYPE: &str =
+    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/31545.md";
+const CONFIGURATION_CLAIM_TYPE: &str =
+    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/42362.md";
 const PUBLISHED_CLAIM_TYPE: &str =
     "https://github.com/project-oak/oak/blob/main/docs/tr/claim/52637.md";
 const RUNNABLE_CLAIM_TYPE: &str =
@@ -42,12 +50,11 @@ const OPEN_SOURCE_CLAIM_TYPE: &str =
     "https://github.com/project-oak/oak/blob/main/docs/tr/claim/92939.md";
 const PI_CLAIM_TYPE: &str = "https://github.com/project-oak/oak/blob/main/docs/tr/claim/39284.md";
 
-const EXPECTED_CLAIMS: &[&str] =
-    &[OPEN_SOURCE_CLAIM_TYPE, RUNNABLE_CLAIM_TYPE, PUBLISHED_CLAIM_TYPE, PI_CLAIM_TYPE];
-
 fn prettify_claim(claim: &str) -> String {
     match claim {
         MPM_CLAIM_TYPE => format!("{claim} (Distributed as MPM)"),
+        FILE_IN_MPM_CLAIM_TYPE => format!("{claim} (File in an MPM)"),
+        CONFIGURATION_CLAIM_TYPE => format!("{claim} (Configuration)"),
         OPEN_SOURCE_CLAIM_TYPE => format!("{claim} (Open Source)"),
         RUNNABLE_CLAIM_TYPE => format!("{claim} (Runnable Binary)"),
         PUBLISHED_CLAIM_TYPE => format!("{claim} (Published Binary)"),
@@ -66,33 +73,35 @@ fn prettify_claim(claim: &str) -> String {
 //   list --endorser-key-hash=sha2-256:12345 --fbucket=12345 --ibucket=67890
 #[derive(Args)]
 pub(crate) struct ListArgs {
-    #[arg(
-        long,
-        help = "Typed hash of the endorsed subject. Takes precedence over listing by key set or key.",
-        value_parser = parse_typed_hash,
-    )]
-    subject_hash: Option<String>,
+    #[command(flatten)]
+    mode: ListMode,
 
     #[arg(
         long,
-        help = "Typed hash of the verifying key used to sign endorsements.",
-        value_parser = parse_typed_hash,
+        help = "Specifies that no t-log inclusion (Rekor, C2SP/Sigsum or PES) should be verified."
     )]
-    endorser_key_hash: Option<String>,
+    skip_tlog_verification: bool,
 
     #[arg(
         long,
-        help = "Typed hash of the endorser keyset used to sign endorsements.",
-        value_parser = parse_typed_hash,
-    )]
-    endorser_keyset_hash: Option<String>,
-
-    #[arg(
-        long,
-        help = "Public key to verify Rekor log entries, as PEM. Unset to disable verification, e.g. when log entries are not available by design.",
+        help = "Public key to verify Rekor log entries, as PEM. Can be empty. Default is to verify Rekor inclusion, unless overridden by --skip_tlog_verification",
         default_value = get_rekor_v1_public_key_pem(),
     )]
     rekor_public_key: String,
+
+    #[arg(
+        long,
+        help = "C2SP policy to verify C2SP t-log proofs. Empty by default, so no verification happens.",
+        default_value = ""
+    )]
+    c2sp_policy: String,
+
+    #[arg(
+        long,
+        help = "Reference value for verifying a PES confirmation. Empty by default, so no verification happens.",
+        default_value = ""
+    )]
+    pes_ref_value: String,
 
     #[arg(
         long,
@@ -120,64 +129,157 @@ pub(crate) struct ListArgs {
     limit: usize,
 }
 
-/// Lists endorsements depending on arguments.
-pub(crate) fn list(current_time: Instant, p: ListArgs) {
-    let storage = CaStorage { url_prefix: p.url_prefix, fbucket: p.fbucket, ibucket: p.ibucket };
-    let loader = EndorsementLoader::new(Box::new(storage));
+/// Represents actual search criteria, all of which are concatenated by a
+/// logical AND.
+#[derive(Args)]
+pub(crate) struct ListMode {
+    #[arg(
+        long,
+        help = "List by typed hash of the endorsed subject.",
+        value_parser = parse_typed_hash,
+    )]
+    subject_hash: Option<String>,
 
-    if p.subject_hash.is_some() {
-        list_endorsements_by_subject(
-            current_time,
-            &loader,
-            p.subject_hash.unwrap().as_str(),
-            string_to_option_string(p.rekor_public_key),
-            p.limit,
-        );
-    } else {
-        let endorser_key_hashes;
-        if p.endorser_key_hash.is_some() {
-            endorser_key_hashes = vec![p.endorser_key_hash.unwrap()];
-        } else if p.endorser_keyset_hash.is_some() {
-            endorser_key_hashes =
-                list_keys_by_keyset(&loader, p.endorser_keyset_hash.unwrap().as_str());
-        } else {
-            panic!("One of --subject-hash, --endorser-key-hash, or --endorser-keyset-hash must be specified.");
-        }
+    #[arg(
+        long,
+        help = "List by typed hash of the verifying key.",
+        value_parser = parse_typed_hash,
+    )]
+    endorser_key_hash: Option<String>,
 
-        for endorser_key_hash in endorser_key_hashes {
-            list_endorsements_by_key(
-                current_time,
-                &loader,
-                endorser_key_hash.as_str(),
-                string_to_option_string(p.rekor_public_key.clone()),
-                p.limit,
-            );
-        }
-    }
+    #[arg(
+        long,
+        help = "List by typed hash of the verifying key set.",
+        value_parser = parse_typed_hash,
+    )]
+    endorser_keyset_hash: Option<String>,
+
+    #[arg(long, help = "List by claim.")]
+    claim: Vec<String>,
 }
 
-fn list_endorsements_by_subject(
+/// Lists endorsements depending on arguments.
+pub(crate) fn list(
     current_time: Instant,
+    claim_types: Vec<String>,
+    p: ListArgs,
+    access_token: Option<String>,
+) {
+    let storage = CaStorage {
+        url_prefix: p.url_prefix,
+        fbucket: p.fbucket,
+        ibucket: p.ibucket,
+        access_token,
+    };
+    let loader = EndorsementLoader::new(Box::new(storage));
+
+    let mut final_hashes: Option<Vec<String>> = None;
+
+    let mut intersect = |hashes: Vec<String>| match final_hashes.as_mut() {
+        Some(current) => {
+            let set: HashSet<String> = hashes.into_iter().collect();
+            current.retain(|h| set.contains(h));
+        }
+        None => {
+            final_hashes = Some(hashes);
+        }
+    };
+
+    if p.mode.subject_hash.is_none()
+        && p.mode.endorser_key_hash.is_none()
+        && p.mode.endorser_keyset_hash.is_none()
+        && p.mode.claim.is_empty()
+    {
+        panic!("At least one list mode must be specified");
+    }
+
+    if let Some(hash) = &p.mode.subject_hash {
+        let hashes =
+            loader.list_endorsements_by_subject(hash).expect("listing endorsements by subject");
+        intersect(hashes);
+    }
+
+    if let Some(hash) = &p.mode.endorser_key_hash {
+        let hashes = loader.list_endorsements_by_key(hash).expect("listing endorsements by key");
+        println!("🧲  Found {} endorsements for endorser key {}", hashes.len(), hash);
+        intersect(hashes);
+    }
+
+    if let Some(hash) = &p.mode.endorser_keyset_hash {
+        let hashes = list_endorsements_by_keyset(&loader, hash);
+        intersect(hashes);
+    }
+
+    for hash in &p.mode.claim {
+        let hashes =
+            loader.list_endorsements_by_claim(hash).expect("listing endorsements by claim");
+        intersect(hashes);
+    }
+
+    let (rekor_public_key, c2sp_policy, pes_ref_value) = if p.skip_tlog_verification {
+        (None, None, None)
+    } else {
+        (
+            string_to_option_string(p.rekor_public_key),
+            string_to_option_string(p.c2sp_policy),
+            string_to_option_string(p.pes_ref_value),
+        )
+    };
+    list_endorsement_hashes(
+        current_time,
+        claim_types,
+        &loader,
+        final_hashes.unwrap_or_default(),
+        rekor_public_key,
+        c2sp_policy,
+        pes_ref_value,
+        p.limit,
+    );
+}
+
+fn list_endorsements_by_keyset(loader: &EndorsementLoader, keyset_hash: &str) -> Vec<String> {
+    let keys = list_keys_by_keyset(loader, keyset_hash);
+    let mut keyset_hashes = HashSet::new();
+    let mut keyset_vec = Vec::new();
+    for key_hash in keys {
+        if let Ok(hashes) = loader.list_endorsements_by_key(&key_hash) {
+            println!("🧲  Found {} endorsements for endorser key {}", hashes.len(), key_hash);
+            for h in hashes {
+                if keyset_hashes.insert(h.clone()) {
+                    keyset_vec.push(h);
+                }
+            }
+        }
+    }
+    keyset_vec
+}
+
+#[allow(clippy::too_many_arguments)]
+fn list_endorsement_hashes(
+    current_time: Instant,
+    claim_types: Vec<String>,
     loader: &EndorsementLoader,
-    subject_hash: &str,
+    endorsement_hashes: Vec<String>,
     rekor_public_key: Option<String>,
+    c2sp_policy: Option<String>,
+    pes_ref_value: Option<String>,
     limit: usize,
 ) {
-    let endorsement_hashes = loader.list_endorsements_by_subject(subject_hash);
-    if endorsement_hashes.is_err() {
-        println!("❌  Failed to list endorsements: {:?}", endorsement_hashes.err().unwrap());
-        return;
-    }
-    let endorsement_hashes = endorsement_hashes.unwrap();
-
     // The index is append-only so we iterate backwards to show the most recent
     // endorsements first.
     for (index, endorsement_hash) in endorsement_hashes.iter().rev().enumerate() {
         let result = loader
-            .load(endorsement_hash, rekor_public_key.clone())
+            .load(
+                endorsement_hash,
+                rekor_public_key.clone(),
+                c2sp_policy.clone(),
+                pes_ref_value.clone(),
+            )
             .with_context(|| format!("loading endorsement {endorsement_hash}"));
         match result {
-            Ok(package) => verify_print_package(current_time, &package, endorsement_hash),
+            Ok(package) => {
+                verify_print_package(current_time, claim_types.clone(), &package, endorsement_hash)
+            }
             Err(err) => println!("❌  Loading endorsement {} failed: {:?}", endorsement_hash, err),
         }
         if limit > 0 && index >= limit - 1 {
@@ -203,50 +305,19 @@ fn list_keys_by_keyset(loader: &EndorsementLoader, endorser_keyset_hash: &str) -
     endorser_keys
 }
 
-fn list_endorsements_by_key(
-    current_time: Instant,
-    loader: &EndorsementLoader,
-    endorser_key_hash: &str,
-    rekor_public_key: Option<String>,
-    limit: usize,
-) {
-    let endorsement_hashes = loader.list_endorsements_by_key(endorser_key_hash);
-    if endorsement_hashes.is_err() {
-        println!("❌  Failed to list endorsements: {:?}", endorsement_hashes.err().unwrap());
-        return;
-    }
-    let endorsement_hashes = endorsement_hashes.unwrap();
-
-    println!(
-        "🧲  Found {} endorsements for endorser key {}",
-        endorsement_hashes.len(),
-        endorser_key_hash
-    );
-
-    // The index is append-only so we iterate backwards to show the most recent
-    // endorsements first.
-    for (index, endorsement_hash) in endorsement_hashes.iter().rev().enumerate() {
-        let result = loader
-            .load(endorsement_hash, rekor_public_key.clone())
-            .with_context(|| format!("loading endorsement {endorsement_hash}"));
-        match result {
-            Ok(package) => verify_print_package(current_time, &package, endorsement_hash),
-            Err(err) => println!("❌  Loading endorsement {} failed: {:?}", endorsement_hash, err),
-        }
-        if limit > 0 && index >= limit - 1 {
-            break;
-        }
-    }
-}
-
 /// Verifies an endorsement package and pretty-prints it to stdout.
-fn verify_print_package(current_time: Instant, package: &Package, endorsement_hash: &str) {
+fn verify_print_package(
+    current_time: Instant,
+    claim_types: Vec<String>,
+    package: &Package,
+    endorsement_hash: &str,
+) {
     let signed_endorsement =
         package.get_signed_endorsement().expect("failed to get signed endorsement");
     let result = verify_endorsement(
         current_time.into_unix_millis(),
         &signed_endorsement,
-        &package.get_reference_value(),
+        &package.get_reference_value(claim_types),
     )
     .context("verifying endorsement");
     match result {
@@ -276,16 +347,12 @@ fn verify_print_package(current_time: Instant, package: &Package, endorsement_ha
                 let mpm_attachment = MpmAttachment::decode(subject.as_slice()).unwrap();
                 println!("        🍀  MPM version ID: {}", mpm_attachment.package_version);
             }
-            for e in EXPECTED_CLAIMS {
-                let claim = details.claim_types.iter().find(|c| c.as_str() == *e);
-                if claim.is_none() {
-                    println!("        ❌  {}", prettify_claim(e));
-                } else {
-                    println!("        🛄  {}", prettify_claim(e));
-                }
-            }
             for c in details.claim_types {
-                if !EXPECTED_CLAIMS.contains(&c.as_str()) {
+                if c.starts_with(MPM_VERSION_CLAIM_TYPE) {
+                    let mpm_version_id =
+                        c.strip_prefix(MPM_VERSION_CLAIM_TYPE).unwrap().strip_prefix("?").unwrap();
+                    println!("        🛠  {}", mpm_version_id);
+                } else {
                     println!("        🛄  {}", prettify_claim(&c));
                 }
             }

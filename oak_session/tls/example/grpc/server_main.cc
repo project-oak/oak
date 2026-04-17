@@ -27,11 +27,11 @@
 #include "oak_session/tls/util.h"
 
 ABSL_FLAG(std::string, port, "8080", "Port for the server to listen on");
-ABSL_FLAG(std::string, server_key, "oak_session/tls/testing/server.key",
+ABSL_FLAG(std::string, server_key, "oak_session/tls/testing/test_server.key",
           "Path to the server key");
-ABSL_FLAG(std::string, server_cert, "oak_session/tls/testing/server.pem",
+ABSL_FLAG(std::string, server_cert, "oak_session/tls/testing/test_server.pem",
           "Path to the server certificate");
-ABSL_FLAG(std::string, client_cert, "oak_session/tls/testing/client.pem",
+ABSL_FLAG(std::string, client_cert, "oak_session/tls/testing/test_client.pem",
           "Path to the client certificate");
 
 namespace oak::session::tls::example {

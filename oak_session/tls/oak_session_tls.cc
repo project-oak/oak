@@ -16,6 +16,7 @@
 
 #include "oak_session/tls/oak_session_tls.h"
 
+#include "absl/base/call_once.h"
 #include "absl/status/status.h"
 #include "openssl/base.h"
 #include "openssl/bio.h"
@@ -36,24 +37,80 @@ namespace oak::session::tls {
 namespace {
 absl::StatusOr<std::string> BioReadAll(BIO* bio);
 absl::StatusOr<std::string> SslReadAll(SSL* ssl);
-absl::Status SetTlsIdentity(SSL_CTX* ctx, const TlsIdentity& tls_identity);
+absl::Status SetTlsIdentity(SSL* ssl, const TlsIdentity& tls_identity);
+
+static int g_custom_verifier_ex_index = -1;
+static absl::once_flag g_custom_verifier_ex_index_once;
+
+int GetCustomVerifierExIndex() {
+  absl::call_once(g_custom_verifier_ex_index_once, []() {
+    g_custom_verifier_ex_index =
+        SSL_get_ex_new_index(0, nullptr, nullptr, nullptr, nullptr);
+  });
+  return g_custom_verifier_ex_index;
+}
+
+int VerifyCallback(X509_STORE_CTX* ctx, void* arg) {
+  // Run standard BoringSSL validation first.
+  int ok = X509_verify_cert(ctx);
+  if (ok <= 0) return ok;
+
+  SSL* ssl = static_cast<SSL*>(
+      X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx()));
+  if (!ssl) return 1;
+
+  CustomCertVerifier* verifier = static_cast<CustomCertVerifier*>(
+      SSL_get_ex_data(ssl, GetCustomVerifierExIndex()));
+  if (!verifier) return 1;
+
+  STACK_OF(X509)* chain = X509_STORE_CTX_get0_chain(ctx);
+  std::vector<std::string> cert_chain;
+  for (size_t i = 0; i < sk_X509_num(chain); ++i) {
+    X509* cert = sk_X509_value(chain, i);
+    unsigned char* der = nullptr;
+    int len = i2d_X509(cert, &der);
+    if (len >= 0) {
+      cert_chain.push_back(std::string(reinterpret_cast<char*>(der), len));
+      OPENSSL_free(der);
+    }
+  }
+
+  // Execute custom validation
+  absl::Status status = (*verifier)(cert_chain);
+  if (!status.ok()) {
+    X509_STORE_CTX_set_error(ctx, X509_V_ERR_APPLICATION_VERIFICATION);
+    return 0;
+  }
+
+  return 1;
+}
+
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<OakSessionTlsContext>>
-OakSessionTlsContext::Create(const ServerContextConfig& config) {
+OakSessionTlsContext::Create(ServerContextConfig config) {
   bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_server_method()));
   if (!ctx) {
     return absl::InternalError("Failed to create SSL_CTX");
   }
 
-  absl::Status creds_status = SetTlsIdentity(ctx.get(), config.tls_identity);
-  if (!creds_status.ok()) {
-    return creds_status;
-  }
+  SSL_CTX_set_min_proto_version(ctx.get(), TLS1_3_VERSION);
 
-  if (config.client_trust_anchor_path.has_value()) {
+  // Enable PQC support with X25519MLKEM768 as preferred, fallback to X25519.
+  // This provides hybrid post-quantum security using ML-KEM-768 combined with
+  // classical X25519 key exchange.
+  static const uint16_t kGroups[] = {SSL_GROUP_X25519_MLKEM768,
+                                     SSL_GROUP_X25519};
+  SSL_CTX_set1_group_ids(ctx.get(), kGroups, std::size(kGroups));
+
+  if (config.client_trust_anchor_path.has_value() ||
+      config.custom_cert_verifier.has_value()) {
     SSL_CTX_set_verify(
         ctx.get(), SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, nullptr);
+
+    if (config.custom_cert_verifier.has_value()) {
+      SSL_CTX_set_cert_verify_callback(ctx.get(), VerifyCallback, nullptr);
+    }
 
     if (SSL_CTX_load_verify_locations(ctx.get(),
                                       config.client_trust_anchor_path->c_str(),
@@ -62,47 +119,146 @@ OakSessionTlsContext::Create(const ServerContextConfig& config) {
     }
   }
 
-  return std::make_unique<OakSessionTlsContext>(OakSessionTlsMode::kServer,
-                                                std::move(ctx));
+  return std::make_unique<OakSessionTlsContext>(
+      OakSessionTlsMode::kServer, std::move(ctx),
+      std::move(config.tls_identity_provider),
+      std::move(config.custom_cert_verifier));
 }
 
 absl::StatusOr<std::unique_ptr<OakSessionTlsContext>>
-OakSessionTlsContext::Create(const ClientContextConfig& config) {
+OakSessionTlsContext::Create(ClientContextConfig config) {
   bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_client_method()));
   if (!ctx) {
     return absl::InternalError("Failed to create SSL_CTX");
   }
 
+  SSL_CTX_set_min_proto_version(ctx.get(), TLS1_3_VERSION);
+
+  // Enable PQC support with X25519MLKEM768 as preferred, fallback to X25519.
+  // This provides hybrid post-quantum security using ML-KEM-768 combined with
+  // classical X25519 key exchange.
+  static const uint16_t kGroups[] = {SSL_GROUP_X25519_MLKEM768,
+                                     SSL_GROUP_X25519};
+  SSL_CTX_set1_group_ids(ctx.get(), kGroups, std::size(kGroups));
+
   SSL_CTX_load_verify_locations(
       ctx.get(), config.server_trust_anchor_path.c_str(), nullptr);
 
-  if (config.tls_identity.has_value()) {
-    absl::Status creds_status = SetTlsIdentity(ctx.get(), *config.tls_identity);
-    if (!creds_status.ok()) {
-      return creds_status;
-    }
+  // Enable server certificate verification.
+  // Note: SSL_VERIFY_FAIL_IF_NO_PEER_CERT is only for servers requiring client
+  // certs.
+  SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER, nullptr);
+
+  if (config.custom_cert_verifier.has_value()) {
+    SSL_CTX_set_cert_verify_callback(ctx.get(), VerifyCallback, nullptr);
   }
 
-  return std::make_unique<OakSessionTlsContext>(OakSessionTlsMode::kClient,
-                                                std::move(ctx));
+  return std::make_unique<OakSessionTlsContext>(
+      OakSessionTlsMode::kClient, std::move(ctx),
+      std::move(config.tls_identity_provider),
+      std::move(config.custom_cert_verifier));
 }
 
 absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>>
 OakSessionTlsContext::NewSession() {
+  const TlsIdentity* identity_ptr = nullptr;
+  std::optional<TlsIdentity> identity;
+  if (tls_identity_provider_ != nullptr) {
+    auto identity_or = tls_identity_provider_->GetIdentity();
+    if (!identity_or.ok()) {
+      return identity_or.status();
+    }
+    identity = std::move(*identity_or);
+    identity_ptr = &*identity;
+  }
+
   switch (mode_) {
     case OakSessionTlsMode::kClient:
-      return OakSessionTlsInitializer::CreateClient(ssl_ctx_.get());
+      return OakSessionTlsInitializer::CreateClient(
+          ssl_ctx_.get(), identity_ptr,
+          custom_cert_verifier_.has_value() ? &*custom_cert_verifier_
+                                            : nullptr);
     case OakSessionTlsMode::kServer:
-      return OakSessionTlsInitializer::CreateServer(ssl_ctx_.get());
+      return OakSessionTlsInitializer::CreateServer(
+          ssl_ctx_.get(), identity_ptr,
+          custom_cert_verifier_.has_value() ? &*custom_cert_verifier_
+                                            : nullptr);
   }
 }
 
+absl::StatusOr<InitializedSession> OakSessionTlsContext::NewInitializedSession(
+    SendFn send, ReceiveFn receive) {
+  auto initializer_or = NewSession();
+  if (!initializer_or.ok()) {
+    return initializer_or.status();
+  }
+  auto initializer = std::move(*initializer_or);
+
+  // Client sends initial frame (ClientHello) before entering the loop.
+  if (mode_ == OakSessionTlsMode::kClient) {
+    auto outgoing = initializer->GetTLSFrame();
+    if (!outgoing.ok()) {
+      return outgoing.status();
+    }
+    auto send_status = send(*outgoing);
+    if (!send_status.ok()) {
+      return send_status;
+    }
+  }
+
+  // Unified loop: receive, process, send response (if any).
+  while (!initializer->IsReady()) {
+    auto incoming = receive();
+    if (!incoming.ok()) {
+      return incoming.status();
+    }
+    auto put_status = initializer->PutTLSFrame(*incoming);
+    if (!put_status.ok()) {
+      return put_status;
+    }
+
+    // Send any outgoing response frame.
+    if (!initializer->IsReady()) {
+      auto outgoing = initializer->GetTLSFrame();
+      if (!outgoing.ok()) {
+        return outgoing.status();
+      }
+      if (!outgoing->empty()) {
+        auto send_status = send(*outgoing);
+        if (!send_status.ok()) {
+          return send_status;
+        }
+      }
+    }
+  }
+
+  // Drain any final outgoing frame (e.g., client's Finished message).
+  auto final_frame = initializer->GetTLSFrame();
+  if (final_frame.ok() && !final_frame->empty()) {
+    auto send_status = send(*final_frame);
+    if (!send_status.ok()) {
+      return send_status;
+    }
+  }
+
+  return initializer->GetOpenSession();
+}
+
 absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>>
-OakSessionTlsInitializer::Create(SSL_CTX* ssl_ctx) {
+OakSessionTlsInitializer::Create(
+    SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity,
+    const CustomCertVerifier* custom_cert_verifier) {
   auto ssl = bssl::UniquePtr<SSL>(SSL_new(ssl_ctx));
   if (!ssl) {
     // TODO: b/448338977 - can we get more error details?
     return absl::FailedPreconditionError("Failed to create SSL instance");
+  }
+
+  if (tls_identity != nullptr) {
+    absl::Status identity_status = SetTlsIdentity(ssl.get(), *tls_identity);
+    if (!identity_status.ok()) {
+      return identity_status;
+    }
   }
 
   // Enable the BIO API for this SSL instance.
@@ -121,14 +277,29 @@ OakSessionTlsInitializer::Create(SSL_CTX* ssl_ctx) {
   // create and pass raw pointers here.
   SSL_set_bio(ssl.get(), rbio, wbio);
 
-  return absl::WrapUnique(
-      new OakSessionTlsInitializer(std::move(ssl), rbio, wbio));
+  std::optional<CustomCertVerifier> verifier_copy;
+  if (custom_cert_verifier) {
+    verifier_copy = *custom_cert_verifier;
+  }
+
+  auto initializer = absl::WrapUnique(new OakSessionTlsInitializer(
+      std::move(ssl), rbio, wbio, std::move(verifier_copy)));
+
+  if (initializer->custom_verifier_.has_value()) {
+    SSL_set_ex_data(initializer->ssl_.get(), GetCustomVerifierExIndex(),
+                    &*initializer->custom_verifier_);
+  }
+
+  return initializer;
 }
 
 absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>>
-OakSessionTlsInitializer::CreateClient(SSL_CTX* ssl_ctx) {
+OakSessionTlsInitializer::CreateClient(
+    SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity,
+    const CustomCertVerifier* custom_cert_verifier) {
   absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> initializer =
-      OakSessionTlsInitializer::Create(ssl_ctx);
+      OakSessionTlsInitializer::Create(ssl_ctx, tls_identity,
+                                       custom_cert_verifier);
   if (!initializer.ok()) {
     return initializer.status();
   }
@@ -150,9 +321,12 @@ OakSessionTlsInitializer::CreateClient(SSL_CTX* ssl_ctx) {
 }
 
 absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>>
-OakSessionTlsInitializer::CreateServer(SSL_CTX* ssl_ctx) {
+OakSessionTlsInitializer::CreateServer(
+    SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity,
+    const CustomCertVerifier* custom_cert_verifier) {
   absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> initializer =
-      OakSessionTlsInitializer::Create(ssl_ctx);
+      OakSessionTlsInitializer::Create(ssl_ctx, tls_identity,
+                                       custom_cert_verifier);
   if (!initializer.ok()) {
     return initializer.status();
   }
@@ -168,11 +342,15 @@ absl::Status OakSessionTlsInitializer::PutTLSFrame(absl::string_view tlsFrame) {
     return absl::FailedPreconditionError("Handshake was already completed.");
   }
 
+  // Write incoming TLS data to the read BIO, making it available to SSL.
   int write_result = BIO_write(bio_read_, tlsFrame.data(), tlsFrame.size());
 
   if (write_result <= 0) {
     return absl::InternalError("Failed to write TLS frame to BIO");
   }
+
+  // Advance the TLS state machine. This may produce outgoing data in
+  // bio_write_.
 
   int ret = SSL_do_handshake(ssl_.get());
   if (ret < 0) {
@@ -186,6 +364,8 @@ absl::Status OakSessionTlsInitializer::PutTLSFrame(absl::string_view tlsFrame) {
     }
   }
 
+  // If the handshake just completed, check for any application data that was
+  // bundled with the final handshake message (common in TLS 1.3).
   if (SSL_is_init_finished(ssl_.get())) {
     auto initial_data = SslReadAll(ssl_.get());
 
@@ -199,6 +379,8 @@ absl::Status OakSessionTlsInitializer::PutTLSFrame(absl::string_view tlsFrame) {
 }
 
 absl::StatusOr<std::string> OakSessionTlsInitializer::GetTLSFrame() {
+  // Read any pending outgoing TLS data from the write BIO.
+  // This contains TLS handshake messages generated by SSL_do_handshake().
   char buf[kReadBufferSize];
   int read_result = BIO_read(bio_write_, buf, sizeof(buf));
 
@@ -213,8 +395,7 @@ bool OakSessionTlsInitializer::IsReady() {
   return SSL_is_init_finished(ssl_.get());
 }
 
-absl::StatusOr<std::unique_ptr<OakSessionTls>>
-OakSessionTlsInitializer::GetOpenSession() {
+absl::StatusOr<InitializedSession> OakSessionTlsInitializer::GetOpenSession() {
   if (ssl_ == nullptr) {
     return absl::FailedPreconditionError("Initializer is no longer valid.");
   }
@@ -222,13 +403,18 @@ OakSessionTlsInitializer::GetOpenSession() {
     return absl::FailedPreconditionError("Handshake is not complete yet.");
   }
 
+  // Transfer ownership of SSL and BIO resources to the new OakSessionTls.
+  // After this, the initializer is no longer valid.
   auto session = absl::WrapUnique(
       new OakSessionTls(std::move(ssl_), bio_read_, bio_write_));
 
   bio_read_ = nullptr;
   bio_write_ = nullptr;
 
-  return session;
+  return InitializedSession{
+      .session = std::move(session),
+      .initial_data = std::move(initial_data_),
+  };
 }
 
 absl::StatusOr<std::string> OakSessionTls::Encrypt(
@@ -254,6 +440,10 @@ absl::StatusOr<std::string> OakSessionTls::Decrypt(
   }
 
   return SslReadAll(ssl_.get());
+}
+
+uint16_t OakSessionTls::GetNegotiatedGroup() const {
+  return SSL_get_group_id(ssl_.get());
 }
 
 namespace {
@@ -300,16 +490,16 @@ absl::StatusOr<std::string> SslReadAll(SSL* ssl) {
   return result;
 }
 
-absl::Status SetTlsIdentity(SSL_CTX* ctx, const TlsIdentity& tls_identity) {
-  if (SSL_CTX_use_RSAPrivateKey_ASN1(
-          ctx, reinterpret_cast<const uint8_t*>(tls_identity.key_asn1.data()),
+absl::Status SetTlsIdentity(SSL* ssl, const TlsIdentity& tls_identity) {
+  if (SSL_use_RSAPrivateKey_ASN1(
+          ssl, reinterpret_cast<const uint8_t*>(tls_identity.key_asn1.data()),
           tls_identity.key_asn1.size()) != 1) {
     return absl::InternalError("Failed to load private key");
   }
 
-  if (SSL_CTX_use_certificate_ASN1(ctx, tls_identity.cert_asn1.size(),
-                                   reinterpret_cast<const uint8_t*>(
-                                       tls_identity.cert_asn1.data())) != 1) {
+  if (SSL_use_certificate_ASN1(
+          ssl, reinterpret_cast<const uint8_t*>(tls_identity.cert_asn1.data()),
+          tls_identity.cert_asn1.size()) != 1) {
     return absl::InternalError("Failed to load certificate");
   }
 

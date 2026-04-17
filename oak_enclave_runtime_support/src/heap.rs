@@ -95,7 +95,7 @@ impl GrowableHeap {
     ///  - The memory block must have been allocated with the same alignment
     ///    ([`Layout::align`]) as `align`.
     pub unsafe fn deallocate(&mut self, ptr: NonNull<u8>, align: usize) {
-        self.heap.deallocate(ptr, align)
+        unsafe { self.heap.deallocate(ptr, align) }
     }
 }
 
@@ -122,6 +122,8 @@ unsafe impl GlobalAlloc for LockedGrowableHeap {
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: core::alloc::Layout) {
-        self.0.lock().deallocate(NonNull::new_unchecked(ptr), layout.align())
+        unsafe {
+            self.0.lock().deallocate(NonNull::new_unchecked(ptr), layout.align());
+        }
     }
 }

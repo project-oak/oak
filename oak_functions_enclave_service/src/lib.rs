@@ -22,15 +22,15 @@ use alloc::{format, string::ToString, sync::Arc, vec::Vec};
 
 use oak_core::sync::OnceCell;
 use oak_crypto::encryption_key::EncryptionKeyHandle;
-use oak_functions_service::{instance::OakFunctionsInstance, Handler, Observer};
+use oak_functions_service::{Handler, Observer, instance::OakFunctionsInstance};
 use oak_micro_rpc::oak::functions::OakFunctions;
 use oak_proto_rust::oak::functions::{
-    extend_next_lookup_data_request::Data, AbortNextLookupDataResponse, Empty,
-    ExtendNextLookupDataRequest, ExtendNextLookupDataResponse, FinishNextLookupDataRequest,
-    FinishNextLookupDataResponse, InitializeRequest, InitializeResponse, InvokeRequest,
-    InvokeResponse, LookupDataChunk, ReserveRequest, ReserveResponse,
+    AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
+    FinishNextLookupDataRequest, FinishNextLookupDataResponse, InitializeRequest,
+    InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk, ReserveRequest,
+    ReserveResponse, extend_next_lookup_data_request::Data,
 };
-use oak_restricted_kernel_sdk::{handler::EncryptionHandler, Attester};
+use oak_restricted_kernel_sdk::{Attester, handler::EncryptionHandler};
 use prost::Message;
 
 pub struct OakFunctionsService<EKH, A, H>

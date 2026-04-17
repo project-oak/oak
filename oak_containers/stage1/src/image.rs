@@ -20,7 +20,7 @@ use std::{
     path::Path,
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use bytes::Buf;
 use nix::unistd::execve;
 use tar::Archive;

@@ -46,7 +46,7 @@ mod systemd_sys {
     }
 
     #[link(name = "systemd")]
-    extern "C" {
+    unsafe extern "C" {
         // https://www.freedesktop.org/software/systemd/man/sd_journal_open.html
         pub fn sd_journal_open(ret: *mut *mut sd_journal, flags: c_int) -> c_int;
         pub fn sd_journal_close(j: *mut sd_journal);
@@ -95,11 +95,7 @@ impl Journal {
         // Safety: we pass in a valid pointer (to the pointer). The returned journal
         // value is opaque and we never directly access it.
         let ret = unsafe { sd_journal_open(&mut journal, flags.bits()) };
-        if ret == 0 {
-            Ok(Self { journal, terminate })
-        } else {
-            Err(nix::errno::from_i32(ret))
-        }
+        if ret == 0 { Ok(Self { journal, terminate }) } else { Err(nix::errno::from_i32(ret)) }
     }
 
     /// Moves the cursor to before the first record in the journal.
@@ -107,11 +103,7 @@ impl Journal {
         // Safety: `self.journal` must be valid because of Journal::new().
         let ret = unsafe { sd_journal_seek_head(self.journal) };
 
-        if ret == 0 {
-            Ok(())
-        } else {
-            Err(nix::errno::from_i32(ret))
-        }
+        if ret == 0 { Ok(()) } else { Err(nix::errno::from_i32(ret)) }
     }
 
     // The slice will be valid until the next call to `next()` or `next_data()`,

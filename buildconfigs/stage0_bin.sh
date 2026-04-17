@@ -10,7 +10,7 @@ export BUILD_COMMAND=(
   .#default
   --command
   just
-  github-stage0_bin
+  github stage0_bin
 )
 
 # The first element must be the Transparent Release binary (the main binary).

@@ -20,7 +20,7 @@ use anyhow::Context;
 use clap::Parser;
 use oak_proxy_lib::{
     config::{self, RestartPolicy, ServerConfig},
-    proxy::{proxy, PeerRole},
+    proxy::{PeerRole, proxy},
     websocket::{read_message, write_message},
 };
 use oak_session::{ProtocolEngine, ServerSession, Session};
@@ -28,7 +28,7 @@ use tokio::{
     net::{TcpListener, TcpStream},
     process::Command,
 };
-use tokio_tungstenite::{accept_async, MaybeTlsStream};
+use tokio_tungstenite::{MaybeTlsStream, accept_async};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -95,6 +95,7 @@ async fn handle_connection(
     let server_config = config::build_session_config(
         &config.attestation_generators,
         &config.attestation_verifiers,
+        None,
     )?;
     let mut session = ServerSession::create(server_config)?;
 
@@ -115,11 +116,13 @@ async fn handle_connection(
         .context(format!("error connecting to backend {}", backend_address))?;
     log::info!("[Server] Connected to backend server at {}", backend_address);
 
-    proxy::<
-        ServerSession,
-        oak_proto_rust::oak::session::v1::SessionRequest,
-        oak_proto_rust::oak::session::v1::SessionResponse,
-    >(PeerRole::Server, session, backend_stream, client_stream, config.keep_alive_interval)
+    proxy::<ServerSession>(
+        PeerRole::Server,
+        session,
+        backend_stream,
+        client_stream,
+        config.keep_alive_interval,
+    )
     .await
 }
 

@@ -324,6 +324,18 @@ impl GuestInstance for Instance {
         info!("connecting to guest instance");
         Ok(Box::new(self.host_socket.try_clone()?))
     }
+
+    async fn connect_with_timeouts(
+        &self,
+        read_timeout: Duration,
+        write_timeout: Duration,
+    ) -> Result<Box<dyn oak_channel::Channel>> {
+        info!("connecting to guest instance with timeouts");
+        let socket = self.host_socket.try_clone()?;
+        socket.set_read_timeout(Some(read_timeout))?;
+        socket.set_write_timeout(Some(write_timeout))?;
+        Ok(Box::new(socket))
+    }
 }
 
 /// Defines the interface of a launched guest instance. Standardizes the
@@ -339,6 +351,12 @@ pub trait GuestInstance {
 
     /// Creates a channel to communicate with the guest instance.
     async fn connect(&self) -> Result<Box<dyn oak_channel::Channel>>;
+
+    async fn connect_with_timeouts(
+        &self,
+        read_timeout: Duration,
+        write_timeout: Duration,
+    ) -> Result<Box<dyn oak_channel::Channel>>;
 }
 
 /// Launches a new guest instance in given mode.

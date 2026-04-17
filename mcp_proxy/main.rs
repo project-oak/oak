@@ -18,26 +18,24 @@ use std::{fs, path::PathBuf};
 
 use anyhow::{Context, Result};
 use axum::{
+    Router,
     body::Body,
     extract::{Request, State},
     http::StatusCode,
     response::Response,
     routing::any,
-    Router,
 };
 use clap::Parser;
 use config::{Config, Filter};
-use digest::{compute_canonical_digest, Digest};
-use oak_proto_rust::oak::HexDigest;
+use oak_digest::Digest;
 use thiserror::Error;
 use tokio::net::TcpListener;
 use trex_client::{
-    http::{fetch_index, HttpBlobFetcher, HttpEndorsementIndex},
     EndorsementVerifier,
+    http::{HttpBlobFetcher, HttpEndorsementIndex},
 };
 
 mod config;
-mod digest;
 
 #[derive(Error, Debug)]
 pub enum VerificationError {
@@ -110,40 +108,43 @@ async fn main() -> Result<()> {
 }
 
 /// Handles incoming HTTP requests. Forwards requests to the target MCP server,
-/// handles headers, and optionally verifies responses based on configuration
+/// caches responses, and optionally verifies them based on configuration
 /// filters.
 async fn handle_request(
     State(state): State<AppState>,
     req: Request,
 ) -> Result<Response, (StatusCode, String)> {
     let (parts, body) = req.into_parts();
-    let path = parts.uri.path();
-    log::info!("Received request: {} {}", parts.method, path);
+    let path = parts.uri.path().to_string();
+    let method_str = parts.method.to_string();
 
-    // Read all the request body.
+    log::info!("================================================================");
+    log::info!("⇒ Request: {} {}", method_str, path);
+
+    // Read all the request body to extract method for filtering.
     let body_bytes = axum::body::to_bytes(body, usize::MAX).await.map_err(|e| {
-        let msg = format!("Failed to read request body: {e}");
+        let msg = format!("Failed to read HTTP request body: {e}");
         log::error!("{msg}");
         (StatusCode::INTERNAL_SERVER_ERROR, msg)
     })?;
 
-    let mut method = None;
+    let mut json_rpc_method = None;
     if !body_bytes.is_empty() {
         if let Ok(json_req) = serde_json::from_slice::<serde_json::Value>(&body_bytes) {
-            log::debug!("Parsed Request Body: {json_req:?}");
+            log::debug!("Parsed HTTP request body as JSON: {json_req:?}");
             if let Some(m) = json_req.get("method").and_then(|v| v.as_str()) {
-                method = Some(m.to_string());
-                log::info!("Extracted MCP method: {m}");
+                json_rpc_method = Some(m.to_string());
+                log::info!("   JSON-RPC Method: {m}");
             }
         } else {
-            log::warn!("Request body not JSON or malformed");
+            log::warn!("   HTTP Request body not JSON or malformed");
         }
     }
 
     let path_query = parts.uri.path_and_query().map(|pq| pq.as_str()).unwrap_or(parts.uri.path());
     let target_base = state.config.target_mcp_server_url.trim_end_matches('/');
     let target_uri_str = format!("{}{}", target_base, path_query);
-    log::info!("Forwarding to target URL: {target_uri_str}");
+    log::info!("   Forwarding to: {target_uri_str}");
 
     let target_url = reqwest::Url::parse(&target_uri_str).map_err(|e| {
         let msg = format!("Invalid target URL: {e}");
@@ -172,31 +173,49 @@ async fn handle_request(
         (StatusCode::BAD_GATEWAY, msg)
     })?;
 
-    log::info!("Received response from target: {}", response.status());
-
-    let matched_filter = state.config.filters.iter().find(|f| Some(&f.method) == method.as_ref());
-
-    if let Some(filter) = matched_filter {
-        log::info!("Request matched filter for method: {}", filter.method);
-        if filter.cosign_identity.is_some() {
-            return handle_filtered_response(response, filter).await;
-        }
-    }
-
     let status = response.status();
+    log::info!("⇐ Response Status: {}", status);
 
     let mut headers = response.headers().clone();
-
     // Strip headers that might conflict with the new body/stream
     headers.remove(axum::http::header::CONTENT_LENGTH);
     headers.remove(axum::http::header::CONTENT_ENCODING);
     headers.remove(axum::http::header::TRANSFER_ENCODING);
 
-    // Stream body for non-filtered response
-    let stream = response.bytes_stream();
+    // Read response body (ALWAYS, to cache it)
+    let resp_body_bytes = response.bytes().await.map_err(|e| {
+        let msg = format!("Failed to read response body: {e}");
+        log::error!("{msg}");
+        (StatusCode::INTERNAL_SERVER_ERROR, msg)
+    })?;
+
+    // Cache the response
+    let (digest, path) = cache_subject(&resp_body_bytes)?;
+    log::info!("   Digest: {}", digest.to_typed_hash());
+    log::info!("   Cached: {:?}", path);
+
+    // Endorsement Verification
+    if let Some(method) = &json_rpc_method {
+        let matched_filter = state.config.filters.iter().find(|f| f.method == *method);
+        if let Some(filter) = matched_filter {
+            if filter.cosign_identity.is_some() {
+                log::info!("   Verifying endorsement for method: {}", method);
+                if let Err(e) = verify_endorsement(filter, &digest, &path).await {
+                    log::info!("   ❌ Verification failed");
+                    log::info!("================================================================");
+                    return Err(e);
+                }
+                log::info!("   ✅ Verification successful");
+            }
+        } else {
+            log::info!("   ✅ Allowed (no verification required)");
+        }
+    }
+
+    log::info!("================================================================");
     let mut builder = Response::builder().status(status);
     *builder.headers_mut().unwrap() = headers;
-    builder.body(Body::from_stream(stream)).map_err(|e| {
+    builder.body(Body::from(resp_body_bytes)).map_err(|e| {
         let msg = e.to_string();
         log::error!("Failed to build response: {msg}");
         (StatusCode::INTERNAL_SERVER_ERROR, msg)
@@ -206,44 +225,17 @@ async fn handle_request(
 /// Verifies the response content against a configured endorsement. Fetches the
 /// index, locates the endorsement, downloads the blob, and verifies it using
 /// `cosign`.
-async fn handle_filtered_response(
-    response: reqwest::Response,
+async fn verify_endorsement(
     filter: &Filter,
-) -> Result<Response, (StatusCode, String)> {
-    let status = response.status();
+    subject_digest: &Digest,
+    subject_path: &PathBuf,
+) -> Result<(), (StatusCode, String)> {
+    if let Some(endorsement_repository_url) = &filter.endorsement_repository_url {
+        log::info!("   Loading endorsement repository from {endorsement_repository_url}");
 
-    let mut headers = response.headers().clone();
-
-    // Strip headers that might conflict with the new body
-    headers.remove(axum::http::header::CONTENT_LENGTH);
-    headers.remove(axum::http::header::CONTENT_ENCODING);
-    headers.remove(axum::http::header::TRANSFER_ENCODING);
-
-    let body_bytes = response.bytes().await.map_err(|e| {
-        let msg = format!("Failed to read response body: {e}");
-        log::error!("{msg}");
-        (StatusCode::INTERNAL_SERVER_ERROR, msg)
-    })?;
-
-    let (subject_digest_local, subject_path) = cache_subject(&body_bytes)?;
-    let subject_digest =
-        HexDigest { sha2_256: subject_digest_local.to_hex(), ..Default::default() };
-
-    if let Some(prefix) = &filter.http_index_prefix {
-        // Fetch index.
-        let index = fetch_index(prefix)
-            .await
-            .map_err(|e| {
-                let msg = format!("Failed to fetch index: {e}");
-                log::error!("{msg}");
-                (StatusCode::INTERNAL_SERVER_ERROR, msg)
-            })?
-            .clone();
-
-        // Create repo and verifier.
-        let index_repo = Box::new(HttpEndorsementIndex::new(Box::new(move || index.clone())));
-        let blob_repo = Box::new(HttpBlobFetcher::new(prefix.clone()));
-        let verifier = EndorsementVerifier::new(index_repo, blob_repo);
+        let fetcher = Box::new(HttpBlobFetcher::new(endorsement_repository_url.clone()));
+        let index = Box::new(HttpEndorsementIndex::new(endorsement_repository_url.clone()));
+        let verifier = EndorsementVerifier::new(index, fetcher);
 
         let now = oak_time_std::instant::now();
         let required_claims = vec![MCP_TOOL_LIST_CLAIM_TYPE.to_string()];
@@ -252,32 +244,25 @@ async fn handle_filtered_response(
         let issuer =
             filter.cosign_oidc_issuer.as_deref().unwrap_or("https://oauth2.sigstore.dev/auth");
 
-        let result =
-            verifier.verify(&subject_digest, now, &required_claims, identity, issuer).await;
+        let result = verifier.verify(subject_digest, now, &required_claims, identity, issuer).await;
 
         if let Err(e) = result {
-            let err_msg = format!("Endorsement verification failed for subject digest: {subject_digest_local}.\nError: {e:?}\n\nThe response from the server was not endorsed by the expected identity ({:?}).\n\nTo endorse this content, run the endorsement tool on the saved subject file:\ndoremint blob endorse --file={subject_path:?} --repository=<path_to_repo> --valid-for=1d --claims=\"{MCP_TOOL_LIST_CLAIM_TYPE}\"\n",
-                filter.cosign_identity);
+            let err_msg = format!(
+                "Endorsement verification failed for subject digest: {}.\nError: {e:?}\n\nThe response from the server was not endorsed by the expected identity ({:?}).\n\nTo endorse this content, run the endorsement tool on the saved subject file:\ndoremint blob endorse --file={subject_path:?} --repository=<path_to_repo> --valid-for=1d --claims=\"{MCP_TOOL_LIST_CLAIM_TYPE}\"\n",
+                subject_digest.to_typed_hash(),
+                filter.cosign_identity
+            );
             log::error!("{err_msg}");
             return Err((StatusCode::FORBIDDEN, err_msg));
         }
     }
-
-    let mut builder = Response::builder().status(status);
-    *builder.headers_mut().unwrap() = headers;
-    builder.body(Body::from(body_bytes)).map_err(|e| {
-        let msg = e.to_string();
-        log::error!("Failed to build response: {msg}");
-        (StatusCode::INTERNAL_SERVER_ERROR, msg)
-    })
+    Ok(())
 }
 
 /// Caches the subject (response body) to a temporary file and returns its
 /// digest and path.
 fn cache_subject(body_bytes: &[u8]) -> Result<(Digest, PathBuf), (StatusCode, String)> {
-    let digest = compute_canonical_digest(body_bytes);
-    let subject_digest = digest.to_string();
-    log::info!("Response Subject Digest: {subject_digest}");
+    let digest = Digest::Sha256(oak_digest::Sha256::from_contents(body_bytes));
 
     let temp_dir = PathBuf::from("/tmp/mcp_proxy");
     fs::create_dir_all(&temp_dir).map_err(|e| {
@@ -286,7 +271,7 @@ fn cache_subject(body_bytes: &[u8]) -> Result<(Digest, PathBuf), (StatusCode, St
         (StatusCode::INTERNAL_SERVER_ERROR, msg)
     })?;
 
-    let subject_filename = digest.to_string();
+    let subject_filename = digest.to_typed_hash();
     let subject_path = temp_dir.join(&subject_filename);
 
     if !subject_path.exists() {
@@ -295,9 +280,6 @@ fn cache_subject(body_bytes: &[u8]) -> Result<(Digest, PathBuf), (StatusCode, St
             log::error!("{msg}");
             (StatusCode::INTERNAL_SERVER_ERROR, msg)
         })?;
-        log::info!("Subject cached at: {subject_path:?}");
-    } else {
-        log::info!("Subject already in cache: {subject_path:?}");
     }
 
     Ok((digest, subject_path))

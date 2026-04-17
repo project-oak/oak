@@ -22,8 +22,8 @@ use sha2::{Digest, Sha256};
 use stage0_parsing::Stage0Info;
 use strum::FromRepr;
 use x86_64::{
-    structures::paging::{PageSize, Size4KiB},
     PhysAddr,
+    structures::paging::{PageSize, Size4KiB},
 };
 use zerocopy::IntoBytes;
 

@@ -22,14 +22,14 @@ use core::cell::Cell;
 use oak_functions_abi::Request;
 
 use super::{
-    api::StdWasmApiFactory, OakLinker, UserState, WasmApiFactory, WasmHandler, ALLOC_FUNCTION_NAME,
-    MEMORY_NAME,
+    ALLOC_FUNCTION_NAME, MEMORY_NAME, OakLinker, UserState, WasmApiFactory, WasmHandler,
+    api::StdWasmApiFactory,
 };
 use crate::{
+    Handler,
     logger::StandaloneLogger,
     lookup::LookupDataManager,
     wasm::{AbiPointer, AbiPointerOffset},
-    Handler,
 };
 
 #[test]

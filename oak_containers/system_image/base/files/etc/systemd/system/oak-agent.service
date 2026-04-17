@@ -9,6 +9,7 @@ Type=exec
 Restart=always
 ExecStart=/usr/bin/oak_containers_agent
 ProtectSystem=strict
+PassEnvironment=LAUNCHER_ADDR
 
 [Install]
 WantedBy=multi-user.target

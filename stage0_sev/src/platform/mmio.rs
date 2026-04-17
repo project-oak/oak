@@ -17,7 +17,7 @@
 use core::mem::size_of;
 
 use oak_stage0::hal::base::Mmio as BaseMmio;
-use x86_64::{structures::paging::PageSize, PhysAddr};
+use x86_64::{PhysAddr, structures::paging::PageSize};
 
 use super::GHCB_WRAPPER;
 
@@ -27,7 +27,7 @@ pub struct Mmio<S: PageSize> {
 
 impl<S: PageSize> Mmio<S> {
     pub unsafe fn new(base_address: PhysAddr) -> Self {
-        Self { mmio: BaseMmio::new(base_address) }
+        Self { mmio: unsafe { BaseMmio::new(base_address) } }
     }
 }
 
@@ -54,7 +54,7 @@ impl<S: PageSize> oak_stage0::hal::Mmio<S> for Mmio<S> {
             ghcb.mmio_write_u32(self.mmio.base_address + (offset as u64), value)
                 .expect("couldn't read the MSR using the GHCB protocol")
         } else {
-            self.mmio.write_u32(offset, value)
+            unsafe { self.mmio.write_u32(offset, value) }
         }
     }
 }

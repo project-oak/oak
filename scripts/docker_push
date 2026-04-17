@@ -13,7 +13,7 @@
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
-source "$SCRIPTS_DIR/common"
+source "${SCRIPTS_DIR}/common"
 
 # We need to push the image to a registry in order to be able to retrieve its digest.
 # See https://github.com/moby/moby/issues/16482.

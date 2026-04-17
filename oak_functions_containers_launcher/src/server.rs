@@ -17,25 +17,30 @@
 // TODO(#4409): this duplicates `oak_functions_launcher/src/server.rs`. Refactor
 // these to share code.
 
-use std::{net::SocketAddr, pin::Pin};
+use std::pin::Pin;
 
-use futures::{Future, Stream, StreamExt};
-use oak_grpc::oak::{
-    functions::oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient,
-    session::v1::streaming_session_server::{StreamingSession, StreamingSessionServer},
+use anyhow::Context;
+use futures::{Stream, StreamExt};
+use http::uri::Uri;
+use oak_grpc::oak::session::v1::streaming_session_server::{
+    StreamingSession, StreamingSessionServer,
 };
 use oak_proto_rust::oak::{
     attestation::v1::{Endorsements, Evidence},
     functions::InvokeRequest,
     session::v1::{
-        request_wrapper, response_wrapper, EndorsedEvidence, GetEndorsedEvidenceResponse,
-        InvokeResponse, RequestWrapper, ResponseWrapper,
+        EndorsedEvidence, GetEndorsedEvidenceResponse, InvokeResponse, RequestWrapper,
+        ResponseWrapper, request_wrapper, response_wrapper,
     },
 };
-use tonic::{transport::Server, Request, Response, Status, Streaming};
+use tokio::net::UnixListener;
+use tokio_stream::wrappers::UnixListenerStream;
+use tonic::{Request, Response, Status, Streaming, transport::Server};
+
+use crate::OakFunctionsClient;
 
 pub struct SessionProxy {
-    connector_handle: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
+    connector_handle: OakFunctionsClient,
     evidence: Evidence,
     endorsements: Endorsements,
 }
@@ -102,13 +107,26 @@ impl StreamingSession for SessionProxy {
     }
 }
 
-pub fn new(
-    addr: SocketAddr,
-    connector_handle: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
+pub async fn new(
+    addr: Uri,
+    connector_handle: OakFunctionsClient,
     evidence: Evidence,
     endorsements: Endorsements,
-) -> impl Future<Output = Result<(), tonic::transport::Error>> {
+) -> anyhow::Result<()> {
     let server_impl = SessionProxy { connector_handle, evidence, endorsements };
 
-    Server::builder().add_service(StreamingSessionServer::new(server_impl)).serve(addr)
+    let router = Server::builder().add_service(StreamingSessionServer::new(server_impl));
+
+    if addr.scheme() == Some(&http::uri::Scheme::HTTP) {
+        let addr =
+            addr.authority().context("invalid URI")?.as_str().parse().context("invalid URI")?;
+        router.serve(addr).await.map_err(anyhow::Error::new)
+    } else if addr.scheme().is_none() {
+        let uds = UnixListener::bind(addr.to_string())?;
+        let stream = UnixListenerStream::new(uds);
+
+        router.serve_with_incoming(stream).await.map_err(anyhow::Error::new)
+    } else {
+        anyhow::bail!("unsupported URI: {}", addr)
+    }
 }

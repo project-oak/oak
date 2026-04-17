@@ -22,18 +22,17 @@ use core::{
 };
 
 use oak_restricted_kernel_interface::{
-    syscalls::{MmapFlags, MmapProtection},
     Errno,
+    syscalls::{MmapFlags, MmapProtection},
 };
 use x86_64::{
-    align_up,
+    VirtAddr, align_up,
     structures::paging::{FrameAllocator, Page, PageSize, Size2MiB},
-    VirtAddr,
 };
 
 use crate::{
-    mm::{Mapper, PageTableFlags},
     FRAME_ALLOCATOR, PAGE_TABLES,
+    mm::{Mapper, PageTableFlags},
 };
 
 pub fn mmap(

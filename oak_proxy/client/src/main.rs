@@ -14,16 +14,26 @@
 // limitations under the License.
 //
 
-use std::{net::SocketAddr, sync::Arc};
+use std::{
+    net::SocketAddr,
+    path::PathBuf,
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use anyhow::Context;
 use clap::Parser;
+use oak_proto_rust::oak::attestation::v1::{CollectedAttestation, collected_attestation};
 use oak_proxy_lib::{
     config::{self, ClientConfig},
-    proxy::{proxy, PeerRole},
+    proxy::{PeerRole, proxy},
     websocket::{read_message, write_message},
 };
-use oak_session::{ClientSession, ProtocolEngine, Session};
+use oak_session::{
+    ClientSession, ProtocolEngine, Session,
+    session::{AttestationEvidence, AttestationPublisher},
+};
+use prost::Message;
 use tokio::net::{TcpListener, TcpStream};
 use url::Url;
 
@@ -43,13 +53,72 @@ struct Args {
     /// This will override the value in the config file.
     #[arg(long, env = "OAK_PROXY_SERVER_URL")]
     server_proxy_url: Option<Url>,
+
+    /// File path to write the received attestation evidence to.
+    /// This will override the value in the config file.
+    #[arg(long, env = "OAK_PROXY_ATTESTATION_OUTPUT_FILE")]
+    attestation_output_file: Option<PathBuf>,
+}
+
+/// An `AttestationPublisher` that serializes received attestation evidence
+/// to a file as a `CollectedAttestation` proto. Writes the evidence
+/// regardless of whether verification succeeded or failed.
+struct FileAttestationPublisher {
+    output_path: PathBuf,
+    server_proxy_url: String,
+}
+
+impl AttestationPublisher for FileAttestationPublisher {
+    fn publish(&self, attestation_evidence: AttestationEvidence) {
+        log::info!(
+            "[Client] publish() called! evidence_count={}, bindings_count={}, handshake_hash_len={}",
+            attestation_evidence.evidence.len(),
+            attestation_evidence.evidence_bindings.len(),
+            attestation_evidence.handshake_hash.len(),
+        );
+        let request_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| prost_types::Timestamp {
+                seconds: d.as_secs() as i64,
+                nanos: d.subsec_nanos() as i32,
+            })
+            .ok();
+        let collected_attestation = CollectedAttestation {
+            request_metadata: Some(collected_attestation::RequestMetadata {
+                uri: self.server_proxy_url.clone(),
+                request_time,
+            }),
+            endorsed_evidence: attestation_evidence.evidence,
+            session_bindings: attestation_evidence.evidence_bindings,
+            handshake_hash: attestation_evidence.handshake_hash,
+        };
+
+        let encoded = collected_attestation.encode_to_vec();
+        log::info!("[Client] Writing {} bytes to '{}'", encoded.len(), self.output_path.display());
+        match std::fs::write(&self.output_path, encoded) {
+            Ok(()) => {
+                log::info!(
+                    "[Client] CollectedAttestation written to '{}'",
+                    self.output_path.display()
+                );
+            }
+            Err(err) => {
+                log::error!(
+                    "[Client] Failed to write CollectedAttestation to '{}': {:?}",
+                    self.output_path.display(),
+                    err
+                );
+            }
+        }
+    }
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let Args { mut config, listen_address, server_proxy_url } = Args::parse();
+    let Args { mut config, listen_address, server_proxy_url, attestation_output_file } =
+        Args::parse();
 
     // The command-line arguments override the values from the config file.
     if let Some(listen_address) = listen_address {
@@ -57,6 +126,9 @@ async fn main() -> anyhow::Result<()> {
     }
     if let Some(server_proxy_url) = server_proxy_url {
         config.server_proxy_url = Some(server_proxy_url);
+    }
+    if let Some(attestation_output_file) = attestation_output_file {
+        config.attestation_output_file = Some(attestation_output_file);
     }
 
     let listen_address = config
@@ -85,9 +157,23 @@ async fn handle_connection(app_stream: TcpStream, config: &ClientConfig) -> anyh
     let (mut server_proxy_stream, _) = tokio_tungstenite::connect_async(server_proxy_url).await?;
     log::info!("[Client] Connected to server proxy at {}", server_proxy_url);
 
+    // Create an attestation publisher if an output file is configured.
+    let attestation_publisher: Option<Arc<dyn AttestationPublisher>> =
+        config.attestation_output_file.as_ref().map(|path| {
+            log::info!(
+                "[Client] Attestation publisher CREATED, will write to '{}'",
+                path.display()
+            );
+            Arc::new(FileAttestationPublisher {
+                output_path: path.clone(),
+                server_proxy_url: server_proxy_url.to_string(),
+            }) as Arc<dyn AttestationPublisher>
+        });
+
     let client_config = config::build_session_config(
         &config.attestation_generators,
         &config.attestation_verifiers,
+        attestation_publisher.as_ref(),
     )?;
     let mut session = ClientSession::create(client_config)?;
 
@@ -105,10 +191,12 @@ async fn handle_connection(app_stream: TcpStream, config: &ClientConfig) -> anyh
 
     log::info!("[Client] Oak Session established with server proxy.");
 
-    proxy::<
-        ClientSession,
-        oak_proto_rust::oak::session::v1::SessionResponse,
-        oak_proto_rust::oak::session::v1::SessionRequest,
-    >(PeerRole::Client, session, app_stream, server_proxy_stream, config.keep_alive_interval)
+    proxy::<ClientSession>(
+        PeerRole::Client,
+        session,
+        app_stream,
+        server_proxy_stream,
+        config.keep_alive_interval,
+    )
     .await
 }

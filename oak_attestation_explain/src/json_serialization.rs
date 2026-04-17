@@ -34,6 +34,7 @@
 //! more maintainable.
 
 use oak_proto_rust::oak::{
+    RawDigest,
     attestation::v1::{
         ApplicationLayerData, ApplicationLayerReferenceValues, ContainerLayerData,
         ContainerLayerReferenceValues, ExtractedEvidence, KernelLayerData,
@@ -41,7 +42,6 @@ use oak_proto_rust::oak::{
         OakRestrictedKernelData, OakRestrictedKernelReferenceValues, ReferenceValues,
         RootLayerData, RootLayerReferenceValues, SystemLayerData, SystemLayerReferenceValues, *,
     },
-    RawDigest,
 };
 use prost_types::{Duration, Timestamp};
 use serde_json::json;
@@ -285,6 +285,7 @@ pub fn serialize_extracted_evidence(instance: &ExtractedEvidence) -> serde_json:
         Some(extracted_evidence::EvidenceValues::OakContainers(instance)) => {
             json!({ "oak_containers": serialize_oak_containers_data(instance) })
         }
+        #[allow(deprecated)]
         Some(extracted_evidence::EvidenceValues::Cb(instance)) => {
             json!({ "cb": serialize_cb_data(instance) })
         }
@@ -497,6 +498,50 @@ fn serialize_verifying_key_reference_value(
     }
 }
 
+fn serialize_c2sp_tlog_proof_reference_value(
+    _instance: &C2sptLogProofReferenceValue,
+) -> serde_json::Value {
+    json!({})
+}
+
+fn serialize_pes_reference_value(_instance: &PesReferenceValue) -> serde_json::Value {
+    json!({})
+}
+
+fn serialize_tlog_reference_values(instance: &TLogReferenceValues) -> serde_json::Value {
+    // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
+    // all fields. If a new field is added to the struct, this code won't
+    // compile unless this destructuring operation is updated, thereby reminding us
+    // to keep the serialization in sync manually.
+    let TLogReferenceValues { strategy, rekor, c2sp, pes } = instance;
+    let mut result = json!({});
+
+    match strategy {
+        Some(t_log_reference_values::Strategy::Skip(instance)) => {
+            result["skip"] = serialize_skip_verification(instance);
+        }
+        Some(t_log_reference_values::Strategy::All(_)) => {
+            result["all"] = json!({});
+        }
+        Some(t_log_reference_values::Strategy::Any(_)) => {
+            result["any"] = json!({});
+        }
+        None => {}
+    }
+
+    if let Some(rekor) = rekor {
+        result["rekor"] = serialize_verifying_key_set(rekor);
+    }
+    if let Some(c2sp) = c2sp {
+        result["c2sp"] = serialize_c2sp_tlog_proof_reference_value(c2sp);
+    }
+    if let Some(pes) = pes {
+        result["pes"] = serialize_pes_reference_value(pes);
+    }
+
+    result
+}
+
 fn serialize_claim_reference_value(instance: &ClaimReferenceValue) -> serde_json::Value {
     // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
     // all fields. If a new field is added to the struct, this code won't
@@ -521,6 +566,7 @@ pub fn serialize_endorsement_reference_value(
         endorser,
         required_claims,
         rekor,
+        tlog,
     } = instance;
     json!({
         "endorser_public_key": hex::encode(endorser_public_key),
@@ -528,6 +574,7 @@ pub fn serialize_endorsement_reference_value(
         "endorser": endorser.as_ref().map(serialize_verifying_key_set),
         "required_claims": required_claims.as_ref().map(serialize_claim_reference_value),
         "rekor": rekor.as_ref().map(serialize_verifying_key_reference_value),
+        "tlog": tlog.as_ref().map(serialize_tlog_reference_values),
     })
 }
 
@@ -848,6 +895,40 @@ pub fn serialize_cb_reference_values(instance: &CbReferenceValues) -> serde_json
     })
 }
 
+#[allow(deprecated)]
+pub fn serialize_cb_layer1_transparent_reference_values(
+    instance: &CbLayer1TransparentReferenceValues,
+) -> serde_json::Value {
+    let CbLayer1TransparentReferenceValues { runtime_agent, runtime_agent_binary, userspace } =
+        instance;
+    json!({
+        "runtime_agent": runtime_agent.as_ref().map(serialize_binary_reference_value),
+        "runtime_agent_binary": runtime_agent_binary.as_ref().map(serialize_binary_reference_value),
+        "userspace": userspace.as_ref().map(serialize_binary_reference_value),
+    })
+}
+
+pub fn serialize_cb_layer2_transparent_reference_values(
+    instance: &CbLayer2TransparentReferenceValues,
+) -> serde_json::Value {
+    let CbLayer2TransparentReferenceValues { binary_mpm } = instance;
+    json!({
+        "binary_mpm": binary_mpm.as_ref().map(serialize_binary_reference_value),
+    })
+}
+
+pub fn serialize_cb_transparent_reference_values(
+    instance: &CbTransparentReferenceValues,
+) -> serde_json::Value {
+    let CbTransparentReferenceValues { root_layer, kernel_layer, layer1, layer2 } = instance;
+    json!({
+        "root_layer": root_layer.as_ref().map(serialize_root_layer_reference_values),
+        "kernel_layer": kernel_layer.as_ref().map(serialize_kernel_layer_reference_values),
+        "layer1": layer1.as_ref().map(serialize_cb_layer1_transparent_reference_values),
+        "layer2": layer2.as_ref().map(serialize_cb_layer2_transparent_reference_values),
+    })
+}
+
 pub fn serialize_certificate_based_reference_values(
     instance: &CertificateBasedReferenceValues,
 ) -> serde_json::Value {
@@ -866,6 +947,7 @@ pub fn serialize_confidential_space_reference_values(
     });
     if let Some(r#container_image) = r#container_image {
         match r#container_image {
+            #[allow(deprecated)]
             confidential_space_reference_values::ContainerImage::CosignReferenceValues(
                 cosign_reference_values,
             ) => {
@@ -890,6 +972,7 @@ pub fn serialize_confidential_space_reference_values(
 }
 
 pub fn serialize_cosign_reference_values(instance: &CosignReferenceValues) -> serde_json::Value {
+    #[allow(deprecated)]
     let CosignReferenceValues { developer_public_key, rekor_public_key } = instance;
     let mut result = json!({});
     if let Some(developer_public_key) = developer_public_key {
@@ -916,6 +999,7 @@ pub fn serialize_reference_values(instance: &ReferenceValues) -> serde_json::Val
         Some(reference_values::Type::OakContainers(instance)) => {
             json!({ "oak_containers": serialize_oak_containers_reference_values(instance) })
         }
+        #[allow(deprecated)]
         Some(reference_values::Type::Cb(instance)) => {
             json!({ "cb": serialize_cb_reference_values(instance) })
         }
@@ -924,6 +1008,9 @@ pub fn serialize_reference_values(instance: &ReferenceValues) -> serde_json::Val
         }
         Some(reference_values::Type::ConfidentialSpace(instance)) => {
             json!({ "confidential_space": serialize_confidential_space_reference_values(instance) })
+        }
+        Some(reference_values::Type::Cbt(instance)) => {
+            json!({ "cbt": serialize_cb_transparent_reference_values(instance) })
         }
         None => json!(null),
     }

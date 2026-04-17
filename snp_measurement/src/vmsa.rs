@@ -15,10 +15,10 @@
 //
 
 use log::trace;
-use oak_sev_guest::vmsa::{calculate_rdx_from_fms, Vmsa, VmsaPage};
+use oak_sev_guest::vmsa::{Vmsa, VmsaPage, calculate_rdx_from_fms};
 use x86_64::{
-    structures::paging::{PageSize, Size4KiB},
     PhysAddr,
+    structures::paging::{PageSize, Size4KiB},
 };
 
 use crate::stage0::SevEsResetBlock;

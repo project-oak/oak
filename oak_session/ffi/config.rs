@@ -14,22 +14,22 @@
 // limitations under the License.
 //
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub static HANDSHAKE_TYPE_NOISE_KK: u32 = 1;
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub static HANDSHAKE_TYPE_NOISE_KN: u32 = 2;
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub static HANDSHAKE_TYPE_NOISE_NK: u32 = 3;
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub static HANDSHAKE_TYPE_NOISE_NN: u32 = 4;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub static ATTESTATION_TYPE_BIDIRECTIONAL: u32 = 1;
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub static ATTESTATION_TYPE_SELF_UNIDIRECTIONAL: u32 = 2;
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub static ATTESTATION_TYPE_PEER_UNIDIRECTIONAL: u32 = 3;
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub static ATTESTATION_TYPE_UNATTESTED: u32 = 4;
 
 use std::ffi::{c_char, c_void};
@@ -53,18 +53,18 @@ use oak_session::{
 };
 use p256::ecdsa::SigningKey;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn certificate_based_attestation_id() -> *const c_char {
     CERTIFICATE_BASED_ATTESTATION_ID_CSTR.as_ptr()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn confidential_space_attestation_id() -> *const c_char {
     CONFIDENTIAL_SPACE_ATTESTATION_ID_CSTR.as_ptr()
 }
 
 /// Create a new `SessionConfigBuilder` for use in FFI;
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn new_session_config_builder(
     attestation_type: u32,
     handshake_type: u32,
@@ -77,7 +77,7 @@ pub extern "C" fn new_session_config_builder(
         _ => {
             return ErrorOrSessionConfigBuilder::err(
                 "Unknown attestation type value {attestation_type}",
-            )
+            );
         }
     };
     let handshake_type = match handshake_type {
@@ -88,7 +88,7 @@ pub extern "C" fn new_session_config_builder(
         _ => {
             return ErrorOrSessionConfigBuilder::err(
                 "Unknown handshake type value {handshake_type}",
-            )
+            );
         }
     };
     let session_config_builder = SessionConfig::builder(attestation_type, handshake_type);
@@ -178,12 +178,12 @@ impl FfiAttestationVerifier {
 /// # Safety
 ///
 /// builder is a valid, properly aligned pointer to a SessionConfigBuilder.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_config_builder_build(
     builder: *mut SessionConfigBuilder,
 ) -> *mut SessionConfig {
     // Take back ownership.
-    let builder = Box::from_raw(builder);
+    let builder = unsafe { Box::from_raw(builder) };
     Box::into_raw(Box::new(builder.build()))
 }
 
@@ -192,9 +192,11 @@ pub unsafe extern "C" fn session_config_builder_build(
 /// # Safety
 ///
 /// session_config must be a valid, properly aligned pointer to a SessionConfig.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_config_free(session_config: *mut SessionConfig) {
-    drop(Box::from_raw(session_config));
+    unsafe {
+        drop(Box::from_raw(session_config));
+    }
 }
 
 /// Call add_self_attestion on the provided builder.
@@ -205,15 +207,17 @@ pub unsafe extern "C" fn session_config_free(session_config: *mut SessionConfig)
 /// * attester_id is a valid Bytes instances.
 /// * FfiAttester was obtained from a suitable source and has not been used in
 ///   another call that consumes it.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_config_builder_add_self_attester(
     builder: *mut SessionConfigBuilder,
     attester_id: BytesView,
     ffi_attester: FfiAttester,
 ) -> *mut SessionConfigBuilder {
     let attester: Box<dyn Attester> = ffi_attester.into_attester();
-    let next_builder = Box::from_raw(builder)
-        .add_self_attester(String::from_utf8_lossy(attester_id.as_slice()).to_string(), attester);
+    let next_builder = unsafe { Box::from_raw(builder) }.add_self_attester(
+        unsafe { String::from_utf8_lossy(attester_id.as_slice()).to_string() },
+        attester,
+    );
     Box::into_raw(Box::new(next_builder))
 }
 
@@ -225,15 +229,17 @@ pub unsafe extern "C" fn session_config_builder_add_self_attester(
 /// * endorser_id is a valid Bytes instances.
 /// * FfiEndorser was obtained from a suitable source and has not been used in
 ///   another call that consumes it.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_config_builder_add_self_endorser(
     builder: *mut SessionConfigBuilder,
     endorser_id: BytesView,
     ffi_endorser: FfiEndorser,
 ) -> *mut SessionConfigBuilder {
     let endorser: Box<dyn Endorser> = ffi_endorser.into_endorser();
-    let next_builder = Box::from_raw(builder)
-        .add_self_endorser(String::from_utf8_lossy(endorser_id.as_slice()).to_string(), endorser);
+    let next_builder = unsafe { Box::from_raw(builder) }.add_self_endorser(
+        unsafe { String::from_utf8_lossy(endorser_id.as_slice()).to_string() },
+        endorser,
+    );
     Box::into_raw(Box::new(next_builder))
 }
 
@@ -245,15 +251,17 @@ pub unsafe extern "C" fn session_config_builder_add_self_endorser(
 /// * attester_id is a valid Bytes instances.
 /// * FfiAttestationVerifier was obtained from a suitable source and has not
 ///   been used in another call that consumes it.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_config_builder_add_peer_verifier(
     builder: *mut SessionConfigBuilder,
     attester_id: BytesView,
     ffi_verifier: FfiAttestationVerifier,
 ) -> *mut SessionConfigBuilder {
     let verifier: Box<dyn AttestationVerifier> = ffi_verifier.into_verifier();
-    let next_builder = Box::from_raw(builder)
-        .add_peer_verifier(String::from_utf8_lossy(attester_id.as_slice()).to_string(), verifier);
+    let next_builder = unsafe { Box::from_raw(builder) }.add_peer_verifier(
+        unsafe { String::from_utf8_lossy(attester_id.as_slice()).to_string() },
+        verifier,
+    );
     Box::into_raw(Box::new(next_builder))
 }
 
@@ -266,15 +274,15 @@ pub unsafe extern "C" fn session_config_builder_add_peer_verifier(
 /// * builder is a valid, properly aligned pointer to a SessionConfigBuilder.
 /// * attester_id is a valid BytesView instances.
 /// * binding_server_key was obtained from a suitable source and is still valid.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_config_builder_add_session_binder(
     builder: *mut SessionConfigBuilder,
     attester_id: BytesView,
     binding_server_key: *const SigningKey,
 ) -> *mut SessionConfigBuilder {
-    let signing_key = (*binding_server_key).clone();
-    let next_builder = Box::from_raw(builder).add_session_binder(
-        String::from_utf8_lossy(attester_id.as_slice()).to_string(),
+    let signing_key = unsafe { (*binding_server_key).clone() };
+    let next_builder = unsafe { Box::from_raw(builder) }.add_session_binder(
+        unsafe { String::from_utf8_lossy(attester_id.as_slice()).to_string() },
         Box::new(SignatureBinderBuilder::default().signer(Box::new(signing_key)).build().unwrap()),
     );
     Box::into_raw(Box::new(next_builder))
@@ -286,12 +294,13 @@ pub unsafe extern "C" fn session_config_builder_add_session_binder(
 ///
 /// * builder is a valid, properly aligned pointer to a SessionConfigBuilder.
 /// * public_key is a valid, properly aligned BytesView.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_config_builder_set_peer_static_public_key(
     builder: *mut SessionConfigBuilder,
     public_key: BytesView,
 ) -> *mut SessionConfigBuilder {
-    let next_builder = Box::from_raw(builder).set_peer_static_public_key(public_key.as_slice());
+    let next_builder =
+        unsafe { Box::from_raw(builder).set_peer_static_public_key(public_key.as_slice()) };
     Box::into_raw(Box::new(next_builder))
 }
 
@@ -304,18 +313,18 @@ pub unsafe extern "C" fn session_config_builder_set_peer_static_public_key(
 ///
 /// * builder is a valid, properly aligned pointer to a SessionConfigBuilder.
 /// * identity is a valid, properly aligned, acquired from a suitable source.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn session_config_builder_set_self_static_private_key(
     builder: *mut SessionConfigBuilder,
     identity_key_ptr: *mut IdentityKey,
 ) -> *mut SessionConfigBuilder {
-    let identity_key = Box::from_raw(identity_key_ptr);
-    let next_builder = Box::from_raw(builder).set_self_static_private_key(identity_key);
+    let identity_key = unsafe { Box::from_raw(identity_key_ptr) };
+    let next_builder = unsafe { Box::from_raw(builder).set_self_static_private_key(identity_key) };
     Box::into_raw(Box::new(next_builder))
 }
 
 /// Create a new IdentityKey instance.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn new_identity_key() -> *mut IdentityKey {
     Box::into_raw(Box::new(IdentityKey::generate()))
 }
@@ -334,9 +343,9 @@ pub extern "C" fn new_identity_key() -> *mut IdentityKey {
 /// # Safety
 ///
 /// * bytes is a valid, properly aligned pointer to a SessionConfigBuilder.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn new_identity_key_from_bytes(bytes: BytesView) -> ErrorOrIdentityKey {
-    match <[u8; P256_SCALAR_LEN]>::try_from(bytes.as_slice()) {
+    match <[u8; P256_SCALAR_LEN]>::try_from(unsafe { bytes.as_slice() }) {
         Ok(bytes) => {
             ErrorOrIdentityKey::ok(Box::into_raw(Box::new(IdentityKey::from_bytes(bytes))))
         }
@@ -349,11 +358,11 @@ pub unsafe extern "C" fn new_identity_key_from_bytes(bytes: BytesView) -> ErrorO
 /// # Safety
 ///
 /// * identity_key is valid, properly aligned, acquired from a suitable source.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn identity_key_get_public_key(
     identity_key: *const IdentityKey,
 ) -> ErrorOrRustBytes {
-    match (*identity_key).get_public_key() {
+    match unsafe { (*identity_key).get_public_key() } {
         Ok(ik) => ErrorOrRustBytes::ok(ik.into_boxed_slice()),
         Err(e) => ErrorOrRustBytes::err(e),
     }
@@ -371,11 +380,13 @@ pub unsafe extern "C" fn identity_key_get_public_key(
 ///   aligned, and points to a valid [`SessionConfigBuilder`] instance.
 ///
 /// * The pointer should not be used anymore after calling this function.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn free_session_config_builder(
     session_config_builder: *mut SessionConfigBuilder,
 ) {
-    drop(Box::from_raw(session_config_builder))
+    unsafe {
+        drop(Box::from_raw(session_config_builder));
+    }
 }
 
 #[repr(C)]

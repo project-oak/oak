@@ -19,13 +19,15 @@
 use alloc::{format, string::ToString, sync::Arc, vec};
 
 use anyhow::Context;
-use coset::{cwt::ClaimsSet, CborSerializable, CoseKey};
-use ecdsa::{signature::Verifier, Signature};
+use coset::{CborSerializable, CoseKey, cwt::ClaimsSet};
+use ecdsa::{Signature, signature::Verifier};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
+use oak_digest::Sha256;
 use oak_proto_rust::oak::attestation::v1::{
-    attestation_results::Status, endorsements, expected_values, AttestationResults, Endorsements,
-    EventLog, Evidence, ExpectedValues, ExtractedEvidence, LayerEvidence, ReferenceValues,
+    AttestationResults, Endorsements, EventAttestationResults, EventLog, Evidence, ExpectedValues,
+    ExtractedEvidence, LayerEvidence, ReferenceValues, attestation_results::Status, endorsements,
+    expected_values,
 };
 use oak_time::{Clock, Instant};
 use p256::ecdsa::VerifyingKey;
@@ -33,8 +35,9 @@ use p256::ecdsa::VerifyingKey;
 use crate::{
     compare::compare_expected_values,
     expect::get_expected_values,
-    extract::{claims_set_from_serialized_cert, extract_event_data, extract_evidence, EventIdType},
+    extract::{EventIdType, claims_set_from_serialized_cert, extract_event_data, extract_evidence},
     platform::verify_root_attestation_signature,
+    results::set_user_data_payload,
 };
 
 // We don't use additional authenticated data.
@@ -150,7 +153,7 @@ pub fn verify_software_rooted_dice_chain(evidence: &Evidence) -> anyhow::Result<
             &evidence.layers
         } else {
             &evidence.layers[1..] // Slice from the second element (index 1) to
-                                  // the end
+            // the end
         };
         validate_that_event_log_is_captured_in_dice_layers(
             event_log,
@@ -433,6 +436,39 @@ pub fn verify_dice_chain_and_extract_evidence(
     extract_evidence(evidence)
 }
 
+/// Verifies the signed user data certificate and returns an
+/// [`EventAttestationResults`] containing the payload bytes.
+///
+/// Parses the provided `signed_user_data_certificate` bytes as a COSE_Sign1
+/// structure, verifies its signature using the given `verifying_key`, and
+/// returns the payload as an `EventAttestationResults` with the
+/// `user-data-payload` artifact key.
+pub fn verify_user_data_certificate(
+    signed_user_data_certificate: &[u8],
+    verifying_key: &VerifyingKey,
+) -> anyhow::Result<EventAttestationResults> {
+    // Parse the signed user data certificate as a COSE_Sign1 structure.
+    let user_data_cert = coset::CoseSign1::from_slice(signed_user_data_certificate)
+        .map_err(|_cose_err| anyhow::anyhow!("could not parse signed user data certificate"))?;
+
+    // Verify the signature using the provided verification key.
+    user_data_cert
+        .verify_signature(ADDITIONAL_DATA, |signature, contents| {
+            let sig = Signature::from_slice(signature)?;
+            verifying_key.verify(contents, &sig)
+        })
+        .map_err(|error| anyhow::anyhow!(error))
+        .context("verifying signed user data certificate signature")?;
+
+    // Extract the payload bytes and wrap in an EventAttestationResults.
+    let payload = user_data_cert
+        .payload
+        .ok_or_else(|| anyhow::anyhow!("no payload in signed user data certificate"))?;
+    let mut results = EventAttestationResults::default();
+    set_user_data_payload(&mut results, &payload);
+    Ok(results)
+}
+
 /// Validates that the digest of the events captured in the event log are
 /// correctly described in the claims of the associated dice layers.
 // Claim entries are under different keys for standard events and transparent
@@ -453,8 +489,9 @@ fn validate_that_event_log_is_captured_in_dice_layers(
                     .event
                     .context("missing event")?
             };
-            let actual_event_hash = &<sha2::Sha256 as sha2::Digest>::digest(encoded_event).to_vec();
-            if actual_event_hash != &event_digest.sha2_256 {
+            let actual_event_hash = Sha256::from_contents(encoded_event);
+            let expected_event_hash = Sha256::try_from(event_digest.sha2_256)?;
+            if actual_event_hash != expected_event_hash {
                 Err(anyhow::anyhow!("event log hash mismatch"))
             } else {
                 Ok(())

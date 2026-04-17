@@ -32,7 +32,8 @@
 //! signed by a particular verifying key:
 //!
 //! let hashes = loader.list_endorsements_by_key(key_hash)?;
-//! let package = loader.load(hashes[hashes.len() - 1], rekor_public_key)?;
+//! let package = loader.load(hashes[hashes.len() - 1], rekor_public_key,
+//!     c2sp_policy, pes_ref_value)?;
 //! package.verify(now).context("verifying endorsement")?;
 
 use alloc::{
@@ -44,6 +45,7 @@ use alloc::{
 
 use anyhow::{Context, Result};
 use intoto::statement::{get_hex_digest_from_statement, parse_statement};
+use oak_digest::Sha256;
 use url::Url;
 
 use crate::package::Package;
@@ -57,10 +59,13 @@ const MPM_CLAIM_TYPE: &str = "https://github.com/project-oak/oak/blob/main/docs/
 // found at go/oak-search-index-structure.
 const ENDORSEMENT_FOR_SUBJECT_LINK: &str = "13";
 const SIGNATURE_FOR_ENDORSEMENT_LINK: &str = "14";
-const LOG_ENTRY_FOR_ENDORSEMENT_LINK: &str = "15";
+const REKOR_LOG_ENTRY_FOR_ENDORSEMENT_LINK: &str = "15";
+const C2SP_TLOG_PROOF_FOR_ENDORSEMENT_LINK: &str = "31";
+const PES_CONFIRMATION_FOR_ENDORSEMENT_LINK: &str = "32";
 const PUBLIC_KEY_FOR_SIGNATURE_LINK: &str = "16";
 const ENDORSEMENTS_FOR_KEY_LINK: &str = "21";
 const KEYS_FOR_KEYSET_LINK: &str = "22";
+const ENDORSEMENTS_FOR_CLAIM_LINK: &str = "36";
 
 /// ContentAddressable is a trait that defines the interface for a
 /// content-addressable storage layer.
@@ -189,6 +194,30 @@ impl EndorsementLoader {
         Ok(endorsements.split_terminator("\n").map(|s| s.to_string()).collect())
     }
 
+    /// Lists all endorsement hashes for the given claim.
+    ///
+    /// The endorsement hashes are sorted by date of issuance (`issuedOn`)
+    /// such that the most recent endorsement comes last.
+    ///
+    /// Returns:
+    /// - The list of endorsement hashes.
+    pub fn list_endorsements_by_claim(&self, claim_type: &str) -> Result<Vec<String>> {
+        let claim_hash = Sha256::from_contents(claim_type.as_bytes());
+        let endorsements = self
+            .storage
+            .get_link(&claim_hash.to_typed_hash(), ENDORSEMENTS_FOR_CLAIM_LINK)
+            .with_context(|| format!("reading endorsements by claim {}", claim_type))
+            .or_else(|err| match err.downcast_ref::<ureq::Error>() {
+                // If the link file for the endorsement list is not found in
+                // the index, we assume the subject has never been endorsed.
+                // So we return an empty list.
+                Some(ureq::Error::Status(404, _)) => Ok(String::new()),
+                _ => Err(err),
+            })?;
+
+        Ok(endorsements.split_terminator("\n").map(|s| s.to_string()).collect())
+    }
+
     /// Loads an endorsement package from remote content-addressable storage.
     ///
     /// Params:
@@ -196,6 +225,8 @@ impl EndorsementLoader {
     ///   endorsement package.
     /// - rekor_public_key: Rekor's verifying key if a log entry is expected and
     ///   should be verified. If it is not expected, pass `None`.
+    /// - c2sp_policy: C2SP policy to verify the C2SP t-log proof.
+    /// - pes_ref_value: PES reference value (unimplemented).
     ///
     /// Returns:
     /// - The endorsement package.
@@ -203,6 +234,8 @@ impl EndorsementLoader {
         &self,
         endorsement_hash: &str,
         rekor_public_key: Option<String>,
+        c2sp_policy: Option<String>,
+        pes_ref_value: Option<String>,
     ) -> Result<Package> {
         let endorsement = self
             .storage
@@ -214,9 +247,10 @@ impl EndorsementLoader {
             .with_context(|| {
                 format!("reading signature file for endorsement {}", endorsement_hash)
             })?;
-        let log_entry = self
+
+        let rekor_log_entry = self
             .storage
-            .get_linked_file(endorsement_hash, LOG_ENTRY_FOR_ENDORSEMENT_LINK)
+            .get_linked_file(endorsement_hash, REKOR_LOG_ENTRY_FOR_ENDORSEMENT_LINK)
             .with_context(|| {
                 format!("reading rekor log entry for endorsement {}", endorsement_hash)
             })
@@ -225,6 +259,32 @@ impl EndorsementLoader {
                 // If the link file for the rekor log entry is not found in the
                 // index, we assume the endorsement is not committed to a
                 // transparency log.
+                Some(ureq::Error::Status(404, _)) => Ok(None),
+                _ => Err(err),
+            })?;
+        let c2sp_tlog_proof = self
+            .storage
+            .get_linked_file(endorsement_hash, C2SP_TLOG_PROOF_FOR_ENDORSEMENT_LINK)
+            .with_context(|| {
+                format!("reading C2SP t-log proof for endorsement {}", endorsement_hash)
+            })
+            .map(Some)
+            .or_else(|err| match err.downcast_ref::<ureq::Error>() {
+                // If the link file for the C2SP t-log proof is not found in
+                // the index, we assume the endorsement doesn't have one.
+                Some(ureq::Error::Status(404, _)) => Ok(None),
+                _ => Err(err),
+            })?;
+        let pes_confirmation = self
+            .storage
+            .get_linked_file(endorsement_hash, PES_CONFIRMATION_FOR_ENDORSEMENT_LINK)
+            .with_context(|| {
+                format!("reading PES confirmation for endorsement {}", endorsement_hash)
+            })
+            .map(Some)
+            .or_else(|err| match err.downcast_ref::<ureq::Error>() {
+                // If the link file for the PES confirmation is not found in
+                // the index, we assume the endorsement doesn't have one.
                 Some(ureq::Error::Status(404, _)) => Ok(None),
                 _ => Err(err),
             })?;
@@ -256,10 +316,14 @@ impl EndorsementLoader {
         Ok(Package {
             endorsement,
             signature,
-            log_entry,
+            rekor_log_entry,
+            c2sp_tlog_proof,
+            pes_confirmation,
             subject,
             endorser_public_key,
             rekor_public_key,
+            c2sp_policy,
+            pes_ref_value,
         })
     }
 }
@@ -275,13 +339,16 @@ pub struct CaStorage {
 
     /// The name of the index bucket.
     pub ibucket: String,
+
+    /// Optional access token for authentication.
+    pub access_token: Option<String>,
 }
 
 impl ContentAddressable for CaStorage {
     fn get_file(&self, file_hash: &str) -> Result<Vec<u8>> {
         let suffix = format!("{}/{}", self.fbucket, file_hash);
         let url = self.url_prefix.join(&suffix)?;
-        fetch(&url)
+        fetch(&url, self.access_token.as_deref())
     }
 
     fn get_linked_file(&self, file_hash: &str, link_type: &str) -> Result<Vec<u8>> {
@@ -294,7 +361,7 @@ impl ContentAddressable for CaStorage {
     fn get_link(&self, file_hash: &str, link_type: &str) -> Result<String> {
         let suffix = format!("{}/{}/{}", self.ibucket, link_type, file_hash);
         let url = self.url_prefix.join(&suffix)?;
-        let fetch_result = fetch(&url)?;
+        let fetch_result = fetch(&url, self.access_token.as_deref())?;
         fetch_result
             .try_into()
             .with_context(|| format!("parsing link {link_type} for file {file_hash}"))
@@ -303,8 +370,13 @@ impl ContentAddressable for CaStorage {
 
 // Fetches the content of the given URL.
 // This probably should be a mockable trait of some kind to help with testing.
-fn fetch(url: &Url) -> Result<Vec<u8>> {
-    let response = ureq::get(url.as_ref()).call().with_context(|| format!("fetching URL {url}"))?;
+fn fetch(url: &Url, token: Option<&str>) -> Result<Vec<u8>> {
+    let mut request = ureq::get(url.as_str());
+    if let Some(token) = token {
+        request = request.set("Authorization", &format!("Bearer {}", token));
+    }
+    let response = request.call().with_context(|| format!("fetching URL {url}"))?;
+
     let mut buffer = Vec::new();
     response
         .into_reader()

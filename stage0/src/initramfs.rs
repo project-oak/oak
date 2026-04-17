@@ -19,7 +19,7 @@ use core::slice;
 use oak_linux_boot_params::BootE820Entry;
 
 use crate::{
-    fw_cfg::{check_non_overlapping, find_suitable_dma_address, FwCfg},
+    fw_cfg::{FwCfg, check_non_overlapping, find_suitable_dma_address},
     kernel::Kernel,
 };
 

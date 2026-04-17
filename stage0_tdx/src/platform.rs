@@ -28,11 +28,11 @@ use core::{
 use log::info;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_stage0::{
+    BOOT_ALLOC, Madt, Rsdp, RsdtEntryPairMut,
     hal::PortFactory,
     mailbox::{FirmwareMailbox, OsMailbox},
     paging,
     paging::PageTableRefs,
-    Madt, Rsdp, RsdtEntryPairMut, BOOT_ALLOC,
 };
 use oak_tdx_guest::{
     tdcall::get_td_info,
@@ -40,19 +40,19 @@ use oak_tdx_guest::{
 };
 use serial::Debug;
 use x86_64::{
+    PhysAddr, VirtAddr,
     instructions::tlb,
     registers::control::Cr3,
     structures::paging::{
         OffsetPageTable, Page, PageSize, PageTable, PageTableFlags, PageTableIndex, PhysFrame,
         Size1GiB, Size2MiB, Size4KiB,
     },
-    PhysAddr, VirtAddr,
 };
 use zerocopy::{FromBytes, IntoBytes};
 use zeroize::Zeroize;
 
 use crate::{
-    accept_memory::{accept_memory_range, counters, TdAcceptPage},
+    accept_memory::{TdAcceptPage, accept_memory_range, counters},
     hob::{self, ResourceDescription},
     mmio::Mmio,
     serial,
@@ -66,14 +66,14 @@ use crate::{
 /// In order to hand APs off to the OS, the BSP needs to create a second
 /// mailbox (OS mailbox). It uses the firmware mailbox to tell APs where the
 /// OS mailbox is.
-#[link_section = ".tdx.td_mailbox"]
+#[unsafe(link_section = ".tdx.td_mailbox")]
 static mut TD_MAILBOX: FirmwareMailbox = FirmwareMailbox::new();
 const TD_MAILBOX_LOCATION: u64 = 0x102000; // Keep in sync with layout.ld.
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 static mut GPAW: u32 = 0;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 static mut AP_IN_64BIT_COUNT: i32 = 0;
 
 static HELLO_OAK: &str = "Hello from stage0_bin_tdx!";
@@ -351,11 +351,7 @@ impl oak_stage0::Platform for Tdx {
                 return Err("Unknown resource type found in TD HoB");
             }
         }
-        if index == 0 {
-            Err("no valid TD HoB found")
-        } else {
-            Ok(index)
-        }
+        if index == 0 { Err("no valid TD HoB found") } else { Ok(index) }
     }
 
     fn initialize_platform(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
@@ -476,7 +472,7 @@ impl oak_stage0::Platform for Tdx {
         msr_read(msr).unwrap()
     }
     unsafe fn write_msr(msr: u32, value: u64) {
-        msr_write(msr, value).unwrap()
+        unsafe { msr_write(msr, value).unwrap() }
     }
 
     fn wbvind() {

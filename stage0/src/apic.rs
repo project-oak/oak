@@ -14,16 +14,16 @@
 // limitations under the License.
 //
 
-use x86_64::{structures::paging::Size4KiB, PhysAddr};
+use x86_64::{PhysAddr, structures::paging::Size4KiB};
 
 use crate::{
+    Platform,
     msr::{
         ApicBase, ApicBaseFlags, ApicErrorFlags, DestinationMode, DestinationShorthand, Level,
         MessageType, SpuriousInterruptFlags, TriggerMode, X2ApicErrorStatusRegister,
         X2ApicIdRegister, X2ApicInterruptCommandRegister, X2ApicSpuriousInterruptRegister,
         X2ApicVersionRegister,
     },
-    Platform,
 };
 
 /// Interrupt Command.
@@ -83,10 +83,10 @@ trait SpuriousInterrupts<P> {
 }
 
 mod xapic {
-    use x86_64::{structures::paging::Size4KiB, PhysAddr};
+    use x86_64::{PhysAddr, structures::paging::Size4KiB};
 
     use super::{ApicErrorFlags, SpuriousInterruptFlags};
-    use crate::{hal, Platform};
+    use crate::{Platform, hal};
 
     // We divide the offset by 4 as we're indexing by u32's, not bytes.
     const APIC_ID_REGISTER_OFFSET: usize = 0x020 / core::mem::size_of::<u32>();
@@ -188,18 +188,18 @@ mod xapic {
     /// Safety: caller needs to guarantee that `apic_base` points to the APIC
     /// MMIO memory.
     pub(crate) unsafe fn init<P: Platform>(apic_base: PhysAddr) -> Xapic<P::Mmio<Size4KiB>> {
-        Xapic { mmio: P::mmio::<Size4KiB>(apic_base) }
+        Xapic { mmio: unsafe { P::mmio::<Size4KiB>(apic_base) } }
     }
 }
 
 mod x2apic {
     use super::{ApicErrorFlags, SpuriousInterruptFlags};
     use crate::{
+        Platform,
         msr::{
             X2ApicErrorStatusRegister, X2ApicIdRegister, X2ApicInterruptCommandRegister,
             X2ApicSpuriousInterruptRegister, X2ApicVersionRegister,
         },
-        Platform,
     };
 
     impl super::ApicId for X2ApicIdRegister {
@@ -334,7 +334,7 @@ impl<M: crate::hal::Mmio<Size4KiB>> Lapic<M> {
     fn error_status<P: Platform<Mmio<Size4KiB> = M>>(&mut self) -> &mut dyn ErrorStatus<P> {
         match &mut self.interface {
             Apic::Xapic(regs) => regs,
-            Apic::X2apic(_, ref mut err, _, _) => err,
+            Apic::X2apic(_, err, _, _) => err,
         }
     }
 
@@ -343,7 +343,7 @@ impl<M: crate::hal::Mmio<Size4KiB>> Lapic<M> {
     ) -> &mut dyn InterprocessorInterrupt<P> {
         match &mut self.interface {
             Apic::Xapic(regs) => regs,
-            Apic::X2apic(ref mut icr, _, _, _) => icr,
+            Apic::X2apic(icr, _, _, _) => icr,
         }
     }
 

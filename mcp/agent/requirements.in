@@ -1,4 +1,4 @@
-google-adk
+google-adk>=1.28.1
 uvicorn
 litellm
 a2a-sdk[http-server]

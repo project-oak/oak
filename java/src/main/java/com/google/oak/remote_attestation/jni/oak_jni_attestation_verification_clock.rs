@@ -15,9 +15,9 @@
 //
 
 use jni::{
+    JNIEnv, JavaVM,
     errors::Result,
     objects::{GlobalRef, JObject},
-    JNIEnv, JavaVM,
 };
 use oak_time::{Clock as AttestationClock, Instant};
 
@@ -60,11 +60,7 @@ impl JNIClock {
     /// }
     /// ```
     pub fn new(env: &JNIEnv, local_instance: &JObject) -> Result<Self> {
-        Ok(Self {
-            jni_vm: env.get_java_vm()?,
-            // TODO - ensure this global ref is cleaned up as expected.
-            jni_instance: env.new_global_ref(local_instance)?,
-        })
+        Ok(Self { jni_vm: env.get_java_vm()?, jni_instance: env.new_global_ref(local_instance)? })
     }
 }
 

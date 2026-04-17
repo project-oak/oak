@@ -26,14 +26,14 @@ use crate::{
 
 #[test]
 fn test_convert_from_raw() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
     let key = convert_raw_to_verifying_key(&d.rekor_public_key);
     assert!(key.is_ok());
 }
 
 #[test]
 fn test_convert_inverse_left() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
     let pem = convert_raw_to_pem(&d.rekor_public_key);
     let actual = convert_pem_to_raw(&pem).expect("could not convert key");
     assert!(equal_keys(&d.rekor_public_key, &actual).expect("could not compare keys"), "{:?}", pem);
@@ -41,7 +41,7 @@ fn test_convert_inverse_left() {
 
 #[test]
 fn test_convert_inverse_right() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
     let raw = convert_pem_to_raw(&d.rekor_public_key_pem).expect("could not convert key");
     let actual = convert_raw_to_pem(&raw);
     assert!(
@@ -54,7 +54,14 @@ fn test_convert_inverse_right() {
 
 #[test]
 fn test_verify_signature_ecdsa() {
-    let d = EndorsementData::load();
+    let d = EndorsementData::load_for_rekor_verification();
     let result = verify_signature_ecdsa(&d.signature, &d.endorsement, &d.endorser_public_key);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_verify_signature_rsa() {
+    let d = EndorsementData::load_for_pes_verification();
+    let result = crate::verify_signature_rsa(&d.signature, &d.endorsement, &d.pes_public_key);
     assert!(result.is_ok());
 }

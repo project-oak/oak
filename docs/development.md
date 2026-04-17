@@ -128,7 +128,6 @@ above):
   ```
 
 - Add a new dependency to the list, and see it reflected in the dev shell:
-
   - (if you are not already in the dev shell) enter the default dev shell:
 
     ```console

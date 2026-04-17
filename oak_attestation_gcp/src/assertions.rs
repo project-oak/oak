@@ -14,29 +14,29 @@
 // limitations under the License.
 //
 
-use alloc::string::String;
+use alloc::{string::String, vec::Vec};
 
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use jwt::Token;
 use oak_attestation_types::assertion_generator::{AssertionGenerator, AssertionGeneratorError};
 use oak_attestation_verification_types::assertion_verifier::{
     AssertionVerifier, AssertionVerifierError,
 };
+use oak_digest::Sha256;
 use oak_proto_rust::oak::attestation::v1::{
-    binary_reference_value, confidential_space_reference_values::ContainerImage, Assertion,
-    BinaryReferenceValue, ConfidentialSpaceAssertion, ConfidentialSpaceEndorsement,
-    ConfidentialSpaceReferenceValues, SignedEndorsement,
+    Assertion, BinaryReferenceValue, ConfidentialSpaceAssertion, ConfidentialSpaceEndorsement,
+    ConfidentialSpaceReferenceValues, SignedEndorsement, binary_reference_value,
+    confidential_space_reference_values::ContainerImage,
 };
 use oak_time::Instant;
 use oci_spec::distribution::Reference;
 use prost::Message;
-use sha2::Digest;
-use verify_endorsement::create_endorsement_reference_value;
-use x509_cert::{der::DecodePem, Certificate};
+use verify_endorsement::{create_endorsement_reference_value, create_tlog_reference_values_all};
+use x509_cert::{Certificate, der::DecodePem};
 
 use crate::{
-    jwt::{verification::verify_attestation_token, Claims, Header},
-    policy::{verify_endorsement_wrapper, ConfidentialSpaceVerificationError},
+    jwt::{Claims, Header, verification::verify_attestation_token},
+    policy::{ConfidentialSpaceVerificationError, verify_endorsement_wrapper},
 };
 
 #[allow(dead_code)]
@@ -52,8 +52,7 @@ impl GcpAssertionGenerator {
 }
 
 fn generate_nonce_from_asserted_data(data: &[u8]) -> String {
-    let digest = sha2::Sha256::digest(data);
-    hex::encode(digest)
+    Sha256::from_contents(data).to_hex()
 }
 
 impl AssertionGenerator for GcpAssertionGenerator {
@@ -127,6 +126,7 @@ impl AssertionVerifier for GcpAssertionVerifier {
             .context("parsing the effective OCI container reference")?;
         if let Some(ci_ref_value) = &self.reference_values.container_image {
             match ci_ref_value {
+                #[allow(deprecated)]
                 ContainerImage::CosignReferenceValues(cosign_reference_values) => {
                     let endorser_key = cosign_reference_values
                         .developer_public_key
@@ -134,8 +134,9 @@ impl AssertionVerifier for GcpAssertionVerifier {
                         .ok_or(anyhow::anyhow!("endorser public key missing"))?
                         .clone();
                     let rekor_key = cosign_reference_values.rekor_public_key.clone();
+                    let tlog = create_tlog_reference_values_all(rekor_key, None);
                     let endorsement_ref_value =
-                        create_endorsement_reference_value(endorser_key, rekor_key);
+                        create_endorsement_reference_value(endorser_key, Vec::new(), tlog);
                     let image_reference_value = BinaryReferenceValue {
                         r#type: Some(binary_reference_value::Type::Endorsement(
                             endorsement_ref_value,
@@ -198,12 +199,12 @@ mod tests {
     use oak_attestation_verification_types::assertion_verifier::AssertionVerifierError;
     use oak_file_utils::{read_testdata, read_testdata_string};
     use oak_proto_rust::oak::attestation::v1::{
-        binary_reference_value, endorsement::Format, BinaryReferenceValue, CosignReferenceValues,
-        Endorsement, Signature, SignedEndorsement,
+        BinaryReferenceValue, CosignReferenceValues, Endorsement, Signature, SignedEndorsement,
+        binary_reference_value, endorsement::Format,
     };
     use oak_time::make_instant;
     use prost::Message;
-    use verify_endorsement::create_verifying_key_from_pem;
+    use verify_endorsement::{create_tlog_reference_values_skip, create_verifying_key_from_pem};
 
     use super::*;
     use crate::OAK_SESSION_NOISE_V1_AUDIENCE;
@@ -245,7 +246,11 @@ mod tests {
                 root_certificate_pem: read_testdata_string!("root_ca_cert.pem"),
                 container_image: Some(ContainerImage::ImageReferenceValue(BinaryReferenceValue {
                     r#type: Some(binary_reference_value::Type::Endorsement(
-                        create_endorsement_reference_value(developer_public_key, None),
+                        create_endorsement_reference_value(
+                            developer_public_key,
+                            Vec::new(),
+                            create_tlog_reference_values_skip(),
+                        ),
                     )),
                 })),
             },
@@ -349,6 +354,7 @@ mod tests {
             audience: OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
             reference_values: ConfidentialSpaceReferenceValues {
                 root_certificate_pem: read_testdata_string!("root_ca_cert.pem"),
+                #[allow(deprecated)]
                 container_image: Some(ContainerImage::CosignReferenceValues(
                     CosignReferenceValues {
                         developer_public_key: Some(create_verifying_key_from_pem(
@@ -380,6 +386,7 @@ mod tests {
             audience: OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
             reference_values: ConfidentialSpaceReferenceValues {
                 root_certificate_pem: read_testdata_string!("root_ca_cert.pem"),
+                #[allow(deprecated)]
                 container_image: Some(ContainerImage::CosignReferenceValues(
                     CosignReferenceValues {
                         developer_public_key: Some(create_verifying_key_from_pem(

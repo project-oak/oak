@@ -16,7 +16,7 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::Context;
-use oak_sdk_containers::{default_orchestrator_channel, OrchestratorClient};
+use oak_sdk_containers::{OrchestratorClient, default_orchestrator_channel};
 use tokio::net::TcpListener;
 
 const ENCLAVE_APP_PORT: u16 = 8080;

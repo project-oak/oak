@@ -22,6 +22,7 @@ use oak_proto_rust::oak::{
     session::v1::{AttestRequest, AttestResponse, EndorsedEvidence},
 };
 use oak_session::{
+    ProtocolEngine,
     aggregators::{All, PassThrough},
     attestation::{
         AttestationHandler, ClientAttestationHandler, PeerAttestationVerdict,
@@ -29,7 +30,6 @@ use oak_session::{
     },
     config::{AttestationHandlerConfig, PeerAttestationVerifier},
     verifier::BoundAssertionVerifierResult,
-    ProtocolEngine,
 };
 use oak_session_testing::{
     create_failing_mock_assertion_verifier, create_failing_mock_verifier,

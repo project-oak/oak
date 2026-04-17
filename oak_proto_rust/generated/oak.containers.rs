@@ -2,12 +2,12 @@
 /// As images can be large (hundreds of megabytes), the launcher chunks up the
 /// response into smaller pieces to respect proto/gRPC limits. The image needs to
 /// be reassembled in the stage1 or the orchestrator.
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetImageResponse {
     #[prost(bytes = "bytes", tag = "1")]
     pub image_chunk: ::prost::bytes::Bytes,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetApplicationConfigResponse {
     /// Arbitrary config that the container can retrieve from the orchestrator.
     /// Included in the attestation measurements conducted by the orchestrator.

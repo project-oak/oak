@@ -21,24 +21,24 @@ use core::{
 };
 
 use aml::{
-    resource::{MemoryRangeDescriptor, Resource},
     AmlContext,
+    resource::{MemoryRangeDescriptor, Resource},
 };
 use anyhow::anyhow;
+use embedded_io::Read;
 use log::info;
-use oak_channel::{Read, Write};
 use spinning_top::Spinlock;
 use virtio_drivers::{
-    device::console::VirtIOConsole,
-    transport::{mmio::MmioTransport, DeviceType, Transport},
     BufferDirection, Hal, PAGE_SIZE,
+    device::console::VirtIOConsole,
+    transport::{DeviceType, Transport, mmio::MmioTransport},
 };
 use x86_64::{PhysAddr, VirtAddr};
 
 use crate::{
+    GUEST_HOST_HEAP, PAGE_TABLES,
     acpi::{Acpi, AcpiDevice, VIRTIO_MMIO},
     mm::Translator,
-    GUEST_HOST_HEAP, PAGE_TABLES,
 };
 
 struct OakHal;
@@ -60,7 +60,7 @@ unsafe impl Hal for OakHal {
             .unwrap()
             .translate_virtual(VirtAddr::from_ptr(vaddr.as_ptr()))
             .unwrap()
-            .as_u64() as usize;
+            .as_u64();
         (phys_addr, vaddr)
     }
 
@@ -69,12 +69,14 @@ unsafe impl Hal for OakHal {
         vaddr: NonNull<u8>,
         pages: usize,
     ) -> i32 {
-        let vaddr_check = Self::mmio_phys_to_virt(paddr, 0);
+        let vaddr_check = unsafe { Self::mmio_phys_to_virt(paddr, 0) };
         assert_eq!(vaddr_check, vaddr, "dma buffer physical and virtual addresses don't match",);
-        GUEST_HOST_HEAP
-            .get()
-            .unwrap()
-            .deallocate(vaddr, Layout::from_size_align(pages * PAGE_SIZE, PAGE_SIZE).unwrap());
+        unsafe {
+            GUEST_HOST_HEAP
+                .get()
+                .unwrap()
+                .deallocate(vaddr, Layout::from_size_align(pages * PAGE_SIZE, PAGE_SIZE).unwrap());
+        }
 
         0
     }
@@ -85,7 +87,7 @@ unsafe impl Hal for OakHal {
                 .lock()
                 .get()
                 .unwrap()
-                .translate_physical(PhysAddr::new(paddr as u64))
+                .translate_physical(PhysAddr::new(paddr))
                 .unwrap()
                 .as_mut_ptr(),
         )
@@ -104,7 +106,7 @@ unsafe impl Hal for OakHal {
             .unwrap()
             .translate_virtual(VirtAddr::from_ptr(buffer.cast::<u8>().as_ptr()))
             .unwrap()
-            .as_u64() as usize
+            .as_u64()
     }
 
     unsafe fn unshare(
@@ -118,40 +120,32 @@ unsafe impl Hal for OakHal {
 }
 
 #[repr(transparent)]
-pub struct MmioConsoleChannel {
-    inner: Spinlock<VirtIOConsole<OakHal, MmioTransport>>,
+pub struct MmioConsoleChannel<'a> {
+    inner: Spinlock<VirtIOConsole<OakHal, MmioTransport<'a>>>,
 }
 
 // Safety: for now, this is safe as we don't have threads in our kernel.
 // TODO(#3531): this will most likely break once we do add threads, though.
-unsafe impl Sync for MmioConsoleChannel {}
-unsafe impl Send for MmioConsoleChannel {}
+unsafe impl Sync for MmioConsoleChannel<'_> {}
+unsafe impl Send for MmioConsoleChannel<'_> {}
 
-impl Read for MmioConsoleChannel {
+impl oak_channel::Read for MmioConsoleChannel<'_> {
     fn read_exact(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         let mut console = self.inner.lock();
-
-        let len = data.len();
-        let mut count = 0;
-        while count < len {
-            if let Some(char) =
-                console.recv(true).map_err(|err| anyhow!("Virtio console read error: {:?}", err))?
-            {
-                data[count] = char;
-                count += 1;
-            }
-        }
-
-        Ok(())
+        console.read_exact(data).map_err(|err| {
+            anyhow!("Virtio console read_exact error: {:?}, requested length: {}", err, data.len())
+        })
     }
 }
 
-impl Write for MmioConsoleChannel {
+impl oak_channel::Write for MmioConsoleChannel<'_> {
     fn write_all(&mut self, data: &[u8]) -> anyhow::Result<()> {
         let mut console = self.inner.lock();
 
-        for char in data {
-            console.send(*char).map_err(|err| anyhow!("Virtio console write error: {:?}", err))?;
+        for chunk in data.chunks(PAGE_SIZE) {
+            console
+                .send_bytes(chunk)
+                .map_err(|err| anyhow!("Virtio console write error: {:?}", err))?;
         }
 
         Ok(())
@@ -181,7 +175,7 @@ fn find_memory_range(device: &AcpiDevice, ctx: &mut AmlContext) -> Option<(PhysA
     None
 }
 
-pub fn get_console_channel(acpi: &mut Acpi) -> MmioConsoleChannel {
+pub fn get_console_channel<'a>(acpi: &mut Acpi) -> MmioConsoleChannel<'a> {
     let devices = acpi.devices().unwrap();
 
     let virtio_devices: Vec<&AcpiDevice> = devices
@@ -192,20 +186,26 @@ pub fn get_console_channel(acpi: &mut Acpi) -> MmioConsoleChannel {
         .collect();
 
     for device in virtio_devices {
-        let header = PAGE_TABLES
-            .lock()
-            .get()
-            .unwrap()
-            .translate_physical(
-                find_memory_range(device, &mut acpi.aml)
-                    .expect("unable to determine physical memory range for virtio MMIO device")
-                    .0,
-            )
-            .unwrap();
+        let acpi_aml_range = find_memory_range(device, &mut acpi.aml)
+            .expect("unable to determine physical memory range for virtio MMIO device");
 
-        let transport =
-            unsafe { MmioTransport::new(core::ptr::NonNull::new(header.as_mut_ptr()).unwrap()) }
-                .expect("MMIO transport setup error");
+        let header =
+            PAGE_TABLES.lock().get().unwrap().translate_physical(acpi_aml_range.0).unwrap();
+
+        let mmio_size = acpi_aml_range.1 - acpi_aml_range.0;
+
+        info!(
+            "Found virtio MMIO device {}; physical range: 0x{:x} - 0x{:x}, size: 0x{:x}",
+            device.name, acpi_aml_range.0, acpi_aml_range.1, mmio_size
+        );
+
+        let transport = unsafe {
+            MmioTransport::new(
+                core::ptr::NonNull::new(header.as_mut_ptr()).unwrap(),
+                mmio_size as usize,
+            )
+        }
+        .expect("MMIO transport setup error");
 
         if transport.device_type() != DeviceType::Console {
             continue;

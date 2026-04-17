@@ -21,9 +21,9 @@ use oak_proto_rust::oak::{
     session::v1::{PlaintextMessage, SessionResponse},
 };
 use oak_session::{
+    ProtocolEngine,
     config::SessionConfig,
     session::{ClientSession, Session},
-    ProtocolEngine,
 };
 use prost::Message;
 
@@ -48,9 +48,9 @@ use prost::Message;
 ///
 /// config is a valid, properly aligned pointer to a SessionConfig object. Once
 /// the config object has been provided here, it should not be used again.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn new_client_session(config: *mut SessionConfig) -> ErrorOrClientSession {
-    let config = Box::from_raw(config);
+    let config = unsafe { Box::from_raw(config) };
     let client_session = ClientSession::create(*config);
     match client_session {
         Ok(session) => ErrorOrClientSession {
@@ -67,9 +67,9 @@ pub unsafe extern "C" fn new_client_session(config: *mut SessionConfig) -> Error
 ///
 /// The provided [`ClientSession`] pointer should be non-null, properly aligned,
 /// and points to a valid [`ClientSession`] instance.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn client_is_open(session: *const ClientSession) -> bool {
-    (*session).is_open()
+    unsafe { (*session).is_open() }
 }
 
 /// Calls [`ClientSession::get_outgoing_message`] on the provided
@@ -85,11 +85,11 @@ pub unsafe extern "C" fn client_is_open(session: *const ClientSession) -> bool {
 ///
 /// The provided [`ClientSession`] pointer should be non-null, properly aligned,
 /// and points to a valid [`ClientSession`] instance.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn client_get_outgoing_message(
     session: *mut ClientSession,
 ) -> ErrorOrRustBytes {
-    safe_client_get_outgoing_message(&mut *session)
+    safe_client_get_outgoing_message(unsafe { &mut *session })
 }
 
 fn safe_client_get_outgoing_message(session: &mut ClientSession) -> ErrorOrRustBytes {
@@ -115,12 +115,14 @@ fn safe_client_get_outgoing_message(session: &mut ClientSession) -> ErrorOrRustB
 ///   aligned, and points to a valid [`ClientSession`] instance.
 ///
 /// * The provided [`BytesView`] is valid.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn client_put_incoming_message(
     session: *mut ClientSession,
     session_response_bytes: BytesView,
 ) -> *const Error {
-    safe_client_put_incoming_message(&mut *session, session_response_bytes.as_slice())
+    safe_client_put_incoming_message(unsafe { &mut *session }, unsafe {
+        session_response_bytes.as_slice()
+    })
 }
 
 fn safe_client_put_incoming_message(
@@ -158,9 +160,9 @@ fn safe_client_put_incoming_message(
 ///
 /// The provided [`ClientSession`] pointer should be non-null, properly aligned,
 /// and points to a valid [`ClientSession`] instance.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn client_read(session: *mut ClientSession) -> ErrorOrRustBytes {
-    safe_client_read(&mut *session)
+    safe_client_read(unsafe { &mut *session })
 }
 
 fn safe_client_read(session: &mut ClientSession) -> ErrorOrRustBytes {
@@ -193,12 +195,12 @@ fn safe_client_read(session: &mut ClientSession) -> ErrorOrRustBytes {
 ///   aligned, and points to a valid [`ClientSession`] instance.
 ///
 /// * The provided [`BytesView`] is valid.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn client_write(
     session: *mut ClientSession,
     plaintext_message_bytes: BytesView,
 ) -> *const Error {
-    safe_client_write(&mut *session, plaintext_message_bytes.as_slice())
+    safe_client_write(unsafe { &mut *session }, unsafe { plaintext_message_bytes.as_slice() })
 }
 
 fn safe_client_write(session: &mut ClientSession, plaintext_bytes_slice: &[u8]) -> *const Error {
@@ -217,12 +219,12 @@ fn safe_client_write(session: &mut ClientSession, plaintext_bytes_slice: &[u8]) 
 ///
 /// * The provided [`ClientSession`] pointer should be non-null, properly
 ///   aligned, and points to a valid [`ClientSession`] instance.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn client_get_session_binding_token(
     session: *mut ClientSession,
     info: BytesView,
 ) -> ErrorOrRustBytes {
-    safe_client_get_session_binding_token(&*session, info.as_slice())
+    safe_client_get_session_binding_token(unsafe { &*session }, unsafe { info.as_slice() })
 }
 
 fn safe_client_get_session_binding_token(session: &ClientSession, info: &[u8]) -> ErrorOrRustBytes {
@@ -244,11 +246,11 @@ fn safe_client_get_session_binding_token(session: &ClientSession, info: &[u8]) -
 ///
 /// The provided [`ClientSession`] pointer should be non-null, properly aligned,
 /// and points to a valid [`ClientSession`] instance.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn client_get_peer_attestation_evidence(
     session: *const ClientSession,
 ) -> ErrorOrRustBytes {
-    safe_client_get_peer_attestation_evidence(&*session)
+    safe_client_get_peer_attestation_evidence(unsafe { &*session })
 }
 
 fn safe_client_get_peer_attestation_evidence(session: &ClientSession) -> ErrorOrRustBytes {
@@ -277,9 +279,11 @@ fn safe_client_get_peer_attestation_evidence(session: &ClientSession) -> ErrorOr
 ///   aligned, and points to a valid [`ClientSession`] instance.
 ///
 /// * The pointer should not be used anymore after calling this function.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn free_client_session(session: *mut ClientSession) {
-    drop(Box::from_raw(session))
+    unsafe {
+        drop(Box::from_raw(session));
+    }
 }
 
 #[repr(C)]

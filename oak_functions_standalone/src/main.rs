@@ -16,14 +16,14 @@
 use std::net::SocketAddr;
 
 use clap::{Parser, ValueEnum};
-use oak_attestation_gcp::{attestation::request_attestation_token, OAK_SESSION_NOISE_V1_AUDIENCE};
+use oak_attestation_gcp::{OAK_SESSION_NOISE_V1_AUDIENCE, attestation::request_attestation_token};
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
-use oak_functions_standalone::{serve, AttestationArgs, OakFunctionsSessionArgs};
+use oak_functions_standalone::{AttestationArgs, OakFunctionsSessionArgs, serve};
 use oak_proto_rust::oak::functions::{
-    config::ApplicationConfig, InitializeRequest, LookupDataChunk,
+    InitializeRequest, LookupDataChunk, config::ApplicationConfig,
 };
 use oak_session::attestation::AttestationType;
-use p256::ecdsa::{signature::rand_core::OsRng, SigningKey};
+use p256::ecdsa::{SigningKey, signature::rand_core::OsRng};
 use prost::Message;
 use sha2::Digest;
 use tokio::net::TcpListener;

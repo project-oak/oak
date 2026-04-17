@@ -3,9 +3,9 @@
 pub struct Profile {
     /// A description of the samples associated with each Sample.value.
     /// For a cpu profile this might be:
-    ///    \[["cpu","nanoseconds"]\] or \[["wall","seconds"]\] or \[["syscall","count"]\]
+    /// ["cpu","nanoseconds"]("cpu","nanoseconds") or ["wall","seconds"]("wall","seconds") or ["syscall","count"]("syscall","count")
     /// For a heap profile, this might be:
-    ///    \[["allocations","count"\], \["space","bytes"]\],
+    /// \["allocations","count"\], ["space","bytes"](<"allocations","count"], ["space","bytes">),
     /// If one of the values represents the number of events represented
     /// by the sample, by convention it should be at index 0 and use
     /// sample_type.unit == "count".
@@ -64,7 +64,7 @@ pub struct Profile {
     pub default_sample_type: i64,
 }
 /// ValueType describes the semantics and measurement units of a value.
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ValueType {
     /// Rename it from type to ty to avoid using keyword in Rust.
     ///
@@ -99,7 +99,7 @@ pub struct Sample {
     #[prost(message, repeated, tag = "3")]
     pub label: ::prost::alloc::vec::Vec<Label>,
 }
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Label {
     /// Index into string table
     #[prost(int64, tag = "1")]
@@ -123,7 +123,7 @@ pub struct Label {
     #[prost(int64, tag = "4")]
     pub num_unit: i64,
 }
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Mapping {
     /// Unique nonzero id for the mapping.
     #[prost(uint64, tag = "1")]
@@ -185,8 +185,8 @@ pub struct Location {
     /// preceding entries were inlined.
     ///
     /// E.g., if memcpy() is inlined into printf:
-    ///     line\[0\].function_name == "memcpy"
-    ///     line\[1\].function_name == "printf"
+    /// line\[0\].function_name == "memcpy"
+    /// line\[1\].function_name == "printf"
     #[prost(message, repeated, tag = "4")]
     pub line: ::prost::alloc::vec::Vec<Line>,
     /// Provides an indication that multiple symbols map to this location's
@@ -197,7 +197,7 @@ pub struct Location {
     #[prost(bool, tag = "5")]
     pub is_folded: bool,
 }
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Line {
     /// The id of the corresponding profile.Function for this line.
     #[prost(uint64, tag = "1")]
@@ -206,7 +206,7 @@ pub struct Line {
     #[prost(int64, tag = "2")]
     pub line: i64,
 }
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Function {
     /// Unique nonzero id for the function.
     #[prost(uint64, tag = "1")]

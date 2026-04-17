@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use oak_proto_rust::oak::{attestation::v1::EventAttestationResults, Variant};
+use oak_proto_rust::oak::{Variant, attestation::v1::EventAttestationResults};
 use oak_time::Instant;
 
 /// A verification policy takes generic evidence and endorsement and performs

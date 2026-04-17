@@ -3,7 +3,10 @@
 load("@oak//bazel/rust:defs.bzl", "STDLIBS_DEPS_VERSIONS")
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
-package(default_visibility = ["//visibility:public"])
+package(
+    default_visibility = ["//visibility:public"],
+    licenses = ["notice"],
+)
 
 exports_files(["bin/*"])
 

@@ -22,10 +22,10 @@ extern crate alloc;
 
 use alloc::borrow::ToOwned;
 
-use anyhow::{ensure, Context};
-use base64::{prelude::BASE64_STANDARD, Engine as _};
-use digest_util::hash_sha2_256;
+use anyhow::{Context, ensure};
+use base64::{Engine as _, prelude::BASE64_STANDARD};
 use key_util::{convert_pem_to_raw, equal_keys, verify_signature_ecdsa};
+use oak_digest::Sha256;
 use oak_proto_rust::oak::attestation::v1::VerifyingKeySet;
 use oak_time::Instant;
 use serde::{Deserialize, Serialize};
@@ -290,7 +290,7 @@ fn verify_rekor_body(body: &Body, artifact_bytes: &[u8]) -> anyhow::Result<()> {
         "unsupported hashing algorithm: {}",
         body.spec.data.hash.algorithm
     );
-    let artfifact_hash = hex::encode(hash_sha2_256(artifact_bytes));
+    let artfifact_hash = Sha256::from_contents(artifact_bytes).to_hex();
     ensure!(
         artfifact_hash == body.spec.data.hash.value,
         "hash of artifact ({:?}) does not match hash in Rekor log entry ({:?})",

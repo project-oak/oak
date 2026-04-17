@@ -18,14 +18,14 @@
 
 use std::fs;
 
+use key_util::convert_pem_to_raw;
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::attestation::v1::{
-    endorsement::Format, ClaimReferenceValue, Endorsement, EndorsementReferenceValue, KeyType,
-    Signature, SignedEndorsement, TransparentReleaseEndorsement, VerifyingKey,
-    VerifyingKeyReferenceValue, VerifyingKeySet,
+    ClaimReferenceValue, Endorsement, EndorsementReferenceValue, KeyType, PesReferenceValue,
+    Signature, SignedEndorsement, TLogReferenceValues, TransparentReleaseEndorsement, VerifyingKey,
+    VerifyingKeySet, endorsement::Format,
 };
-use oak_time::{make_instant, Instant};
-use p256::pkcs8::Document;
+use oak_time::{Instant, make_instant};
 
 const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";
 const SIGNATURE_PATH: &str = "oak_attestation_verification/testdata/endorsement.json.sig";
@@ -37,9 +37,12 @@ const LOG_ENTRY_PATH: &str = "oak_attestation_verification/testdata/logentry.jso
 // from https://rekor.sigstore.dev/api/v1/log/publicKey.
 const REKOR_PUBLIC_KEY_PATH: &str = "oak_attestation_verification/testdata/rekor_public_key.pem";
 
-const KEY_ID: u32 = 4711;
+// RSA signature of the endorsement, signed by the PES, with the public key of
+// the PES.
+const RSA_SIGNATURE_PATH: &str = "oak_attestation_verification/testdata/endorsement_rsa.json.sig";
+const PES_PUBLIC_KEY_PATH: &str = "oak_attestation_verification/testdata/pes_public_key.pem";
 
-const PUBLIC_KEY_PEM_LABEL: &str = "PUBLIC KEY";
+const KEY_ID: u32 = 4711;
 
 pub struct EndorsementData {
     // Direct access to data, needed for legacy endorsement verification.
@@ -52,6 +55,7 @@ pub struct EndorsementData {
     pub rekor_public_key_pem: String,
     pub endorser_public_key: Vec<u8>,
     pub rekor_public_key: Vec<u8>,
+    pub pes_public_key: Vec<u8>,
 
     // Valid populated protos, for verify_endorsement().
     pub valid_not_before: Instant,
@@ -64,7 +68,8 @@ pub struct EndorsementData {
 }
 
 impl EndorsementData {
-    pub fn load() -> EndorsementData {
+    #[allow(deprecated)]
+    pub fn load_for_rekor_verification() -> EndorsementData {
         let serialized = fs::read(data_path(ENDORSEMENT_PATH)).expect("couldn't read endorsement");
         let signature = fs::read(data_path(SIGNATURE_PATH)).expect("couldn't read signature");
         let log_entry = fs::read(data_path(LOG_ENTRY_PATH)).expect("couldn't read log entry");
@@ -93,7 +98,6 @@ impl EndorsementData {
             key_id: 0,
             raw: rekor_public_key.clone(),
         };
-
         EndorsementData {
             endorsement: serialized.clone(),
             signature: signature.clone(),
@@ -101,6 +105,7 @@ impl EndorsementData {
             rekor_public_key_pem,
             endorser_public_key,
             rekor_public_key,
+            pes_public_key: vec![],
 
             valid_not_before: make_instant!("2024-02-28T09:47:12.067000Z"),
             valid_not_after: make_instant!("2025-02-27T09:47:12.067000Z"),
@@ -108,6 +113,8 @@ impl EndorsementData {
                 endorsement: Some(endorsement),
                 signature: Some(Signature { key_id: KEY_ID, raw: signature.clone() }),
                 rekor_log_entry: log_entry.clone(),
+                c2sp_tlog_proof: vec![],
+                pes_confirmation: vec![],
             },
             ref_value: EndorsementReferenceValue {
                 endorser: Some(VerifyingKeySet {
@@ -115,12 +122,17 @@ impl EndorsementData {
                     ..Default::default()
                 }),
                 required_claims: Some(ClaimReferenceValue { claim_types: vec![] }),
-                rekor: Some(VerifyingKeyReferenceValue {
-                    r#type: Some(
-                        oak_proto_rust::oak::attestation::v1::verifying_key_reference_value::Type::Verify(
-                            VerifyingKeySet { keys: [rekor_key].to_vec(), ..Default::default() },
+                tlog: Some(TLogReferenceValues {
+                    strategy: Some(
+                        oak_proto_rust::oak::attestation::v1::t_log_reference_values::Strategy::All(
+                            (),
                         ),
                     ),
+                    rekor: Some(VerifyingKeySet {
+                        keys: [rekor_key].to_vec(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
                 }),
                 ..Default::default()
             },
@@ -134,20 +146,87 @@ impl EndorsementData {
         }
     }
 
+    #[allow(deprecated)]
+    pub fn load_for_pes_verification() -> EndorsementData {
+        let serialized = fs::read(data_path(ENDORSEMENT_PATH)).expect("couldn't read endorsement");
+        let signature = fs::read(data_path(RSA_SIGNATURE_PATH)).expect("couldn't read signature");
+        let endorser_public_key_pem = fs::read_to_string(data_path(ENDORSER_PUBLIC_KEY_PATH))
+            .expect("couldn't read endorser public key");
+        let pes_public_key_pem = fs::read_to_string(data_path(PES_PUBLIC_KEY_PATH))
+            .expect("couldn't read PES public key");
+
+        let endorser_public_key = convert_pem_to_raw(endorser_public_key_pem.as_str())
+            .expect("failed to convert endorser key");
+        let pes_public_key =
+            convert_pem_to_raw(&pes_public_key_pem).expect("failed to convert PES key");
+
+        let endorsement = Endorsement {
+            format: Format::EndorsementFormatJsonIntoto.into(),
+            serialized: serialized.clone(),
+            ..Default::default()
+        };
+        let endorser_key = VerifyingKey {
+            r#type: KeyType::EcdsaP256Sha256.into(),
+            key_id: KEY_ID,
+            raw: endorser_public_key.clone(),
+        };
+        let pes_key = VerifyingKey {
+            r#type: KeyType::RsaSha2256.into(),
+            key_id: 0,
+            raw: pes_public_key.clone(),
+        };
+
+        EndorsementData {
+            endorsement: serialized.clone(),
+            signature: signature.clone(),
+            log_entry: vec![],
+            rekor_public_key_pem: "".to_string(),
+            endorser_public_key,
+            rekor_public_key: vec![],
+            pes_public_key,
+
+            valid_not_before: make_instant!("2024-02-28T09:47:12.067000Z"),
+            valid_not_after: make_instant!("2025-02-27T09:47:12.067000Z"),
+            signed_endorsement: SignedEndorsement {
+                endorsement: Some(endorsement),
+                signature: None,
+                rekor_log_entry: vec![],
+                c2sp_tlog_proof: vec![],
+                pes_confirmation: signature.clone(),
+            },
+            ref_value: EndorsementReferenceValue {
+                endorser: Some(VerifyingKeySet {
+                    keys: [endorser_key].to_vec(),
+                    ..Default::default()
+                }),
+                required_claims: Some(ClaimReferenceValue { claim_types: vec![] }),
+                tlog: Some(TLogReferenceValues {
+                    strategy: Some(
+                        oak_proto_rust::oak::attestation::v1::t_log_reference_values::Strategy::All(
+                            (),
+                        ),
+                    ),
+                    pes: Some(PesReferenceValue {
+                        key_set: Some(VerifyingKeySet {
+                            keys: [pes_key].to_vec(),
+                            ..Default::default()
+                        }),
+                    }),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+
+            tr_endorsement: TransparentReleaseEndorsement {
+                endorsement: serialized.clone(),
+                subject: vec![],
+                endorsement_signature: signature.clone(),
+                rekor_log_entry: vec![],
+            },
+        }
+    }
+
     pub fn make_valid_time(&self) -> Instant {
         self.valid_not_before + (self.valid_not_after - self.valid_not_before) / 2
     }
-}
-
-/// Converts a PEM public key to raw ASN.1 DER bytes.
-fn convert_pem_to_raw(public_key_pem: &str) -> anyhow::Result<Vec<u8>> {
-    let (label, key) = Document::from_pem(public_key_pem)
-        .map_err(|e| anyhow::anyhow!("Couldn't interpret PEM: {e}"))?;
-
-    anyhow::ensure!(
-        label == PUBLIC_KEY_PEM_LABEL,
-        "PEM label {label} is not {PUBLIC_KEY_PEM_LABEL}"
-    );
-
-    Ok(key.into_vec())
 }

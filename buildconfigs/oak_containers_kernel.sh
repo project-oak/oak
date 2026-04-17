@@ -10,7 +10,7 @@ export BUILD_COMMAND=(
   .#default
   --command
   just
-  github-oak_containers_kernel
+  github oak_containers_kernel
 )
 
 # The first element must be the Transparent Release binary (the main binary).

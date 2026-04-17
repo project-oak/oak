@@ -24,15 +24,15 @@
 
 use anyhow::{Context, Result};
 #[allow(deprecated)]
-use oak_attestation::{dice::DiceAttester, ApplicationKeysAttester};
+use oak_attestation::{ApplicationKeysAttester, dice::DiceAttester};
 use oak_attestation_types::attester::Attester;
 use oak_containers_attestation::{InstanceKeys, InstancePublicKeys};
-use oak_crypto::encryption_key::{generate_encryption_key_pair, EncryptionKey};
+use oak_crypto::encryption_key::{EncryptionKey, generate_encryption_key_pair};
 use oak_dice::cert::generate_ecdsa_key_pair;
 use oak_proto_rust::oak::{
-    attestation::v1::{endorsements, AmdSevSnpEndorsement, Endorsements, Stage0Measurements},
-    session::v1::EndorsedEvidence,
     Variant,
+    attestation::v1::{AmdSevSnpEndorsement, Endorsements, Stage0Measurements, endorsements},
+    session::v1::EndorsedEvidence,
 };
 use oak_sdk_common::StaticEncryptionKeyHandle;
 use p256::ecdsa::{SigningKey, VerifyingKey};
@@ -243,10 +243,10 @@ mod tests {
     use oak_attestation_verification_results::unique_signing_public_key;
     use oak_attestation_verification_types::verifier::AttestationVerifier;
     use oak_proto_rust::oak::attestation::v1::{
-        attestation_results, binary_reference_value, kernel_binary_reference_value,
-        text_reference_value, BinaryReferenceValue, ContainerLayerReferenceValues,
-        KernelBinaryReferenceValue, KernelLayerReferenceValues, SkipVerification,
-        SystemLayerReferenceValues, TextReferenceValue,
+        BinaryReferenceValue, ContainerLayerReferenceValues, KernelBinaryReferenceValue,
+        KernelLayerReferenceValues, SkipVerification, SystemLayerReferenceValues,
+        TextReferenceValue, attestation_results, binary_reference_value,
+        kernel_binary_reference_value, text_reference_value,
     };
     use oak_time_std::clock::SystemTimeClock;
 

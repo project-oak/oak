@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-#![feature(let_chains)]
-
 extern crate alloc;
 
 #[cfg(test)]
@@ -26,15 +24,15 @@ use std::fmt::Write;
 
 use anyhow::{Context, Result};
 use oak_proto_rust::oak::{
-    attestation,
+    RawDigest, attestation,
     attestation::v1::{
-        root_layer_data::Report, ApplicationLayerData, ApplicationLayerReferenceValues,
-        ContainerLayerData, ContainerLayerReferenceValues, ExtractedEvidence, KernelLayerData,
+        ApplicationLayerData, ApplicationLayerReferenceValues, ContainerLayerData,
+        ContainerLayerReferenceValues, ExtractedEvidence, KernelLayerData,
         KernelLayerReferenceValues, OakContainersData, OakContainersReferenceValues,
         OakRestrictedKernelData, OakRestrictedKernelReferenceValues, ReferenceValues,
         RootLayerData, RootLayerReferenceValues, SystemLayerData, SystemLayerReferenceValues,
+        root_layer_data::Report,
     },
-    RawDigest,
 };
 use sha2::{Digest, Sha256};
 use zerocopy::{FromBytes, KnownLayout};
@@ -47,8 +45,7 @@ const AMD_SEV_SNP_TITLE: &str = "AMD SEV-SNP";
 const INTEL_TDX_TITLE: &str = "Intel TDX";
 const INSECURE_TEE_TITLE: &str = "FAKE INSECURE";
 
-const ATTESTATIONS_INTRO: &str =
-    "Attestations identifying artifacts accepted by the reference values for this layer are described below.\n";
+const ATTESTATIONS_INTRO: &str = "Attestations identifying artifacts accepted by the reference values for this layer are described below.\n";
 const REFERENCE_VALUES_INTRO: &str =
     "The reference values describing this layer are printed below.\n";
 
@@ -98,9 +95,9 @@ impl HumanReadableExplanation for ExtractedEvidence {
     fn description(&self) -> Result<String, anyhow::Error> {
         let yaml_representation = {
             let json_representation = json_serialization::serialize_extracted_evidence(self);
-            serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)?
+            yaml_serde::to_value(json_representation).map_err(anyhow::Error::msg)?
         };
-        serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)
+        yaml_serde::to_string(&yaml_representation).map_err(anyhow::Error::msg)
     }
 }
 
@@ -123,11 +120,13 @@ impl HumanReadableExplanation for ReferenceValues {
         match self {
             ReferenceValues {
                 r#type:
-                    Some(attestation::v1::reference_values::Type::OakRestrictedKernel(OakRestrictedKernelReferenceValues {
-                        root_layer: Some(root_layer),
-                        kernel_layer: Some(kernel_layer),
-                        application_layer: Some(application_layer),
-                    })),
+                    Some(attestation::v1::reference_values::Type::OakRestrictedKernel(
+                        OakRestrictedKernelReferenceValues {
+                            root_layer: Some(root_layer),
+                            kernel_layer: Some(kernel_layer),
+                            application_layer: Some(application_layer),
+                        },
+                    )),
             } => Ok(format!(
                 "_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}",
                 root_layer.title()?,
@@ -139,12 +138,14 @@ impl HumanReadableExplanation for ReferenceValues {
             )),
             ReferenceValues {
                 r#type:
-                    Some(attestation::v1::reference_values::Type::OakContainers(OakContainersReferenceValues {
-                        root_layer: Some(root_layer),
-                        kernel_layer: Some(kernel_layer),
-                        system_layer: Some(system_layer),
-                        container_layer: Some(container_layer),
-                    })),
+                    Some(attestation::v1::reference_values::Type::OakContainers(
+                        OakContainersReferenceValues {
+                            root_layer: Some(root_layer),
+                            kernel_layer: Some(kernel_layer),
+                            system_layer: Some(system_layer),
+                            container_layer: Some(container_layer),
+                        },
+                    )),
             } => Ok(format!(
                 "_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}",
                 root_layer.title()?,
@@ -159,9 +160,9 @@ impl HumanReadableExplanation for ReferenceValues {
             _ => {
                 let yaml_representation = {
                     let json_representation = json_serialization::serialize_reference_values(self);
-                    serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)?
+                    yaml_serde::to_value(json_representation).map_err(anyhow::Error::msg)?
                 };
-                serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)
+                yaml_serde::to_string(&yaml_representation).map_err(anyhow::Error::msg)
             }
         }
     }
@@ -223,9 +224,9 @@ impl HumanReadableExplanation for RootLayerData {
                     let yaml_representation = {
                         let json_representation =
                             json_serialization::serialize_root_layer_data(self);
-                        serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)?
+                        yaml_serde::to_value(json_representation).map_err(anyhow::Error::msg)?
                     };
-                    serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
+                    yaml_serde::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
                 };
                 Ok(format!(
                     "The attestation is rooted in an {tee_name} TEE.
@@ -304,7 +305,9 @@ impl HumanReadableExplanation for RootLayerReferenceValues {
                 format!("The attestation must be rooted in an {INTEL_TDX_TITLE} TEE.")
             }
             RootLayerReferenceValues { amd_sev: Some(_), intel_tdx: Some(_), insecure: None } => {
-                format!("The attestation must be rooted in an {AMD_SEV_SNP_TITLE} or {INTEL_TDX_TITLE} TEE.")
+                format!(
+                    "The attestation must be rooted in an {AMD_SEV_SNP_TITLE} or {INTEL_TDX_TITLE} TEE."
+                )
             }
             RootLayerReferenceValues { insecure: Some(_), .. } => {
                 "The root of the attestation is not being verified.".to_owned()
@@ -317,12 +320,12 @@ impl HumanReadableExplanation for RootLayerReferenceValues {
             let yaml_representation = {
                 let json_representation =
                     json_serialization::serialize_root_layer_reference_values(self);
-                serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)?
+                yaml_serde::to_value(json_representation).map_err(anyhow::Error::msg)?
             };
             format!(
                 "{REFERENCE_VALUES_INTRO}
 {}",
-                serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
+                yaml_serde::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
             )
         };
         if let Some(provenance_explaination) =
@@ -372,9 +375,9 @@ impl HumanReadableExplanation for KernelLayerData {
         let yaml_string = {
             let yaml_representation = {
                 let json_representation = json_serialization::serialize_kernel_layer_data(self);
-                serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)?
+                yaml_serde::to_value(json_representation).map_err(anyhow::Error::msg)?
             };
-            serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
+            yaml_serde::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
         };
 
         Ok(format!(
@@ -449,12 +452,12 @@ impl HumanReadableExplanation for KernelLayerReferenceValues {
             let yaml_representation = {
                 let json_representation =
                     json_serialization::serialize_kernel_layer_reference_values(self);
-                serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)?
+                yaml_serde::to_value(json_representation).map_err(anyhow::Error::msg)?
             };
             format!(
                 "{REFERENCE_VALUES_INTRO}
 {}",
-                serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
+                yaml_serde::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
             )
         };
         if let Some(provenance_explanation) =
@@ -490,9 +493,9 @@ impl HumanReadableExplanation for SystemLayerData {
         let yaml_string = {
             let yaml_representation = {
                 let json_representation = json_serialization::serialize_system_layer_data(self);
-                serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)?
+                yaml_serde::to_value(json_representation).map_err(anyhow::Error::msg)?
             };
-            serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
+            yaml_serde::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
         };
         Ok(format!(
             "Attestations identifying the system image captured in the evidence can be found here: {system_image_provenance_link}
@@ -545,12 +548,12 @@ impl HumanReadableExplanation for SystemLayerReferenceValues {
             let yaml_representation = {
                 let json_representation =
                     json_serialization::serialize_system_layer_reference_values(self);
-                serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)?
+                yaml_serde::to_value(json_representation).map_err(anyhow::Error::msg)?
             };
             format!(
                 "{REFERENCE_VALUES_INTRO}
 {}",
-                serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
+                yaml_serde::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
             )
         };
         if let Some(provenance_explanation) =
@@ -579,9 +582,9 @@ impl HumanReadableExplanation for ApplicationLayerData {
             let yaml_representation = {
                 let json_representation =
                     json_serialization::serialize_application_layer_data(self);
-                serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)?
+                yaml_serde::to_value(json_representation).map_err(anyhow::Error::msg)?
             };
-            serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
+            yaml_serde::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
         };
         Ok(format!(
             "The evidence describing the application is outlined below.
@@ -602,9 +605,9 @@ impl HumanReadableExplanation for ApplicationLayerReferenceValues {
         let yaml_representation = {
             let json_representation =
                 json_serialization::serialize_application_layer_reference_values(self);
-            serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)?
+            yaml_serde::to_value(json_representation).map_err(anyhow::Error::msg)?
         };
-        serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)
+        yaml_serde::to_string(&yaml_representation).map_err(anyhow::Error::msg)
     }
 }
 
@@ -619,9 +622,9 @@ impl HumanReadableExplanation for ContainerLayerData {
         let yaml_string = {
             let yaml_representation = {
                 let json_representation = json_serialization::serialize_container_layer_data(self);
-                serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)?
+                yaml_serde::to_value(json_representation).map_err(anyhow::Error::msg)?
             };
-            serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
+            yaml_serde::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
         };
         Ok(format!(
             "The evidence describing the application is outlined below.
@@ -688,12 +691,12 @@ impl HumanReadableExplanation for ContainerLayerReferenceValues {
             let yaml_representation = {
                 let json_representation =
                     json_serialization::serialize_container_layer_reference_values(self);
-                serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)?
+                yaml_serde::to_value(json_representation).map_err(anyhow::Error::msg)?
             };
             format!(
                 "{REFERENCE_VALUES_INTRO}
 {}",
-                serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
+                yaml_serde::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
             )
         };
         if let Some(provenance_explanation) =

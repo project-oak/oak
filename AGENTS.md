@@ -1,4 +1,4 @@
-# Gemini Instructions
+# Agent Instructions
 
 ## Building and Running
 
@@ -7,6 +7,15 @@ Rust, all managed via Bazel.
 
 Do not attempt to build anything with Cargo. There are some Cargo related files
 around, but they are not expected to work.
+
+The repo uses **nix flakes** for development environments. Bazel and other tools
+are provided via nix shells defined in `flake.nix`. To run commands like `bazel`
+or `just`, wrap them in `nix develop`:
+
+```bash
+nix develop --command bazel build //path/to:target
+nix develop --command bazel test //path/to/package/...
+```
 
 The project uses `just` to provide useful commands for developers and CI. Look
 into the `justfile` to see a few example recipes. Feel free to call `just`
@@ -82,52 +91,162 @@ bazel run oak_proto_rust:copy_generated_files
 
 To add a new crate dependency to the project, you need to:
 
-1. **Add the crate to `bazel/crates/oak_crates.bzl`**. Be mindful of the
-   following:
-   - **Dependency Group:** Add the crate to the appropriate dictionary.
-     - `_common_crates`: For crates that are used in both `std` and `no_std`
-       environments.
-     - `OAK_NO_STD_CRATES`: For crates that are only used in `no_std`
-       environments.
-     - `OAK_STD_CRATES`: For crates that are only used in `std` environments.
+1. **Add the crate to `bazel/crates/oak_crate_specs.MODULE.bazel`**. Be mindful
+   of the following:
+   - **Dependency Group:** Assign the crate to the appropriate symbolic
+     repository or group (e.g., `STD`, `NO_STD`, `ALL_REPOSITORIES`).
    - **Features:** Carefully select the features for each crate. For `no_std`
-     builds, it's critical to set `default_features = False` and only enable the
+     builds, it's critical to set `default_features = False` and only enable
      features that are compatible with a `no_std` environment (e.g., `alloc`).
-2. **Run `just bazel-repin-all`** to update the lockfiles and BUILD files.
+2. **Run `just bazel-lockfile-all`** to update the lockfiles for all Bazel
+   modules in the project. Commit the updated lockfiles along with your changes.
 
 ## Documentation
 
 If you learn anything new about the codebase, please update this file with those
 details.
 
+Additionally, many folders contain a `README.md` file that provides a high-level
+overview of the components in that folder. Before modifying any files in a
+folder, you should read its `README.md`. If you make changes that affect the
+high-level design or usage described in the `README.md`, you must update it.
+
+Guidelines for `README.md` files:
+
+- Keep them high-level and focused on intent and architecture.
+- Do not repeat the code, but feel free to refer to specific comments or
+  declarations.
+- Use code snippets with concrete types to illustrate usage patterns, avoiding
+  excessive abstraction or showing every single instruction.
+- Ensure they remain a single source of truth for the folder's purpose.
+
+### External References
+
+When code relies on formats, protocols, conventions, or assumptions defined
+outside this repository (e.g. file formats, URL patterns, API contracts, wire
+protocols), doc comments and README files **must** include a link to the
+authoritative source. This makes it possible to verify assumptions and detect
+when upstream specifications change.
+
+Example:
+
+```rust
+/// Downloads a `.crate` archive from crates.io.
+///
+/// The URL pattern follows the crates.io download endpoint documented at
+/// <https://doc.rust-lang.org/cargo/reference/registry-web-api.html#download>
+fn download_url(&self) -> String { /* ... */ }
+```
+
 ## Style Guide
 
 - Do not use the word "learning". Use "lesson" instead.
+- Use the **current year** in copyright headers when creating new files (e.g.
+  `Copyright 2026 The Project Oak Authors`). Do not copy a stale year from an
+  older file.
 
-### Errors
+### Errors and Log Messages
 
-Add `context("message")` to errors when it reduces ambiguity. Higher up in the
-stack, use a `message` that starts with a verb and use gerund. Fine to repeat a
-human readable version of the function name the context is attached to. Negative
-terms like "fail" or "missing" should only be used in actual errors at the
-deepest level. Don't be too verbose in these context messages.
+All error messages, log lines, and `context()` strings must follow these rules:
 
-Examples:
+- **Lowercase start.** Error messages are composed in chains like
+  `"verifying signature: parsing certificate: invalid PEM"`. Uppercase initial
+  letters break the chain's readability.
+- **No trailing period.** Sentences in error chains should not end with `.`.
+- **No "error:" or "failed to" prefixes.** The caller adds context; the message
+  describes what was being done or what went wrong.
+- **Use `thiserror`** (`#[derive(thiserror::Error)]`) for structured error
+  types. The project uses thiserror v2 with `default_features = False`, which is
+  `no_std`-compatible.
+
+#### `context()` messages
+
+Use gerund form. Fine to repeat a human-readable version of the function name.
+Negative terms like "missing" should only appear at the deepest error level.
 
 ```rust
 verify_signature(evidence).context("verifying signature")?;
 let timestamp = request.timestamp.as_ref().context("missing timestamp")?;
 ```
 
-## Git
+#### `thiserror` `#[error]` messages
 
-We don't use git.
+Lowercase, no trailing period, describe the problem:
 
-Do not run any git commands, not even `git status`, and definitely not
-`git commit`, `git push` or `git checkout`.
+```rust
+#[derive(thiserror::Error, Debug)]
+pub enum PolicyError {
+    #[error("missing workload endorsement")]
+    MissingWorkloadEndorsement,
+    #[error("could not decode field {name}: {value}")]
+    HexDecodingError { name: String, value: String },
+}
+```
+
+#### Log lines
+
+Same rules: lowercase, no trailing period. Use gerund for in-progress actions,
+past tense for completions.
+
+```rust
+log::info!("starting server on port {port}");
+log::info!("loaded {n} certificates");
+log::warn!("retrying after transient failure");
+```
+
+### CLI Flags
+
+Prefer long flag names over short ones (e.g. `--wasm-module-file` not `-w`).
+When passing flag values, use the `--flag=value` form with an equals sign, not
+the space-separated `--flag value` form. This applies both in code (e.g. in test
+helpers that invoke binaries) and in documentation examples.
+
+```bash
+# Preferred
+cleanroom --wasm-module-file=module.wasm
+
+# Avoid
+cleanroom --wasm-module-file module.wasm
+cleanroom -w module.wasm
+```
+
+## Version Control
+
+This repo may be managed by **jj (Jujutsu)** or **git**, depending on the
+developer. Before running any version control commands, check which tool is in
+use by looking for a `.jj` directory at the repo root:
+
+- **Important:** The `.jj` directory is gitignored, so file search tools (like
+  `fd` / `find_by_name`) will not find it. You must use `list_dir` on the repo
+  root directly, or check the path explicitly (e.g. `test -d .jj`).
+- Both `.jj` and `.git` will often coexist (jj uses git as a backend). Always
+  check for `.jj` **first**. If it exists, use **jj** for all version control
+  operations.
+- Only if `.jj` is absent, fall back to **git**.
+
+**Do not mix tools.** If jj is available, do not run any git commands, and vice
+versa.
+
+### Common operations with jj
+
+| Operation                     | Command                           |
+| ----------------------------- | --------------------------------- |
+| Status / diff of working copy | `jj diff`                         |
+| Log                           | `jj log` (or just `jj`)           |
+| Show a specific change        | `jj show <change_id>`             |
+| Diff between two revisions    | `jj diff --from=<rev> --to=<rev>` |
+| Create a new change           | `jj new`                          |
+| Squash into parent            | `jj squash`                       |
+| Describe (commit message)     | `jj describe -m "message"`        |
+
+Do not run `jj git push`, `jj git fetch`, or `jj gerrit upload` unless
+explicitly asked.
+
+Destructive operations (e.g. `jj squash`, `jj abandon`, `jj rebase`) modify
+history. Always ask the user for confirmation before running them.
 
 ### Commits
 
-- When writing commit messages, any backticks
-  (`) must be escaped with a backslash (\`) to ensure they are correctly
-  written.
+- When writing commit messages from the CLI using double quotes, any special
+  characters (such as \`, \$, \!, etc.) must be escaped with a backslash to
+  prevent shell expansion.

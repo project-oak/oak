@@ -18,13 +18,13 @@ extern crate alloc;
 
 use alloc::{boxed::Box, collections::BTreeMap};
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use oak_crypto::identity_key::{IdentityKey, IdentityKeyHandle};
 use oak_session::{
+    ProtocolEngine,
     attestation::{AttestationState, PeerAttestationVerdict},
     config::HandshakeHandlerConfig,
     handshake::{ClientHandshakeHandler, HandshakeType, ServerHandshakeHandler},
-    ProtocolEngine,
 };
 fn process_kk_handshake() {
     let initiator_identity_key: Box<dyn IdentityKeyHandle> = Box::new(IdentityKey::generate());

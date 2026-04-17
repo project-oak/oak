@@ -30,9 +30,9 @@ use oak_crypto::certificate::certificate_verifier::{
 };
 use oak_crypto_tink::signature_verifier::SignatureVerifier;
 use oak_proto_rust::oak::{
+    Variant,
     attestation::v1::{CertificateBasedReferenceValues, ConfidentialSpaceReferenceValues},
     session::v1::SessionBinding,
-    Variant,
 };
 use oak_session::session_binding::{SessionBindingVerifier, SignatureBindingVerifierBuilder};
 use oak_time::Instant;
@@ -284,16 +284,16 @@ mod tests {
     use core::str::FromStr;
 
     use jwt::{
-        algorithm::{openssl::PKeyWithDigest, AlgorithmType},
         SignWithKey, SigningAlgorithm, Token, Verified, VerifyWithKey, VerifyingAlgorithm,
+        algorithm::{AlgorithmType, openssl::PKeyWithDigest},
     };
     use oak_attestation_gcp::{
         jwt::{
+            Claims, Header,
             verification::{
                 AttestationTokenVerificationReport, AttestationVerificationError,
                 CertificateReport, IssuerReport,
             },
-            Claims, Header,
         },
         policy::{ConfidentialSpaceVerificationError, ConfidentialSpaceVerificationReport},
     };
@@ -302,7 +302,7 @@ mod tests {
         CertificateVerificationError, CertificateVerificationReport,
     };
     use openssl::{hash::MessageDigest, pkey::PKey, rsa::Rsa};
-    use p256::ecdsa::{signature::SignerMut, Signature, SigningKey};
+    use p256::ecdsa::{Signature, SigningKey, signature::SignerMut};
 
     use super::*;
 
@@ -368,7 +368,7 @@ Nj98VHCkMOChdP0NoY0+ASi3S9WesDHql/SS3TeVKIW0W7VRIYDz51rU
         report.print(&mut writer, INDENT, HANDSHAKE_HASH, Option::None).unwrap();
         assert_eq_trimmed_lines(
             &writer,
-            &["❌ is invalid: Unknown error: endorsement error", "❌ No session binding found"],
+            &["❌ is invalid: unknown error: endorsement error", "❌ No session binding found"],
         );
     }
 
@@ -402,9 +402,9 @@ Nj98VHCkMOChdP0NoY0+ASi3S9WesDHql/SS3TeVKIW0W7VRIYDz51rU
             &writer,
             &[
                 "📜 Certificate:",
-                "❌ is invalid: Unknown error: validity error",
-                "❌ failed to verify: Unknown error: verification error",
-                "❌ proof of freshness failed to verify: Unknown error: freshness error",
+                "❌ is invalid: unknown error: validity error",
+                "❌ failed to verify: unknown error: verification error",
+                "❌ proof of freshness failed to verify: unknown error: freshness error",
                 "🔐 Session binding:",
                 "❌ failed to verify: could not parse signature",
             ],
@@ -541,15 +541,15 @@ Nj98VHCkMOChdP0NoY0+ASi3S9WesDHql/SS3TeVKIW0W7VRIYDz51rU
             &writer,
             &[
                 "🔑 Public key:",
-                "❌ failed to verify: Missing field: public key",
+                "❌ failed to verify: missing field: public key",
                 "🪙 Token verification:",
-                "❌ failed to have required claims: Unknown error: debug image",
-                "❌ is invalid: Unknown error: token validity error",
-                "❌ failed to verify: Unknown error: verification error",
+                "❌ failed to have required claims: unknown error: debug image",
+                "❌ is invalid: unknown error: token validity error",
+                "❌ failed to verify: unknown error: verification error",
                 "📜 Certificate chain:",
-                "❌ invalid: Unknown error: issuer error",
+                "❌ invalid: unknown error: issuer error",
                 "📦 Workload endorsement:",
-                "❌ failed to verify: Failed to verify endorsement: endorsement verification error",
+                "❌ failed to verify: could not verify endorsement: endorsement verification error",
                 "🔐 Session binding:",
                 "❌ failed to verify: could not parse signature",
             ],
@@ -606,7 +606,7 @@ Nj98VHCkMOChdP0NoY0+ASi3S9WesDHql/SS3TeVKIW0W7VRIYDz51rU
                 "✍️ issued by:",
                 "🛡️ Confidential Space root certificate",
                 "📦 Workload endorsement:",
-                "❌ failed to verify: Failed to verify endorsement: endorsement verification error",
+                "❌ failed to verify: could not verify endorsement: endorsement verification error",
                 "🔐 Session binding:",
                 "✅ verified successfully",
             ],

@@ -17,10 +17,10 @@
 use alloc::boxed::Box;
 
 use oak_dice::evidence::{RestrictedKernelDiceData, Stage0DiceData};
-use oak_restricted_kernel_interface::{Errno, DICE_DATA_FD};
+use oak_restricted_kernel_interface::{DICE_DATA_FD, Errno};
 use zeroize::Zeroize;
 
-use super::fd::{copy_max_slice, FileDescriptor};
+use super::fd::{FileDescriptor, copy_max_slice};
 
 pub enum DiceData {
     Layer0(Box<Stage0DiceData>),

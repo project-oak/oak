@@ -60,6 +60,7 @@ HIDDEN(DESCRIPTOR_PRESENT = 1 << 47);
  */
 PHDRS
 {
+    bda PT_LOAD;
     bss PT_LOAD;
     data PT_LOAD;
     stack PT_LOAD;
@@ -84,6 +85,12 @@ SECTIONS {
      *
      * These sections have to be marked NOLOAD, otherwise you risk ending up with a 4GB BIOS image.
      */
+
+    /* BIOS Data Area (BDA) - 256 bytes at 0x400.*/
+    .bda 0x400 (NOLOAD) : {
+        KEEP(*(.bda))
+    } > ram_low : bda
+    ASSERT(. <= 0x500, "BDA overflow")
 
     .bss 0x1000 (NOLOAD) : {
         bss_start = .;

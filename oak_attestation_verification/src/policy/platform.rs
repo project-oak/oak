@@ -20,13 +20,13 @@ use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
 use oak_dice::evidence::TeePlatform;
 use oak_proto_rust::oak::{
+    RawDigest, Variant,
     attestation::v1::{
-        binary_reference_value, tcb_version_reference_value, tdx_tcb_svn_reference_value,
         AmdSevReferenceValues, AmdSevSnpEndorsement, BinaryReferenceValue, Digests,
         EventAttestationResults, IntelTdxReferenceValues, RootLayerEvidence, TcbVersion,
-        TcbVersionReferenceValue, TdxTcbSvnReferenceValue,
+        TcbVersionReferenceValue, TdxTcbSvnReferenceValue, binary_reference_value,
+        tcb_version_reference_value, tdx_tcb_svn_reference_value,
     },
-    RawDigest, Variant,
 };
 use oak_sev_snp_attestation_report::{AmdProduct, AttestationReport};
 use oak_tdx_quote::{TdAttributes, TdxQuoteWrapper};
@@ -273,7 +273,7 @@ mod tests {
 
     use oak_attestation_verification_results::get_initial_measurement;
     use oak_proto_rust::oak::attestation::v1::endorsements;
-    use test_util::{get_oc_reference_values, AttestationData};
+    use test_util::{AttestationData, get_oc_reference_values};
 
     use super::*;
     use crate::FirmwarePolicy;

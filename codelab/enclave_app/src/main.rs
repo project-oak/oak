@@ -24,7 +24,7 @@ use alloc::boxed::Box;
 
 use oak_restricted_kernel_sdk::{
     attestation::InstanceAttester,
-    channel::{start_blocking_server, FileDescriptorChannel},
+    channel::{FileDescriptorChannel, start_blocking_server},
     entrypoint,
     utils::samplestore::StaticSampleStore,
 };

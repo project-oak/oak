@@ -14,10 +14,8 @@
 # limitations under the License.
 #
 
-load("@oak//bazel:defs.bzl", "oci_runtime_bundle")
+load("@oak//oak_containers/app_base:defs.bzl", "app_bundle")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
-load("@rules_oci//oci:defs.bzl", "oci_image")
-load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(
@@ -42,10 +40,10 @@ rust_library(
         "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
-        "@oak_crates_index//:rand",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",
+        "@pm_crates//:rand",
     ],
 )
 
@@ -59,11 +57,36 @@ rust_test(
 )
 
 rust_library(
+    name = "attestation",
+    srcs = ["src/attestation.rs"],
+    deps = [
+        "@oak//oak_attestation_types",
+        "@oak//oak_proto_rust",
+        "@oak//oak_session",
+        "@oak//oak_session/endorsed_evidence:oak_session_endorsed_evidence",
+        "@oak_crates_index//:anyhow",
+    ],
+)
+
+rust_library(
+    name = "attestation_testing",
+    testonly = True,
+    srcs = ["src/attestation_testing.rs"],
+    deps = [
+        "@oak//oak_attestation_types",
+        "@oak//oak_attestation_verification_types",
+        "@oak//oak_proto_rust",
+        "@oak//oak_session",
+        "@oak_crates_index//:anyhow",
+    ],
+)
+
+rust_library(
     name = "encryption",
     srcs = ["src/encryption.rs"],
     deps = [
-        "@oak_crates_index//:aes-gcm-siv",
         "@oak_crates_index//:anyhow",
+        "@pm_crates//:aes-gcm-siv",
     ],
 )
 
@@ -104,8 +127,29 @@ rust_library(
         "@oak_crates_index//:futures",
         "@oak_crates_index//:opentelemetry",
         "@oak_crates_index//:prost",
-        "@oak_crates_index//:rand",
         "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tonic",
+        "@pm_crates//:rand",
+    ],
+)
+
+rust_library(
+    name = "session_binder",
+    srcs = ["src/session_binder.rs"],
+    proc_macro_deps = [
+        "@oak_crates_index//:async-trait",
+    ],
+    deps = [
+        "//proto:sealed_memory_rust_proto",
+        "@oak//oak_proto_rust",
+        "@oak//oak_proto_rust/grpc",
+        "@oak//oak_session",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:p256",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:rand",
+        "@oak_crates_index//:rand_core",
+        "@oak_crates_index//:serde",
         "@oak_crates_index//:tonic",
     ],
 )
@@ -120,6 +164,7 @@ rust_library(
         ":external_db_client",
         ":log",
         ":metrics",
+        ":session_binder",
         "//app",
         "//database",
     ],
@@ -132,14 +177,15 @@ rust_library(
         "@oak_crates_index//:async-trait",
     ],
     deps = [
+        ":log",
         "//proto:sealed_memory_rust_proto",
         "//proto/grpc:sealed_memory_grpc_proto",
         "@oak//oak_proto_rust",
         "@oak//oak_session",
+        "@oak//oak_session/tls/rust:oak_session_tls",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:futures",
         "@oak_crates_index//:prost",
-        "@oak_crates_index//:serde_json",
         "@oak_crates_index//:tonic",
     ],
 )
@@ -148,7 +194,9 @@ rust_binary(
     name = "private_memory_server",
     srcs = ["src/main.rs"],
     deps = [
+        ":attestation",
         ":private_memory_server_lib",
+        "//database",
         "@oak//oak_sdk/containers:oak_sdk_containers",
         "@oak//oak_session",
         "@oak_crates_index//:anyhow",
@@ -169,22 +217,102 @@ cc_test(
 
 rust_library(
     name = "private_memory_test_utils",
+    testonly = True,
     srcs = ["test/test_utils.rs"],
     deps = [
+        ":attestation_testing",
         ":private_memory_server_lib",
         ":private_memory_test_database_server_lib",
+        "//database",
+        "@oak//oak_containers/launcher:lib",
+        "@oak//oak_session/tls/rust:oak_session_tls",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:which",
+        "@rules_rust//tools/runfiles",
+    ],
+)
+
+rust_library(
+    name = "server_e2e_test_lib",
+    testonly = True,
+    srcs = ["test/e2e_test.rs"],
+    data = [
+        ":bundle",
+        "@oak_containers_kernel//file",
+        "@oak_containers_stage0//file",
+        "@oak_containers_stage1//file",
+        "@oak_containers_system_image//file",
+    ],
+    proc_macro_deps = ["@oak_crates_index//:async-trait"],
+    deps = [
+        ":client",
+        ":private_memory_server_lib",
+        ":private_memory_test_database_server_lib",
+        ":private_memory_test_utils",
+        "//app",
+        "//database",
+        "//proto:sealed_memory_rust_proto",
+        "//proto/grpc:sealed_memory_grpc_proto",
+        "@oak//oak_client",
+        "@oak//oak_client/tonic:oak_client_tonic",
+        "@oak//oak_crypto",
+        "@oak//oak_file_utils",
+        "@oak//oak_proto_rust",
+        "@oak//oak_proto_rust/grpc",
+        "@oak//oak_session",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:futures",
+        "@oak_crates_index//:futures-util",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tonic",
+    ],
+)
+
+rust_test(
+    name = "session_binder_test",
+    srcs = ["test/session_binder_test.rs"],
+    proc_macro_deps = ["@oak_crates_index//:async-trait"],
+    deps = [
+        ":private_memory_server_lib",
+        "//proto:sealed_memory_rust_proto",
+        "@oak//oak_session",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:prost",
         "@oak_crates_index//:tokio",
     ],
 )
 
 rust_test(
     name = "server_e2e_test",
-    srcs = ["test/server_e2e_test.rs"],
+    crate = ":server_e2e_test_lib",
+    # Tracking: b/5034099
+    flaky = True,
+)
+
+rust_test(
+    name = "server_e2e_test_containers",
+    crate = ":server_e2e_test_lib",
+    env = {"OAK_E2E_BACKEND": "container"},
+    # Tracking: b/5034099
+    flaky = True,
+    tags = ["requires-kvm"],
+)
+
+rust_test(
+    name = "client_test",
+    srcs = ["test/client_test.rs"],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
+        ":attestation_testing",
         ":client",
         ":private_memory_server_lib",
         ":private_memory_test_database_server_lib",
@@ -211,43 +339,12 @@ rust_test(
 )
 
 rust_test(
-    name = "proto_serialization_test",
-    srcs = ["test/proto_serialization_test.rs"],
+    name = "external_db_client_test",
+    srcs = ["test/external_db_client_test.rs"],
     deps = [
-        "//proto:sealed_memory_rust_proto",
-        "@oak_crates_index//:env_logger",
-        "@oak_crates_index//:log",
-        "@oak_crates_index//:prost",
-        "@oak_crates_index//:prost-types",
-        "@oak_crates_index//:serde_json",
-    ],
-)
-
-rust_test(
-    name = "client_test",
-    srcs = ["test/client_test.rs"],
-    proc_macro_deps = ["@oak_crates_index//:async-trait"],
-    deps = [
-        ":client",
-        ":private_memory_server_lib",
+        ":external_db_client",
         ":private_memory_test_database_server_lib",
-        ":private_memory_test_utils",
         "//proto:sealed_memory_rust_proto",
-        "//proto/grpc:sealed_memory_grpc_proto",
-        "@oak//oak_client",
-        "@oak//oak_client/tonic:oak_client_tonic",
-        "@oak//oak_crypto",
-        "@oak//oak_proto_rust",
-        "@oak//oak_proto_rust/grpc",
-        "@oak//oak_session",
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:env_logger",
-        "@oak_crates_index//:futures",
-        "@oak_crates_index//:futures-util",
-        "@oak_crates_index//:log",
-        "@oak_crates_index//:prost",
-        "@oak_crates_index//:prost-types",
-        "@oak_crates_index//:serde_json",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",
     ],
@@ -260,28 +357,47 @@ rust_test(
         "//database",
         "//proto:sealed_memory_rust_proto",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:env_logger",
         "@oak_crates_index//:googletest",
+        "@oak_crates_index//:log",
         "@oak_crates_index//:prost-types",
-        "@oak_crates_index//:tempfile",
     ],
 )
 
-pkg_tar(
-    name = "tar",
-    srcs = [":private_memory_server"],
-    package_dir = "/usr/local/bin",
-    strip_prefix = "/oak_private_memory",
+rust_test(
+    name = "tls_client_test",
+    srcs = ["test/tls_client_test.rs"],
+    data = ["@oak//oak_session/tls/testing:test_keys"],
+    deps = [
+        ":client",
+        ":private_memory_server_lib",
+        ":private_memory_test_utils",
+        "//proto:sealed_memory_rust_proto",
+        "@oak//oak_session/tls/rust:oak_session_tls",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:rustls-pki-types",
+        "@oak_crates_index//:tokio",
+        "@rules_rust//tools/runfiles",
+    ],
 )
 
-oci_image(
-    name = "image",
-    base = "@distroless_cc_debian12",
-    entrypoint = ["/usr/local/bin/private_memory_server"],
-    tars = [":tar"],
-)
-
-oci_runtime_bundle(
+app_bundle(
     name = "bundle",
-    config_patch = 'with(.process.rlimits ; .[] | select(.type == "RLIMIT_NOFILE") | .hard = 524288) | with(.process.rlimits ; .[] | select(.type == "RLIMIT_NOFILE") | .soft = 524288)',
-    image = ":image",
+    binary = ":private_memory_server",
+    extra_mounts = ["""
+        {
+            "destination": "/tmp",
+            "type": "tmpfs",
+            "source": "tmpfs",
+            "options": [
+                "nosuid",
+                "nodev",
+                "mode=1777",
+                "size=90%"
+            ]
+        }
+    """],
+    process_rlimits = [
+        '{"type":"RLIMIT_NOFILE","hard":524288,"soft":524288}',
+    ],
 )

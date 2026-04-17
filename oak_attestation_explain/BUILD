@@ -31,8 +31,8 @@ rust_library(
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
-        "@oak_crates_index//:serde_yaml",
         "@oak_crates_index//:sha2",
+        "@oak_crates_index//:yaml_serde",
         "@oak_crates_index//:zerocopy",
     ],
 )

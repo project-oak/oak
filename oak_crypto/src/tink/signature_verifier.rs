@@ -27,7 +27,7 @@ pub struct StatusWrapper {
 
 // See the implementations in cc/crypto/tink/signature/verification-ffi.h
 #[link(name = "verification-ffi")]
-extern "C" {
+unsafe extern "C" {
     fn VerifySignatureWithTink(
         message: BytesView,
         signature: BytesView,

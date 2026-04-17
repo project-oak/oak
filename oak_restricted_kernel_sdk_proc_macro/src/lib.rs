@@ -16,7 +16,7 @@
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Item, ItemFn, Result};
+use syn::{Item, ItemFn, Result, parse_macro_input};
 
 #[proc_macro_attribute]
 pub fn entrypoint(_attr: TokenStream, entry: TokenStream) -> TokenStream {
@@ -67,7 +67,7 @@ fn process_entry_fn(entry_fn: ItemFn) -> TokenStream {
 
         static LOGGER: oak_restricted_kernel_sdk::utils::StderrLogger = oak_restricted_kernel_sdk::utils::StderrLogger {};
 
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         fn _start() -> ! {
             oak_restricted_kernel_sdk::utils::log::set_logger(&LOGGER).expect("failed to set logger");
             // Set the default. Applications may overwrite the log level by calling

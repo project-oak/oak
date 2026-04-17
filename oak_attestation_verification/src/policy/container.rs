@@ -19,11 +19,11 @@ use alloc::vec;
 use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
-    attestation::v1::{
-        binary_reference_value, BinaryReferenceValue, ContainerEndorsement, ContainerLayerData,
-        ContainerLayerReferenceValues, Digests, EventAttestationResults,
-    },
     Variant,
+    attestation::v1::{
+        BinaryReferenceValue, ContainerEndorsement, ContainerLayerData,
+        ContainerLayerReferenceValues, Digests, EventAttestationResults, binary_reference_value,
+    },
 };
 use oak_time::Instant;
 
@@ -116,7 +116,7 @@ impl Policy<[u8]> for ContainerPolicy {
 
 #[cfg(test)]
 mod tests {
-    use test_util::{get_oc_reference_values, AttestationData};
+    use test_util::{AttestationData, get_oc_reference_values};
 
     use super::*;
 

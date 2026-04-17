@@ -18,11 +18,11 @@ use micro_rpc_noise_rust_proto::oak::containers::example::{
 };
 use micro_rpc_noise_service::TrustedApplicationService;
 use oak_session::{
+    Session,
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
     handshake::HandshakeType,
-    Session,
 };
 
 #[test]

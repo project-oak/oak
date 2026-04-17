@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -33,6 +33,21 @@ rust_library(
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:hex",
         "@oak_crates_index//:p256",
+        "@oak_crates_index//:prost",
+    ],
+)
+
+rust_test(
+    name = "endorsed_evidence_assertion_verifier_tests",
+    crate = ":endorsed_evidence_assertion_verifier",
+    data = [
+        "//oak_attestation_verification/endorsed_evidence/testdata",
+    ],
+    deps = [
+        "//oak_attestation_verification",
+        "//oak_attestation_verification:test_util",
+        "//oak_file_utils",
+        "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost",
     ],
 )

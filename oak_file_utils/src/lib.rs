@@ -29,6 +29,23 @@ pub fn data_path(path: impl AsRef<Path>) -> PathBuf {
     p
 }
 
+/// Resolves a path against `BUILD_WORKING_DIRECTORY` if running under `bazel
+/// run`. If the environment variable is not set, or the path is absolute,
+/// returns the path as is.
+pub fn resolve_bazel_path(path: impl AsRef<Path>) -> PathBuf {
+    let path = path.as_ref();
+    if path.is_absolute() {
+        return path.to_path_buf();
+    }
+    if let Ok(working_dir) = std::env::var("BUILD_WORKING_DIRECTORY") {
+        let mut resolved = PathBuf::from(working_dir);
+        resolved.push(path);
+        resolved
+    } else {
+        path.to_path_buf()
+    }
+}
+
 /// Reads a test data file as raw bytes.
 ///
 /// The macro assumes that the crate follows this structure, and expects the

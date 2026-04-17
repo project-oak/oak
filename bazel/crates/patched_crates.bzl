@@ -51,14 +51,15 @@ def _load_patched_prost_types():
     would need to include some more overrides here.
 
     Note: The `crate.annotation` helper in crates universe provides an
-    `override_target` which allows you to replace the rules_rust-generated
-    target with any arbitrary target label of your choosing. Unforunately, it
-    does not lead to the crate_universe logic skipping the feature resolution
-    logic, so the same issue still ends up applying.
+    `override_target` which allows you to patch the crate, or to replace the
+    rules_rust-generated target with any arbitrary target label of your
+    choosing. Unforunately, it does not lead to the crate_universe logic
+    skipping the feature resolution logic, so the same issue still ends up
+    applying. So we must apply the patch outside of the crate_universe logic.
     """
 
     # This must match the version the crates repository uses.
-    PROST_VERSION = "0.13.5"
+    PROST_VERSION = "0.14.3"
 
     http_archive(
         name = "prost_types_oak_patched",
@@ -89,7 +90,7 @@ rust_library(
     ],
 )
         """.format(prost_version = PROST_VERSION),
-        integrity = "sha256-dTNazgva+WrqzjmXkePVN8iPBpyWcACNcu+vKMlL6X0=",
+        integrity = "sha256-+mG3Il4QDcYUVhQIOXFDx6e6B7Y8heWFhvTnJ4fzxeU",
         urls = [
             "https://github.com/tokio-rs/prost/archive/refs/tags/v{}.tar.gz".format(PROST_VERSION),
         ],

@@ -57,10 +57,12 @@ async fn test_echo_enclave_app_launch_for_initial_data_version(
         data_path("enclave_apps/oak_echo_enclave_app/oak_echo_enclave_app");
 
     let kernel = match communication_channel {
-        launcher::CommunicationChannel::Serial =>
-            data_path("oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_serial_channel_bin"),
-        launcher::CommunicationChannel::VirtioConsole =>
-            data_path("oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin"),
+        launcher::CommunicationChannel::Serial => data_path(
+            "oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_serial_channel_bin",
+        ),
+        launcher::CommunicationChannel::VirtioConsole => data_path(
+            "oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin",
+        ),
     };
 
     let params = launcher::Params {

@@ -423,12 +423,10 @@ encryption and decryption of application messages.
 To use this library, follow these steps:
 
 - Create a `Config` object specifying the desired features of the session
-
   - Select the attestation type, for example, SelfUnidirectional
   - Select the desired Noise handshake pattern, for example, NoiseNN
   - The attesting party must configure the following objects for each supported
     attestation type:
-
     - [`Attester`](/oak_attestation_types/src/attester.rs)
     - [`Endorser`](/oak_attestation_types/src/endorser.rs)
     - [`SessionBinder`](src/session_binding.rs)
@@ -443,7 +441,6 @@ To use this library, follow these steps:
     ```
 
   - The verifying party configures the following components:
-
     - [`AttestationVerifier`](/oak_attestation_verification_types/src/verifier.rs)
     - [`SessionBindingVerifier`](src/session_binding.rs)
       - [KeyExtractor](src/key_extractor) can be used instead of providing

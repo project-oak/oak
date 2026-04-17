@@ -18,9 +18,9 @@ use std::collections::BTreeMap;
 
 use anyhow::Context;
 use jni::{
+    JNIEnv, JavaVM,
     errors::Result,
     objects::{GlobalRef, JMap, JObject},
-    JNIEnv, JavaVM,
 };
 use oak_session::session::{AttestationEvidence, AttestationPublisher};
 

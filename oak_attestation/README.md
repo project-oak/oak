@@ -106,7 +106,6 @@ DICE mechanism is represented in the `Evidence` as the following messages:
 
 - `RootLayerEvidence`: Message that contains hardware remote attestation report
   and a measurement of the firmware (i.e. [`stage0`](../stage0_bin/README.md)).
-
   - Note: Strictly speaking it's not a DICE layer, it's just a message just
     binds the root public key into the hardware-based attestation
 
@@ -122,7 +121,6 @@ mechanism:
 1. When the firmware starts, it generates a Certificate Authority Keypair
    `(S_0, P_0)` for itself and requests the TEE hardware to sign the hash of the
    public key `P_0`.
-
    - TEE generates a signed attestation report that contains the measurement of
      the initial memory layout and the the public key `P_0` hash.
    - Attestation report is stored in the `RootLayerEvidence`.
@@ -136,7 +134,6 @@ mechanism:
    layer, and uses its own private key `S_0` to issue a signed
    [CBOR Web Token (CWT)](https://www.rfc-editor.org/rfc/rfc8392.html)
    containing the measurement of the next layer and its public key `P_1` hash.
-
    - Next layer's measurement is stored in a new `Event` message and the CWT
      contains the hash of the serialized `Event` as a _"claim"_.
    - CWT is signed using the `S_0` key.
@@ -146,7 +143,6 @@ mechanism:
 1. Firmware starts the next layer and gives it access to the Certificate
    Authority Keypair `(S_1, P_1)` and to the current version of the `Evidence`
    message (so that it could be extended by the next layer).
-
    - This is done by serializing the `DiceAttester` and sending it to the next
      layer as a [`DiceData`](../proto/attestation/dice.proto) message.
    - It's important to note that each layer must delete its own private key

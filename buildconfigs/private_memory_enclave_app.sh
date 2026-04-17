@@ -10,7 +10,7 @@ export BUILD_COMMAND=(
   .#default
   --command
   just
-  github-private_memory_enclave_app
+  github private_memory_enclave_app
 )
 
 export SUBJECT_PATHS=(

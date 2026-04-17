@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-load("@cxx.rs//tools/bazel:rust_cxx_bridge.bzl", "rust_cxx_bridge")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
@@ -27,6 +26,7 @@ rust_test(
     srcs = ["test.rs"],
     deps = [
         ":icing",
+        "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:tempfile",
     ],
@@ -39,30 +39,49 @@ rust_library(
         ":icing_ffi_bridge",
         "//proto:sealed_memory_rust_proto",
         "//src/icing/proto:icing_rust_proto",
-        "@cxx.rs//:cxx",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost",
+        "@pm_crates//:cxx",
     ],
 )
 
 rust_library(
     name = "icing_ffi_bridge",
     srcs = ["ffi_bridge.rs"],
-    edition = "2021",
     deps = [
         ":bridge",
         ":ffi_wrapper-sys",
         "//src/icing/proto:icing_rust_proto",
-        "@cxx.rs//:cxx",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost",
+        "@pm_crates//:cxx",
     ],
 )
 
-rust_cxx_bridge(
+genrule(
+    name = "bridge/generated",
+    srcs = ["ffi_bridge.rs"],
+    outs = [
+        "ffi_bridge.rs.h",
+        "ffi_bridge.rs.cc",
+    ],
+    cmd = "$(location @cxx.rs//:codegen) $(location ffi_bridge.rs) -o $(location ffi_bridge.rs.h) -o $(location ffi_bridge.rs.cc)",
+    tools = ["@cxx.rs//:codegen"],
+)
+
+cc_library(
     name = "bridge",
-    src = "ffi_bridge.rs",
-    deps = [":ffi_wrapper-include"],
+    srcs = ["ffi_bridge.rs.cc"],
+    linkstatic = True,
+    deps = [
+        ":bridge/include",
+        ":ffi_wrapper-include",
+    ],
+)
+
+cc_library(
+    name = "bridge/include",
+    hdrs = ["ffi_bridge.rs.h"],
 )
 
 cc_library(

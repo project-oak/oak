@@ -29,7 +29,7 @@ mod asm;
 ///
 /// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page
 ///   tables.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn rust64_start() -> ! {
     oak_stage0::rust64_start::<oak_stage0_sev::Sev>()
 }

@@ -37,19 +37,30 @@ async fn try_persist_database(
         info!("Database is not changed, skip saving");
         return Ok(MetadataPersistResult::Succeeded);
     }
-
+    // Calling this multiple times should be fine because the database is persisted
+    // to disk after each call. Subsequent calls to optimize will be a no-op or
+    // fast.
+    let now = Instant::now();
+    user_context.database.optimize()?;
+    let elapsed = now.elapsed();
+    get_global_metrics().record_db_optimize_latency(elapsed.as_millis() as u64);
     let exported_db = user_context.database.export()?;
-    let encrypted_info = exported_db.encrypted_info.context("Encrypted info is empty")?;
+    let encrypted_info = exported_db.encrypted_info.context("encrypted info is empty")?;
     let database = encrypt_database(&encrypted_info, &user_context.dek)?;
 
-    let db_size = database.data.len() as u64;
+    let db_size = database.data.len();
+    if db_size > crate::db_client::MAX_DECODE_SIZE {
+        // Even we save it, it will fail during the keysync.
+        info!("Database is too large to save: {}", db_size);
+        anyhow::bail!("Database is too large to save: {}", db_size);
+    }
     info!("Saving db size: {}", db_size);
-    get_global_metrics().record_db_size(db_size);
+    get_global_metrics().record_db_size(db_size as u64);
 
     let now = Instant::now();
     let result = user_context
         .database_service_client
-        .add_metadata_blob(
+        .add_metadata_blob_stream(
             &user_context.uid,
             EncryptedMetadataBlob {
                 encrypted_data_blob: Some(database),
@@ -71,7 +82,6 @@ async fn try_persist_database(
 // the underlying database layer.
 async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Result<()> {
     let mut attempt: u64 = 1;
-
     let now = Instant::now();
     while attempt < MAX_RETRY_ATTEMPTS {
         match try_persist_database(user_context).await {
@@ -84,11 +94,11 @@ async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Resu
             }
             Ok(MetadataPersistResult::RetryNeeded) => {
                 attempt += 1;
-                info!("Retrying db save (attempt {attempt}");
+                info!("Retrying db save (attempt {attempt})");
                 // rebase the database and try again
                 let refreshed_blob = user_context
                     .database_service_client
-                    .get_metadata_blob(&user_context.uid)
+                    .get_metadata_blob_stream(&user_context.uid)
                     .await?
                     .context("no blob found")?;
 
@@ -99,7 +109,11 @@ async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Resu
                     .icing_db
                     .context("missing icing_db in refreshed blob result")?;
 
-                user_context.database.rebase(new_icing_db.encode_to_vec().as_slice())?;
+                let failed_operations =
+                    user_context.database.rebase(new_icing_db.encode_to_vec().as_slice())?;
+                if failed_operations > 0 {
+                    get_global_metrics().inc_db_rebase_operation_failures(failed_operations as u64);
+                }
                 user_context.database_version = refreshed_blob.version;
             }
             Err(e) => return Err(e),

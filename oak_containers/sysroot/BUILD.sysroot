@@ -1,0 +1,43 @@
+# Copyright 2025 Google LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+package(licenses = ["notice"])
+
+# This rule captures the entire sysroot for use in the CC toolchain.
+# Currently, this includes more files than strictly necessary for compilation.
+filegroup(
+    name = "sysroot",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)
+
+# Provides the dynamic linker library.
+filegroup(
+    name = "linker_library",
+    srcs = [
+        "lib/x86_64-linux-gnu/ld-linux-x86-64.so.2",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# Provides only the shared libraries needed by Oak Conatiners Stage 1.
+filegroup(
+    name = "stage1_shared_libraries",
+    srcs = [
+        "lib/x86_64-linux-gnu/libc.so.6",
+        "lib/x86_64-linux-gnu/libgcc_s.so.1",
+        "lib/x86_64-linux-gnu/libm.so.6",
+    ],
+    visibility = ["//visibility:public"],
+)

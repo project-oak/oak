@@ -54,6 +54,7 @@ mod ffi {
             result_spec: &[u8],
         ) -> UniquePtr<CxxVector<u8>>;
         fn persist_to_disk(&self, persist_type: i32) -> UniquePtr<CxxVector<u8>>;
+        fn optimize_impl(&self) -> UniquePtr<CxxVector<u8>>;
 
         fn create_icing_search_engine(options: &[u8]) -> UniquePtr<IcingSearchEngine>;
     }
@@ -80,7 +81,7 @@ mod ffi {
         fn create_schema_type_config_builder() -> UniquePtr<SchemaTypeConfigBuilder>;
         fn set_type<'a>(&'a self, type_name: &[u8]) -> &'a SchemaTypeConfigBuilder;
         fn add_parent_type<'a>(&'a self, parent_type: &[u8]) -> &'a SchemaTypeConfigBuilder;
-        fn set_version<'a>(&'a self, version: i32) -> &'a SchemaTypeConfigBuilder;
+        fn set_version(&self, version: i32) -> &SchemaTypeConfigBuilder;
         fn set_description<'a>(&'a self, description: &[u8]) -> &'a SchemaTypeConfigBuilder;
         fn set_database<'a>(&'a self, database: &[u8]) -> &'a SchemaTypeConfigBuilder;
         fn add_property<'a>(
@@ -99,15 +100,13 @@ mod ffi {
 
         fn set_name<'a>(&'a self, name: &[u8]) -> &'a PropertyConfigBuilder;
 
-        fn set_data_type<'a>(&'a self, data_type: i32) -> &'a PropertyConfigBuilder;
+        fn set_data_type(&self, data_type: i32) -> &PropertyConfigBuilder;
 
         fn set_data_type_vector(&self, data_type_vector: i32) -> &PropertyConfigBuilder;
-        fn set_data_type_string<'a>(
-            &'a self,
-            match_type: i32,
-            tokenizer: i32,
-        ) -> &'a PropertyConfigBuilder;
-        fn set_data_type_int64<'a>(&'a self, value: i32) -> &'a PropertyConfigBuilder;
+        fn set_data_type_string(&self, match_type: i32, tokenizer: i32) -> &PropertyConfigBuilder;
+        fn set_data_type_joinable_string(&self, joinable_value_type: i32)
+        -> &PropertyConfigBuilder;
+        fn set_data_type_int64(&self, value: i32) -> &PropertyConfigBuilder;
 
         fn set_data_type_document<'a>(
             &'a self,
@@ -115,9 +114,11 @@ mod ffi {
             index_nested_properties: bool,
         ) -> &'a PropertyConfigBuilder;
 
-        fn set_cardinality<'a>(&'a self, cardinality: i32) -> &'a PropertyConfigBuilder;
+        fn set_cardinality(&self, cardinality: i32) -> &PropertyConfigBuilder;
 
         fn set_description<'a>(&'a self, description: &[u8]) -> &'a PropertyConfigBuilder;
+
+        fn set_scorable_type(&self, scorable_type: i32) -> &PropertyConfigBuilder;
 
         fn build(&self) -> UniquePtr<CxxVector<u8>>;
     }
@@ -132,9 +133,9 @@ use cxx::UniquePtr;
 // Re-export all FFI functions and types
 pub use ffi::*;
 use icing_rust_proto::icing::lib::{
-    property_proto::VectorProto, DeleteResultProto, DocumentProto, InitializeResultProto,
-    PutResultProto, ResultSpecProto, SchemaProto, ScoringSpecProto, SearchResultProto,
-    SearchSpecProto, SetSchemaResultProto,
+    DeleteResultProto, DocumentProto, InitializeResultProto, OptimizeResultProto, PutResultProto,
+    ResultSpecProto, SchemaProto, ScoringSpecProto, SearchResultProto, SearchSpecProto,
+    SetSchemaResultProto, property_proto::VectorProto,
 };
 use prost::Message;
 
@@ -200,6 +201,11 @@ impl ffi::IcingSearchEngine {
     pub fn get_next_page(&self, next_page_token: u64) -> anyhow::Result<SearchResultProto> {
         let result = self.get_next_page_impl(next_page_token);
         Ok(SearchResultProto::decode(result.as_slice())?)
+    }
+
+    pub fn optimize(&self) -> anyhow::Result<OptimizeResultProto> {
+        let result = self.optimize_impl();
+        Ok(OptimizeResultProto::decode(result.as_slice())?)
     }
 }
 

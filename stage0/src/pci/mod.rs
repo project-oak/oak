@@ -21,12 +21,12 @@ use spinning_top::Spinlock;
 use zerocopy::{FromBytes, FromZeros, IntoBytes};
 
 use crate::{
+    Platform, ZeroPage,
     fw_cfg::Firmware,
     pci::{
-        config_access::{ConfigAccess, CAM},
+        config_access::{CAM, ConfigAccess},
         device::{PciBar, PciClass, PciFunction, PciSubclass},
     },
-    Platform, ZeroPage,
 };
 
 mod config_access;
@@ -35,7 +35,7 @@ mod machine;
 mod resource_allocator;
 
 use device::Bdf;
-use machine::{I440fx, Machine, Q35};
+use machine::{I440fx, IntelVirtPcieHost, Machine, Q35};
 use resource_allocator::ResourceAllocator;
 
 #[repr(C)]
@@ -198,11 +198,7 @@ struct PciBus {
 impl PciBus {
     fn new(bus: u8, access: &mut dyn ConfigAccess) -> Result<Option<Self>, &'static str> {
         let root = PciAddress::new(bus, 0, 0)?;
-        if root.exists(access)? {
-            Ok(Some(Self { root }))
-        } else {
-            Ok(None)
-        }
+        if root.exists(access)? { Ok(Some(Self { root })) } else { Ok(None) }
     }
 
     fn init(
@@ -322,6 +318,8 @@ fn init_machine<P: Platform, M: Machine>(
 
     log::info!("PCI: using windows {:?}", pci_windows);
 
+    M::init_acpi_io(config_access.lock().as_mut())?;
+
     root_bus.init(&pci_windows, config_access)?;
 
     // Find out if there are any extra roots.
@@ -358,6 +356,9 @@ pub fn init<P: Platform>(
     match root_bridge_device_id {
         (I440fx::PCI_VENDOR_ID, I440fx::PCI_DEVICE_ID) => {
             init_machine::<P, I440fx>(root_bus, firmware, zero_page, config_access)
+        }
+        (IntelVirtPcieHost::PCI_VENDOR_ID, IntelVirtPcieHost::PCI_DEVICE_ID) => {
+            init_machine::<P, IntelVirtPcieHost>(root_bus, firmware, zero_page, config_access)
         }
         (Q35::PCI_VENDOR_ID, Q35::PCI_DEVICE_ID) => {
             init_machine::<P, Q35>(root_bus, firmware, zero_page, config_access)

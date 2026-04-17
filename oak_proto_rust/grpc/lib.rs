@@ -31,12 +31,6 @@ pub mod oak {
         }
     }
 
-    pub mod key_provisioning {
-        pub mod v1 {
-            #![allow(clippy::return_self_not_must_use)]
-            tonic::include_proto!("oak.key_provisioning.v1");
-        }
-    }
     pub mod session {
         pub mod v1 {
             #![allow(clippy::return_self_not_must_use)]

@@ -37,10 +37,10 @@ use oak_proto_rust::oak::functions::config::WasmtimeConfig;
 use wasmtime::{PoolingAllocationConfig, Store};
 
 use crate::{
+    Handler, Observer,
     logger::{OakLogger, StandaloneLogger},
     lookup::LookupDataManager,
-    wasm::{api::StdWasmApiFactory, WasmApiFactory},
-    Handler, Observer,
+    wasm::{WasmApiFactory, api::StdWasmApiFactory},
 };
 
 /// Fixed name of the function to start a Wasm. Every Oak Wasm module must
@@ -433,7 +433,7 @@ impl WasmtimeHandler {
                     total_core_instances,
                     max_core_instance_size as usize,
                     max_tables_per_module,
-                    table_elements,
+                    table_elements as usize,
                     max_memories_per_module
                 ]
             );
@@ -443,13 +443,7 @@ impl WasmtimeHandler {
         maybe_set!(
             config,
             config_proto,
-            [
-                static_memory_maximum_size,
-                static_memory_guard_size,
-                dynamic_memory_guard_size,
-                dynamic_memory_reserved_for_growth,
-                memory_init_cow
-            ]
+            [memory_init_cow, memory_reservation_for_growth, memory_guard_size]
         );
 
         let engine = wasmtime::Engine::new(&config)

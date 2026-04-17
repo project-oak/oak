@@ -16,11 +16,11 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::Context;
 use cosign_util::pull_package;
-use oak_attestation_gcp::{attestation::request_attestation_token, OAK_SESSION_NOISE_V1_AUDIENCE};
+use oak_attestation_gcp::{OAK_SESSION_NOISE_V1_AUDIENCE, attestation::request_attestation_token};
 use oak_gcp_examples_echo_enclave_app::{app, app_service, gcp};
 use oak_proto_rust::oak::attestation::v1::ConfidentialSpaceEndorsement;
-use oci_client::{client::ClientConfig, secrets::RegistryAuth, Client, Reference};
-use p256::ecdsa::{signature::rand_core::OsRng, SigningKey};
+use oci_client::{Client, Reference, client::ClientConfig, secrets::RegistryAuth};
+use p256::ecdsa::{SigningKey, signature::rand_core::OsRng};
 use sha2::Digest;
 use tokio::net::TcpListener;
 
@@ -53,7 +53,7 @@ async fn main() -> anyhow::Result<()> {
         .expect("Could not read tee-image-reference, are we running in Confidential Space?");
     let image_reference: Reference = image_reference
         .parse()
-        .context("Could not parse tee-image-reference into an OCI image reference")?;
+        .context("parsing tee-image-reference into an OCI image reference")?;
     anyhow::ensure!(
         image_reference.digest().is_some(),
         "Only images with digests are supported, not {image_reference}"
@@ -71,9 +71,10 @@ async fn main() -> anyhow::Result<()> {
         // therefore we may pass the key as empty.
         let package = pull_package(&client, &auth, &image_reference, "").await?;
         let endorsement = &package.endorsement;
-        let log_entry = package.log_entry.as_ref().ok_or(anyhow::anyhow!("missing log entry"))?;
+        let rekor_log_entry =
+            package.rekor_log_entry.as_ref().ok_or(anyhow::anyhow!("missing Rekor log entry"))?;
         println!("Received statement: {endorsement:?}");
-        println!("Converted Rekor log entry: {log_entry:?}");
+        println!("Converted Rekor log entry: {rekor_log_entry:?}");
         package.get_signed_endorsement()?
     };
     let endorsement =

@@ -20,8 +20,8 @@
 /// may need to be configured in specific ways.
 use std::{collections::BTreeMap, pin::Pin, sync::Arc};
 
-use anyhow::{anyhow, Context, Result};
-use oak_attestation_gcp::{assertions::GcpAssertionGenerator, OAK_SESSION_NOISE_V1_AUDIENCE};
+use anyhow::{Context, Result, anyhow};
+use oak_attestation_gcp::{OAK_SESSION_NOISE_V1_AUDIENCE, assertions::GcpAssertionGenerator};
 use oak_gcp_echo_proto::oak::standalone::example::enclave_application_server::{
     EnclaveApplication, EnclaveApplicationServer,
 };
@@ -30,16 +30,16 @@ use oak_proto_rust::oak::{
     session::v1::{SessionRequest, SessionResponse},
 };
 use oak_session::{
+    ServerSession, Session,
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
     generator::{BindableAssertionGenerator, SessionKeyBindableAssertionGenerator},
     handshake::HandshakeType,
-    ServerSession, Session,
 };
 use p256::ecdsa::SigningKey;
 use tokio::net::TcpListener;
-use tokio_stream::{wrappers::TcpListenerStream, Stream, StreamExt};
+use tokio_stream::{Stream, StreamExt, wrappers::TcpListenerStream};
 
 use crate::app::EchoHandler;
 

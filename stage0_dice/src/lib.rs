@@ -33,7 +33,7 @@ use coset::CborSerializable;
 use hkdf::Hkdf;
 use oak_dice::{
     cert::{generate_ecdsa_key_pair, verifying_key_to_cose_key},
-    evidence::{Stage0DiceData, TeePlatform, STAGE0_MAGIC},
+    evidence::{STAGE0_MAGIC, Stage0DiceData, TeePlatform},
 };
 use oak_proto_rust::oak::attestation::v1::{
     CertificateAuthority, DiceData, Evidence, RootLayerEvidence,
@@ -51,11 +51,7 @@ const STAGE0_TRANSPARENT_TAG: &str = "Stage0Transparent";
 // TODO: b/331252282 - Remove temporary workaround for cmd line length.
 fn shorten_cmdline(cmdline: &str) -> String {
     let max_length: usize = 256;
-    if cmdline.len() > max_length {
-        cmdline[..max_length].to_string()
-    } else {
-        cmdline.to_string()
-    }
+    if cmdline.len() > max_length { cmdline[..max_length].to_string() } else { cmdline.to_string() }
 }
 
 pub fn dice_data_proto_to_stage0_dice_data(
@@ -125,6 +121,7 @@ pub fn generate_initial_dice_data<
         application_keys: None,
         event_log: Some(event_log),
         transparent_event_log: None,
+        signed_user_data_certificate: Vec::new(),
     };
 
     let result_ca = CertificateAuthority { eca_private_key: stage0_eca_key.to_bytes().to_vec() };
@@ -176,20 +173,42 @@ pub fn mock_derived_key() -> Result<DerivedKey, &'static str> {
     Ok(DerivedKey::default())
 }
 
+fn encode_event_with_tag_and_type<T: prost::Message>(
+    measurements: T,
+    tag: &str,
+    type_url: &str,
+) -> Vec<u8> {
+    let tag = String::from(tag);
+
+    // When an any type is deserialized, the `type_url` is missing the
+    // `type.googleapis.com{}` suffix. But we depend on it being there for this
+    // attestation mechansim, so we manually create the Any struct rather than using
+    // a generated version.
+    let event = Some(prost_types::Any {
+        type_url: type_url.to_string(),
+        value: measurements.encode_to_vec(),
+    });
+
+    let event = oak_proto_rust::oak::attestation::v1::Event { tag, event };
+    event.encode_to_vec()
+}
+
 pub fn encode_stage0_event(
     measurements: oak_proto_rust::oak::attestation::v1::Stage0Measurements,
 ) -> Vec<u8> {
-    let tag = String::from(STAGE0_TAG);
-    let any = prost_types::Any::from_msg(&measurements);
-    let event = oak_proto_rust::oak::attestation::v1::Event { tag, event: Some(any.unwrap()) };
-    event.encode_to_vec()
+    encode_event_with_tag_and_type(
+        measurements,
+        STAGE0_TAG,
+        "type.googleapis.com/oak.attestation.v1.Stage0Measurements",
+    )
 }
 
 pub fn encode_stage0_transparent_event(
     measurements: oak_proto_rust::oak::attestation::v1::Stage0TransparentMeasurements,
 ) -> Vec<u8> {
-    let tag = String::from(STAGE0_TRANSPARENT_TAG);
-    let any = prost_types::Any::from_msg(&measurements);
-    let event = oak_proto_rust::oak::attestation::v1::Event { tag, event: Some(any.unwrap()) };
-    event.encode_to_vec()
+    encode_event_with_tag_and_type(
+        measurements,
+        STAGE0_TRANSPARENT_TAG,
+        "type.googleapis.com/oak.attestation.v1.Stage0TransparentMeasurements",
+    )
 }

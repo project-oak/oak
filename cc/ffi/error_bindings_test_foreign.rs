@@ -16,7 +16,7 @@
 
 use oak_ffi_error::Error;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn anyhow_error_with_three_contexts() -> *const Error {
     Error::new_raw(
         anyhow::anyhow!("Main error message")

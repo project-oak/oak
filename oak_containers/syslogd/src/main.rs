@@ -24,16 +24,16 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use clap::Parser;
 use oak_containers_orchestrator::launcher_client::LauncherClient;
-use opentelemetry::global::set_error_handler;
 use signal_hook::consts::signal::SIGTERM;
 use signal_hook_tokio::Signals;
 use tokio::sync::OnceCell;
 use tokio_stream::StreamExt;
+use tonic::transport::Uri;
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(default_value = "http://10.0.2.100:8080")]
-    launcher_addr: String,
+    #[arg(env, default_value = "http://10.0.2.100:8080")]
+    launcher_addr: Uri,
 }
 
 #[allow(clippy::never_loop)]
@@ -50,16 +50,30 @@ async fn signal_handler(mut signals: Signals, term: Arc<OnceCell<()>>) {
     }
 }
 
+mod otel_logging {
+    use tracing_subscriber::{filter::filter_fn, fmt::Layer, prelude::*};
+
+    // Set up logging for opentelemetry errors.
+    pub fn init() {
+        let opentelemetry_layer = Layer::new()
+            .with_writer(std::io::stderr.with_max_level(tracing::Level::WARN))
+            .with_filter(filter_fn(|metadata| metadata.target().starts_with("opentelemetry")));
+
+        tracing_subscriber::registry().with(opentelemetry_layer).init();
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    set_error_handler(|err| eprintln!("oak-syslogd: OTLP error: {}", err))?;
+    otel_logging::init();
 
     let term = Arc::new(OnceCell::new());
-    let launcher_client = LauncherClient::create(args.launcher_addr.parse()?)
-        .await
-        .map_err(|error| anyhow!("couldn't create client: {:?}", error))?;
+    let launcher_client =
+        LauncherClient::create(args.launcher_addr.clone()).await.map_err(|error| {
+            anyhow!("couldn't create client with addr {}: {:?}", args.launcher_addr, error)
+        })?;
 
     let signals = Signals::new([SIGTERM])?;
     let handle = signals.handle();

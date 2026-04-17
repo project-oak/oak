@@ -13,10 +13,11 @@ destructive and can live alongside your existing git setup.
 jj git init --git-repo .
 ```
 
-Tell `jj` to track the remote `main` branch when syncing:
+Tell `jj` to track the remote `main` branch when syncing (replace `origin` with
+your remote name):
 
 ```console
-jj bookmark track main@origin
+jj bookmark track main --remote=origin
 ```
 
 Run the following to see the latest commits:
@@ -51,9 +52,17 @@ $ jj log
 ╷ │  remove an unused flag for cloud-hypervisor
 ```
 
-## Gerrit utils
+## Gerrit setup
 
-Append the following to your global config.
+Configure the Gerrit remote and target branch in your repo config (one-time
+setup):
+
+```console
+jj config set --repo gerrit.default-remote "origin"
+jj config set --repo gerrit.default-remote-branch "main"
+```
+
+Optionally, add the following aliases to your global config for convenience:
 
 ```console
 jj config edit --user
@@ -61,34 +70,18 @@ jj config edit --user
 
 ```toml
 [aliases]
-cr = ["util", "exec", "--", "bash", "-c", """
-set -euo pipefail
-INPUT=${1:-"@-"}
-HASH=$(jj log --revisions="${INPUT}" --template=commit_id --no-graph)
-HASHINFO=$(git log --max-count=1 ${HASH} --oneline --color=always)
-echo "Pushing from commit ${HASHINFO}"
-git push origin "${HASH}":refs/for/main
-""", ""]
-```
-
-Append the following to your repo-specific config (since you most likely don't
-want to add gerrit-style change-id headers to all your other repos).
-
-```console
-jj config edit --repo
-```
-
-```toml
-[templates]
-commit_trailers = '''
-if(self.author().email() == "YOUR_EMAIL_HERE" &&
-  !trailers.contains_key("Change-Id"),
-  format_gerrit_change_id_trailer(self)
-)
-'''
+cr = ["gerrit", "upload", "--revisions=@-"]
+sync = ["git", "fetch", "--all-remotes"]
+evolve = ["rebase", "--destination=main"]
 ```
 
 ## First commit
+
+If you hadn't before, sync to head:
+
+```console
+jj sync
+```
 
 Start a new change, branching from `main`:
 
@@ -124,15 +117,28 @@ $ jj log
 │  test change
 │ ○  vpqyvtyn tzn@google.com 2025-07-03 22:33:58 7dc69c3d
 ├─╯  (no description set)
-◆  xkxnqpup ivanpetrov@google.com 2025-06-25 10:48:20 main main@origin e097debc
-│  Connect the agent to a Rust MCP server
-~  (elided revisions)
-│ ○  vvqlovtx tiziano88@gmail.com 2025-06-24 22:48:47 tzn_mac_shell_gemini d1b0faaa
-├─╯  Mac shell with Gemini
-◆  rwyqsvyz tbinder@google.com 2025-06-17 08:44:55 ef4fc17b
-│  Return endorsement claims as part of EndorsementDetails.
-~
+...
 ```
+
+Upload your change:
+
+```console
+jj cr
+```
+
+## Sending for review to Gerrit
+
+You can send your changes to Gerrit to be reviewed.
+
+```console
+# Upload @ if it has a description, otherwise uploads @-
+$ jj gerrit upload
+
+# Or explicitly specify a revision to upload.
+$ jj gerrit upload -r @-
+```
+
+Use the `--dry-run` flag to preview the changes that will be uploaded.
 
 ## Addressing comments
 
@@ -165,11 +171,10 @@ top of that, you can run the following command:
 jj git fetch --all-remotes
 ```
 
-You can also turn this into an alias in `jj config edit --user`:
+Or if you added the alias above:
 
-```toml
-[aliases]
-sync = ['git', 'fetch', '--all-remotes']
+```console
+jj sync
 ```
 
 If you run `jj log` now, you will see that your current change still branches
@@ -200,11 +205,10 @@ To rebase it on top of the newly synced main, you can run
 jj rebase --destination=main
 ```
 
-This is also worth an alias for convenience:
+Or if you added the alias above:
 
-```toml
-[aliases]
-evolve = ['rebase', '--destination=main']
+```console
+jj evolve
 ```
 
 If there are no conflicts, your change now has the current upstream main as its

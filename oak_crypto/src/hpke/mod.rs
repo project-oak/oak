@@ -18,15 +18,15 @@ pub(crate) mod aead;
 
 use alloc::vec::Vec;
 
-use anyhow::{anyhow, Context};
-use hpke::{
-    aead::AesGcm256, kdf::HkdfSha256, kem::X25519HkdfSha256, Kem as KemTrait, OpModeR, OpModeS,
-};
+use anyhow::{Context, anyhow};
 pub use hpke::{Deserializable, Serializable};
+use hpke::{
+    Kem as KemTrait, OpModeR, OpModeS, aead::AesGcm256, kdf::HkdfSha256, kem::X25519HkdfSha256,
+};
 use oak_proto_rust::oak::crypto::v1::SessionKeys;
 use rand_core::{OsRng, RngCore};
 
-use crate::hpke::aead::{AeadKey, AeadNonce, AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES};
+use crate::hpke::aead::{AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES, AeadKey, AeadNonce};
 
 type Aead = AesGcm256;
 type Kdf = HkdfSha256;

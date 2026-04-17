@@ -93,21 +93,21 @@ use alloc::{
     vec::Vec,
 };
 
-use anyhow::{anyhow, Error};
+use anyhow::{Error, anyhow};
 use itertools::{EitherOrBoth, Itertools};
 use oak_proto_rust::oak::{
-    attestation::v1::{attestation_results, Assertion, AttestationResults},
+    attestation::v1::{Assertion, AttestationResults, attestation_results},
     session::v1::{AttestRequest, AttestResponse, EndorsedEvidence},
 };
 use prost::Message;
 
 use crate::{
+    ProtocolEngine,
     aggregators::AggregatedVerificationError,
     config::{AttestationHandlerConfig, PeerAttestationVerifier},
     generator::BindableAssertion,
     session_binding::SessionBindingVerifier,
     verifier::{BoundAssertionVerifier, BoundAssertionVerifierResult},
-    ProtocolEngine,
 };
 
 /// Represents the outcome of the attestation process.
@@ -361,7 +361,9 @@ impl AttestationHandler for ClientAttestationHandler {
     }
 }
 
-impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationHandler {
+impl ProtocolEngine for ClientAttestationHandler {
+    type Input = AttestResponse;
+    type Output = AttestRequest;
     /// Gets the next outgoing `AttestRequest` message to be sent to the server.
     ///
     /// For the client, this is typically the initial `AttestRequest` containing
@@ -525,7 +527,9 @@ impl AttestationHandler for ServerAttestationHandler {
     }
 }
 
-impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationHandler {
+impl ProtocolEngine for ServerAttestationHandler {
+    type Input = AttestRequest;
+    type Output = AttestResponse;
     /// Gets the next outgoing `AttestResponse` message to be sent to the
     /// client.
     ///
@@ -609,16 +613,28 @@ fn combine_attestation_results(
             EitherOrBoth::Both((_, peer_verifier), (id, ee)) => {
                 match (ee.evidence.as_ref(), ee.endorsements.as_ref()) {
                     (Some(evidence), Some(endorsements)) => {
-                        let result = peer_verifier.verifier.verify(evidence, endorsements)?;
-                        Ok((
-                            id,
-                            match result.status() {
-                                attestation_results::Status::Success => {
-                                    VerifierResult::Success { evidence: ee, result }
-                                }
-                                _ => VerifierResult::Failure { evidence: ee, result },
-                            },
-                        ))
+                        match peer_verifier.verifier.verify(evidence, endorsements) {
+                            core::result::Result::Ok(result) => Ok((
+                                id,
+                                match result.status() {
+                                    attestation_results::Status::Success => {
+                                        VerifierResult::Success { evidence: ee, result }
+                                    }
+                                    _ => VerifierResult::Failure { evidence: ee, result },
+                                },
+                            )),
+                            core::result::Result::Err(err) => Ok((
+                                id,
+                                VerifierResult::Failure {
+                                    evidence: ee,
+                                    result: AttestationResults {
+                                        status: attestation_results::Status::GenericFailure.into(),
+                                        reason: format!("{:#}", err),
+                                        ..Default::default()
+                                    },
+                                },
+                            )),
+                        }
                     }
                     _ => Ok((
                         id,

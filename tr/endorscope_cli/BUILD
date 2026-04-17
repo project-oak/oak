@@ -31,6 +31,7 @@ rust_binary(
         "//oak_proto_rust",
         "//oak_time",
         "//oak_time:oak_time_std",
+        "//tr/c2sp",
         "//tr/endorscope",
         "//tr/intoto",
         "//tr/rekor",

@@ -20,7 +20,7 @@ use async_trait::async_trait;
 use oak_crypto::{encryption_key::AsyncEncryptionKeyHandle, hpke::RecipientContext};
 use oak_grpc::oak::containers::v1::orchestrator_crypto_client::OrchestratorCryptoClient as GrpcOrchestratorCryptoClient;
 use oak_proto_rust::oak::{
-    containers::v1::{BindSessionRequest, DeriveSessionKeysRequest, KeyOrigin, SignRequest},
+    containers::v1::{BindSessionRequest, DeriveSessionKeysRequest, SignRequest},
     crypto::v1::{SessionKeys, Signature},
 };
 use oak_session::session_binding::SessionBinder;
@@ -38,7 +38,6 @@ impl OrchestratorCryptoClient {
 
     async fn derive_session_keys(
         &self,
-        key_origin: KeyOrigin,
         serialized_encapsulated_public_key: &[u8],
     ) -> Result<SessionKeys, Box<dyn std::error::Error>> {
         let context = self
@@ -46,7 +45,6 @@ impl OrchestratorCryptoClient {
             // TODO(#4477): Remove unnecessary copies of the Orchestrator client.
             .clone()
             .derive_session_keys(DeriveSessionKeysRequest {
-                key_origin: key_origin.into(),
                 serialized_encapsulated_public_key: serialized_encapsulated_public_key.to_vec(),
             })
             .await?
@@ -56,11 +54,11 @@ impl OrchestratorCryptoClient {
         Ok(context)
     }
 
-    async fn sign(&self, key_origin: KeyOrigin, message: Vec<u8>) -> anyhow::Result<Signature> {
+    async fn sign(&self, message: Vec<u8>) -> anyhow::Result<Signature> {
         self.inner
             // TODO(#4477): Remove unnecessary copies of the Orchestrator client.
             .clone()
-            .sign(SignRequest { message, key_origin: key_origin.into() })
+            .sign(SignRequest { message })
             .await?
             .into_inner()
             .signature
@@ -104,7 +102,7 @@ impl AsyncEncryptionKeyHandle for InstanceEncryptionKeyHandle {
     ) -> anyhow::Result<RecipientContext> {
         let serialized_crypto_context = self
             .orchestrator_crypto_client
-            .derive_session_keys(KeyOrigin::Instance, encapsulated_public_key)
+            .derive_session_keys(encapsulated_public_key)
             .await
             .map_err(|error| {
                 tonic::Status::internal(format!(
@@ -175,7 +173,7 @@ impl InstanceSigner {
 #[async_trait]
 impl Signer for InstanceSigner {
     async fn sign(&self, message: &[u8]) -> anyhow::Result<Signature> {
-        self.orchestrator_crypto_client.sign(KeyOrigin::Instance, message.to_vec()).await
+        self.orchestrator_crypto_client.sign(message.to_vec()).await
     }
 }
 

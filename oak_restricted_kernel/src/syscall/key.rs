@@ -17,9 +17,9 @@
 use alloc::boxed::Box;
 
 use oak_restricted_kernel_dice::DerivedKey;
-use oak_restricted_kernel_interface::{Errno, DERIVED_KEY_FD};
+use oak_restricted_kernel_interface::{DERIVED_KEY_FD, Errno};
 
-use super::fd::{copy_max_slice, FileDescriptor};
+use super::fd::{FileDescriptor, copy_max_slice};
 
 #[derive(Default)]
 struct DerivedKeyState {

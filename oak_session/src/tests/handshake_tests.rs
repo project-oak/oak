@@ -29,12 +29,12 @@ use oak_proto_rust::oak::{
     session::v1::{PlaintextMessage, SessionBinding},
 };
 use oak_session::{
+    ProtocolEngine,
     attestation::{AttestationState, PeerAttestationVerdict},
     config::HandshakeHandlerConfig,
     encryptors::OrderedChannelEncryptor,
     generator::{BindableAssertion, BindableAssertionGeneratorError},
     handshake::{ClientHandshakeHandler, HandshakeHandler, HandshakeType, ServerHandshakeHandler},
-    ProtocolEngine,
 };
 
 #[test]

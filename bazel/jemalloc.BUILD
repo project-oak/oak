@@ -1,5 +1,7 @@
 load("@rules_foreign_cc//foreign_cc:defs.bzl", "configure_make")
 
+package(licenses = ["notice"])
+
 filegroup(
     name = "all_srcs",
     srcs = glob(["**"]),

@@ -13,7 +13,7 @@ readonly TARGET_DIR=oak_containers/system_image/base/target
 usage_and_exit() {
   set +o xtrace
 
-  >&2 echo "Usage: $0 [vanilla|nvidia|sysroot]"
+  >&2 echo "Usage: $0 [vanilla|nvidia]"
   >&2 echo "Builds and pushes one of the containers base images."
   >&2 echo ""
   >&2 echo "If you haven't done a push before, you'll need to set up gcloud."
@@ -32,16 +32,16 @@ if [[ $# != 1 ]]; then
 fi
 if [ "$1" == "vanilla" ]; then
   "${SCRIPTS_DIR}/build-base.sh" vanilla
-  readonly source=base-image.tar
+  readonly source="${TARGET_DIR}/base-image.tar"
   readonly static_dir=base-image
 elif [ "$1" == "nvidia" ]; then
   "${SCRIPTS_DIR}/build-base.sh" nvidia
-  readonly source=nvidia-base-image.tar
+  readonly source="${TARGET_DIR}/nvidia-base-image.tar"
   readonly static_dir=nvidia-base-image
 elif [ "$1" == "sysroot" ]; then
-  "${SCRIPTS_DIR}/build-base.sh" sysroot
-  readonly source=sysroot.tar
-  readonly static_dir=sysroot
+  set +o xtrace
+  echo "See oak_containers/sysroot"
+  exit 1
 else
   usage_and_exit
 fi

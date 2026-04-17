@@ -5,7 +5,7 @@
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
-source "$SCRIPTS_DIR/common"
+source "${SCRIPTS_DIR}/common"
 
 print_usage_and_exit() {
   echo "Usage:
@@ -23,25 +23,29 @@ Options:
 }
 
 while getopts "hc:o:" opt; do
-  case $opt in
+  case ${opt} in
     h)
-      print_usage_and_exit;;
+      print_usage_and_exit
+      ;;
     o)
-      readonly OUTPUT_OCI_BUNDLE_TAR="${OPTARG}";;
+      readonly OUTPUT_OCI_BUNDLE_TAR="${OPTARG}"
+      ;;
     c)
-      readonly INPUT_OCI_IMAGE_TAR="${OPTARG}";;
+      readonly INPUT_OCI_IMAGE_TAR="${OPTARG}"
+      ;;
     *)
       echo "Invalid argument: ${OPTARG}"
-      exit 1;;
+      exit 1
+      ;;
   esac
 done
 
-if [[ -z "${INPUT_OCI_IMAGE_TAR}" ]]; then
+if [[ -z ${INPUT_OCI_IMAGE_TAR} ]]; then
   echo "Missing required option: -c <input-oci-image-tar>"
   exit 1
 fi
 
-if [[ -z "${OUTPUT_OCI_BUNDLE_TAR}" ]]; then
+if [[ -z ${OUTPUT_OCI_BUNDLE_TAR} ]]; then
   echo "Missing required option: -o <output-oci-bundle-tar>"
   exit 1
 fi
@@ -52,8 +56,8 @@ echo "[INFO] Exporting the container as an OCI image"
 readonly OCI_IMAGE_DIR="${WORK_DIR}/image"
 mkdir "${OCI_IMAGE_DIR}"
 tar --extract \
-    --file="${INPUT_OCI_IMAGE_TAR}" \
-    --directory="${OCI_IMAGE_DIR}"
+  --file="${INPUT_OCI_IMAGE_TAR}" \
+  --directory="${OCI_IMAGE_DIR}"
 
 echo "[INFO] Creating runtime bundle"
 readonly OCI_BUNDLE_DIR="${WORK_DIR}/bundle"
@@ -61,9 +65,9 @@ readonly OCI_BUNDLE_DIR="${WORK_DIR}/bundle"
 # Note that in addition to this, umoci also creates an mtree spec in the same
 # dir. This mtree is not deterministic. Ref: https://github.com/opencontainers/umoci/blob/main/doc/man/umoci-unpack.1.md
 umoci unpack \
-    --rootless \
-    --image="${OCI_IMAGE_DIR}" \
-    "${OCI_BUNDLE_DIR}"
+  --rootless \
+  --image="${OCI_IMAGE_DIR}" \
+  "${OCI_BUNDLE_DIR}"
 
 # Bundle just the files and directories that constitute the deterministically
 # generated OCI bundle.

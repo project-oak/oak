@@ -19,7 +19,7 @@ oak_restricted_kernel {
             claim_types: "https://github.com/project-oak/oak/blob/main/docs/tr/claim/66738.md"
             claim_types: "https://github.com/project-oak/oak/blob/main/docs/tr/claim/10271.md"
           }
-          rekor {
+          tlog {
             skip {
             }
           }
@@ -50,7 +50,7 @@ oak_restricted_kernel {
           claim_types: "https://github.com/project-oak/oak/blob/main/docs/tr/claim/36746.md"
           claim_types: "https://github.com/project-oak/oak/blob/main/docs/tr/claim/98982.md"
         }
-        rekor {
+        tlog {
           skip {
           }
         }
@@ -68,7 +68,7 @@ oak_restricted_kernel {
         required_claims {
           claim_types: "https://github.com/project-oak/oak/blob/main/docs/tr/claim/87425.md"
         }
-        rekor {
+        tlog {
           skip {
           }
         }

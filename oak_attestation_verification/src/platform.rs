@@ -19,21 +19,21 @@
 use alloc::format;
 
 use anyhow::Context;
-use digest_util::hash_sha2_256;
+use oak_digest::Sha256;
 use oak_proto_rust::oak::{
-    attestation::v1::{
-        tcb_version_expected_value, tdx_tcb_svn_expected_value, AmdAttestationReport,
-        AmdSevExpectedValues, InsecureExpectedValues, IntelTdxAttestationReport,
-        IntelTdxExpectedValues, RootLayerEvidence, TcbVersion, TdxTcbSvn, TeePlatform,
-    },
     RawDigest,
+    attestation::v1::{
+        AmdAttestationReport, AmdSevExpectedValues, InsecureExpectedValues,
+        IntelTdxAttestationReport, IntelTdxExpectedValues, RootLayerEvidence, TcbVersion,
+        TdxTcbSvn, TeePlatform, tcb_version_expected_value, tdx_tcb_svn_expected_value,
+    },
 };
 use oak_sev_snp_attestation_report::{AmdProduct, AttestationReport};
 use oak_tdx_quote::{ParsedTdxQuote, TdAttributes};
 use oak_time::Instant;
 use x509_cert::{
-    der::{Decode, DecodePem},
     Certificate,
+    der::{Decode, DecodePem},
 };
 use zerocopy::FromBytes;
 
@@ -52,12 +52,13 @@ pub fn verify_dice_root_eca_key(
     attestation_report: &AttestationReport,
     eca_public_key: &[u8],
 ) -> anyhow::Result<()> {
-    let expected = &hash_sha2_256(eca_public_key)[..];
+    let expected = Sha256::from_contents(eca_public_key);
     let actual = attestation_report.data.report_data;
     anyhow::ensure!(
         // The report data contains 64 bytes by default, but we only use the
         // first 32 bytes at the moment.
-        expected.len() < actual.len() && expected == &actual[..expected.len()],
+        expected.as_ref().len() < actual.len()
+            && expected.as_ref() == &actual[..expected.as_ref().len()],
         "the root ECA public key is not bound to the AMD SEV-SNP attestation report"
     );
     Ok(())
