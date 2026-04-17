@@ -18,6 +18,6 @@ integrity = ["alice"]
 
 [[cell]]
 name      = "google_oauth_token"
-value     = "ya29.a0Aa7MYioZNBusZnLOlGLIRLnwQDRb1xvnmLb6ImZGRPzYJ8E27nUzo8WbquQXu9DDiLR_HaQkngXu2O3On8Y1xriBzoNGkCAexo3ZAzOPkVKZtvDPWGDfXe3El9gsde4YiZbQ-OjCNp-QzHWwJMM-SuaGzxX1nEDJPNcFnFvdRc2GUTBFwDuBifO7eUNh7yiD5RW27bQaCgYKAXkSARYSFQHGX2MiC6HEf9mYYnXfZU6Jzz1_QA0206"
+value     = "your-oauth-token-here"
 secrecy   = ["calendar_token"]
 integrity = ["alice"]
