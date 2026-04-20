@@ -341,6 +341,13 @@ pub trait PrivateMemoryAppClient {
             sealed_memory_response::Response::GetDatabaseMetricsResponse
         )
     }
+
+    async fn sync_database(&mut self) -> Result<SyncDatabaseResponse> {
+        let request = SyncDatabaseRequest::default();
+        let response =
+            self.invoke(sealed_memory_request::Request::SyncDatabaseRequest(request)).await?;
+        expect_response_type!(response, sealed_memory_response::Response::SyncDatabaseResponse)
+    }
 }
 
 #[async_trait]

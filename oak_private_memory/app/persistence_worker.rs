@@ -19,7 +19,9 @@ use log::info;
 use metrics::get_global_metrics;
 use oak_private_memory_database::encryption::{decrypt_database, encrypt_database};
 use prost::Message;
-use sealed_memory_rust_proto::oak::private_memory::EncryptedMetadataBlob;
+use sealed_memory_rust_proto::{
+    oak::private_memory::EncryptedMetadataBlob, prelude::v1::SyncDatabaseResponse,
+};
 use tokio::{sync::mpsc, time::Instant};
 
 static MAX_RETRY_ATTEMPTS: u64 = 25;
@@ -77,6 +79,60 @@ async fn try_persist_database(
     Ok(result)
 }
 
+/// Fetch the latest remote blob and rebase the local database onto it.
+///
+/// If `require_blob` is true, a missing blob is an error (used on CAS retry).
+/// If false, a missing blob is silently skipped (used for initial sync where
+/// the user may not have any persisted data yet).
+async fn pull_and_rebase(
+    user_context: &mut UserSessionContext,
+    require_blob: bool,
+) -> anyhow::Result<()> {
+    let refreshed_blob =
+        user_context.database_service_client.get_metadata_blob_stream(&user_context.uid).await?;
+
+    let refreshed_blob = match refreshed_blob {
+        Some(blob) => blob,
+        None if require_blob => anyhow::bail!("no blob found"),
+        None => return Ok(()),
+    };
+
+    if refreshed_blob.version == user_context.database_version {
+        return Ok(());
+    }
+
+    let encrypted_data_blob =
+        refreshed_blob.encrypted_data_blob.context("missing encrypted data blob")?;
+    let decrypted = decrypt_database(encrypted_data_blob, &user_context.dek)?;
+    let new_icing_db = decrypted.icing_db.context("missing icing_db in refreshed blob")?;
+    let failed_operations =
+        user_context.database.rebase(new_icing_db.encode_to_vec().as_slice())?;
+    if failed_operations > 0 {
+        get_global_metrics().inc_db_rebase_operation_failures(failed_operations as u64);
+    }
+    user_context.database_version = refreshed_blob.version;
+    Ok(())
+}
+
+/// Synchronously persist the database.
+///
+/// This is the public API for the SyncDatabase RPC handler. It pulls the latest
+/// remote state (which may include writes from other sessions), rebases the
+/// local database, then pushes any local changes.
+pub async fn sync_persist_database(
+    user_context: &mut UserSessionContext,
+) -> anyhow::Result<SyncDatabaseResponse> {
+    // Pull: fetch the latest remote blob and rebase so that remote changes
+    // become visible in this session's local database.
+    pull_and_rebase(user_context, /* require_blob= */ false).await?;
+
+    // Push: persist any local changes (now rebased on top of the latest remote
+    // state).
+    persist_database(user_context).await?;
+
+    Ok(SyncDatabaseResponse {})
+}
+
 // Attempt to persist the database up to MAX_RETRY_ATTEMPTS times.
 // Retries only occur when the FailedPrecondition error code is returned from
 // the underlying database layer.
@@ -95,26 +151,7 @@ async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Resu
             Ok(MetadataPersistResult::RetryNeeded) => {
                 attempt += 1;
                 info!("Retrying db save (attempt {attempt})");
-                // rebase the database and try again
-                let refreshed_blob = user_context
-                    .database_service_client
-                    .get_metadata_blob_stream(&user_context.uid)
-                    .await?
-                    .context("no blob found")?;
-
-                let encrypted_data_blob =
-                    refreshed_blob.encrypted_data_blob.context("missing encrypted data blob")?;
-
-                let new_icing_db = decrypt_database(encrypted_data_blob, &user_context.dek)?
-                    .icing_db
-                    .context("missing icing_db in refreshed blob result")?;
-
-                let failed_operations =
-                    user_context.database.rebase(new_icing_db.encode_to_vec().as_slice())?;
-                if failed_operations > 0 {
-                    get_global_metrics().inc_db_rebase_operation_failures(failed_operations as u64);
-                }
-                user_context.database_version = refreshed_blob.version;
+                pull_and_rebase(user_context, /* require_blob= */ true).await?;
             }
             Err(e) => return Err(e),
         }

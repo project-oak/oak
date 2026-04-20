@@ -38,7 +38,7 @@ use tonic::transport::Channel;
 
 use crate::{
     IntoTonicResult, context::UserSessionContext, db_client::SharedDbClient,
-    packing::ResponsePacking,
+    packing::ResponsePacking, persistence_worker,
 };
 /// Controls how errors are propagated to the client.
 ///
@@ -475,6 +475,18 @@ impl SealedMemorySessionHandler {
 
         database.get_database_metrics().into_internal_error("failed to get database metrics")
     }
+
+    pub async fn sync_database_handler(
+        &self,
+        _request: SyncDatabaseRequest,
+    ) -> tonic::Result<SyncDatabaseResponse> {
+        let mut mutex_guard = self.session_context().await;
+        let context = mutex_guard.as_mut().into_failed_precondition("call key sync first")?;
+
+        persistence_worker::sync_persist_database(context)
+            .await
+            .into_internal_error("failed to sync all memories with the persistent database")
+    }
 }
 
 impl SealedMemorySessionHandler {
@@ -557,6 +569,9 @@ impl SealedMemorySessionHandler {
             }
             sealed_memory_request::Request::GetDatabaseMetricsRequest(request) => {
                 self.get_database_metrics_handler(request).await?.into_response()
+            }
+            sealed_memory_request::Request::SyncDatabaseRequest(request) => {
+                self.sync_database_handler(request).await?.into_response()
             }
         };
         Ok(response)

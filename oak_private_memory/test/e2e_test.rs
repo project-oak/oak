@@ -727,3 +727,157 @@ async fn test_error_propagation_behavior() {
 
     ctx.teardown().await;
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_sync_database() {
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
+    let pm_uid = "test_sync_database_user";
+
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+
+    // Add a memory and then sync to force persistence.
+    let memory = create_test_memory("sync_test_memory");
+    client.add_memory(memory).await.unwrap();
+
+    client.sync_database().await.unwrap();
+
+    // A second sync should also succeed (idempotent).
+    client.sync_database().await.unwrap();
+
+    // Drop and re-create the client to prove persistence actually happened.
+    drop(client);
+    let mut client2 =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+    expect_memory_by_id(&mut client2, "sync_test_memory").await;
+
+    ctx.teardown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_sync_database_cross_session() {
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
+    let pm_uid = "test_sync_database_cross_session_user";
+
+    // Session A: add a memory and sync to persist it.
+    let mut client_a =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+    let memory = create_test_memory("cross_session_mem");
+    client_a.add_memory(memory).await.unwrap();
+
+    client_a.sync_database().await.unwrap();
+
+    // Session B: a new session for the same user with NO local changes.
+    // SyncDatabase should pull Session A's persisted data via rebase.
+    let mut client_b =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+
+    client_b.sync_database().await.unwrap();
+
+    // Session B should now see the memory that Session A persisted.
+    expect_memory_by_id(&mut client_b, "cross_session_mem").await;
+
+    ctx.teardown().await;
+}
+
+/// Session 1 opens first, then Session 2 writes + syncs.
+/// Session 1 reads WITHOUT syncing — should NOT see Session 2's data.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_sync_database_stale_without_sync() {
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
+    let pm_uid = "test_sync_stale_user";
+
+    // Session 1: open first (empty DB).
+    let mut client1 =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+
+    // Session 2: write a memory and sync.
+    let mut client2 =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+    let memory = create_test_memory("stale_mem");
+    client2.add_memory(memory).await.unwrap();
+    client2.sync_database().await.unwrap();
+
+    // Session 1: read WITHOUT syncing — should NOT see the memory.
+    let response = client1.get_memory_by_id("stale_mem", None).await.unwrap();
+    assert!(!response.success, "Session 1 should NOT see Session 2's data without syncing");
+
+    ctx.teardown().await;
+}
+
+/// Session 1 opens first, then Session 2 writes + syncs.
+/// Session 1 syncs, THEN reads — should see Session 2's data.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_sync_database_fresh_after_sync() {
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
+    let pm_uid = "test_sync_fresh_user";
+
+    // Session 1: open first (empty DB).
+    let mut client1 =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+
+    // Session 2: write a memory and sync.
+    let mut client2 =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+    let memory = create_test_memory("fresh_mem");
+    client2.add_memory(memory).await.unwrap();
+    client2.sync_database().await.unwrap();
+
+    // Session 1: sync to pull remote changes, then read.
+    client1.sync_database().await.unwrap();
+
+    // Now Session 1 should see the memory from Session 2.
+    expect_memory_by_id(&mut client1, "fresh_mem").await;
+
+    ctx.teardown().await;
+}
+
+/// Two sessions open concurrently for the same user.
+/// Each adds its own memory; neither sees the other's data until it syncs.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_sync_database_concurrent_sessions() {
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
+    let pm_uid = "test_sync_concurrent_user";
+
+    // Session A and B open at the same time.
+    let mut client_a =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+    let mut client_b =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+
+    // A adds MemA, B adds MemB.
+    client_a.add_memory(create_test_memory("mem_a")).await.unwrap();
+    client_b.add_memory(create_test_memory("mem_b")).await.unwrap();
+
+    // A cannot read MemB, B cannot read MemA.
+    let resp = client_a.get_memory_by_id("mem_b", None).await.unwrap();
+    assert!(!resp.success, "A should NOT see MemB before any sync");
+    let resp = client_b.get_memory_by_id("mem_a", None).await.unwrap();
+    assert!(!resp.success, "B should NOT see MemA before any sync");
+
+    // A syncs — persists MemA but still cannot read MemB (B hasn't synced).
+    client_a.sync_database().await.unwrap();
+    let resp = client_a.get_memory_by_id("mem_b", None).await.unwrap();
+    assert!(!resp.success, "A should NOT see MemB after A syncs (B hasn't synced yet)");
+    // B still cannot read MemA (B hasn't synced).
+    let resp = client_b.get_memory_by_id("mem_a", None).await.unwrap();
+    assert!(!resp.success, "B should NOT see MemA before B syncs");
+
+    // B syncs — persists MemB and pulls MemA from durable storage.
+    client_b.sync_database().await.unwrap();
+    expect_memory_by_id(&mut client_b, "mem_a").await;
+    // A still cannot see MemB (A hasn't re-synced).
+    let resp = client_a.get_memory_by_id("mem_b", None).await.unwrap();
+    assert!(!resp.success, "A should NOT see MemB until A re-syncs");
+
+    // A syncs again — now pulls MemB.
+    client_a.sync_database().await.unwrap();
+    expect_memory_by_id(&mut client_a, "mem_b").await;
+
+    ctx.teardown().await;
+}

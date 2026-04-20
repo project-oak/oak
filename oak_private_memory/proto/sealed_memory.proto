@@ -595,6 +595,14 @@ message GetDatabaseMetricsResponse {
   StorageInfo storage_info = 2;
 }
 
+// Request to synchronously refresh the in-memory database from the latest
+// durable storage snapshot, and persist it back to durable
+// storage. The connection remains open after the sync completes, allowing
+// subsequent requests in the same session.
+message SyncDatabaseRequest {}
+
+message SyncDatabaseResponse {}
+
 message SealedMemoryRequest {
   oneof request {
     KeySyncRequest key_sync_request = 6;
@@ -615,6 +623,8 @@ message SealedMemoryRequest {
     ResetMemoryRequest reset_memory_request = 3;
 
     GetDatabaseMetricsRequest get_database_metrics_request = 13;
+
+    SyncDatabaseRequest sync_database_request = 14;
 
     // Use SearchMemoryRequest.
     GetMemoriesRequest get_memories_request = 2 [deprecated = true];
@@ -647,6 +657,8 @@ message SealedMemoryResponse {
     SearchMemoryResponse search_memory_response = 7;
 
     GetDatabaseMetricsResponse get_database_metrics_response = 13;
+
+    SyncDatabaseResponse sync_database_response = 14;
 
     GetMemoriesResponse get_memories_response = 2 [deprecated = true];
 

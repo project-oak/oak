@@ -27,10 +27,11 @@ pub mod v1 {
         SealedMemoryResponse, SealedMemorySessionRequest, SealedMemorySessionResponse,
         SearchMemoriesFilter, SearchMemoriesFilters, SearchMemoriesRequest, SearchMemoriesResponse,
         SearchMemoriesResultItem, SearchMemoriesSort, SearchMemoryQuery, SearchMemoryRequest,
-        SearchMemoryResponse, SearchMemoryResultItem, SortOrder, StringFilter, TimeFilter,
-        TimeSort, UserDb, UserRegistrationRequest, UserRegistrationResponse,
-        WrappedDataEncryptionKey, get_database_metrics_response, key_sync_response, memory_value,
-        sealed_memory_request, sealed_memory_response, search_memories_filter,
-        search_memories_sort, search_memory_query, user_registration_response,
+        SearchMemoryResponse, SearchMemoryResultItem, SortOrder, StringFilter, SyncDatabaseRequest,
+        SyncDatabaseResponse, TimeFilter, TimeSort, UserDb, UserRegistrationRequest,
+        UserRegistrationResponse, WrappedDataEncryptionKey, get_database_metrics_response,
+        key_sync_response, memory_value, sealed_memory_request, sealed_memory_response,
+        search_memories_filter, search_memories_sort, search_memory_query,
+        user_registration_response,
     };
 }
