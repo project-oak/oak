@@ -1,5 +1,5 @@
 #
-# Copyright 2024 The Project Oak Authors
+# Copyright 2026 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
+load("//bazel:defs.bzl", "any_platform")
 
 package(
     default_visibility = ["//:internal"],
@@ -22,11 +23,14 @@ package(
 )
 
 rust_library(
-    name = "oak_simple_io",
+    name = "oak_hal",
     srcs = glob(["src/**"]),
+    target_compatible_with = any_platform([
+        "//:x86_64-none-setting",
+        "//:x86_64-none-no_avx-setting",
+        "//:x86_64-linux-setting",  # Needed for unit testing.
+    ]),
     deps = [
-        "//oak_hal",
-        "//oak_sev_guest",
         "@oak_crates_index//:x86_64",
     ],
 )

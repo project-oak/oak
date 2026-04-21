@@ -17,46 +17,11 @@
 use core::marker::PhantomData;
 
 use lock_api::{Mutex, RawMutex};
+use oak_hal::{IoPortFactory, PortReader, PortWriter};
 use spinning_top::{RawSpinlock, Spinlock};
-use x86_64::{
-    instructions::port::Port,
-    structures::port::{PortRead, PortWrite},
-};
+use x86_64::instructions::port::Port;
 
 use crate::ghcb::{Ghcb, GhcbProtocol};
-
-/// Factory for instantiating IO port readers and writers.
-///
-/// The typical usage is to either create raw instances that peform direct IO on
-/// the ports, or instances that use the GHCB IOIO protocol.
-pub trait IoPortFactory<'a, T, R: PortReader<T> + 'a, W: PortWriter<T> + 'a> {
-    /// Creates a new IO port reader instance.
-    fn new_reader(&self, port: u16) -> R;
-    /// Creates a new IO port writer instance.
-    fn new_writer(&self, port: u16) -> W;
-}
-
-/// Reader that can be used to read values from a port.
-pub trait PortReader<T> {
-    /// Tries to read from the port.
-    ///
-    /// # Safety
-    ///
-    /// This function is unsafe because port access could have unsafe
-    /// side-effects.
-    unsafe fn try_read(&mut self) -> Result<T, &'static str>;
-}
-
-/// Writer that can be used to write values to a port.
-pub trait PortWriter<T> {
-    /// Tries to write a value to the port.
-    ///
-    /// # Safety
-    ///
-    /// This function is unsafe because port access could have unsafe
-    /// side-effects.
-    unsafe fn try_write(&mut self, value: T) -> Result<(), &'static str>;
-}
 
 /// A factory for creating port readers and writers that use the GHCB IOIO
 /// protocol.
@@ -192,25 +157,6 @@ where
 
     fn new_writer(&self, port: u16) -> Port<T> {
         Port::<T>::new(port)
-    }
-}
-
-impl<T> PortReader<T> for Port<T>
-where
-    T: PortRead,
-{
-    unsafe fn try_read(&mut self) -> Result<T, &'static str> {
-        Ok(unsafe { self.read() })
-    }
-}
-
-impl<T> PortWriter<T> for Port<T>
-where
-    T: PortWrite,
-{
-    unsafe fn try_write(&mut self, value: T) -> Result<(), &'static str> {
-        unsafe { self.write(value) };
-        Ok(())
     }
 }
 

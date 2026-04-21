@@ -25,8 +25,8 @@ use oak_attestation_types::{
     attester::Attester, transparent_attester::TransparentAttester, util::Serializable,
 };
 use oak_dice::evidence::TeePlatform;
+use oak_hal::{IoPortFactory, PortReader, PortWriter};
 use oak_linux_boot_params::BootE820Entry;
-use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 use oak_stage0_dice::DerivedKey;
 use x86_64::{
     PhysAddr,

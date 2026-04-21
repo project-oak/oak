@@ -16,8 +16,9 @@
 
 use core::arch::asm;
 
+use oak_hal::{IoPortFactory, PortWriter};
 use oak_sev_guest::{
-    io::{IoPortFactory, PortFactoryWrapper, PortWrapper, PortWriter},
+    io::{PortFactoryWrapper, PortWrapper},
     msr::{SevStatus, TerminationReason, TerminationRequest, get_sev_status, request_termination},
 };
 use x86_64::{VirtAddr, instructions::tables::lidt, structures::DescriptorTablePointer};

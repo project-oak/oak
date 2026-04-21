@@ -17,9 +17,10 @@
 use core::{arch::naked_asm, ops::Deref};
 
 use log::error;
+use oak_hal::{IoPortFactory, PortWriter};
 use oak_sev_guest::{
     interrupts::{MutableInterruptStackFrame, mutable_interrupt_handler_with_error_code},
-    io::{IoPortFactory, PortFactoryWrapper, PortWrapper, PortWriter},
+    io::{PortFactoryWrapper, PortWrapper},
     msr::{SevStatus, get_cpuid_for_vc_exception},
 };
 use spinning_top::Spinlock;

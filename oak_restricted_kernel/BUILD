@@ -25,6 +25,7 @@ package(
 exports_files(["layout.ld"])
 
 _OAK_RESTRICTED_KERNEL_COMMON_DEPS = [
+    "//oak_hal",
     "//oak_channel",
     "//oak_core",
     "//oak_crypto",

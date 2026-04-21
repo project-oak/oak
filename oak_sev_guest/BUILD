@@ -34,6 +34,7 @@ rust_library(
         "//:x86_64-linux-setting",  # Needed for unit testing.
     ]),
     deps = [
+        "//oak_hal",
         "//oak_sev_snp_attestation_report",
         "@oak_crates_index//:aes-gcm",
         "@oak_crates_index//:bitflags",
@@ -57,6 +58,7 @@ rust_library(
         "//:x86_64-linux-setting",  # Needed for unit testing.
     ]),
     deps = [
+        "//oak_hal",
         "//oak_sev_snp_attestation_report",
         "@oak_crates_index//:bitflags",
         "@oak_crates_index//:lock_api",

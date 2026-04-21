@@ -24,7 +24,8 @@ extern crate alloc;
 use alloc::{collections::VecDeque, vec::Vec};
 use core::alloc::Allocator;
 
-use oak_sev_guest::io::{IoPortFactory, PortFactoryWrapper, PortReader, PortWrapper, PortWriter};
+use oak_hal::{IoPortFactory, PortReader, PortWriter};
+use oak_sev_guest::io::{PortFactoryWrapper, PortWrapper};
 use x86_64::{PhysAddr, VirtAddr};
 
 /// I/O port descriptor for a buffer.

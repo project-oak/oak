@@ -31,6 +31,7 @@ rust_library(
         "//:x86_64-linux-setting",  # Needed for unit testing of stage0.
     ]),
     deps = [
+        "//oak_hal",
         "//oak_sev_guest",
         "@oak_crates_index//:x86_64",
     ],
@@ -46,6 +47,7 @@ rust_library(
         "//:x86_64-linux-setting",  # Needed for unit testing of stage0.
     ]),
     deps = [
+        "//oak_hal",
         "//oak_sev_guest:oak_sev_guest_no_rust_crypto",
         "@oak_crates_index//:x86_64",
     ],

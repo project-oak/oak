@@ -18,7 +18,7 @@
 
 use core::fmt::Write;
 
-use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
+use oak_hal::{IoPortFactory, PortReader, PortWriter};
 
 /// The offset from the base address to the interrupt register.
 const INTERRUPT_ENABLE: u16 = 1;

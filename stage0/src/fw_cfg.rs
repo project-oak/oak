@@ -21,8 +21,8 @@ use alloc::{vec, vec::Vec};
 use core::{cmp::min, ffi::CStr};
 
 use bitflags::bitflags;
+use oak_hal::{IoPortFactory, PortReader, PortWriter};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
-use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 use x86_64::{
     PhysAddr, VirtAddr,
     structures::paging::{PageSize, Size4KiB},
