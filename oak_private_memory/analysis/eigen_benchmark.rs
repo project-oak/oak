@@ -1,0 +1,165 @@
+//
+// Copyright 2026 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+//! Eigen Embedding Search Benchmark
+//!
+//! Measures embedding search latency with Eigen enabled (the current build).
+//! Compare results against the prior benchmark data collected without Eigen
+//! to quantify the improvement from SIMD-optimized vector operations.
+//!
+//! The benchmark populates an Icing database with N embeddings and runs
+//! embedding search queries, timing each search operation.
+
+use std::time::Instant;
+
+use anyhow::Result;
+use clap::Parser;
+use icing::set_logging;
+use oak_private_memory_database::icing::{IcingMetaDatabase, IcingTempDir, PageToken};
+use rand::random;
+use sealed_memory_rust_proto::oak::private_memory::{
+    Embedding, EmbeddingQuery, LlmView, LlmViews, Memory, SearchMemoryQuery, search_memory_query,
+};
+
+/// Eigen embedding search benchmark.
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Size of the embedding vector
+    #[arg(short, long, default_value_t = 768)]
+    embedding_size: usize,
+
+    /// Maximum number of embeddings to test (powers of 2 starting from 1000)
+    #[arg(short, long, default_value_t = 64_000)]
+    max_embeddings: u32,
+
+    /// Number of search iterations per data point
+    #[arg(short = 'i', long, default_value_t = 20)]
+    iterations: u32,
+}
+
+/// Create a memory with a random embedding.
+fn create_memory_with_embedding(index: u32, embedding_size: usize) -> Memory {
+    let values: Vec<f32> = (0..embedding_size).map(|_| random::<f32>()).collect();
+
+    Memory {
+        id: format!("memory_{}", index),
+        views: Some(LlmViews {
+            llm_views: vec![LlmView {
+                id: format!("view_{}", index),
+                embedding: Some(Embedding {
+                    model_signature: "benchmark_model".to_string(),
+                    values,
+                }),
+                ..Default::default()
+            }],
+        }),
+        ..Default::default()
+    }
+}
+
+/// Create a random query embedding wrapped in SearchMemoryQuery.
+fn create_query(embedding_size: usize) -> (SearchMemoryQuery, EmbeddingQuery) {
+    let values: Vec<f32> = (0..embedding_size).map(|_| random::<f32>()).collect();
+    let eq = EmbeddingQuery {
+        embedding: vec![Embedding { model_signature: "benchmark_model".to_string(), values }],
+        ..Default::default()
+    };
+    let smq =
+        SearchMemoryQuery { clause: Some(search_memory_query::Clause::EmbeddingQuery(eq.clone())) };
+    (smq, eq)
+}
+
+/// Generate embedding counts (1k, 2k, 4k, ...).
+fn get_embedding_counts(max: u32) -> Vec<u32> {
+    let mut counts = Vec::new();
+    let mut c = 1000;
+    while c <= max {
+        counts.push(c);
+        c *= 2;
+    }
+    counts
+}
+
+/// Measure embedding search latency over multiple iterations.
+fn measure_search_latency(
+    db: &IcingMetaDatabase,
+    embedding_query: &EmbeddingQuery,
+    iterations: u32,
+) -> Result<(f64, f64, f64)> {
+    let mut times = Vec::with_capacity(iterations as usize);
+
+    for _ in 0..iterations {
+        let start = Instant::now();
+        let _results = db.embedding_search(embedding_query, 10, PageToken::Start, false)?;
+        let elapsed = start.elapsed().as_secs_f64() * 1000.0;
+        times.push(elapsed);
+    }
+
+    let min = times.iter().cloned().fold(f64::INFINITY, f64::min);
+    let avg = times.iter().sum::<f64>() / iterations as f64;
+    let max = times.iter().cloned().fold(0.0, f64::max);
+
+    Ok((min, avg, max))
+}
+
+fn main() -> Result<()> {
+    let args = Args::parse();
+    set_logging(false);
+
+    println!("Eigen Embedding Search Benchmark");
+    println!("================================\n");
+    println!(
+        "Configuration: embedding_size={}, iterations={}\n",
+        args.embedding_size, args.iterations
+    );
+
+    let counts = get_embedding_counts(args.max_embeddings);
+
+    // Print header
+    println!(
+        "| {:>10} | {:>12} | {:>12} | {:>12} |",
+        "Embeddings", "Min (ms)", "Avg (ms)", "Max (ms)"
+    );
+    println!("|------------|--------------|--------------|--------------|");
+
+    for &count in &counts {
+        let temp_dir = IcingTempDir::new("icing-eigen-bench-");
+        let mut db = IcingMetaDatabase::new(temp_dir)?;
+
+        // Populate
+        for i in 0..count {
+            let memory = create_memory_with_embedding(i, args.embedding_size);
+            db.add_memory(&memory, format!("blob_{}", i))?;
+        }
+        db.optimize()?;
+
+        // Create query
+        let (_smq, eq) = create_query(args.embedding_size);
+
+        // Warmup
+        let _ = db.embedding_search(&eq, 10, PageToken::Start, false)?;
+
+        // Measure
+        let (min, avg, max) = measure_search_latency(&db, &eq, args.iterations)?;
+
+        println!("| {:>10} | {:>12.2} | {:>12.2} | {:>12.2} |", count, min, avg, max);
+
+        drop(db);
+    }
+
+    Ok(())
+}

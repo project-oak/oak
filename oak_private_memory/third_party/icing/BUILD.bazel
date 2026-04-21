@@ -73,14 +73,13 @@ cc_library(
             "icing/transform/simple/**/*.h",
         ],
     ),
-    # Add ICING_DISABLE_EIGEN to disable eigen.
-    copts = ["-DICING_DISABLE_EIGEN"],
     includes = [
         ".",  # For includes relative to the library's root (like CMAKE_CURRENT_SOURCE_DIR)
     ],
     deps = [
         ":icing_cc_proto",
         "@bazel_tools//tools/jdk:jni",
+        "@eigen",
         "@icu//:common",
     ],
 )

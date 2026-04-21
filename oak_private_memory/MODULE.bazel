@@ -123,6 +123,13 @@ git_repository(
     remote = "https://android.googlesource.com/platform/external/icing",
 )
 
+git_repository(
+    name = "eigen",
+    build_file = "@//third_party/eigen:BUILD.bazel",
+    commit = "636ff04e85ac169431b0e177606a315205799423",  # 2024-12-19
+    remote = "https://android.googlesource.com/platform/external/eigen",
+)
+
 bazel_dep(name = "cxx.rs", version = "1.0.194")
 
 crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
