@@ -257,7 +257,6 @@ copy-oak-artifacts: \
     (copy-all "@jemalloc" "jemalloc") \
     (copy-binary "enclave_apps/oak_echo_enclave_app" "oak_echo_enclave_app") \
     (copy-binary "enclave_apps/oak_echo_raw_enclave_app" "oak_echo_raw_enclave_app") \
-    (copy-binary "enclave_apps/oak_logcabin_endorser_enclave_app" "oak_logcabin_endorser_enclave_app") \
     (copy-binary "oak_functions_containers_app/bundle" "oak_functions_container") \
     (copy-binary "oak_functions_containers_app/bundle_insecure" "oak_functions_insecure_container") \
     (copy-binary "enclave_apps/oak_functions_enclave_app" "oak_functions_enclave_app") \
