@@ -37,7 +37,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use wasmtime_wasi::{ResourceTable, WasiCtx, WasiView};
+use wasmtime_wasi::{IoView, ResourceTable, WasiCtx, WasiView};
 
 use crate::ifc::{Label, Privilege};
 
@@ -67,10 +67,13 @@ pub struct CleanroomState {
     pub client_stream: Option<Arc<Mutex<std::os::unix::net::UnixStream>>>,
 }
 
-impl WasiView for CleanroomState {
+impl IoView for CleanroomState {
     fn table(&mut self) -> &mut ResourceTable {
         &mut self.table
     }
+}
+
+impl WasiView for CleanroomState {
     fn ctx(&mut self) -> &mut WasiCtx {
         &mut self.ctx
     }

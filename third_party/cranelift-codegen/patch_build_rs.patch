@@ -1,0 +1,44 @@
+--- build.rs
++++ build.rs
+@@ -60,4 +60,4 @@
+     }
+
+-    let cur_dir = env::current_dir().expect("Can't access current working directory");
+-    let crate_dir = cur_dir.as_path();
++    let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
++    let crate_dir = std::path::Path::new(&manifest_dir);
+@@ -154,3 +154,4 @@
+  ) -> Result<(), Box<dyn std::error::Error + 'static>> {
+-    let cur_dir = std::env::current_dir()?;
++    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")?;
++    let cur_dir = std::path::PathBuf::from(manifest_dir);
+      let isle_compilations = meta::isle::get_isle_compilations(
+@@ -197,9 +198,24 @@
+     eprintln!("Rebuilding {}", compilation.output.display());
+
+     let code = {
+-        let file_paths = compilation
+-            .inputs
+-            .iter()
+-            .chain(compilation.untracked_inputs.iter());
++        let mut fixed_inputs = Vec::new();
++        let cur_dir = std::env::current_dir().unwrap();
++        let cur_dir_str = cur_dir.to_str().unwrap();
++        let sandbox_root = if let Some(idx) = cur_dir_str.find("execroot/_main/") {
++            &cur_dir_str[..idx + "execroot/_main/".len()]
++        } else {
++            cur_dir_str
++        };
++
++        for path in compilation.inputs.iter().chain(compilation.untracked_inputs.iter()) {
++            let path_str = path.to_str().unwrap();
++            if let Some(idx) = path_str.find("execroot/_main/") {
++                let rel_part = &path_str[idx + "execroot/_main/".len()..];
++                fixed_inputs.push(std::path::PathBuf::from(sandbox_root).join(rel_part));
++            } else {
++                fixed_inputs.push(path.clone());
++            }
++        }
++        let file_paths = fixed_inputs.iter();
+
+         let mut options = isle::codegen::CodegenOptions::default();

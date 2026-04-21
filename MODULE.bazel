@@ -1783,21 +1783,31 @@ crate.spec(
     ],
     package = "wasmtime",
     repositories = ALL_STD,
-    version = "29.0.0",
+    version = "30.0.0",
 )
 crate.spec(
     default_features = True,
     features = [],
     package = "wasmtime-wasi",
     repositories = ALL_STD,
-    version = "29.0.0",
+    version = "30.0.0",
 )
 crate.spec(
     default_features = True,
     features = [],
     package = "wasmtime-wasi-http",
     repositories = ALL_STD,
-    version = "29.0.0",
+    version = "30.0.0",
+)
+crate.annotation(
+    crate = "cranelift-codegen",
+    disable_pipelining = False,
+    patch_args = [
+        "-u",
+        "-p0",
+    ],
+    patches = ["@oak//third_party/cranelift-codegen:patch_build_rs.patch"],
+    repositories = ALL_STD,
 )
 crate.spec(
     default_features = True,
