@@ -1783,21 +1783,21 @@ crate.spec(
     ],
     package = "wasmtime",
     repositories = ALL_STD,
-    version = "30.0.0",
+    version = "32.0.0",
 )
 crate.spec(
     default_features = True,
     features = [],
     package = "wasmtime-wasi",
     repositories = ALL_STD,
-    version = "30.0.0",
+    version = "32.0.0",
 )
 crate.spec(
     default_features = True,
     features = [],
     package = "wasmtime-wasi-http",
     repositories = ALL_STD,
-    version = "30.0.0",
+    version = "32.0.0",
 )
 crate.annotation(
     crate = "cranelift-codegen",

@@ -33,7 +33,7 @@ pub enum AttestationVerificationError {
     #[error("could not verify certificate: {0}")]
     X509VerificationError(x509_verify::Error),
     #[error("could not decode base64: {0}")]
-    X509Base64DecodeError(#[from] base64::DecodeError),
+    X509Base64DecodeError(base64::DecodeError),
     #[error("could not decode DER: {0}")]
     X509DerDecodeError(x509_cert::der::Error),
     #[error("certificate validity not_before: {not_before} > {current_time}")]
@@ -208,7 +208,11 @@ pub fn report_attestation_token(
     for base64_der in token.header().x509_chain.iter().rev() {
         issuer_report = Some(
             try {
-                let certificate = Box::new(Certificate::from_der(&STANDARD.decode(base64_der)?)?);
+                let certificate = Box::new(Certificate::from_der(
+                    &STANDARD
+                        .decode(base64_der)
+                        .map_err(AttestationVerificationError::X509Base64DecodeError)?,
+                )?);
                 let validity = verify_certificate_validity(certificate.as_ref(), current_time);
                 let verification = verify_certificate(issuer.as_ref(), certificate.as_ref());
                 issuer = certificate;

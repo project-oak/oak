@@ -68,7 +68,9 @@ pub async fn pull_package(
         let signature = annotations
             .remove("dev.cosignproject.cosign/signature")
             .context("cosign image does not have signature annotation")?;
-        let signature = BASE64_STANDARD.decode(signature)?;
+        let signature = BASE64_STANDARD
+            .decode(signature)
+            .map_err(|e| anyhow::anyhow!("base64 decode error: {e:?}"))?;
 
         let bundle = annotations
             .remove("dev.sigstore.cosign/bundle")
