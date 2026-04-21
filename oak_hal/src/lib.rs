@@ -17,8 +17,11 @@
 #![no_std]
 
 use x86_64::{
-    instructions::port::Port,
-    structures::port::{PortRead, PortWrite},
+    instructions::port::Port as X86Port,
+    structures::{
+        paging::PageSize,
+        port::{PortRead, PortWrite},
+    },
 };
 
 /// Factory for instantiating IO port readers and writers.
@@ -51,7 +54,7 @@ pub trait PortWriter<T> {
     unsafe fn try_write(&mut self, value: T) -> Result<(), &'static str>;
 }
 
-impl<T> PortReader<T> for Port<T>
+impl<T> PortReader<T> for X86Port<T>
 where
     T: PortRead,
 {
@@ -60,12 +63,166 @@ where
     }
 }
 
-impl<T> PortWriter<T> for Port<T>
+impl<T> PortWriter<T> for X86Port<T>
 where
     T: PortWrite,
 {
     unsafe fn try_write(&mut self, value: T) -> Result<(), &'static str> {
         unsafe { self.write(value) };
         Ok(())
+    }
+}
+
+/// Abstraction around MMIO (memory-mapped I/O) read/write access.
+///
+/// Normally you can just access the memory directly via
+/// `read_volatile`/`write_volatile`, but for SEV-ES and above we need to go via
+/// the GHCB to do MMIO.
+pub trait Mmio<S: PageSize> {
+    /// Reads an u32 from the MMIO memory region.
+    ///
+    /// The offset is the number of u32-s (not byte offsets); that is, to read
+    /// bytes at [base_address+4, base_address+8) the offset needs to be 1.
+    ///
+    /// Panics if the read would go outside the memory range.
+    fn read_u32(&self, offset: usize) -> u32;
+
+    /// Write an u32 from the MMIO memory region.
+    ///
+    /// The offset is the number of u32-s (not byte offsets); that is, to read
+    /// bytes at [base_address+4, base_address+8) the offset needs to be 1.
+    ///
+    /// Panics if the read would go outside the memory range.
+    ///
+    /// # Safety
+    ///
+    /// The caller needs to guarantee that the value is valid for the register
+    /// it is written to.
+    unsafe fn write_u32(&mut self, offset: usize, value: u32);
+}
+
+/// Whether a memory page is private to the guest or shared with the hypervisor.
+#[derive(Copy, Clone, Debug)]
+pub enum PageAssignment {
+    Shared,
+    Private,
+}
+
+/// Abstraction around MSR (model-specific register) read/write access.
+pub trait MsrAccess {
+    /// Read the MSR.
+    ///
+    /// ## Safety
+    ///
+    /// The caller must guarantee that the MSR is valid.
+    unsafe fn read_msr(msr: u32) -> u64;
+
+    /// Write the MSR.
+    ///
+    /// ## Safety
+    ///
+    /// The caller must guarantee that the MSR is valid.
+    unsafe fn write_msr(msr: u32, value: u64);
+}
+
+/// Wrapper that can access a MSR either directly or through the GHCB, depending
+/// on the environment.
+pub struct Msr {
+    msr_id: u32,
+}
+
+impl Msr {
+    pub const fn new(reg: u32) -> Self {
+        Self { msr_id: reg }
+    }
+
+    /// Read the MSR.
+    ///
+    /// ## Safety
+    ///
+    /// The caller must guarantee that the MSR is valid.
+    pub unsafe fn read<A: MsrAccess>(&self) -> u64 {
+        unsafe { A::read_msr(self.msr_id) }
+    }
+
+    /// Write the MSR.
+    ///
+    /// ## Safety
+    ///
+    /// The caller must guarantee that the MSR is valid.
+    pub unsafe fn write<A: MsrAccess>(&mut self, val: u64) {
+        unsafe { A::write_msr(self.msr_id, val) };
+    }
+}
+
+/// Holder for port-based IO functions.
+///
+/// This is not a trait on purpose: `PortFactory` gets stored in a static, so it
+/// needs to be Sized.
+#[derive(Clone)]
+pub struct PortFactory {
+    pub read_u8: unsafe fn(u16) -> Result<u8, &'static str>,
+    pub read_u16: unsafe fn(u16) -> Result<u16, &'static str>,
+    pub read_u32: unsafe fn(u16) -> Result<u32, &'static str>,
+    pub write_u8: unsafe fn(u16, u8) -> Result<(), &'static str>,
+    pub write_u16: unsafe fn(u16, u16) -> Result<(), &'static str>,
+    pub write_u32: unsafe fn(u16, u32) -> Result<(), &'static str>,
+}
+
+impl IoPortFactory<'_, u8, Port<u8>, Port<u8>> for PortFactory {
+    fn new_reader(&self, port: u16) -> Port<u8> {
+        Port::new(port, self.read_u8, self.write_u8)
+    }
+
+    fn new_writer(&self, port: u16) -> Port<u8> {
+        Port::new(port, self.read_u8, self.write_u8)
+    }
+}
+
+impl IoPortFactory<'_, u16, Port<u16>, Port<u16>> for PortFactory {
+    fn new_reader(&self, port: u16) -> Port<u16> {
+        Port::new(port, self.read_u16, self.write_u16)
+    }
+
+    fn new_writer(&self, port: u16) -> Port<u16> {
+        Port::new(port, self.read_u16, self.write_u16)
+    }
+}
+
+impl IoPortFactory<'_, u32, Port<u32>, Port<u32>> for PortFactory {
+    fn new_reader(&self, port: u16) -> Port<u32> {
+        Port::new(port, self.read_u32, self.write_u32)
+    }
+
+    fn new_writer(&self, port: u16) -> Port<u32> {
+        Port::new(port, self.read_u32, self.write_u32)
+    }
+}
+
+pub struct Port<T: PortRead + PortWrite> {
+    port: u16,
+    read: unsafe fn(u16) -> Result<T, &'static str>,
+    write: unsafe fn(u16, T) -> Result<(), &'static str>,
+}
+
+impl<T: PortRead + PortWrite> Port<T> {
+    fn new(
+        port: u16,
+        read: unsafe fn(u16) -> Result<T, &'static str>,
+        write: unsafe fn(u16, T) -> Result<(), &'static str>,
+    ) -> Self {
+        Self { port, read, write }
+    }
+}
+
+impl<T: PortRead + PortWrite> PortReader<T> for Port<T> {
+    unsafe fn try_read(&mut self) -> Result<T, &'static str> {
+        unsafe { (self.read)(self.port) }
+    }
+}
+
+impl<T: PortRead + PortWrite> PortWriter<T> for Port<T> {
+    unsafe fn try_write(&mut self, value: T) -> Result<(), &'static str> {
+        unsafe { (self.write)(self.port, value) }
     }
 }

@@ -26,6 +26,7 @@ use core::{
 };
 
 use log::info;
+use oak_hal::MsrAccess;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_stage0::{
     BOOT_ALLOC, Madt, Rsdp, RsdtEntryPairMut,
@@ -468,14 +469,17 @@ impl oak_stage0::Platform for Tdx {
     fn tee_platform() -> oak_dice::evidence::TeePlatform {
         oak_dice::evidence::TeePlatform::IntelTdx
     }
+
+    fn wbvind() {
+        tdvmcall_wbinvd().unwrap()
+    }
+}
+
+impl MsrAccess for Tdx {
     unsafe fn read_msr(msr: u32) -> u64 {
         msr_read(msr).unwrap()
     }
     unsafe fn write_msr(msr: u32, value: u64) {
         unsafe { msr_write(msr, value).unwrap() }
-    }
-
-    fn wbvind() {
-        tdvmcall_wbinvd().unwrap()
     }
 }

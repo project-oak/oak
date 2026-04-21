@@ -25,9 +25,6 @@ package(
 rust_library(
     name = "stage0",
     srcs = glob(["src/**"]),
-    crate_features = [
-        "sev",
-    ],
     target_compatible_with = any_platform([
         "//:x86_64-none-setting",
         "//:x86_64-none-no_avx-setting",
@@ -41,8 +38,6 @@ rust_library(
         "//oak_hal",
         "//oak_linux_boot_params",
         "//oak_proto_rust",
-        "//oak_sev_guest",
-        "//oak_sev_snp_attestation_report",
         "//sev_serial",
         "//stage0_dice",
         "@oak_crates_index//:anyhow",
@@ -71,7 +66,6 @@ rust_library(
     name = "stage0_for_test",
     srcs = glob(["src/**"]),
     crate_features = [
-        "sev",
         "stage0_test",
     ],
     target_compatible_with = any_platform([
@@ -85,8 +79,6 @@ rust_library(
         "//oak_hal",
         "//oak_linux_boot_params",
         "//oak_proto_rust",
-        "//oak_sev_guest",
-        "//oak_sev_snp_attestation_report",
         "//sev_serial",
         "//stage0_dice",
         "@oak_crates_index//:anyhow",

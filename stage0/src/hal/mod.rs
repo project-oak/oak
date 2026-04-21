@@ -25,60 +25,22 @@ use oak_attestation_types::{
     attester::Attester, transparent_attester::TransparentAttester, util::Serializable,
 };
 use oak_dice::evidence::TeePlatform;
-use oak_hal::{IoPortFactory, PortReader, PortWriter};
+pub use oak_hal::{Mmio, PageAssignment};
 use oak_linux_boot_params::BootE820Entry;
 use oak_stage0_dice::DerivedKey;
 use x86_64::{
     PhysAddr,
-    structures::{
-        paging::{Page, PageSize, Size4KiB},
-        port::{PortRead, PortWrite},
-    },
+    structures::paging::{Page, PageSize, Size4KiB},
 };
 use zerocopy::{FromBytes, IntoBytes};
 
 use crate::{acpi_tables::Rsdp, paging::PageEncryption, zero_page::ZeroPage};
 
-/// Abstraction around MMIO (memory-mapped I/O) read/write access.
-///
-/// Normally you can just access the memory directly via
-/// `read_volatile`/`write_volatile`, but for SEV-ES and above we need to go via
-/// the GHCB to do MMIO.
-pub trait Mmio<S: PageSize> {
-    /// Reads an u32 from the MMIO memory region.
-    ///
-    /// The offset is the number of u32-s (not byte offsets); that is, to read
-    /// bytes at [base_address+4, base_address+8) the offset needs to be 1.
-    ///
-    /// Panics if the read would go outside the memory range.
-    fn read_u32(&self, offset: usize) -> u32;
-
-    /// Write an u32 from the MMIO memory region.
-    ///
-    /// The offset is the number of u32-s (not byte offsets); that is, to read
-    /// bytes at [base_address+4, base_address+8) the offset needs to be 1.
-    ///
-    /// Panics if the read would go outside the memory range.
-    ///
-    /// # Safety
-    ///
-    /// The caller needs to guarantee that the value is valid for the register
-    /// it is written to.
-    unsafe fn write_u32(&mut self, offset: usize, value: u32);
-}
-
-/// Whether a memory page is private to the guest or shared with the hypervisor.
-#[derive(Copy, Clone, Debug)]
-pub enum PageAssignment {
-    Shared,
-    Private,
-}
-
 #[cfg_attr(test, mockall::automock(
     type Mmio<S: PageSize> = <Base as Platform>::Mmio<S>;
     type Attester = <Base as Platform>::Attester;
 ))]
-pub trait Platform {
+pub trait Platform: oak_hal::MsrAccess {
     type Mmio<S: PageSize>: Mmio<S>;
     type Attester: Attester + TransparentAttester + Serializable;
 
@@ -177,20 +139,6 @@ pub trait Platform {
 
     fn tee_platform() -> TeePlatform;
 
-    /// Read a MSR.
-    ///
-    /// ## Safety
-    ///
-    /// The caller must guarantee that the MSR is valid.
-    unsafe fn read_msr(msr: u32) -> u64;
-
-    /// Write to a MSR.
-    ///
-    /// ## Safety
-    ///
-    /// The caller must guarantee that the MSR is valid.
-    unsafe fn write_msr(msr: u32, value: u64);
-
     /// Write Back and Invalidate Cache
     ///
     /// Writes back all modified cache lines in the processor’s internal cache
@@ -220,104 +168,13 @@ pub trait Platform {
     }
 }
 
-/// Wrapper that can access a MSR either directly or through the GHCB, depending
-/// on the environment.
-pub struct Msr {
-    msr_id: u32,
+#[cfg(test)]
+impl oak_hal::MsrAccess for MockPlatform {
+    unsafe fn read_msr(_msr: u32) -> u64 {
+        0
+    }
+
+    unsafe fn write_msr(_msr: u32, _value: u64) {}
 }
 
-impl Msr {
-    pub const fn new(reg: u32) -> Self {
-        Self { msr_id: reg }
-    }
-
-    /// Read the MSR.
-    ///
-    /// ## Safety
-    ///
-    /// The caller must guarantee that the MSR is valid.
-    pub unsafe fn read<P: Platform>(&self) -> u64 {
-        unsafe { P::read_msr(self.msr_id) }
-    }
-
-    /// Write the MSR.
-    ///
-    /// ## Safety
-    ///
-    /// The caller must guarantee that the MSR is valid.
-    pub unsafe fn write<P: Platform>(&mut self, val: u64) {
-        unsafe { P::write_msr(self.msr_id, val) };
-    }
-}
-
-/// Holder for port-based IO functions.
-///
-/// This is not a trait on purpose: `PortFactory` gets stored in a static, so it
-/// needs to be Sized.
-#[derive(Clone)]
-pub struct PortFactory {
-    pub read_u8: unsafe fn(u16) -> Result<u8, &'static str>,
-    pub read_u16: unsafe fn(u16) -> Result<u16, &'static str>,
-    pub read_u32: unsafe fn(u16) -> Result<u32, &'static str>,
-    pub write_u8: unsafe fn(u16, u8) -> Result<(), &'static str>,
-    pub write_u16: unsafe fn(u16, u16) -> Result<(), &'static str>,
-    pub write_u32: unsafe fn(u16, u32) -> Result<(), &'static str>,
-}
-
-impl IoPortFactory<'_, u8, Port<u8>, Port<u8>> for PortFactory {
-    fn new_reader(&self, port: u16) -> Port<u8> {
-        Port::new(port, self.read_u8, self.write_u8)
-    }
-
-    fn new_writer(&self, port: u16) -> Port<u8> {
-        Port::new(port, self.read_u8, self.write_u8)
-    }
-}
-
-impl IoPortFactory<'_, u16, Port<u16>, Port<u16>> for PortFactory {
-    fn new_reader(&self, port: u16) -> Port<u16> {
-        Port::new(port, self.read_u16, self.write_u16)
-    }
-
-    fn new_writer(&self, port: u16) -> Port<u16> {
-        Port::new(port, self.read_u16, self.write_u16)
-    }
-}
-
-impl IoPortFactory<'_, u32, Port<u32>, Port<u32>> for PortFactory {
-    fn new_reader(&self, port: u16) -> Port<u32> {
-        Port::new(port, self.read_u32, self.write_u32)
-    }
-
-    fn new_writer(&self, port: u16) -> Port<u32> {
-        Port::new(port, self.read_u32, self.write_u32)
-    }
-}
-
-pub struct Port<T: PortRead + PortWrite> {
-    port: u16,
-    read: unsafe fn(u16) -> Result<T, &'static str>,
-    write: unsafe fn(u16, T) -> Result<(), &'static str>,
-}
-
-impl<T: PortRead + PortWrite> Port<T> {
-    fn new(
-        port: u16,
-        read: unsafe fn(u16) -> Result<T, &'static str>,
-        write: unsafe fn(u16, T) -> Result<(), &'static str>,
-    ) -> Self {
-        Self { port, read, write }
-    }
-}
-
-impl<T: PortRead + PortWrite> PortReader<T> for Port<T> {
-    unsafe fn try_read(&mut self) -> Result<T, &'static str> {
-        unsafe { (self.read)(self.port) }
-    }
-}
-
-impl<T: PortRead + PortWrite> PortWriter<T> for Port<T> {
-    unsafe fn try_write(&mut self, value: T) -> Result<(), &'static str> {
-        unsafe { (self.write)(self.port, value) }
-    }
-}
+pub use oak_hal::{Msr, Port, PortFactory};

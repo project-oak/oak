@@ -25,6 +25,7 @@ use core::{arch::x86_64::CpuidResult, mem::MaybeUninit};
 use oak_attestation::dice::DiceAttester;
 use oak_core::sync::OnceCell;
 use oak_dice::evidence::TeePlatform;
+use oak_hal::MsrAccess;
 use oak_linux_boot_params::BootE820Entry;
 use oak_sev_guest::{
     ap_jump_table::ApJumpTable, cpuid::CpuidInput, ghcb::GhcbProtocol, msr::SevStatus,
@@ -332,6 +333,12 @@ impl Platform for Sev {
         encrypted()
     }
 
+    fn wbvind() {
+        Base::wbvind()
+    }
+}
+
+impl MsrAccess for Sev {
     unsafe fn read_msr(msr_id: u32) -> u64 {
         if let Some(mut ghcb) = GHCB_WRAPPER.get() {
             ghcb.msr_read(msr_id).expect("couldn't read the MSR using the GHCB protocol")
@@ -346,9 +353,5 @@ impl Platform for Sev {
         } else {
             unsafe { Base::write_msr(msr_id, val) }
         }
-    }
-
-    fn wbvind() {
-        Base::wbvind()
     }
 }

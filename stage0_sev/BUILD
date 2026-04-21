@@ -29,6 +29,7 @@ rust_library(
         "//oak_attestation",
         "//oak_core",
         "//oak_dice",
+        "//oak_hal",
         "//oak_linux_boot_params",
         "//oak_sev_guest",
         "//oak_sev_snp_attestation_report",

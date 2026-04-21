@@ -117,14 +117,6 @@ impl crate::Platform for Base {
         TeePlatform::None
     }
 
-    unsafe fn read_msr(msr: u32) -> u64 {
-        unsafe { Msr::new(msr).read() }
-    }
-
-    unsafe fn write_msr(msr: u32, value: u64) {
-        unsafe { Msr::new(msr).write(value) }
-    }
-
     fn wbvind() {
         // Safety: this shouldn't have any (visible) effects that affect Rust safety.
         unsafe {
@@ -134,5 +126,15 @@ impl crate::Platform for Base {
 
             }
         }
+    }
+}
+
+impl oak_hal::MsrAccess for Base {
+    unsafe fn read_msr(msr: u32) -> u64 {
+        unsafe { Msr::new(msr).read() }
+    }
+
+    unsafe fn write_msr(msr: u32, value: u64) {
+        unsafe { Msr::new(msr).write(value) }
     }
 }
