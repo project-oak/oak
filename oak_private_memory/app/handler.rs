@@ -247,7 +247,7 @@ impl SealedMemorySessionHandler {
         Ok(())
     }
 
-    pub async fn boot_strap_handler(
+    pub async fn user_registration_handler(
         &self,
         request: UserRegistrationRequest,
     ) -> tonic::Result<UserRegistrationResponse> {
@@ -522,7 +522,7 @@ impl SealedMemorySessionHandler {
     ) -> tonic::Result<SealedMemoryResponse> {
         let response = match request_variant {
             sealed_memory_request::Request::UserRegistrationRequest(request) => {
-                self.boot_strap_handler(request).await?.into_response()
+                self.user_registration_handler(request).await?.into_response()
             }
             sealed_memory_request::Request::KeySyncRequest(request) => {
                 self.key_sync_handler(request).await?.into_response()
