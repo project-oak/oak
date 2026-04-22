@@ -73,7 +73,7 @@ pub use acpi_tables::{
     ProcessorLocalX2Apic, Rsdp, Rsdt, RsdtEntryPairMut, Xsdt,
 };
 pub use apic::Lapic;
-pub use hal::Platform;
+pub use hal::{FirmwarePlatform, Platform};
 pub use pic::disable_pic8259;
 pub use zero_page::ZeroPage;
 
@@ -115,7 +115,7 @@ pub fn create_idt(_idt: &mut InterruptDescriptorTable) {}
 ///
 /// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page
 ///   tables.
-pub fn rust64_start<P: hal::Platform>() -> ! {
+pub fn rust64_start<P: hal::Platform + hal::FirmwarePlatform>() -> ! {
     // Ensure the BDA is zeroed out, lest some legacy code go looking for some data
     // from there.
     //

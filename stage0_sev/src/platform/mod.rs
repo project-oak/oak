@@ -33,7 +33,7 @@ use oak_sev_guest::{
 use oak_stage0::{
     BOOT_ALLOC, BootAllocator, Rsdp, ZeroPage,
     allocator::Shared,
-    hal::{Base, PageAssignment, Platform, PortFactory},
+    hal::{Base, FirmwarePlatform, PageAssignment, Platform, PortFactory},
     paging::PageEncryption,
 };
 use spinning_top::{RawSpinlock, Spinlock, lock_api::MutexGuard};
@@ -152,7 +152,6 @@ pub struct Sev {}
 
 impl Platform for Sev {
     type Mmio<S: PageSize> = mmio::Mmio<S>;
-    type Attester = DiceAttester;
 
     fn cpuid(leaf: u32) -> CpuidResult {
         if let Some(mut ghcb) = GHCB_WRAPPER.get() {
@@ -181,10 +180,6 @@ impl Platform for Sev {
         } else {
             oak_stage0::hal::Base::port_factory()
         }
-    }
-
-    fn prefill_e820_table<T: IntoBytes + FromBytes>(_: &mut T) -> Result<usize, &'static str> {
-        Err("SEV does not support E820 prefill")
     }
 
     fn early_initialize_platform() {
@@ -249,6 +244,48 @@ impl Platform for Sev {
         }
     }
 
+    fn page_table_mask(encryption_state: PageEncryption) -> u64 {
+        if sev_status().contains(SevStatus::SEV_ENABLED) {
+            match encryption_state {
+                PageEncryption::Unset => 0,
+                PageEncryption::Encrypted => encrypted(),
+                PageEncryption::Unencrypted => 0,
+            }
+        } else {
+            0
+        }
+    }
+
+    fn change_page_state(
+        page: x86_64::structures::paging::Page<x86_64::structures::paging::Size4KiB>,
+        state: PageAssignment,
+    ) {
+        accept_memory::change_page_state(page, state.into_msr())
+            .expect("failed to change page state");
+    }
+
+    fn revalidate_page(
+        page: x86_64::structures::paging::Page<x86_64::structures::paging::Size4KiB>,
+    ) {
+        accept_memory::revalidate_page(page).expect("failed to revalidate memory");
+    }
+
+    fn encrypted() -> u64 {
+        encrypted()
+    }
+
+    fn wbvind() {
+        Base::wbvind()
+    }
+}
+
+impl FirmwarePlatform for Sev {
+    type Attester = DiceAttester;
+
+    fn prefill_e820_table<T: IntoBytes + FromBytes>(_: &mut T) -> Result<usize, &'static str> {
+        Err("SEV does not support E820 prefill")
+    }
+
     fn finalize_acpi_tables(rsdp: &mut Rsdp) -> Result<(), &'static str> {
         // No further changes needed to ACPI tables, but now that they're in
         // place, we can bring up other CPUs (APs).
@@ -295,46 +332,12 @@ impl Platform for Sev {
         }
     }
 
-    fn page_table_mask(encryption_state: PageEncryption) -> u64 {
-        if sev_status().contains(SevStatus::SEV_ENABLED) {
-            match encryption_state {
-                PageEncryption::Unset => 0,
-                PageEncryption::Encrypted => encrypted(),
-                PageEncryption::Unencrypted => 0,
-            }
-        } else {
-            0
-        }
-    }
-
     fn get_attester() -> Result<Self::Attester, &'static str> {
         dice_attestation::get_attester()
     }
 
     fn get_derived_key() -> Result<oak_stage0_dice::DerivedKey, &'static str> {
         dice_attestation::get_derived_key()
-    }
-
-    fn change_page_state(
-        page: x86_64::structures::paging::Page<x86_64::structures::paging::Size4KiB>,
-        state: PageAssignment,
-    ) {
-        accept_memory::change_page_state(page, state.into_msr())
-            .expect("failed to change page state");
-    }
-
-    fn revalidate_page(
-        page: x86_64::structures::paging::Page<x86_64::structures::paging::Size4KiB>,
-    ) {
-        accept_memory::revalidate_page(page).expect("failed to revalidate memory");
-    }
-
-    fn encrypted() -> u64 {
-        encrypted()
-    }
-
-    fn wbvind() {
-        Base::wbvind()
     }
 }
 

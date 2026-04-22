@@ -115,7 +115,7 @@ pub fn setup_high_allocator(zero_page: &mut ZeroPage) -> Result<(), &'static str
 /// Populates the ACPI tables per linking instructions in `etc/table-loader`.
 ///
 /// Returns the address of the RSDP table.
-pub fn build_acpi_tables<P: crate::Platform>(
+pub fn build_acpi_tables<P: crate::Platform + crate::FirmwarePlatform>(
     fwcfg: &mut FwCfg<P>,
     acpi_digest: &mut Sha256,
     pci_windows: Option<PciWindows>,

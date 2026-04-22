@@ -39,7 +39,6 @@ pub struct Base {}
 
 impl crate::Platform for Base {
     type Mmio<S: PageSize> = mmio::Mmio<S>;
-    type Attester = DiceAttester;
 
     fn cpuid(leaf: u32) -> CpuidResult {
         // Safety: all CPUs we care about are modern enough to support CPUID.
@@ -74,11 +73,38 @@ impl crate::Platform for Base {
 
     fn early_initialize_platform() {}
 
+    fn initialize_platform(_e820_table: &[BootE820Entry]) {}
+
+    fn change_page_state(_page: Page<Size4KiB>, _state: PageAssignment) {}
+
+    fn revalidate_page(_page: Page<Size4KiB>) {}
+
+    fn page_table_mask(_encryption_state: PageEncryption) -> u64 {
+        0
+    }
+
+    fn encrypted() -> u64 {
+        0
+    }
+
+    fn wbvind() {
+        // Safety: this shouldn't have any (visible) effects that affect Rust safety.
+        unsafe {
+            core::arch::asm! {
+                "wbinvd",
+                 options(preserves_flags, nostack)
+
+            }
+        }
+    }
+}
+
+impl super::FirmwarePlatform for Base {
+    type Attester = DiceAttester;
+
     fn prefill_e820_table<T: IntoBytes + FromBytes>(_: &mut T) -> Result<usize, &'static str> {
         Err("not needed")
     }
-
-    fn initialize_platform(_e820_table: &[BootE820Entry]) {}
 
     fn finalize_acpi_tables(_rsdp: &mut Rsdp) -> Result<(), &'static str> {
         Ok(())
@@ -101,31 +127,8 @@ impl crate::Platform for Base {
         oak_stage0_dice::mock_derived_key()
     }
 
-    fn change_page_state(_page: Page<Size4KiB>, _state: PageAssignment) {}
-
-    fn revalidate_page(_page: Page<Size4KiB>) {}
-
-    fn page_table_mask(_encryption_state: PageEncryption) -> u64 {
-        0
-    }
-
-    fn encrypted() -> u64 {
-        0
-    }
-
     fn tee_platform() -> TeePlatform {
         TeePlatform::None
-    }
-
-    fn wbvind() {
-        // Safety: this shouldn't have any (visible) effects that affect Rust safety.
-        unsafe {
-            core::arch::asm! {
-                "wbinvd",
-                 options(preserves_flags, nostack)
-
-            }
-        }
     }
 }
 

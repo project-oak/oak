@@ -30,7 +30,7 @@ use oak_hal::MsrAccess;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_stage0::{
     BOOT_ALLOC, Madt, Rsdp, RsdtEntryPairMut,
-    hal::PortFactory,
+    hal::{FirmwarePlatform, Platform, PortFactory},
     mailbox::{FirmwareMailbox, OsMailbox},
     paging,
     paging::PageTableRefs,
@@ -272,15 +272,14 @@ fn handle_legacy_smbios(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
 
 pub struct Tdx {}
 
-impl oak_stage0::Platform for Tdx {
+impl Platform for Tdx {
     type Mmio<S: x86_64::structures::paging::page::PageSize> = Mmio;
-    type Attester = crate::attestation::RtmrAttester;
 
     fn cpuid(leaf: u32) -> core::arch::x86_64::CpuidResult {
         call_cpuid(leaf, 0).unwrap()
     }
 
-    unsafe fn mmio<S>(_: x86_64::addr::PhysAddr) -> <Self as oak_stage0::Platform>::Mmio<S>
+    unsafe fn mmio<S>(_: x86_64::addr::PhysAddr) -> <Self as Platform>::Mmio<S>
     where
         S: x86_64::structures::paging::page::PageSize,
     {
@@ -295,6 +294,59 @@ impl oak_stage0::Platform for Tdx {
         show_td_info();
         serial::debug!("early_initialize_platform completed");
     }
+
+    fn initialize_platform(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
+        // logger is initialized starting from here
+        info!("initialize platform");
+        info!("{:?}", e820_table);
+
+        setup_mailbox();
+        accept_tdx_memory(e820_table);
+        handle_legacy_smbios(e820_table);
+
+        info!("initialize platform completed");
+    }
+
+    fn change_page_state(
+        page: x86_64::structures::paging::Page,
+        attr: oak_stage0::hal::PageAssignment,
+    ) {
+        let shared: bool = match attr {
+            oak_stage0::hal::PageAssignment::Shared => true,
+            oak_stage0::hal::PageAssignment::Private => false,
+        };
+        let mut pt = offset_pt();
+        pt_set_shared_bit(&mut pt, &page, shared);
+    }
+
+    fn revalidate_page(_: x86_64::structures::paging::Page) {
+        // TODO: b/360488924 - impl revalidate_page
+    }
+
+    fn page_table_mask(enc: oak_stage0::paging::PageEncryption) -> u64 {
+        // a. When 4-level EPT is active, the SHARED bit position would
+        // always be bit 47.
+        // b. When 5-level EPT is active, the SHARED bit position would
+        // be bit 47 if GPAW is 0. Otherwise, else it would be bit 51.
+        match enc {
+            oak_stage0::paging::PageEncryption::Unset => 0,
+            oak_stage0::paging::PageEncryption::Encrypted => 0,
+            oak_stage0::paging::PageEncryption::Unencrypted => 1 << get_tdx_shared_bit(),
+        }
+    }
+
+    fn encrypted() -> u64 {
+        // stage0_bin_tdx does not support regular VM
+        1 << get_tdx_shared_bit()
+    }
+
+    fn wbvind() {
+        tdvmcall_wbinvd().unwrap()
+    }
+}
+
+impl FirmwarePlatform for Tdx {
+    type Attester = crate::attestation::RtmrAttester;
 
     #[allow(clippy::if_same_then_else)]
     fn prefill_e820_table<T: IntoBytes + FromBytes>(dest: &mut T) -> Result<usize, &'static str> {
@@ -353,18 +405,6 @@ impl oak_stage0::Platform for Tdx {
             }
         }
         if index == 0 { Err("no valid TD HoB found") } else { Ok(index) }
-    }
-
-    fn initialize_platform(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
-        // logger is initialized starting from here
-        info!("initialize platform");
-        info!("{:?}", e820_table);
-
-        setup_mailbox();
-        accept_tdx_memory(e820_table);
-        handle_legacy_smbios(e820_table);
-
-        info!("initialize platform completed");
     }
 
     fn finalize_acpi_tables(rsdp: &mut Rsdp) -> Result<(), &'static str> {
@@ -426,52 +466,23 @@ impl oak_stage0::Platform for Tdx {
     fn deinit_platform() {
         //TODO: b/360488922 - impl deinit_platform
     }
+
     fn populate_zero_page(_: &mut oak_stage0::ZeroPage) {
         info!("populate_zero_page start");
         info!("populate_zero_page completed");
     }
+
     fn get_attester() -> Result<Self::Attester, &'static str> {
         Ok(crate::attestation::RtmrAttester::default())
     }
+
     fn get_derived_key() -> Result<[u8; 32], &'static str> {
         // TODO: b/360488668 - impl get_derived_key
         Ok([0; 32])
     }
-    fn change_page_state(
-        page: x86_64::structures::paging::Page,
-        attr: oak_stage0::hal::PageAssignment,
-    ) {
-        let shared: bool = match attr {
-            oak_stage0::hal::PageAssignment::Shared => true,
-            oak_stage0::hal::PageAssignment::Private => false,
-        };
-        let mut pt = offset_pt();
-        pt_set_shared_bit(&mut pt, &page, shared);
-    }
-    fn revalidate_page(_: x86_64::structures::paging::Page) {
-        // TODO: b/360488924 - impl revalidate_page
-    }
-    fn page_table_mask(enc: oak_stage0::paging::PageEncryption) -> u64 {
-        // a. When 4-level EPT is active, the SHARED bit position would
-        // always be bit 47.
-        // b. When 5-level EPT is active, the SHARED bit position would
-        // be bit 47 if GPAW is 0. Otherwise, else it would be bit 51.
-        match enc {
-            oak_stage0::paging::PageEncryption::Unset => 0,
-            oak_stage0::paging::PageEncryption::Encrypted => 0,
-            oak_stage0::paging::PageEncryption::Unencrypted => 1 << get_tdx_shared_bit(),
-        }
-    }
-    fn encrypted() -> u64 {
-        // stage0_bin_tdx does not support regular VM
-        1 << get_tdx_shared_bit()
-    }
+
     fn tee_platform() -> oak_dice::evidence::TeePlatform {
         oak_dice::evidence::TeePlatform::IntelTdx
-    }
-
-    fn wbvind() {
-        tdvmcall_wbinvd().unwrap()
     }
 }
 

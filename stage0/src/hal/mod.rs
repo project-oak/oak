@@ -38,11 +38,9 @@ use crate::{acpi_tables::Rsdp, paging::PageEncryption, zero_page::ZeroPage};
 
 #[cfg_attr(test, mockall::automock(
     type Mmio<S: PageSize> = <Base as Platform>::Mmio<S>;
-    type Attester = <Base as Platform>::Attester;
 ))]
 pub trait Platform: oak_hal::MsrAccess {
     type Mmio<S: PageSize>: Mmio<S>;
-    type Attester: Attester + TransparentAttester + Serializable;
 
     /// Performs the CPUID instruction.
     fn cpuid(leaf: u32) -> CpuidResult;
@@ -68,16 +66,6 @@ pub trait Platform: oak_hal::MsrAccess {
     ///     work).
     fn early_initialize_platform();
 
-    /// Prefill E820 Table using platform specific features.
-    ///
-    /// Intel TDX requires the virtual firmware to consume inputs from TD HoB
-    /// and measure them. This gets executed before asking the fw_cfg device
-    /// for E820 table. It should populate the inner E820 table. If this
-    /// function returns Ok, stage0 will not ask fw_cfg for E820 table.
-    fn prefill_e820_table<T: IntoBytes + FromBytes + 'static>(
-        input: &mut T,
-    ) -> Result<usize, &'static str>;
-
     /// Platform-specific intialization.
     ///
     /// This gets executed after `early_initalize_platform()` and some other
@@ -88,6 +76,69 @@ pub trait Platform: oak_hal::MsrAccess {
     /// This does mean you do not have access to the heap allocator
     /// (BOOT_ALLOCATOR will still work).
     fn initialize_platform(e820_table: &[BootE820Entry]);
+
+    /// Ask for the page state to be changed by the hypervisor.
+    fn change_page_state(page: Page<Size4KiB>, state: PageAssignment);
+
+    /// Validate one page of memory.
+    ///
+    /// This operation is required for SEV after going from a SHARED state to a
+    /// PRIVATE state.
+    fn revalidate_page(page: Page<Size4KiB>);
+
+    /// Mask to use in the page tables for the given encrypion state.
+    ///
+    /// SEV and TDX have opposite behaviours: for SEV, encrypted pages are
+    /// marked; for TDX, unencrypted pages are marked.
+    fn page_table_mask(encryption_state: PageEncryption) -> u64;
+
+    /// Encrypted/shared bit mask irrespective of its semantics.
+    fn encrypted() -> u64;
+
+    /// Write Back and Invalidate Cache
+    ///
+    /// Writes back all modified cache lines in the processor’s internal cache
+    /// to main memory and invalidates (flushes) the internal caches.
+    fn wbvind();
+
+    /// Returns the number of bits in use in guest physical memory addresses.
+    ///
+    /// This is dependent on both the (real physical) CPU on the machine and the
+    /// VMM.
+    fn guest_phys_addr_size() -> u8 {
+        let cpuid = Self::cpuid(0x8000_0008); // Long Mode Size Identifiers
+
+        // EDK2 treads carefully here as sometimes QEMU can report more physical bits
+        // than the CPU actually supports. We'll just assume these are correct and the
+        // CPUs *have* at least 40 physical address bits. We don't need to support
+        // particularly old machines, after all.
+
+        // First, see if GuestPhysAddrSize is set (bits 23:16):
+        let addr_size = ((cpuid.eax >> 16) & 0xFF) as u8;
+        if addr_size == 0 {
+            // not specified, it's the same as PhysAddrSize (bits 7:0)
+            (cpuid.eax & 0xFF) as u8
+        } else {
+            addr_size
+        }
+    }
+}
+
+#[cfg_attr(test, mockall::automock(
+    type Attester = <Base as FirmwarePlatform>::Attester;
+))]
+pub trait FirmwarePlatform {
+    type Attester: Attester + TransparentAttester + Serializable;
+
+    /// Prefill E820 Table using platform specific features.
+    ///
+    /// Intel TDX requires the virtual firmware to consume inputs from TD HoB
+    /// and measure them. This gets executed before asking the fw_cfg device
+    /// for E820 table. It should populate the inner E820 table. If this
+    /// function returns Ok, stage0 will not ask fw_cfg for E820 table.
+    fn prefill_e820_table<T: IntoBytes + FromBytes + 'static>(
+        input: &mut T,
+    ) -> Result<usize, &'static str>;
 
     /// Platform-specific modifications and validations of ACPI tables, starting
     /// from RSDP, including RSDT, XSDT, APIC aka MADT.
@@ -119,53 +170,7 @@ pub trait Platform: oak_hal::MsrAccess {
     /// the last layer.
     fn get_derived_key() -> Result<DerivedKey, &'static str>;
 
-    /// Ask for the page state to be changed by the hypervisor.
-    fn change_page_state(page: Page<Size4KiB>, state: PageAssignment);
-
-    /// Validate one page of memory.
-    ///
-    /// This operation is required for SEV after going from a SHARED state to a
-    /// PRIVATE state.
-    fn revalidate_page(page: Page<Size4KiB>);
-
-    /// Mask to use in the page tables for the given encrypion state.
-    ///
-    /// SEV and TDX have opposite behaviours: for SEV, encrypted pages are
-    /// marked; for TDX, unencrypted pages are marked.
-    fn page_table_mask(encryption_state: PageEncryption) -> u64;
-
-    /// Encrypted/shared bit mask irrespective of its semantics.
-    fn encrypted() -> u64;
-
     fn tee_platform() -> TeePlatform;
-
-    /// Write Back and Invalidate Cache
-    ///
-    /// Writes back all modified cache lines in the processor’s internal cache
-    /// to main memory and invalidates (flushes) the internal caches.
-    fn wbvind();
-
-    /// Returns the number of bits in use in guest physical memory addresses.
-    ///
-    /// This is dependent on both the (real physical) CPU on the machine and the
-    /// VMM.
-    fn guest_phys_addr_size() -> u8 {
-        let cpuid = Self::cpuid(0x8000_0008); // Long Mode Size Identifiers
-
-        // EDK2 treads carefully here as sometimes QEMU can report more physical bits
-        // than the CPU actually supports. We'll just assume these are correct and the
-        // CPUs *have* at least 40 physical address bits. We don't need to support
-        // particularly old machines, after all.
-
-        // First, see if GuestPhysAddrSize is set (bits 23:16):
-        let addr_size = ((cpuid.eax >> 16) & 0xFF) as u8;
-        if addr_size == 0 {
-            // not specified, it's the same as PhysAddrSize (bits 7:0)
-            (cpuid.eax & 0xFF) as u8
-        } else {
-            addr_size
-        }
-    }
 }
 
 #[cfg(test)]
