@@ -26,11 +26,11 @@ use core::{
 };
 
 use log::info;
-use oak_hal::MsrAccess;
+use oak_hal::{MsrAccess, PageAssignment, PageEncryption, Platform};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_stage0::{
     BOOT_ALLOC, Madt, Rsdp, RsdtEntryPairMut,
-    hal::{FirmwarePlatform, Platform, PortFactory},
+    hal::{FirmwarePlatform, PortFactory},
     mailbox::{FirmwareMailbox, OsMailbox},
     paging,
     paging::PageTableRefs,
@@ -307,13 +307,10 @@ impl Platform for Tdx {
         info!("initialize platform completed");
     }
 
-    fn change_page_state(
-        page: x86_64::structures::paging::Page,
-        attr: oak_stage0::hal::PageAssignment,
-    ) {
+    fn change_page_state(page: x86_64::structures::paging::Page, attr: PageAssignment) {
         let shared: bool = match attr {
-            oak_stage0::hal::PageAssignment::Shared => true,
-            oak_stage0::hal::PageAssignment::Private => false,
+            PageAssignment::Shared => true,
+            PageAssignment::Private => false,
         };
         let mut pt = offset_pt();
         pt_set_shared_bit(&mut pt, &page, shared);
@@ -323,15 +320,15 @@ impl Platform for Tdx {
         // TODO: b/360488924 - impl revalidate_page
     }
 
-    fn page_table_mask(enc: oak_stage0::paging::PageEncryption) -> u64 {
+    fn page_table_mask(enc: PageEncryption) -> u64 {
         // a. When 4-level EPT is active, the SHARED bit position would
         // always be bit 47.
         // b. When 5-level EPT is active, the SHARED bit position would
         // be bit 47 if GPAW is 0. Otherwise, else it would be bit 51.
         match enc {
-            oak_stage0::paging::PageEncryption::Unset => 0,
-            oak_stage0::paging::PageEncryption::Encrypted => 0,
-            oak_stage0::paging::PageEncryption::Unencrypted => 1 << get_tdx_shared_bit(),
+            PageEncryption::Unset => 0,
+            PageEncryption::Encrypted => 0,
+            PageEncryption::Unencrypted => 1 << get_tdx_shared_bit(),
         }
     }
 

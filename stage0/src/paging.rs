@@ -289,18 +289,7 @@ impl<L: PageTableLevel> From<&mut BasePageTableEntry> for &mut PageTableEntry<L>
 ///
 /// For Intel TDX, the `Encrypted` == `Unset``, so it's safe to use `Unset` for
 /// TDX page tables as well.
-pub enum PageEncryption {
-    /// Always defaults to "don't set the encrypted bit", no matter its
-    /// semantics. This should be the default for non-leaf page table
-    /// entries.
-    Unset,
-
-    /// Ensures that the encrypted bit is enabled.
-    Encrypted,
-
-    /// Ensures that the encrypted bit is disabled.
-    Unencrypted,
-}
+pub use oak_hal::PageEncryption;
 
 /// Initialises the page table references.
 pub fn init_page_table_refs<P: Platform>() {

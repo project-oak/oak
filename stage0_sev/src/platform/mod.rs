@@ -25,7 +25,7 @@ use core::{arch::x86_64::CpuidResult, mem::MaybeUninit};
 use oak_attestation::dice::DiceAttester;
 use oak_core::sync::OnceCell;
 use oak_dice::evidence::TeePlatform;
-use oak_hal::MsrAccess;
+use oak_hal::{MsrAccess, PageAssignment, PageEncryption, Platform};
 use oak_linux_boot_params::BootE820Entry;
 use oak_sev_guest::{
     ap_jump_table::ApJumpTable, cpuid::CpuidInput, ghcb::GhcbProtocol, msr::SevStatus,
@@ -33,8 +33,7 @@ use oak_sev_guest::{
 use oak_stage0::{
     BOOT_ALLOC, BootAllocator, Rsdp, ZeroPage,
     allocator::Shared,
-    hal::{Base, FirmwarePlatform, PageAssignment, Platform, PortFactory},
-    paging::PageEncryption,
+    hal::{Base, FirmwarePlatform, PortFactory},
 };
 use spinning_top::{RawSpinlock, Spinlock, lock_api::MutexGuard};
 use x86_64::{PhysAddr, VirtAddr, structures::paging::PageSize};

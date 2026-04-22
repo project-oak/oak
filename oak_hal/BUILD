@@ -31,6 +31,7 @@ rust_library(
         "//:x86_64-linux-setting",  # Needed for unit testing.
     ]),
     deps = [
+        "//oak_linux_boot_params",
         "@oak_crates_index//:x86_64",
     ],
 )

@@ -16,10 +16,14 @@
 
 #![no_std]
 
+use core::arch::x86_64::CpuidResult;
+
+use oak_linux_boot_params::BootE820Entry;
 use x86_64::{
+    PhysAddr,
     instructions::port::Port as X86Port,
     structures::{
-        paging::PageSize,
+        paging::{Page, PageSize, Size4KiB},
         port::{PortRead, PortWrite},
     },
 };
@@ -106,6 +110,105 @@ pub trait Mmio<S: PageSize> {
 pub enum PageAssignment {
     Shared,
     Private,
+}
+
+/// Encryption state of a page in the page table.
+pub enum PageEncryption {
+    /// Always defaults to "don't set the encrypted bit", no matter its
+    /// semantics. This should be the default for non-leaf page table
+    /// entries.
+    Unset,
+
+    /// Ensures that the encrypted bit is enabled.
+    Encrypted,
+
+    /// Ensures that the encrypted bit is disabled.
+    Unencrypted,
+}
+
+pub trait Platform: MsrAccess {
+    type Mmio<S: PageSize>: Mmio<S>;
+
+    /// Performs the CPUID instruction.
+    fn cpuid(leaf: u32) -> CpuidResult;
+
+    /// # Safety
+    //
+    //   - base_address is aligned to u32
+    //   - we've checked it's within the page size
+    //   - we were promised that he memory is valid
+    unsafe fn mmio<S: PageSize + 'static>(base_address: PhysAddr) -> Self::Mmio<S>;
+
+    fn port_factory() -> PortFactory;
+
+    /// Platform-specific early initialization.
+    ///
+    /// This sets up the bare minimum to get things going; for example, under
+    /// SEV-ES and above, we set up the GHCB here, but nothing more.
+    ///
+    /// This gets executed very soon after stage0 starts and comes with many
+    /// restrictions:
+    ///   - You do not have access to logging.
+    ///   - You do not have access to heap allocator (BOOT_ALLOCATOR will still
+    ///     work).
+    fn early_initialize_platform();
+
+    /// Platform-specific intialization.
+    ///
+    /// This gets executed after `early_initalize_platform()` and some other
+    /// auxiliary services, such as logging, have been set up; the main purpose
+    /// is to accept all guest memory so that we can set up a heap
+    /// allocator.
+    ///
+    /// This does mean you do not have access to the heap allocator
+    /// (BOOT_ALLOCATOR will still work).
+    fn initialize_platform(e820_table: &[BootE820Entry]);
+
+    /// Ask for the page state to be changed by the hypervisor.
+    fn change_page_state(page: Page<Size4KiB>, state: PageAssignment);
+
+    /// Validate one page of memory.
+    ///
+    /// This operation is required for SEV after going from a SHARED state to a
+    /// PRIVATE state.
+    fn revalidate_page(page: Page<Size4KiB>);
+
+    /// Mask to use in the page tables for the given encrypion state.
+    ///
+    /// SEV and TDX have opposite behaviours: for SEV, encrypted pages are
+    /// marked; for TDX, unencrypted pages are marked.
+    fn page_table_mask(encryption_state: PageEncryption) -> u64;
+
+    /// Encrypted/shared bit mask irrespective of its semantics.
+    fn encrypted() -> u64;
+
+    /// Write Back and Invalidate Cache
+    ///
+    /// Writes back all modified cache lines in the processor’s internal cache
+    /// to main memory and invalidates (flushes) the internal caches.
+    fn wbvind();
+
+    /// Returns the number of bits in use in guest physical memory addresses.
+    ///
+    /// This is dependent on both the (real physical) CPU on the machine and the
+    /// VMM.
+    fn guest_phys_addr_size() -> u8 {
+        let cpuid = Self::cpuid(0x8000_0008); // Long Mode Size Identifiers
+
+        // EDK2 treads carefully here as sometimes QEMU can report more physical bits
+        // than the CPU actually supports. We'll just assume these are correct and the
+        // CPUs *have* at least 40 physical address bits. We don't need to support
+        // particularly old machines, after all.
+
+        // First, see if GuestPhysAddrSize is set (bits 23:16):
+        let addr_size = ((cpuid.eax >> 16) & 0xFF) as u8;
+        if addr_size == 0 {
+            // not specified, it's the same as PhysAddrSize (bits 7:0)
+            (cpuid.eax & 0xFF) as u8
+        } else {
+            addr_size
+        }
+    }
 }
 
 /// Abstraction around MSR (model-specific register) read/write access.

@@ -16,8 +16,6 @@
 
 pub mod base;
 
-use core::arch::x86_64::CpuidResult;
-
 pub use base::Base;
 #[cfg(test)]
 use mockall;
@@ -26,103 +24,52 @@ use oak_attestation_types::{
 };
 use oak_dice::evidence::TeePlatform;
 pub use oak_hal::{Mmio, PageAssignment};
-use oak_linux_boot_params::BootE820Entry;
 use oak_stage0_dice::DerivedKey;
-use x86_64::{
-    PhysAddr,
-    structures::paging::{Page, PageSize, Size4KiB},
-};
 use zerocopy::{FromBytes, IntoBytes};
 
-use crate::{acpi_tables::Rsdp, paging::PageEncryption, zero_page::ZeroPage};
+use crate::{acpi_tables::Rsdp, zero_page::ZeroPage};
 
-#[cfg_attr(test, mockall::automock(
-    type Mmio<S: PageSize> = <Base as Platform>::Mmio<S>;
-))]
-pub trait Platform: oak_hal::MsrAccess {
-    type Mmio<S: PageSize>: Mmio<S>;
+#[cfg(test)]
+pub mod test_mocks {
+    use core::arch::x86_64::CpuidResult;
 
-    /// Performs the CPUID instruction.
-    fn cpuid(leaf: u32) -> CpuidResult;
+    use oak_hal::{MsrAccess, PageAssignment, PortFactory};
+    use oak_linux_boot_params::BootE820Entry;
+    use x86_64::{
+        PhysAddr,
+        structures::paging::{Page, PageSize, Size4KiB},
+    };
 
-    /// # Safety
-    //
-    //   - base_address is aligned to u32
-    //   - we've checked it's within the page size
-    //   - we were promised that he memory is valid
-    unsafe fn mmio<S: PageSize + 'static>(base_address: PhysAddr) -> Self::Mmio<S>;
+    use super::*;
+    use crate::paging::PageEncryption;
 
-    fn port_factory() -> PortFactory;
-
-    /// Platform-specific early initialization.
-    ///
-    /// This sets up the bare minimum to get things going; for example, under
-    /// SEV-ES and above, we set up the GHCB here, but nothing more.
-    ///
-    /// This gets executed very soon after stage0 starts and comes with many
-    /// restrictions:
-    ///   - You do not have access to logging.
-    ///   - You do not have access to heap allocator (BOOT_ALLOCATOR will still
-    ///     work).
-    fn early_initialize_platform();
-
-    /// Platform-specific intialization.
-    ///
-    /// This gets executed after `early_initalize_platform()` and some other
-    /// auxiliary services, such as logging, have been set up; the main purpose
-    /// is to accept all guest memory so that we can set up a heap
-    /// allocator.
-    ///
-    /// This does mean you do not have access to the heap allocator
-    /// (BOOT_ALLOCATOR will still work).
-    fn initialize_platform(e820_table: &[BootE820Entry]);
-
-    /// Ask for the page state to be changed by the hypervisor.
-    fn change_page_state(page: Page<Size4KiB>, state: PageAssignment);
-
-    /// Validate one page of memory.
-    ///
-    /// This operation is required for SEV after going from a SHARED state to a
-    /// PRIVATE state.
-    fn revalidate_page(page: Page<Size4KiB>);
-
-    /// Mask to use in the page tables for the given encrypion state.
-    ///
-    /// SEV and TDX have opposite behaviours: for SEV, encrypted pages are
-    /// marked; for TDX, unencrypted pages are marked.
-    fn page_table_mask(encryption_state: PageEncryption) -> u64;
-
-    /// Encrypted/shared bit mask irrespective of its semantics.
-    fn encrypted() -> u64;
-
-    /// Write Back and Invalidate Cache
-    ///
-    /// Writes back all modified cache lines in the processor’s internal cache
-    /// to main memory and invalidates (flushes) the internal caches.
-    fn wbvind();
-
-    /// Returns the number of bits in use in guest physical memory addresses.
-    ///
-    /// This is dependent on both the (real physical) CPU on the machine and the
-    /// VMM.
-    fn guest_phys_addr_size() -> u8 {
-        let cpuid = Self::cpuid(0x8000_0008); // Long Mode Size Identifiers
-
-        // EDK2 treads carefully here as sometimes QEMU can report more physical bits
-        // than the CPU actually supports. We'll just assume these are correct and the
-        // CPUs *have* at least 40 physical address bits. We don't need to support
-        // particularly old machines, after all.
-
-        // First, see if GuestPhysAddrSize is set (bits 23:16):
-        let addr_size = ((cpuid.eax >> 16) & 0xFF) as u8;
-        if addr_size == 0 {
-            // not specified, it's the same as PhysAddrSize (bits 7:0)
-            (cpuid.eax & 0xFF) as u8
-        } else {
-            addr_size
+    mockall::mock! {
+        pub Platform {}
+        impl oak_hal::Platform for Platform {
+            type Mmio<S: PageSize> = <super::Base as oak_hal::Platform>::Mmio<S>;
+            fn cpuid(leaf: u32) -> CpuidResult;
+            unsafe fn mmio<S: PageSize + 'static>(base_address: PhysAddr) -> <Self as oak_hal::Platform>::Mmio<S>;
+            fn port_factory() -> PortFactory;
+            fn early_initialize_platform();
+            fn initialize_platform(e820_table: &[BootE820Entry]);
+            fn change_page_state(page: Page<Size4KiB>, state: PageAssignment);
+            fn revalidate_page(page: Page<Size4KiB>);
+            fn page_table_mask(encryption_state: PageEncryption) -> u64;
+            fn encrypted() -> u64;
+            fn wbvind();
+            fn guest_phys_addr_size() -> u8;
         }
     }
+    impl MsrAccess for MockPlatform {
+        unsafe fn read_msr(_msr: u32) -> u64 {
+            0
+        }
+        unsafe fn write_msr(_msr: u32, _value: u64) {}
+    }
 }
+pub use oak_hal::Platform;
+#[cfg(test)]
+pub use test_mocks::MockPlatform;
 
 #[cfg_attr(test, mockall::automock(
     type Attester = <Base as FirmwarePlatform>::Attester;
@@ -171,15 +118,6 @@ pub trait FirmwarePlatform {
     fn get_derived_key() -> Result<DerivedKey, &'static str>;
 
     fn tee_platform() -> TeePlatform;
-}
-
-#[cfg(test)]
-impl oak_hal::MsrAccess for MockPlatform {
-    unsafe fn read_msr(_msr: u32) -> u64 {
-        0
-    }
-
-    unsafe fn write_msr(_msr: u32, _value: u64) {}
 }
 
 pub use oak_hal::{Msr, Port, PortFactory};
