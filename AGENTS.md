@@ -203,11 +203,11 @@ helpers that invoke binaries) and in documentation examples.
 
 ```bash
 # Preferred
-cleanroom --wasm-module-file=module.wasm
+app --wasm-module-file=module.wasm
 
 # Avoid
-cleanroom --wasm-module-file module.wasm
-cleanroom -w module.wasm
+app --wasm-module-file module.wasm
+app -w module.wasm
 ```
 
 ## Version Control
