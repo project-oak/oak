@@ -112,7 +112,6 @@
                 cachix
                 fd
                 gettext
-                google-cloud-sdk
                 just
                 ps
                 which
