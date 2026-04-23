@@ -51,8 +51,8 @@ async fn try_persist_database(
     let database = encrypt_database(&encrypted_info, &user_context.dek)?;
 
     let db_size = database.data.len();
-    if db_size > crate::db_client::MAX_DECODE_SIZE {
-        // Even we save it, it will fail during the keysync.
+    if db_size > crate::db_client::MAX_DATABASE_SIZE {
+        // Database exceeds the maximum allowed size.
         info!("Database is too large to save: {}", db_size);
         anyhow::bail!("Database is too large to save: {}", db_size);
     }

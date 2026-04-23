@@ -472,7 +472,7 @@ pub async fn create(
                 tls_server_context,
                 clock,
             ))
-            .max_decoding_message_size(crate::db_client::MAX_DECODE_SIZE),
+            .max_decoding_message_size(crate::db_client::MAX_GRPC_DECODE_SIZE),
         )
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await

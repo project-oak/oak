@@ -29,9 +29,12 @@ use crate::{
     memory_cache::MemoryCache,
 };
 
-// We limit the decode size to 100 MB and use this limit as the max size of the
-// database.
-pub const MAX_DECODE_SIZE: usize = 100 * 1024 * 1024; // 100 MB
+// Maximum size of the database (metadata blob). This can exceed the gRPC
+// message size limit because streaming read/write is used for persistence.
+pub const MAX_DATABASE_SIZE: usize = 250 * 1024 * 1024; // 250 MB
+
+// Maximum gRPC decode size for non-streaming messages.
+pub const MAX_GRPC_DECODE_SIZE: usize = 100 * 1024 * 1024; // 100 MB
 /// A database with cache. It loads the meta database of the user at start,
 /// then loads documents at request. The loaded documents will be then cached
 /// in memory.
@@ -57,7 +60,7 @@ impl DatabaseWithCache {
             cache: MemoryCache::new(db_client, dek),
             key_derivation_info,
             current_size: initial_size,
-            max_size: MAX_DECODE_SIZE,
+            max_size: MAX_DATABASE_SIZE,
             clock: Arc::new(SystemClock),
         }
     }

@@ -18,7 +18,9 @@ use std::net::SocketAddr;
 use anyhow::bail;
 use log::info;
 use metrics::get_global_metrics;
-pub use oak_private_memory_database::database_with_cache::MAX_DECODE_SIZE;
+pub use oak_private_memory_database::database_with_cache::{
+    MAX_DATABASE_SIZE, MAX_GRPC_DECODE_SIZE,
+};
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use tokio::sync::RwLock;
 use tonic::transport::{Channel, Endpoint};
@@ -68,7 +70,7 @@ impl SharedDbClient {
             match endpoint.connect().await {
                 Ok(channel) => {
                     let new_client = SealedMemoryDatabaseServiceClient::new(channel)
-                        .max_decoding_message_size(MAX_DECODE_SIZE);
+                        .max_decoding_message_size(MAX_GRPC_DECODE_SIZE);
                     *write_guard = Some(new_client.clone());
                     info!("Successfully created and cached new DB client");
                     return Ok(new_client);
