@@ -633,9 +633,12 @@ impl IcingMetaDatabase {
         let mut pending_views: Vec<PendingLlmViewMetadata> = Vec::new();
         if let Some(views) = memory.views.as_ref() {
             for view in &views.llm_views {
-                // TODO: yongheng - Generate view id if not provided.
+                let mut view = view.clone();
+                if view.id.is_empty() {
+                    view.id = uuid::Uuid::new_v4().to_string();
+                }
                 if let Some(pending_view_metadata) =
-                    PendingLlmViewMetadata::new(memory, view, &blob_id)?
+                    PendingLlmViewMetadata::new(memory, &view, &blob_id)?
                 {
                     pending_views.push(pending_view_metadata);
                 }
