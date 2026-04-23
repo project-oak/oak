@@ -635,7 +635,8 @@ impl IcingMetaDatabase {
             for view in &views.llm_views {
                 let mut view = view.clone();
                 if view.id.is_empty() {
-                    view.id = uuid::Uuid::new_v4().to_string();
+                    let random: u128 = rand::rng().random::<u128>();
+                    view.id = format!("{:032x}", random);
                 }
                 if let Some(pending_view_metadata) =
                     PendingLlmViewMetadata::new(memory, &view, &blob_id)?

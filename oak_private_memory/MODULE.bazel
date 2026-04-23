@@ -145,11 +145,6 @@ crate.spec(
     package = "rand",
     version = "0.9.1",
 )
-crate.spec(
-    package = "uuid",
-    version = "1.12.1",
-    features = ["v4"],
-)
 crate.from_specs(
     name = "pm_crates",
 )
