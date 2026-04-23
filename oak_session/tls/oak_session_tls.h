@@ -102,8 +102,10 @@ struct ServerContextConfig {
 
 // Parameters to configure OakSessionTlsContext for client behavior.
 struct ClientContextConfig {
-  // The path to a trust anchor that can verify the server.
-  std::string server_trust_anchor_path;
+  // Optional path to a trust anchor that can verify the server.
+  // If not set, standard PKI verification will not be configured and a
+  // custom_cert_verifier must be provided to handle certificate validation.
+  std::optional<std::string> server_trust_anchor_path;
 
   // If provided, called each time a new session is created to get the
   // client's TLS identity. Enables mTLS mode, allowing the server to

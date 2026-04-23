@@ -21,6 +21,7 @@
 #include "openssl/base.h"
 #include "openssl/bio.h"
 #include "openssl/err.h"
+#include "openssl/evp.h"
 #include "openssl/ssl.h"
 
 constexpr int kMaxTlsFrameSize = 16 * 1024;  // 16 KB
@@ -116,10 +117,12 @@ OakSessionTlsContext::Create(ServerContextConfig config) {
       SSL_CTX_set_cert_verify_callback(ctx.get(), VerifyCallback, nullptr);
     }
 
-    if (SSL_CTX_load_verify_locations(ctx.get(),
-                                      config.client_trust_anchor_path->c_str(),
-                                      nullptr) != 1) {
-      return absl::InternalError("Failed to load trust anchor for client");
+    if (config.client_trust_anchor_path.has_value()) {
+      if (SSL_CTX_load_verify_locations(
+              ctx.get(), config.client_trust_anchor_path->c_str(), nullptr) !=
+          1) {
+        return absl::InternalError("Failed to load trust anchor for client");
+      }
     }
   }
 
@@ -145,13 +148,20 @@ OakSessionTlsContext::Create(ClientContextConfig config) {
                                      SSL_GROUP_X25519};
   SSL_CTX_set1_group_ids(ctx.get(), kGroups, std::size(kGroups));
 
-  SSL_CTX_load_verify_locations(
-      ctx.get(), config.server_trust_anchor_path.c_str(), nullptr);
+  if (config.server_trust_anchor_path.has_value()) {
+    if (SSL_CTX_load_verify_locations(ctx.get(),
+                                      config.server_trust_anchor_path->c_str(),
+                                      nullptr) != 1) {
+      return absl::InternalError("Failed to load trust anchor for server");
+    }
+  }
 
-  // Enable server certificate verification.
-  // Note: SSL_VERIFY_FAIL_IF_NO_PEER_CERT is only for servers requiring client
-  // certs.
-  SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER, nullptr);
+  // Enable server certificate verification if either a trust anchor or custom
+  // verifier is configured.
+  if (config.server_trust_anchor_path.has_value() ||
+      config.custom_cert_verifier.has_value()) {
+    SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER, nullptr);
+  }
 
   if (config.custom_cert_verifier.has_value()) {
     SSL_CTX_set_cert_verify_callback(ctx.get(), VerifyCallback, nullptr);
@@ -495,9 +505,16 @@ absl::StatusOr<std::string> SslReadAll(SSL* ssl) {
 }
 
 absl::Status SetTlsIdentity(SSL* ssl, const TlsIdentity& tls_identity) {
-  if (SSL_use_RSAPrivateKey_ASN1(
-          ssl, reinterpret_cast<const uint8_t*>(tls_identity.key_asn1.data()),
-          tls_identity.key_asn1.size()) != 1) {
+  // Use d2i_AutoPrivateKey to auto-detect the key type (RSA, EC, etc.)
+  // rather than assuming RSA.
+  const unsigned char* key_data =
+      reinterpret_cast<const unsigned char*>(tls_identity.key_asn1.data());
+  bssl::UniquePtr<EVP_PKEY> pkey(
+      d2i_AutoPrivateKey(nullptr, &key_data, tls_identity.key_asn1.size()));
+  if (!pkey) {
+    return absl::InternalError("Failed to parse private key");
+  }
+  if (SSL_use_PrivateKey(ssl, pkey.get()) != 1) {
     return absl::InternalError("Failed to load private key");
   }
 

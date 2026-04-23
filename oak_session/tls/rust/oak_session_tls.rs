@@ -302,6 +302,140 @@ impl ClientCertVerifier for DelegatingClientCertVerifier {
     }
 }
 
+/// A standalone server certificate verifier that delegates entirely to a
+/// [`CustomCertVerifier`], without performing any standard WebPKI validation.
+///
+/// Used when no trust anchors are configured but custom verification (such as
+/// attestation-based checks) is desired.
+#[derive(Debug)]
+struct CustomOnlyServerCertVerifier {
+    custom: Box<dyn CustomCertVerifier>,
+}
+
+impl ServerCertVerifier for CustomOnlyServerCertVerifier {
+    fn verify_server_cert(
+        &self,
+        end_entity: &CertificateDer<'_>,
+        intermediates: &[CertificateDer<'_>],
+        _server_name: &ServerName<'_>,
+        _ocsp_response: &[u8],
+        _now: UnixTime,
+    ) -> Result<ServerCertVerified, rustls::Error> {
+        // No standard verification was performed, so pass Err to the custom
+        // verifier indicating that standard verification is not available.
+        let verify_result = Err(&rustls::Error::UnsupportedNameType);
+        self.custom
+            .verify(end_entity, intermediates, verify_result)
+            .map(|_| ServerCertVerified::assertion())
+            .map_err(|e| rustls::Error::General(format!("custom verification failed: {e}")))
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls12_signature(
+            message,
+            cert,
+            dss,
+            &rustls::crypto::ring::default_provider().signature_verification_algorithms,
+        )
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls13_signature(
+            message,
+            cert,
+            dss,
+            &rustls::crypto::ring::default_provider().signature_verification_algorithms,
+        )
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+        rustls::crypto::ring::default_provider()
+            .signature_verification_algorithms
+            .supported_schemes()
+    }
+}
+
+/// A standalone client certificate verifier that delegates entirely to a
+/// [`CustomCertVerifier`], without performing any standard WebPKI validation.
+///
+/// Used when no trust anchors are configured but custom verification (such as
+/// attestation-based checks) is desired.
+#[derive(Debug)]
+struct CustomOnlyClientCertVerifier {
+    custom: Box<dyn CustomCertVerifier>,
+}
+
+impl ClientCertVerifier for CustomOnlyClientCertVerifier {
+    fn offer_client_auth(&self) -> bool {
+        true
+    }
+
+    fn client_auth_mandatory(&self) -> bool {
+        true
+    }
+
+    fn root_hint_subjects(&self) -> &[rustls::DistinguishedName] {
+        &[]
+    }
+
+    fn verify_client_cert(
+        &self,
+        end_entity: &CertificateDer<'_>,
+        intermediates: &[CertificateDer<'_>],
+        _now: UnixTime,
+    ) -> Result<ClientCertVerified, rustls::Error> {
+        let verify_result = Err(&rustls::Error::UnsupportedNameType);
+        self.custom
+            .verify(end_entity, intermediates, verify_result)
+            .map(|_| ClientCertVerified::assertion())
+            .map_err(|e| rustls::Error::General(format!("custom verification failed: {e}")))
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls12_signature(
+            message,
+            cert,
+            dss,
+            &rustls::crypto::ring::default_provider().signature_verification_algorithms,
+        )
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls13_signature(
+            message,
+            cert,
+            dss,
+            &rustls::crypto::ring::default_provider().signature_verification_algorithms,
+        )
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+        rustls::crypto::ring::default_provider()
+            .signature_verification_algorithms
+            .supported_schemes()
+    }
+}
+
 /// Manages a TLS configuration that will be used to create Oak TLS client
 /// sessions.
 pub struct OakSessionTlsClientContext {
@@ -314,17 +448,23 @@ impl OakSessionTlsClientContext {
     pub fn create(config: ClientContextConfig) -> Result<Self, ContextError> {
         ensure_crypto_provider();
 
-        let mut root_store = RootCertStore::empty();
-        if let Some(trust_anchor) = config.server_trust_anchor_der {
-            root_store.add(trust_anchor)?;
-        }
-        let verifier = WebPkiServerVerifier::builder(Arc::new(root_store)).build()?;
-
         let verifier: Arc<dyn rustls::client::danger::ServerCertVerifier> =
-            if let Some(custom) = config.custom_cert_verifier {
-                Arc::new(DelegatingServerCertVerifier { inner: verifier, custom })
-            } else {
-                verifier
+            match (config.server_trust_anchor_der, config.custom_cert_verifier) {
+                (Some(trust_anchor), custom) => {
+                    let mut root_store = RootCertStore::empty();
+                    root_store.add(trust_anchor)?;
+                    let inner = WebPkiServerVerifier::builder(Arc::new(root_store)).build()?;
+                    if let Some(custom) = custom {
+                        Arc::new(DelegatingServerCertVerifier { inner, custom })
+                    } else {
+                        inner
+                    }
+                }
+                (None, Some(custom)) => Arc::new(CustomOnlyServerCertVerifier { custom }),
+                (None, None) => {
+                    let root_store = RootCertStore::empty();
+                    WebPkiServerVerifier::builder(Arc::new(root_store)).build()?
+                }
             };
 
         Ok(Self { verifier, tls_identity_provider: config.tls_identity_provider })
@@ -405,18 +545,19 @@ impl OakSessionTlsServerContext {
         ensure_crypto_provider();
 
         let client_verifier: Option<Arc<dyn rustls::server::danger::ClientCertVerifier>> =
-            if let Some(trust_anchor) = config.client_trust_anchor_der {
-                let mut root_store = RootCertStore::empty();
-                root_store.add(trust_anchor)?;
-                let verifier = WebPkiClientVerifier::builder(Arc::new(root_store)).build()?;
-
-                if let Some(custom) = config.custom_cert_verifier {
-                    Some(Arc::new(DelegatingClientCertVerifier { inner: verifier, custom }))
-                } else {
-                    Some(verifier)
+            match (config.client_trust_anchor_der, config.custom_cert_verifier) {
+                (Some(trust_anchor), custom) => {
+                    let mut root_store = RootCertStore::empty();
+                    root_store.add(trust_anchor)?;
+                    let inner = WebPkiClientVerifier::builder(Arc::new(root_store)).build()?;
+                    if let Some(custom) = custom {
+                        Some(Arc::new(DelegatingClientCertVerifier { inner, custom }))
+                    } else {
+                        Some(inner)
+                    }
                 }
-            } else {
-                None
+                (None, Some(custom)) => Some(Arc::new(CustomOnlyClientCertVerifier { custom })),
+                (None, None) => None,
             };
 
         Ok(Self { tls_identity_provider: config.tls_identity_provider, client_verifier })
