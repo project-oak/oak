@@ -685,9 +685,30 @@ pub mod utils {
     /// Creates a TlsIdentityProvider that generates an ephemeral self-signed
     /// certificate upon construction.
     pub fn create_self_signed() -> Result<Box<dyn TlsIdentityProvider>, ContextError> {
+        create_self_signed_with_extensions(Vec::new())
+    }
+
+    /// Creates a TlsIdentityProvider that generates an ephemeral self-signed
+    /// certificate with the specified X.509v3 extensions.
+    ///
+    /// Use [`rcgen::CustomExtension::from_oid_content`] to create extensions.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let ext = rcgen::CustomExtension::from_oid_content(
+    ///     &[1, 2, 3, 4, 5],
+    ///     b"attestation-evidence".to_vec(),
+    /// );
+    /// let provider = create_self_signed_with_extensions(vec![ext])?;
+    /// ```
+    pub fn create_self_signed_with_extensions(
+        extensions: Vec<rcgen::CustomExtension>,
+    ) -> Result<Box<dyn TlsIdentityProvider>, ContextError> {
         let subject_alt_names = vec![OAK_SESSION_TLS_SERVER_NAME.to_string()];
-        let params = rcgen::CertificateParams::new(subject_alt_names)
+        let mut params = rcgen::CertificateParams::new(subject_alt_names)
             .map_err(|e| ContextError::CertGen(e.to_string()))?;
+
+        params.custom_extensions = extensions;
 
         let key_pair = rcgen::KeyPair::generate_for(&rcgen::PKCS_ECDSA_P256_SHA256)
             .map_err(|e| ContextError::CertGen(e.to_string()))?;

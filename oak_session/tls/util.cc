@@ -20,6 +20,7 @@
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "openssl/base.h"
 #include "openssl/ec.h"
 #include "openssl/evp.h"
@@ -113,7 +114,8 @@ absl::StatusOr<std::unique_ptr<TlsIdentityProvider>> CreateFromFiles(
       .key_asn1 = std::move(*key_der), .cert_asn1 = std::move(*cert_der)});
 }
 
-absl::StatusOr<std::unique_ptr<TlsIdentityProvider>> CreateSelfSigned() {
+absl::StatusOr<std::unique_ptr<TlsIdentityProvider>> CreateSelfSigned(
+    absl::Span<const X509Extension> extensions) {
   bssl::UniquePtr<EVP_PKEY> pkey(EVP_PKEY_new());
   if (!pkey) {
     return absl::InternalError("Failed to create EVP_PKEY");
@@ -146,6 +148,37 @@ absl::StatusOr<std::unique_ptr<TlsIdentityProvider>> CreateSelfSigned() {
       name, "CN", MBSTRING_ASC,
       reinterpret_cast<const unsigned char*>("oak-session-tls"), -1, -1, 0);
   X509_set_issuer_name(x509.get(), name);
+
+  // Add any requested X.509v3 extensions before signing.
+  for (const auto& ext : extensions) {
+    bssl::UniquePtr<ASN1_OBJECT> obj(
+        OBJ_txt2obj(ext.oid.c_str(), /*dont_search_names=*/1));
+    if (!obj) {
+      return absl::InvalidArgumentError(
+          absl::StrCat("invalid extension OID: ", ext.oid));
+    }
+
+    bssl::UniquePtr<ASN1_OCTET_STRING> oct(ASN1_OCTET_STRING_new());
+    if (!oct ||
+        !ASN1_OCTET_STRING_set(
+            oct.get(), reinterpret_cast<const unsigned char*>(ext.value.data()),
+            ext.value.size())) {
+      return absl::InternalError(
+          absl::StrCat("failed to set extension value for OID: ", ext.oid));
+    }
+
+    bssl::UniquePtr<X509_EXTENSION> x509_ext(X509_EXTENSION_create_by_OBJ(
+        nullptr, obj.get(), ext.critical ? 1 : 0, oct.get()));
+    if (!x509_ext) {
+      return absl::InternalError(
+          absl::StrCat("failed to create extension for OID: ", ext.oid));
+    }
+
+    if (!X509_add_ext(x509.get(), x509_ext.get(), -1)) {
+      return absl::InternalError(
+          absl::StrCat("failed to add extension for OID: ", ext.oid));
+    }
+  }
 
   if (!X509_sign(x509.get(), pkey.get(), EVP_sha256())) {
     return absl::InternalError("Failed to sign certificate");

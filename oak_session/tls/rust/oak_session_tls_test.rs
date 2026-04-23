@@ -576,3 +576,43 @@ async fn do_handshake(
     }
     session
 }
+
+#[test]
+fn test_create_self_signed_no_extensions() {
+    let provider = utils::create_self_signed().expect("create_self_signed failed");
+    let identity = provider.get_identity().expect("get_identity failed");
+    assert!(!identity.cert_der.is_empty());
+}
+
+#[test]
+fn test_create_self_signed_with_extensions() {
+    let ext = rcgen::CustomExtension::from_oid_content(
+        &[1, 2, 3, 4, 5, 6, 7, 8, 9],
+        b"test-attestation-data".to_vec(),
+    );
+    let provider = utils::create_self_signed_with_extensions(vec![ext])
+        .expect("create_self_signed_with_extensions failed");
+    let identity = provider.get_identity().expect("get_identity failed");
+    assert!(!identity.cert_der.is_empty());
+
+    // The extension OID 1.2.3.4.5.6.7.8.9 should appear in the DER-encoded
+    // cert as its BER encoding: 2a.03.04.05.06.07.08.09
+    // (first two arcs 1.2 merge into 0x2a, rest are single-byte).
+    let cert_bytes = identity.cert_der.as_ref();
+    let oid_bytes: &[u8] = &[0x2a, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09];
+    assert!(
+        cert_bytes.windows(oid_bytes.len()).any(|w| w == oid_bytes),
+        "extension OID not found in certificate DER"
+    );
+}
+
+#[test]
+fn test_create_self_signed_with_multiple_extensions() {
+    let ext1 = rcgen::CustomExtension::from_oid_content(&[1, 2, 3, 4, 5, 100], b"first".to_vec());
+    let ext2 =
+        rcgen::CustomExtension::from_oid_content(&[1, 2, 3, 4, 5, 200, 1], b"second".to_vec());
+    let provider = utils::create_self_signed_with_extensions(vec![ext1, ext2])
+        .expect("create_self_signed_with_extensions failed");
+    let identity = provider.get_identity().expect("get_identity failed");
+    assert!(!identity.cert_der.is_empty());
+}

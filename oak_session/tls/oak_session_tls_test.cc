@@ -691,5 +691,96 @@ HandshakeResult RunHandshake(OakSessionTlsContext& client_ctx,
   return {std::move(client_result), std::move(server_result)};
 }
 
+TEST(CreateSelfSignedTest, NoExtensions) {
+  auto provider = util::CreateSelfSigned();
+  ASSERT_THAT(provider, IsOk());
+
+  auto identity = (*provider)->GetIdentity();
+  ASSERT_THAT(identity, IsOk());
+  EXPECT_FALSE(identity->key_asn1.empty());
+  EXPECT_FALSE(identity->cert_asn1.empty());
+}
+
+TEST(CreateSelfSignedTest, SingleExtension) {
+  std::string test_value = "test-attestation-data";
+  std::vector<util::X509Extension> extensions = {
+      {.oid = "1.2.3.4.5.6.7.8.9", .value = test_value, .critical = false}};
+
+  auto provider = util::CreateSelfSigned(extensions);
+  ASSERT_THAT(provider, IsOk());
+
+  auto identity = (*provider)->GetIdentity();
+  ASSERT_THAT(identity, IsOk());
+
+  // Parse the certificate and verify the extension is present.
+  const unsigned char* p =
+      reinterpret_cast<const unsigned char*>(identity->cert_asn1.data());
+  bssl::UniquePtr<X509> cert(d2i_X509(nullptr, &p, identity->cert_asn1.size()));
+  ASSERT_NE(cert, nullptr);
+
+  bssl::UniquePtr<ASN1_OBJECT> obj(
+      OBJ_txt2obj("1.2.3.4.5.6.7.8.9", /*dont_search_names=*/1));
+  ASSERT_NE(obj, nullptr);
+
+  int idx = X509_get_ext_by_OBJ(cert.get(), obj.get(), -1);
+  ASSERT_GE(idx, 0) << "extension not found in certificate";
+
+  X509_EXTENSION* ext = X509_get_ext(cert.get(), idx);
+  ASSERT_NE(ext, nullptr);
+  EXPECT_EQ(X509_EXTENSION_get_critical(ext), 0);
+
+  ASN1_OCTET_STRING* ext_data = X509_EXTENSION_get_data(ext);
+  ASSERT_NE(ext_data, nullptr);
+  std::string retrieved(
+      reinterpret_cast<const char*>(ASN1_STRING_get0_data(ext_data)),
+      ASN1_STRING_length(ext_data));
+  EXPECT_THAT(retrieved, Eq(test_value));
+}
+
+TEST(CreateSelfSignedTest, MultipleExtensions) {
+  std::vector<util::X509Extension> extensions = {
+      {.oid = "1.2.3.4.5.100", .value = "first", .critical = false},
+      {.oid = "1.2.3.4.5.200", .value = "second", .critical = true}};
+
+  auto provider = util::CreateSelfSigned(extensions);
+  ASSERT_THAT(provider, IsOk());
+
+  auto identity = (*provider)->GetIdentity();
+  ASSERT_THAT(identity, IsOk());
+
+  const unsigned char* p =
+      reinterpret_cast<const unsigned char*>(identity->cert_asn1.data());
+  bssl::UniquePtr<X509> cert(d2i_X509(nullptr, &p, identity->cert_asn1.size()));
+  ASSERT_NE(cert, nullptr);
+
+  // Verify the first extension.
+  {
+    bssl::UniquePtr<ASN1_OBJECT> obj(
+        OBJ_txt2obj("1.2.3.4.5.100", /*dont_search_names=*/1));
+    int idx = X509_get_ext_by_OBJ(cert.get(), obj.get(), -1);
+    ASSERT_GE(idx, 0);
+    X509_EXTENSION* ext = X509_get_ext(cert.get(), idx);
+    EXPECT_EQ(X509_EXTENSION_get_critical(ext), 0);
+  }
+
+  // Verify the second extension is critical.
+  {
+    bssl::UniquePtr<ASN1_OBJECT> obj(
+        OBJ_txt2obj("1.2.3.4.5.200", /*dont_search_names=*/1));
+    int idx = X509_get_ext_by_OBJ(cert.get(), obj.get(), -1);
+    ASSERT_GE(idx, 0);
+    X509_EXTENSION* ext = X509_get_ext(cert.get(), idx);
+    EXPECT_EQ(X509_EXTENSION_get_critical(ext), 1);
+  }
+}
+
+TEST(CreateSelfSignedTest, InvalidOidReturnsError) {
+  std::vector<util::X509Extension> extensions = {
+      {.oid = "not-a-valid-oid", .value = "data", .critical = false}};
+
+  auto provider = util::CreateSelfSigned(extensions);
+  EXPECT_THAT(provider, StatusIs(absl::StatusCode::kInvalidArgument));
+}
+
 }  // namespace
 }  // namespace oak::session::tls
