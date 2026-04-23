@@ -85,8 +85,8 @@ macro_rules! stub_wasm_function {
                 caller
                     .data()
                     .log_error(concat!("called stubbed ", stringify!($function_mod), ".", stringify!($function_name)));
-                Err::<$r, ::anyhow::Error>(
-                    ::anyhow::anyhow!(
+                Err::<$r, wasmtime::Error>(
+                    wasmtime::Error::msg(
                         concat!("called stubbed ", stringify!($function_mod), ".", stringify!($function_name))))
             },
         )
@@ -540,8 +540,8 @@ impl Handler for WasmtimeHandler {
 
 /// A helper function to move between our specific result type `Result<(),
 /// StatusCode>` and the `wasmtime` specific result type `Result<i32,
-/// wasmtime::Trap>`.
-fn from_status_code(result: Result<(), StatusCode>) -> anyhow::Result<i32> {
+/// wasmtime::Error>`.
+fn from_status_code(result: Result<(), StatusCode>) -> Result<i32, wasmtime::Error> {
     let status_code = result.err().unwrap_or(StatusCode::Ok);
     Ok(status_code as i32)
 }
