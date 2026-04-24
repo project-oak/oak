@@ -1,4 +1,4 @@
-presubmit: verify-bazelisk format style build-and-test
+presubmit: verify-bazelisk format-all style build-and-test
 
 verify-bazelisk:
     rm -r ~/.cache/bazelisk
