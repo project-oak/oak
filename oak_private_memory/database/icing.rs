@@ -1048,8 +1048,11 @@ impl IcingMetaDatabase {
         const DEFAULT_LIMIT: i32 = 10;
         let limit = if page_size > 0 { page_size } else { DEFAULT_LIMIT };
 
-        let mut result_spec =
-            icing::ResultSpecProto { num_per_page: Some(limit), ..Default::default() };
+        let mut result_spec = icing::ResultSpecProto {
+            num_per_page: Some(limit),
+            num_to_score: Some(i32::MAX),
+            ..Default::default()
+        };
 
         result_spec.type_property_masks.push(result_projection);
 
@@ -2063,6 +2066,7 @@ impl IcingMetaDatabase {
             // Use an empty projection — we only need the count, not the data.
             let result_spec = icing::ResultSpecProto {
                 num_per_page: Some(1000),
+                num_to_score: Some(i32::MAX),
                 type_property_masks: vec![icing::TypePropertyMask {
                     schema_type: Some(schema_name.to_string()),
                     paths: vec![],

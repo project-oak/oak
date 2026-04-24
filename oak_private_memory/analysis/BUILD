@@ -80,3 +80,16 @@ rust_binary(
         "@oak_crates_index//:rand",
     ],
 )
+
+rust_binary(
+    name = "embedding_scoring_limit_test",
+    srcs = ["embedding_scoring_limit_test.rs"],
+    deps = [
+        "//database:oak_private_memory_database",
+        "//proto:sealed_memory_rust_proto",
+        "//src/icing",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:log",
+    ],
+)
