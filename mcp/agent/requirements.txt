@@ -4,9 +4,6 @@
 #
 #    pip-compile --extra-index-url=https://pypi.org/simple/ --generate-hashes --output-file=requirements.txt requirements.in
 #
---index-url https://us-python.pkg.dev/artifact-foundry-prod/ah-3p-staging-python/simple/
---extra-index-url https://pypi.org/simple/
-
 a2a-sdk[http-server]==0.3.25 \
     --hash=sha256:2fce38faea82eb0b6f9f9c2bcf761b0d78612c80ef0e599b50d566db1b2654b5 \
     --hash=sha256:afda85bab8d6af0c5d15e82f326c94190f6be8a901ce562d045a338b7127242f
@@ -1283,9 +1280,9 @@ jsonschema-specifications==2025.9.1 \
     --hash=sha256:98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe \
     --hash=sha256:b540987f239e745613c7a9176f3edb72b832a4ac465cf02712288397832b5e8d
     # via jsonschema
-litellm==1.83.1 \
-    --hash=sha256:2becb86c60e4d9738d321e563dc0a1bf4712f8f725c4d6e9d76a1f49a246bc42 \
-    --hash=sha256:a0fa79b3010b97da1b40fb91adf9097d4f2d6f9b01d13a8efeff82381521430b
+litellm==1.83.7 \
+    --hash=sha256:5784a1d9a9a4a8acd6ca1e347003a5e2e1b3c749b4d41e7da4904577adade111 \
+    --hash=sha256:e2f2cb99df2e2b2eab63f1354faa45c88dd7c8d40c18eb648afb1b349c689633
     # via -r requirements.in
 mako==1.3.10 \
     --hash=sha256:99579a6f39583fa7e5630a28c3c1f440e4e97a414b80372649c0ce338da2ea28 \
