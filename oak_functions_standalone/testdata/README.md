@@ -2,7 +2,7 @@
 
 Keys are specified in the form of `"(<lat>,<long>)"` where lat and long have two
 points of precision after the decimal. The values are the temperatures in
-Celsius of those corrdinates. Both the keys and values are UTF-8 encoded.
+Celsius of those coordinates. Both the keys and values are UTF-8 encoded.
 
 The data is for testing only and is not based on real temperature data.
 

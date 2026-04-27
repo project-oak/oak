@@ -1,6 +1,6 @@
 # Getting Started
 
-This directory contains a minimal template for writting enclave apps with `oak`.
+This directory contains a minimal template for writing enclave apps with `oak`.
 
 ## Usage
 

@@ -11,7 +11,7 @@ This library provides an implementation of the
 underlying details of the TEE platform (e.g.,
 [AMD SEV-SNP](https://www.amd.com/en/developer/sev.html) or
 [Intel TDX](https://www.intel.com/content/www/us/en/developer/tools/trust-domain-extensions/overview.html))
-and provides a unified inferface for generating the
+and provides a unified interface for generating the
 [`Evidence`](../proto/attestation/evidence.proto) message needed for
 [Remote Attestation](../docs/remote-attestation.md).
 
