@@ -32,11 +32,11 @@ if [[ $# != 1 ]]; then
 fi
 if [ "$1" == "vanilla" ]; then
   "${SCRIPTS_DIR}/build-base.sh" vanilla
-  readonly source="${TARGET_DIR}/base-image.tar"
+  readonly source="base-image.tar"
   readonly static_dir=base-image
 elif [ "$1" == "nvidia" ]; then
   "${SCRIPTS_DIR}/build-base.sh" nvidia
-  readonly source="${TARGET_DIR}/nvidia-base-image.tar"
+  readonly source="nvidia-base-image.tar"
   readonly static_dir=nvidia-base-image
 elif [ "$1" == "sysroot" ]; then
   set +o xtrace

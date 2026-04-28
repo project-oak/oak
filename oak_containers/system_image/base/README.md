@@ -11,10 +11,16 @@ avoiding the need for Docker when rebuilding a system image container.
 
 To update the base image and push it:
 
-just build-base just push-base
+```bash
+just containers system-image
+just containers push-system-image
+```
 
 For nvidia;
 
-just build-nvidia-base just push-nvidia-base
+```bash
+just containers nvidia-system-image
+just containers push-nvidia-system-image
+```
 
 For building the sysroot, see: oak_containers/sysroot

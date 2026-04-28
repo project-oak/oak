@@ -14,7 +14,7 @@ RUN apt-get --yes update \
     && apt-get install --yes --no-install-recommends \
     curl gpg ca-certificates
 
-RUN curl -O -L https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb \
+RUN curl -O -L https://developer.download.nvidia.com/compute/cuda/repos/debian13/x86_64/cuda-keyring_1.1-1_all.deb \
     && dpkg -i cuda-keyring_1.1-1_all.deb \
     && rm -f cuda-keyring_1.1-1_all.deb
 

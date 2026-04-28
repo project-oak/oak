@@ -3,10 +3,12 @@ default:
     @just --list containers
 
 # Update and build the Oak Containers system image
+[working-directory: ".."]
 system-image:
     ./oak_containers/system_image/base/build-base.sh vanilla
 
 # Update and build the Oak Containers system image with nvidia GPU support
+[working-directory: ".."]
 nvidia-system-image:
     ./oak_containers/system_image/base/build-base.sh nvidia
 
@@ -22,8 +24,15 @@ sysroot-dev:
     bazel build sysroot-dev
     @printf "\nAbsolute Location:\n\n  $(pwd)/bazel-bin/sysroot-dev.tar\n\n"
 
+# Update the Oak Containers App base.
+[working-directory: ".."]
+app_base:
+    bazel run @oak_containers_app_base//:lock
+
+[working-directory: ".."]
 push-system-image:
     ./oak_containers/system_image/base/push-base.sh vanilla
+[working-directory: ".."]
 push-nvidia-system-image:
     ./oak_containers/system_image/base/push-base.sh nvidia
 
