@@ -17,6 +17,7 @@
 pub mod application;
 pub mod application_keys;
 pub mod binary;
+pub mod cb_transparent;
 pub mod container;
 pub mod firmware;
 pub mod kernel;

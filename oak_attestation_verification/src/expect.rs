@@ -614,7 +614,7 @@ pub(crate) fn get_expected_measurement_digest(
 // Generic helper to extract digest values for the provided endorsement and
 // binary reference value. The resulting values can be cached by the client to
 // avoid re-computation later.
-fn acquire_expected_digests(
+pub(crate) fn acquire_expected_digests(
     now_utc_millis: i64,
     signed_endorsement: Option<&SignedEndorsement>,
     reference_value: &BinaryReferenceValue,

@@ -33,8 +33,8 @@ use oak_proto_rust::oak::{
         ApplicationKeys, ApplicationLayerData, CbData, ContainerLayerData, Event, EventData,
         Evidence, ExtractedEvidence, FakeAttestationReport, KernelLayerData, OakContainersData,
         OakRestrictedKernelData, OrchestratorMeasurements, RootLayerData, RootLayerEvidence,
-        Stage0Measurements, Stage1Measurements, SystemLayerData, TeePlatform,
-        extracted_evidence::EvidenceValues, root_layer_data::Report,
+        Stage0Measurements, Stage0TransparentMeasurements, Stage1Measurements, SystemLayerData,
+        TeePlatform, extracted_evidence::EvidenceValues, root_layer_data::Report,
     },
 };
 use oak_sev_snp_attestation_report::AttestationReport;
@@ -589,6 +589,36 @@ pub(crate) fn stage0_measurements_to_kernel_layer_data(
             ..Default::default()
         }),
         kernel_raw_cmd_line: Some(measurements.kernel_cmdline),
+        init_ram_fs: Some(RawDigest {
+            sha2_256: measurements.ram_disk_digest,
+            ..Default::default()
+        }),
+        memory_map: Some(RawDigest {
+            sha2_256: measurements.memory_map_digest,
+            ..Default::default()
+        }),
+        acpi: Some(RawDigest { sha2_256: measurements.acpi_digest, ..Default::default() }),
+    }
+}
+
+/// Translates [`Stage0TransparentMeasurements`] to [`KernelLayerData`].
+///
+/// Unlike [`stage0_measurements_to_kernel_layer_data`], the transparent version
+/// has `kernel_cmdline_digest` (a hash) instead of `kernel_cmdline` (the raw
+/// string), so `kernel_raw_cmd_line` is `None`.
+pub(crate) fn stage0_transparent_measurements_to_kernel_layer_data(
+    measurements: Stage0TransparentMeasurements,
+) -> KernelLayerData {
+    KernelLayerData {
+        kernel_image: Some(RawDigest {
+            sha2_256: measurements.kernel_measurement,
+            ..Default::default()
+        }),
+        kernel_setup_data: Some(RawDigest {
+            sha2_256: measurements.setup_data_digest,
+            ..Default::default()
+        }),
+        kernel_raw_cmd_line: None,
         init_ram_fs: Some(RawDigest {
             sha2_256: measurements.ram_disk_digest,
             ..Default::default()

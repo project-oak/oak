@@ -14,72 +14,174 @@
 // limitations under the License.
 //
 
+use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
-    Variant,
+    RawDigest, Variant,
     attestation::v1::{
-        CbLayer1TransparentReferenceValues, CbLayer2TransparentReferenceValues,
-        EventAttestationResults, KernelLayerReferenceValues,
+        CbLayer1TransparentEndorsement, CbLayer1TransparentEvent,
+        CbLayer1TransparentReferenceValues, CbLayer2TransparentEndorsement,
+        CbLayer2TransparentEvent, CbLayer2TransparentReferenceValues, EventAttestationResults,
+        KernelEndorsement, KernelLayerReferenceValues, Stage0TransparentMeasurements,
     },
 };
 use oak_time::Instant;
 
+use crate::{
+    compare::{compare_kernel_layer_measurement_digests, compare_measurement_digest},
+    expect::{acquire_expected_digests, acquire_kernel_event_expected_values},
+    extract::stage0_transparent_measurements_to_kernel_layer_data,
+    util::decode_event_proto,
+};
+
 /// Event policy for transparent stage 0.
 ///
-/// This policy blindly succeeds when applied.
+/// Decodes [`Stage0TransparentMeasurements`] from the evidence, converts to
+/// [`KernelLayerData`], and compares against the kernel layer expected values
+/// derived from the reference values and endorsements.
 pub struct TransparentStage0Policy {
-    _reference_values: KernelLayerReferenceValues,
+    reference_values: KernelLayerReferenceValues,
 }
 
 impl TransparentStage0Policy {
+    #[allow(dead_code)]
     pub fn new(reference_values: &KernelLayerReferenceValues) -> Self {
-        Self { _reference_values: reference_values.clone() }
+        Self { reference_values: reference_values.clone() }
     }
 }
 
 impl Policy<[u8]> for TransparentStage0Policy {
     fn verify(
         &self,
-        _verification_time: Instant,
-        _evidence: &[u8],
-        _endorsement: &Variant,
+        verification_time: Instant,
+        evidence: &[u8],
+        endorsement: &Variant,
     ) -> anyhow::Result<EventAttestationResults> {
-        Ok(EventAttestationResults::default())
+        let event = stage0_transparent_measurements_to_kernel_layer_data(decode_event_proto::<
+            Stage0TransparentMeasurements,
+        >(
+            "type.googleapis.com/oak.attestation.v1.Stage0TransparentMeasurements",
+            evidence,
+        )?);
+        let endorsement: Option<KernelEndorsement> =
+            endorsement.try_into().map_err(anyhow::Error::msg)?;
+
+        let expected_values = acquire_kernel_event_expected_values(
+            verification_time.into_unix_millis(),
+            endorsement.as_ref(),
+            &self.reference_values,
+        )
+        .context("acquiring kernel event expected values")?;
+
+        compare_kernel_layer_measurement_digests(&event, &expected_values)
+            .context("comparing kernel event digests")?;
+
+        Ok(EventAttestationResults { ..Default::default() })
     }
 }
 
 /// Event policy for transparent layer 1.
 ///
-/// This policy blindly succeeds when applied.
+/// Decodes [`CbLayer1TransparentEvent`] from the evidence and compares the
+/// `runtime_agent_binary`, `userspace`, and `runtime_agent` measurements
+/// against the reference values and endorsements.
 pub struct TransparentLayer1Policy {
-    _reference_values: CbLayer1TransparentReferenceValues,
+    reference_values: CbLayer1TransparentReferenceValues,
 }
 
 impl TransparentLayer1Policy {
+    #[allow(dead_code)]
     pub fn new(reference_values: &CbLayer1TransparentReferenceValues) -> Self {
-        Self { _reference_values: reference_values.clone() }
+        Self { reference_values: reference_values.clone() }
     }
 }
 
 impl Policy<[u8]> for TransparentLayer1Policy {
+    // TODO: b/474580576 - stop verifying runtime_agent once we migrate to
+    // runtime_agent_binary and userspace measurements.
+    #[allow(deprecated)]
     fn verify(
         &self,
-        _verification_time: Instant,
-        _evidence: &[u8],
-        _endorsement: &Variant,
+        verification_time: Instant,
+        evidence: &[u8],
+        endorsement: &Variant,
     ) -> anyhow::Result<EventAttestationResults> {
-        Ok(EventAttestationResults::default())
+        let event = decode_event_proto::<CbLayer1TransparentEvent>(
+            "type.googleapis.com/oak.attestation.v1.CbLayer1TransparentEvent",
+            evidence,
+        )?;
+        let endorsement: Option<CbLayer1TransparentEndorsement> =
+            endorsement.try_into().map_err(anyhow::Error::msg)?;
+
+        // Verify runtime agent measurement
+        let runtime_agent_ref_value = self
+            .reference_values
+            .runtime_agent
+            .as_ref()
+            .context("no runtime agent reference value")?;
+        let runtime_agent_measurement =
+            RawDigest { sha2_256: event.runtime_agent_measurement.clone(), ..Default::default() };
+        let expected = acquire_expected_digests(
+            verification_time.into_unix_millis(),
+            endorsement.as_ref().and_then(|e| e.runtime_agent.as_ref()),
+            runtime_agent_ref_value,
+        )
+        .context("acquiring runtime agent expected values")?;
+        compare_measurement_digest(&runtime_agent_measurement, &expected)
+            .context("comparing runtime agent measurement")?;
+
+        // Verify runtime agent binary measurement
+        let runtime_agent_binary_ref_value = self
+            .reference_values
+            .runtime_agent_binary
+            .as_ref()
+            .context("no runtime agent binary reference value")?;
+        let runtime_agent_binary_measurement = RawDigest {
+            sha2_256: event.runtime_agent_binary_measurement.clone(),
+            ..Default::default()
+        };
+        let expected = acquire_expected_digests(
+            verification_time.into_unix_millis(),
+            endorsement.as_ref().and_then(|e| e.runtime_agent_binary.as_ref()),
+            runtime_agent_binary_ref_value,
+        )
+        .context("acquiring runtime agent binary expected values")?;
+        compare_measurement_digest(&runtime_agent_binary_measurement, &expected)
+            .context("comparing runtime agent binary measurement")?;
+
+        // Verify userspace measurement
+        let userspace_ref_value =
+            self.reference_values.userspace.as_ref().context("no userspace reference value")?;
+        let userspace_measurement =
+            RawDigest { sha2_256: event.userspace_measurement.clone(), ..Default::default() };
+        let expected = acquire_expected_digests(
+            verification_time.into_unix_millis(),
+            endorsement.as_ref().and_then(|e| e.userspace.as_ref()),
+            userspace_ref_value,
+        )
+        .context("acquiring userspace expected values")?;
+        compare_measurement_digest(&userspace_measurement, &expected)
+            .context("comparing userspace measurement")?;
+
+        Ok(EventAttestationResults { ..Default::default() })
     }
 }
 
 /// Event policy for transparent layer 2.
 ///
-/// This policy blindly succeeds when applied.
+/// Decodes [`CbLayer2TransparentEvent`] from the evidence and compares the
+/// `binary_mpm` measurement against the reference values and endorsements.
+///
+/// Note: the event contains [`MpmPackage`] metadata (string version IDs) rather
+/// than raw digest measurements. The `binary_mpm` endorsement-based comparison
+/// is performed when present, but digest-level comparison against the event
+/// contents is not yet implemented.
 pub struct TransparentLayer2Policy {
     _reference_values: CbLayer2TransparentReferenceValues,
 }
 
 impl TransparentLayer2Policy {
+    #[allow(dead_code)]
     pub fn new(reference_values: &CbLayer2TransparentReferenceValues) -> Self {
         Self { _reference_values: reference_values.clone() }
     }
@@ -89,49 +191,125 @@ impl Policy<[u8]> for TransparentLayer2Policy {
     fn verify(
         &self,
         _verification_time: Instant,
-        _evidence: &[u8],
-        _endorsement: &Variant,
+        evidence: &[u8],
+        endorsement: &Variant,
     ) -> anyhow::Result<EventAttestationResults> {
-        Ok(EventAttestationResults::default())
+        // Decode the event to validate it is well-formed.
+        let _event = decode_event_proto::<CbLayer2TransparentEvent>(
+            "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
+            evidence,
+        )?;
+        let _endorsement: Option<CbLayer2TransparentEndorsement> =
+            endorsement.try_into().map_err(anyhow::Error::msg)?;
+
+        // TODO: b/493160251 - Implement digest-level comparison once the event
+        // proto carries measurement digests alongside the MpmPackage metadata.
+        Ok(EventAttestationResults { ..Default::default() })
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use oak_proto_rust::oak::attestation::v1::{Event, MpmPackage};
+    use prost::Message;
+    use prost_types::Any;
+
     use super::*;
 
     const TEST_TIME: Instant = Instant::from_unix_millis(1_000_000);
 
-    #[test]
-    fn transparent_stage0_verify_succeeds() {
-        let reference_values = KernelLayerReferenceValues::default();
-        let policy = TransparentStage0Policy::new(&reference_values);
-
-        let result = policy.verify(TEST_TIME, b"arbitrary evidence", &Variant::default());
-
-        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
-        assert_eq!(result.unwrap(), EventAttestationResults::default());
+    /// Helper to encode a proto as a serialized [`Event`], the format expected
+    /// by [`decode_event_proto`].
+    fn encode_event_proto<M: Message>(type_url: &str, msg: &M) -> Vec<u8> {
+        let event = Event {
+            tag: String::new(),
+            event: Some(Any { type_url: type_url.to_string(), value: msg.encode_to_vec() }),
+        };
+        event.encode_to_vec()
     }
 
     #[test]
-    fn transparent_layer1_verify_succeeds() {
-        let reference_values = CbLayer1TransparentReferenceValues::default();
-        let policy = TransparentLayer1Policy::new(&reference_values);
+    fn transparent_stage0_verify_succeeds() {
+        use oak_proto_rust::oak::attestation::v1::{
+            BinaryReferenceValue, KernelBinaryReferenceValue, SkipVerification, TextReferenceValue,
+            binary_reference_value::Type as BrvType,
+            kernel_binary_reference_value::Type as KbrvType, text_reference_value::Type as TrvType,
+        };
 
-        let result = policy.verify(TEST_TIME, b"arbitrary evidence", &Variant::default());
+        let skip_brv = BinaryReferenceValue { r#type: Some(BrvType::Skip(SkipVerification {})) };
+        let skip_kbrv =
+            KernelBinaryReferenceValue { r#type: Some(KbrvType::Skip(SkipVerification {})) };
+        let skip_trv = TextReferenceValue { r#type: Some(TrvType::Skip(SkipVerification {})) };
+
+        let measurements = Stage0TransparentMeasurements {
+            setup_data_digest: vec![0u8; 32],
+            kernel_measurement: vec![0u8; 32],
+            ram_disk_digest: vec![0u8; 32],
+            memory_map_digest: vec![0u8; 32],
+            acpi_digest: vec![0u8; 32],
+            kernel_cmdline_digest: vec![0u8; 32],
+        };
+        let evidence = encode_event_proto(
+            "type.googleapis.com/oak.attestation.v1.Stage0TransparentMeasurements",
+            &measurements,
+        );
+        let reference_values = KernelLayerReferenceValues {
+            kernel: Some(skip_kbrv),
+            kernel_cmd_line_text: Some(skip_trv),
+            init_ram_fs: Some(skip_brv.clone()),
+            memory_map: Some(skip_brv.clone()),
+            acpi: Some(skip_brv),
+        };
+        let policy = TransparentStage0Policy::new(&reference_values);
+
+        let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
 
         assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
-        assert_eq!(result.unwrap(), EventAttestationResults::default());
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn transparent_layer1_verify_succeeds() {
+        use oak_proto_rust::oak::attestation::v1::{
+            BinaryReferenceValue, SkipVerification, binary_reference_value::Type as BrvType,
+        };
+
+        let skip_ref = BinaryReferenceValue { r#type: Some(BrvType::Skip(SkipVerification {})) };
+        let event = CbLayer1TransparentEvent {
+            runtime_agent_binary_measurement: vec![0u8; 32],
+            runtime_agent_measurement: vec![0u8; 32],
+            userspace_measurement: vec![0u8; 32],
+        };
+        let evidence = encode_event_proto(
+            "type.googleapis.com/oak.attestation.v1.CbLayer1TransparentEvent",
+            &event,
+        );
+        let reference_values = CbLayer1TransparentReferenceValues {
+            runtime_agent_binary: Some(skip_ref.clone()),
+            userspace: Some(skip_ref.clone()),
+            runtime_agent: Some(skip_ref),
+        };
+        let policy = TransparentLayer1Policy::new(&reference_values);
+
+        let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
+
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
     }
 
     #[test]
     fn transparent_layer2_verify_succeeds() {
+        let event = CbLayer2TransparentEvent {
+            packages: vec![MpmPackage { mpm_version_id: "test/1.0".into() }],
+        };
+        let evidence = encode_event_proto(
+            "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
+            &event,
+        );
         let reference_values = CbLayer2TransparentReferenceValues::default();
         let policy = TransparentLayer2Policy::new(&reference_values);
 
-        let result = policy.verify(TEST_TIME, b"arbitrary evidence", &Variant::default());
+        let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
 
         assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
-        assert_eq!(result.unwrap(), EventAttestationResults::default());
     }
 }
