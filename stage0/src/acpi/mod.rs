@@ -26,22 +26,20 @@ use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use sha2::{Digest, Sha256};
 use strum::FromRepr;
 
-use crate::{
-    Madt, ZeroPage,
-    acpi_tables::{
-        Fadt, InterruptSourceOverride, IoApic, LocalApicNmi, MultiprocessorWakeup,
-        ProcessorLocalApic, ProcessorLocalX2Apic,
-    },
-    fw_cfg::FwCfg,
-    pci::PciWindows,
-};
+use crate::{ZeroPage, acpi_tables::Fadt, fw_cfg::FwCfg, pci::PciWindows};
 
 mod commands;
 mod files;
 pub mod tables;
 use commands::{Invoke, RomfileCommand};
 use files::{Files, MemFiles};
-use tables::{DescriptionHeader, Rsdp};
+use tables::{
+    DescriptionHeader, Madt, Rsdp,
+    madt::{
+        InterruptSourceOverride, IoApic, LocalApicNmi, MultiprocessorWakeup, ProcessorLocalApic,
+        ProcessorLocalX2Apic,
+    },
+};
 
 type LowMemoryAllocator = linked_list_allocator::LockedHeap;
 /// Allocator for low memory in the EBDA: 128K of memory (where the RSDP will be
