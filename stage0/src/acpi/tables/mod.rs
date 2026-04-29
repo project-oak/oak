@@ -59,6 +59,7 @@
 //!
 //! Collectively, these structures are referred to as "the ACPI tables".
 
+mod fadt;
 pub mod madt;
 mod rsdp;
 pub mod rsdt;
@@ -66,6 +67,7 @@ mod xsdt;
 
 use core::{any::type_name, fmt::Display, ops::Range, slice};
 
+pub use fadt::Fadt;
 pub use madt::Madt;
 pub use rsdp::Rsdp;
 pub use rsdt::Rsdt;

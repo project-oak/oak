@@ -1,5 +1,5 @@
 //
-// Copyright 2023 The Project Oak Authors
+// Copyright 2026 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,56 +14,7 @@
 // limitations under the License.
 //
 
-//! Defines ACPI structures based on ACPI specification.
-//! You can find this specification here:
-//! https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html
-//!
-//! ACPI tables are located in the first 1KB of the EBDA (Extended Bios Data
-//! Area) or in the BIOS read-only memory space between 0E0000h and 0FFFFFh. The
-//! basic structure of ACPI tables is as follows:
-//!
-//! - RSDP (Root System Descriptor Pointer) is a structure (not a pointer)
-//!   described in ACPI Spec section 5.2.5. Its location is hardcoded by the
-//!   firmware, and it's in the first 1KB of the EBDA. In our case we provide
-//!   the location using the linker section ".ebda.rsdp" (see layout.ld files).
-//!   The RSDP contains optional pointers to an RSDT and an XSDT. Version 1 RSDP
-//!   uses an RSDT while v2 may use an XSDT.
-//!   - RSDT (Root System Description Table) - ACPI Spec section 5.2.7 contains
-//!     a header (our type: `DescriptionHeader`) and a variable number of 4-byte
-//!     pointers to the headers (also `DescriptionHeader`) of substructures
-//!     described below.
-//!   - XSDT (Extended System Description Table) - ACPI Spec section 5.2.8
-//!     contains a header (also `DescriptionHeader`) and a variable number of
-//!     8-byte pointers to the headers (also `DescriptionHeader`) of
-//!     substructures described below.
-//!
-//!     - RSDT and XSDT entry pointers point to a number of possible
-//!       substructures, each with a 4-byte signature, listed in tables 5.5 and
-//!       5.6 of ACPI Spec.
-//!     - One such substructure is a MADT (Multiple APIC Description Table),
-//!       with signature "APIC", described in ACPI Spec section 5.2.12. A MADT
-//!       (our type: `Madt`) contains a header (also a `DescriptionHeader`), a
-//!       couple more fields, plus a variable number of variable length
-//!       "Interrupt Controller Structures". These ICSs can't be represented in
-//!       Rust, so they're parsed dynamically (remember that the initial content
-//!       of ACPI tables is given to use by the VMM).
-//!
-//!       - In its "Interrupt Controller Structure" entries (our type:
-//!         `ControllerHeader`), a MADT can contain multiple substructures, the
-//!         type of each identified by a 1-byte integer (as opposed to a 4-byte
-//!         signature)
-//!       - We are only interested in a subset of such substructures, like
-//!         LocalApic (type=0, section 5.2.12.2), LocalX2Apic(type=9, section
-//!         5.2.12.12), and MultiprocessorWakeupStructure (type=0x10, section
-//!         5.2.12.19). This last one is used to hand over APs to the OS.
-//!
-//! Collectively, these structures are referred to as "the ACPI tables".
-
-use core::{fmt::Debug, mem::size_of};
-
-use crate::acpi::tables::DescriptionHeader;
-
-type ResultStaticErr<T> = Result<T, &'static str>;
+use crate::{DescriptionHeader, acpi::tables::Result};
 
 // GAS for short. This is a structure used to describe the position of
 // registers.
@@ -191,7 +142,7 @@ impl Fadt {
     // compared to its intended name because it predates ACPI 1.0
     pub const SIGNATURE: &'static [u8; 4] = b"FACP";
 
-    pub fn new(hdr: &DescriptionHeader) -> ResultStaticErr<&'static Fadt> {
+    pub fn new(hdr: &DescriptionHeader) -> Result<&'static Fadt> {
         // Safety: we're checking that it's a valid FADT in `validate()`.
         let fadt = unsafe { &*(hdr as *const _ as usize as *const Fadt) };
         fadt.validate()?;
@@ -205,7 +156,7 @@ impl Fadt {
         self.header.update_checksum();
     }
 
-    fn validate(&self) -> ResultStaticErr<()> {
+    fn validate(&self) -> Result<()> {
         self.header.validate()?;
 
         if self.header.signature != *Self::SIGNATURE {

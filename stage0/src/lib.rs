@@ -51,7 +51,6 @@ use zerocopy::IntoBytes;
 use zeroize::Zeroize;
 
 mod acpi;
-mod acpi_tables;
 pub mod allocator;
 mod apic;
 mod cmos;

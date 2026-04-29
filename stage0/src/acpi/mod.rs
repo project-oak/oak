@@ -26,7 +26,7 @@ use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use sha2::{Digest, Sha256};
 use strum::FromRepr;
 
-use crate::{ZeroPage, acpi_tables::Fadt, fw_cfg::FwCfg, pci::PciWindows};
+use crate::{ZeroPage, fw_cfg::FwCfg, pci::PciWindows};
 
 mod commands;
 mod files;
@@ -34,7 +34,7 @@ pub mod tables;
 use commands::{Invoke, RomfileCommand};
 use files::{Files, MemFiles};
 use tables::{
-    DescriptionHeader, Madt, Rsdp,
+    DescriptionHeader, Fadt, Madt, Rsdp,
     madt::{
         InterruptSourceOverride, IoApic, LocalApicNmi, MultiprocessorWakeup, ProcessorLocalApic,
         ProcessorLocalX2Apic,
