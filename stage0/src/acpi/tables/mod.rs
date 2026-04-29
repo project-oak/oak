@@ -74,6 +74,7 @@ pub use rsdt::Rsdt;
 pub use xsdt::Xsdt;
 
 type Result<T> = core::result::Result<T, &'static str>;
+
 /// Header common for all ACPI tables.
 ///
 /// See Section 5.2.6, System Description Table Header, in the ACPI
@@ -82,14 +83,14 @@ type Result<T> = core::result::Result<T, &'static str>;
 #[repr(C, packed)]
 pub struct DescriptionHeader {
     /// ASCII string representation of the table identifer.
-    pub signature: [u8; 4],
+    pub(super) signature: [u8; 4],
 
     /// Length of the table, in bytes, including the header.
-    pub length: u32,
+    length: u32,
 
     /// Revision of the struture corresponding to the signature field for this
     /// table.
-    pub revision: u8,
+    revision: u8,
 
     /// The entire table, including the checksum field, must add to zero to be
     /// considered valid.

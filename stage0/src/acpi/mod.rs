@@ -57,7 +57,7 @@ const HIGH_MEM_SIZE: usize = 0x10_0000;
 // memory backing the allocator will go.
 type HighMemoryAllocator = linked_list_allocator::LockedHeap;
 /// Allocator for high memory (where the ACPI tables themselves will go).
-pub static HIGH_MEMORY_ALLOCATOR: HighMemoryAllocator = HighMemoryAllocator::empty();
+static HIGH_MEMORY_ALLOCATOR: HighMemoryAllocator = HighMemoryAllocator::empty();
 
 const TABLE_LOADER_FILE_NAME: &CStr = c"etc/table-loader";
 
@@ -323,8 +323,6 @@ mod tests {
             RomfileCommand::default(),
         ];
 
-        println!(" COMMAND 0: {:?}", commands[0]);
-        println!("ECOMMAND 0: {:?}", &expected_commands[0]);
         assert_that!(&commands[0], eq(&expected_commands[0]));
         assert_that!(commands, container_eq(expected_commands));
     }
