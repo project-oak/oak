@@ -9,7 +9,7 @@
 We use this Docker image to build the base system image for Oak Containers.
 
 The bazel-built system image rules layer in freshly-built Oak Containers
-binaries onto a pre-created base image. The base iamge is not re-generated on
+binaries onto a pre-created base image. The base image is not re-generated on
 every run, since it changes very infrequently.
 
 For more information on updating the base image, see `base/README.md`.

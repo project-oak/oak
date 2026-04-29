@@ -402,7 +402,7 @@ sequenceDiagram
     CH->>+CSV: verify_binding (server_binding)
     CSV-->>-CH: result
 
-    CH->>+CSB: bind(hanshake_hash)
+    CH->>+CSB: bind(handshake_hash)
     CSB-->>-CH: client_binding
     CH--)SH: followup request (client_binding)
 

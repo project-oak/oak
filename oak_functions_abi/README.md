@@ -10,7 +10,7 @@ The Oak Functions WebAssembly module
 - [imports functions](#imported-functions) from the Oak Functions runtime.
 
 The Oak Functions WebAssembly ABI is quite low-level, and it is mostly a way to
-allow building a more expressive API based on an invocation-bsaed
+allow building a more expressive API based on an invocation-based
 [microRPC](/micro_rpc/) transport on top of it.
 
 Oak Functions WebAssembly modules will typically use more convenient (and safer)
@@ -69,7 +69,7 @@ providing the following functions as
   little-endian u32).
 - `result[0]: i32`: numeric
   [`StatusCode`](https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc)
-  reprsenting the result of the invocation. Note that this is in addition to any
+  representing the result of the invocation. Note that this is in addition to any
   status code that the API implementation may return; it only represents the
   success or failure of the Wasm invocation itself as a transport.
 

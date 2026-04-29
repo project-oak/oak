@@ -6,7 +6,7 @@ handle encryption.
 
 - `application` contains the actual application business logic that the rest of
   the demo exposes.
-- `proto` contains the proto messages and service defintions
+- `proto` contains the proto messages and service definitions
 - `service` contains the implementation of the microRPC service
 - `tests` shows a simple end-to-end example
 
