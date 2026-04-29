@@ -16,7 +16,7 @@
 use oak_crypto::verifier::Verifier;
 use oak_file_utils::data_path;
 
-use crate::signature_verifier::SignatureVerifier;
+use crate::{alloc::string::ToString, signature_verifier::SignatureVerifier};
 
 const MESSAGE_PATH: &str = "cc/crypto/tink/signature/testdata/message";
 const SIGNATURE_PATH: &str = "cc/crypto/tink/signature/testdata/signature";

@@ -46,7 +46,9 @@ rust_test(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_attestation_verification:test_util",
+        "//oak_crypto:oak_crypto_tink",
         "@oak_crates_index//:base64",
+        "@oak_crates_index//:ed25519-dalek",
         "@oak_crates_index//:sha2",
     ],
 )

@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+#![no_std]
+
 extern crate alloc;
 
 #[cfg(test)]

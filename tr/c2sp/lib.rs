@@ -29,9 +29,14 @@
 //! proof.verify(&policy, &entry_bytes)?;
 //! ```
 //!
-//! Signature verification supports Ed25519 (type 0x01) and timestamped
-//! Ed25519 witness cosignatures (type 0x04) as defined by the
-//! [signed-note specification](https://c2sp.org/signed-note#signature-types).
+//! Signature verification supports Ed25519 (type 0x01), timestamped
+//! Ed25519 witness cosignatures (type 0x04), and timestamped ML-DSA-44
+//! signatures (type 0x06) as defined by the
+//! [signed-note specification](https://c2sp.org/signed-note#signature-types)
+//! and the
+//! [tlog-cosignature specification](https://c2sp.org/tlog-cosignature).
+//!
+//! ML-DSA-44 (type 0x06) may be used by both logs and witnesses.
 
 #![no_std]
 
@@ -48,7 +53,10 @@ use alloc::{
 };
 
 use base64::{Engine, engine::general_purpose::STANDARD as B64};
-pub use note::{NoteError, NoteSignature, NoteSigningKey, NoteVerifyingKey, SignatureType};
+pub use note::{
+    NoteError, NoteSignature, NoteSigningKey, NoteVerifyingKey, SignatureType, SigningKey,
+    VerifyingKey,
+};
 use oak_digest::Sha256;
 pub use policy::{Policy, PolicyError};
 use rs_merkle::Hasher;
@@ -60,8 +68,8 @@ pub enum TLogProofError {
     InvalidHeader,
     #[error("invalid index format")]
     InvalidIndex,
-    #[error("malformed checkpoint section")]
-    MalformedCheckpoint,
+    #[error("malformed checkpoint")]
+    MalformedCheckpoint(#[from] CheckpointError),
     #[error("malformed proof")]
     MalformedProof,
     #[error("mismatch between signatures and verifying keys")]
@@ -76,6 +84,13 @@ pub enum TLogProofError {
     Note(#[from] NoteError),
     #[error("malformed data")]
     Format(#[from] Box<dyn core::error::Error + Send + Sync>),
+}
+
+/// Errors produced when parsing a checkpoint body.
+#[derive(Error, Debug)]
+pub enum CheckpointError {
+    #[error("malformed checkpoint")]
+    Malformed,
 }
 
 /// Represents the checkpoint section of a t-log proof.
@@ -99,19 +114,17 @@ impl Checkpoint {
     /// The checkpoint body consists of origin, tree size, base64-encoded root
     /// hash, and optional extension lines, followed by a blank separator line
     /// and then signature lines.
-    pub fn parse(serialized: &str) -> Result<Self, TLogProofError> {
+    pub fn parse(serialized: &str) -> Result<Self, CheckpointError> {
         let mut lines = serialized.lines();
 
         // Read the required checkpoint body fields.
-        let origin = lines.next().ok_or(TLogProofError::MalformedCheckpoint)?;
-        let cp_size_str = lines.next().ok_or(TLogProofError::MalformedCheckpoint)?;
-        let tree_size: u64 =
-            cp_size_str.parse().map_err(|_| TLogProofError::MalformedCheckpoint)?;
-        let cp_root_str = lines.next().ok_or(TLogProofError::MalformedCheckpoint)?;
-        let root_hash_raw =
-            B64.decode(cp_root_str).map_err(|_| TLogProofError::MalformedCheckpoint)?;
+        let origin = lines.next().ok_or(CheckpointError::Malformed)?;
+        let cp_size_str = lines.next().ok_or(CheckpointError::Malformed)?;
+        let tree_size: u64 = cp_size_str.parse().map_err(|_| CheckpointError::Malformed)?;
+        let cp_root_str = lines.next().ok_or(CheckpointError::Malformed)?;
+        let root_hash_raw = B64.decode(cp_root_str).map_err(|_| CheckpointError::Malformed)?;
         let root_hash = Sha256::from(
-            <[u8; 32]>::try_from(root_hash_raw).map_err(|_| TLogProofError::MalformedCheckpoint)?,
+            <[u8; 32]>::try_from(root_hash_raw).map_err(|_| CheckpointError::Malformed)?,
         );
 
         // Build signed payload from the body: the three required fields plus
@@ -131,7 +144,7 @@ impl Checkpoint {
             if line.is_empty() {
                 continue;
             }
-            signatures.push(NoteSignature::parse(line)?);
+            signatures.push(NoteSignature::parse(line).map_err(|_| CheckpointError::Malformed)?);
         }
 
         Ok(Checkpoint {
@@ -344,6 +357,7 @@ mod tests {
     use alloc::vec;
 
     use base64::{Engine, engine::general_purpose::STANDARD as B64};
+    use oak_crypto_tink::ml_dsa_44;
     use oak_time::Instant;
 
     use super::*;
@@ -381,31 +395,55 @@ mod tests {
     impl TestIdentity {
         /// Creates an identity from the real test-vector verifying key (no
         /// signing capability).
-        fn real_log() -> Self {
+        fn real_ed25519() -> Self {
             let verifying_key =
                 NoteVerifyingKey::parse(TEST_MAIN_VKEY).expect("parsing verifying key");
             Self { origin: verifying_key.origin.clone(), signing_key: None, verifying_key }
         }
 
         /// Deterministic fake Ed25519 log identity.
-        fn fake_log() -> Self {
-            Self::fake(FAKE_ORIGIN, SignatureType::Ed25519, [42u8; 32])
+        fn fake_ed25519() -> Self {
+            Self::ed25519(FAKE_ORIGIN, [42u8; 32])
         }
 
-        /// Deterministic fake CosignatureV1 witness identity.
-        fn fake_witness() -> Self {
-            Self::fake("fake-witness", SignatureType::CosignatureV1, [43u8; 32])
+        /// Deterministic fake Ed25519CosignatureV1 witness identity.
+        fn fake_cosignature_v1() -> Self {
+            Self::cosignature_v1("fake-witness", [43u8; 32])
         }
 
-        fn fake(origin: &str, signature_type: SignatureType, raw: [u8; 32]) -> Self {
-            let note_key = NoteSigningKey::from_parts(origin, signature_type, raw);
-            let verifying_key = note_key.verifying_key.clone();
+        /// Fake MlDsa44SubtreeV1 identity.
+        fn fake_subtree_v1() -> Self {
+            Self::subtree_v1("fake-ml-dsa-witness")
+        }
+
+        fn ed25519(origin: &str, raw: [u8; 32]) -> Self {
+            let note_key = NoteSigningKey::new(
+                origin,
+                SigningKey::Ed25519(ed25519_dalek::SigningKey::from_bytes(&raw)),
+            );
+            let verifying_key = note_key.verifying_key();
+            Self { origin: origin.into(), signing_key: Some(note_key), verifying_key }
+        }
+
+        fn cosignature_v1(origin: &str, raw: [u8; 32]) -> Self {
+            let note_key = NoteSigningKey::new(
+                origin,
+                SigningKey::Ed25519CosignatureV1(ed25519_dalek::SigningKey::from_bytes(&raw)),
+            );
+            let verifying_key = note_key.verifying_key();
+            Self { origin: origin.into(), signing_key: Some(note_key), verifying_key }
+        }
+
+        fn subtree_v1(origin: &str) -> Self {
+            let kp = ml_dsa_44::generate_key_pair().expect("generating ML-DSA-44 key pair");
+            let note_key = NoteSigningKey::new(origin, SigningKey::MlDsa44SubtreeV1(kp));
+            let verifying_key = note_key.verifying_key();
             Self { origin: origin.into(), signing_key: Some(note_key), verifying_key }
         }
 
         /// Signs a checkpoint, dispatching based on the key's signature type.
         fn sign(&self, checkpoint_text: &str, timestamp: Instant) -> NoteSignature {
-            self.signing_key.as_ref().unwrap().sign(checkpoint_text, timestamp)
+            self.signing_key.as_ref().unwrap().sign(checkpoint_text, timestamp).unwrap()
         }
 
         /// Returns a policy text line for this identity's vkey.
@@ -492,8 +530,8 @@ mod tests {
 
     #[test]
     fn test_verify_ed25519_wrong_key() {
-        let signer = TestIdentity::fake_log();
-        let other = TestIdentity::fake(FAKE_ORIGIN, SignatureType::Ed25519, [99u8; 32]);
+        let signer = TestIdentity::fake_ed25519();
+        let other = TestIdentity::ed25519(FAKE_ORIGIN, [99u8; 32]);
         let signed_text = "test message\n";
         let sig = signer.sign(signed_text, Instant::UNIX_EPOCH);
 
@@ -532,33 +570,24 @@ mod tests {
 
     #[test]
     fn test_parse_checkpoint_missing_fields() {
-        assert!(matches!(
-            Checkpoint::parse("single-line"),
-            Err(TLogProofError::MalformedCheckpoint)
-        ));
+        assert!(matches!(Checkpoint::parse("single-line"), Err(CheckpointError::Malformed)));
     }
 
     #[test]
     fn test_parse_checkpoint_invalid_tree_size() {
         let checkpoint_str = "origin\nnot_a_number\nhash\n\n";
-        assert!(matches!(
-            Checkpoint::parse(checkpoint_str),
-            Err(TLogProofError::MalformedCheckpoint)
-        ));
+        assert!(matches!(Checkpoint::parse(checkpoint_str), Err(CheckpointError::Malformed)));
     }
 
     #[test]
     fn test_parse_checkpoint_invalid_root_hash() {
         let checkpoint_str = "origin\n1\nnot_base64!\n\n";
-        assert!(matches!(
-            Checkpoint::parse(checkpoint_str),
-            Err(TLogProofError::MalformedCheckpoint)
-        ));
+        assert!(matches!(Checkpoint::parse(checkpoint_str), Err(CheckpointError::Malformed)));
     }
 
     #[test]
     fn test_parse_proof_real_vectors() {
-        let identity = TestIdentity::real_log();
+        let identity = TestIdentity::real_ed25519();
 
         let proof = TLogProof::parse(TEST_TLOG_PROOF).expect("parsing proof");
 
@@ -572,7 +601,7 @@ mod tests {
 
     #[test]
     fn test_parse_proof_synthetic() {
-        let identity = TestIdentity::fake_log();
+        let identity = TestIdentity::fake_ed25519();
         let root_hash = Sha256::from([0xCC; 32]);
         let checkpoint = make_checkpoint(&identity, 456, &root_hash);
         let proof_str = make_tlog_proof(123, &[Sha256::from([0xAA; 32])], &checkpoint);
@@ -607,15 +636,21 @@ mod tests {
     #[test]
     fn test_parse_proof_malformed_checkpoint() {
         let proof_str = "c2sp.org/tlog-proof@v1\nindex 0\n\norigin\nnot_a_number\n";
-        assert!(matches!(TLogProof::parse(proof_str), Err(TLogProofError::MalformedCheckpoint)));
+        assert!(matches!(
+            TLogProof::parse(proof_str),
+            Err(TLogProofError::MalformedCheckpoint(CheckpointError::Malformed))
+        ));
 
         let proof_str2 = "c2sp.org/tlog-proof@v1\nindex 0\n\norigin\n1\nnot_b64\n";
-        assert!(matches!(TLogProof::parse(proof_str2), Err(TLogProofError::MalformedCheckpoint)));
+        assert!(matches!(
+            TLogProof::parse(proof_str2),
+            Err(TLogProofError::MalformedCheckpoint(CheckpointError::Malformed))
+        ));
     }
 
     #[test]
     fn test_parse_proof_with_extra_data() {
-        let identity = TestIdentity::fake_log();
+        let identity = TestIdentity::fake_ed25519();
         let entry = b"entry-data";
         let test_tree = TestTree::new(2, 0, entry);
         let checkpoint = make_checkpoint(&identity, 2, &test_tree.root());
@@ -636,7 +671,7 @@ mod tests {
 
     #[test]
     fn test_serialize_roundtrip_synthetic() {
-        let identity = TestIdentity::fake_log();
+        let identity = TestIdentity::fake_ed25519();
         let entry = b"roundtrip-entry";
         let test_tree = TestTree::new(4, 2, entry);
         let checkpoint = make_checkpoint(&identity, 4, &test_tree.root());
@@ -651,8 +686,8 @@ mod tests {
 
     #[test]
     fn test_serialize_roundtrip_with_cosignature() {
-        let log = TestIdentity::fake_log();
-        let witness = TestIdentity::fake_witness();
+        let log = TestIdentity::fake_ed25519();
+        let witness = TestIdentity::fake_cosignature_v1();
         let entry = b"cosig-roundtrip";
         let test_tree = TestTree::new(3, 1, entry);
         let root = test_tree.root();
@@ -679,7 +714,7 @@ mod tests {
 
     #[test]
     fn test_verify_real_vectors() {
-        let identity = TestIdentity::real_log();
+        let identity = TestIdentity::real_ed25519();
         let witness_vkey = NoteVerifyingKey::parse(TEST_WITNESS_VKEY).unwrap();
         let proof = TLogProof::parse(TEST_TLOG_PROOF).unwrap();
 
@@ -697,7 +732,7 @@ mod tests {
 
     #[test]
     fn test_verify_real_merkle_vectors() {
-        let identity = TestIdentity::fake_log();
+        let identity = TestIdentity::fake_ed25519();
         let proof_hashes: Vec<Sha256> = TEST_REAL_PROOF_HASHES
             .iter()
             .map(|h| Sha256::from(<[u8; 32]>::try_from(B64.decode(h).unwrap()).unwrap()))
@@ -715,7 +750,7 @@ mod tests {
 
     #[test]
     fn test_verify_synthetic() {
-        let identity = TestIdentity::fake_log();
+        let identity = TestIdentity::fake_ed25519();
         let entry = b"valid-entry";
         let test_tree = TestTree::new(2, 0, entry);
         let checkpoint = make_checkpoint(&identity, 2, &test_tree.root());
@@ -729,8 +764,8 @@ mod tests {
 
     #[test]
     fn test_verify_cosignature() {
-        let log = TestIdentity::fake_log();
-        let witness = TestIdentity::fake_witness();
+        let log = TestIdentity::fake_ed25519();
+        let witness = TestIdentity::fake_cosignature_v1();
         let entry = b"valid-entry";
         let test_tree = TestTree::new(3, 1, entry);
         let root = test_tree.root();
@@ -765,7 +800,7 @@ mod tests {
 
     #[test]
     fn test_verify_with_extension_lines() {
-        let identity = TestIdentity::fake_log();
+        let identity = TestIdentity::fake_ed25519();
         let entry = b"ext-entry";
         let test_tree = TestTree::new(2, 0, entry);
         let root = test_tree.root();
@@ -793,7 +828,7 @@ mod tests {
 
     #[test]
     fn test_verify_single_leaf_tree() {
-        let identity = TestIdentity::fake_log();
+        let identity = TestIdentity::fake_ed25519();
         let entry = b"single-leaf";
         let test_tree = TestTree::new(1, 0, entry);
         let checkpoint = make_checkpoint(&identity, 1, &test_tree.root());
@@ -807,7 +842,7 @@ mod tests {
 
     #[test]
     fn test_verify_last_leaf() {
-        let identity = TestIdentity::fake_log();
+        let identity = TestIdentity::fake_ed25519();
         let entry = b"last-leaf";
         let tree_size = 16;
         let last_index = tree_size - 1;
@@ -824,8 +859,8 @@ mod tests {
 
     #[test]
     fn test_verify_wrong_origin() {
-        let identity = TestIdentity::fake_log();
-        let other = TestIdentity::fake("wrong.com/log", SignatureType::Ed25519, [99u8; 32]);
+        let identity = TestIdentity::fake_ed25519();
+        let other = TestIdentity::ed25519("wrong.com/log", [99u8; 32]);
         let entry = b"data";
         let test_tree = TestTree::new(2, 0, entry);
         let checkpoint = make_checkpoint(&identity, 2, &test_tree.root());
@@ -841,7 +876,7 @@ mod tests {
 
     #[test]
     fn test_verify_wrong_entry() {
-        let identity = TestIdentity::fake_log();
+        let identity = TestIdentity::fake_ed25519();
         let entry = b"real-entry";
         let test_tree = TestTree::new(2, 0, entry);
         let checkpoint = make_checkpoint(&identity, 2, &test_tree.root());
@@ -856,7 +891,7 @@ mod tests {
 
     #[test]
     fn test_verify_tampered_signature() {
-        let identity = TestIdentity::fake_log();
+        let identity = TestIdentity::fake_ed25519();
         let entry = b"data";
         let test_tree = TestTree::new(2, 0, entry);
         let checkpoint = make_checkpoint(&identity, 2, &test_tree.root());
@@ -883,14 +918,14 @@ mod tests {
 
     #[test]
     fn test_verify_signature_mismatch() {
-        let identity = TestIdentity::fake_log();
+        let identity = TestIdentity::fake_ed25519();
         let entry = b"valid-entry";
         let test_tree = TestTree::new(2, 0, entry);
         let checkpoint = make_checkpoint(&identity, 2, &test_tree.root());
         let proof_str = make_tlog_proof(0, &test_tree.proof(0), &checkpoint);
         let proof = TLogProof::parse(&proof_str).unwrap();
 
-        let other = TestIdentity::fake(FAKE_ORIGIN, SignatureType::Ed25519, [99u8; 32]);
+        let other = TestIdentity::ed25519(FAKE_ORIGIN, [99u8; 32]);
 
         // Policy with a key whose key_id_hint won't match any signature.
         let p = policy::Policy::parse(&format!("{}quorum none\n", other.log_line())).unwrap();
@@ -899,7 +934,7 @@ mod tests {
 
     #[test]
     fn test_verify_invalid_merkle_chain() {
-        let identity = TestIdentity::fake_log();
+        let identity = TestIdentity::fake_ed25519();
         let entry = b"valid-entry";
         let test_tree = TestTree::new(5, 0, entry);
         let checkpoint = make_checkpoint(&identity, 5, &test_tree.root());
@@ -914,10 +949,9 @@ mod tests {
 
     #[test]
     fn test_verify_with_policy_success() {
-        let log = TestIdentity::fake_log();
-        let witness1 = TestIdentity::fake_witness();
-        let witness2 =
-            TestIdentity::fake("fake-witness-2", SignatureType::CosignatureV1, [44u8; 32]);
+        let log = TestIdentity::fake_ed25519();
+        let witness1 = TestIdentity::fake_cosignature_v1();
+        let witness2 = TestIdentity::cosignature_v1("fake-witness-2", [44u8; 32]);
         let entry = b"valid-entry";
         let test_tree = TestTree::new(3, 1, entry);
         let root = test_tree.root();
@@ -959,10 +993,9 @@ mod tests {
 
     #[test]
     fn test_verify_with_policy_any_single_signer() {
-        let log = TestIdentity::fake_log();
-        let witness1 = TestIdentity::fake_witness();
-        let witness2 =
-            TestIdentity::fake("fake-witness-2", SignatureType::CosignatureV1, [44u8; 32]);
+        let log = TestIdentity::fake_ed25519();
+        let witness1 = TestIdentity::fake_cosignature_v1();
+        let witness2 = TestIdentity::cosignature_v1("fake-witness-2", [44u8; 32]);
         let entry = b"valid-entry";
         let test_tree = TestTree::new(3, 1, entry);
         let root = test_tree.root();
@@ -1005,10 +1038,9 @@ mod tests {
 
     #[test]
     fn test_verify_with_policy_failure() {
-        let log = TestIdentity::fake_log();
-        let witness1 = TestIdentity::fake_witness();
-        let witness2 =
-            TestIdentity::fake("fake-witness-2", SignatureType::CosignatureV1, [44u8; 32]);
+        let log = TestIdentity::fake_ed25519();
+        let witness1 = TestIdentity::fake_cosignature_v1();
+        let witness2 = TestIdentity::cosignature_v1("fake-witness-2", [44u8; 32]);
         let entry = b"valid-entry";
         let test_tree = TestTree::new(3, 1, entry);
         let root = test_tree.root();
@@ -1047,5 +1079,300 @@ mod tests {
         let result = proof.verify(&policy, entry);
 
         assert!(matches!(result, Err(TLogProofError::InsufficientWitnesses)));
+    }
+
+    #[test]
+    fn test_verify_ml_dsa_log_origin() {
+        let log = TestIdentity::subtree_v1(FAKE_ORIGIN);
+        let entry = b"ml-dsa-log-entry";
+        let test_tree = TestTree::new(4, 2, entry);
+        let checkpoint = make_checkpoint(&log, 4, &test_tree.root());
+        let proof_str = make_tlog_proof(2, &test_tree.proof(2), &checkpoint);
+
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        let p = policy::Policy::parse(&format!("{}quorum none\n", log.log_line())).unwrap();
+        assert!(proof.verify(&p, entry).is_ok());
+    }
+
+    #[test]
+    fn test_verify_ml_dsa_log_origin_wrong_entry() {
+        let log = TestIdentity::subtree_v1(FAKE_ORIGIN);
+        let entry = b"ml-dsa-real-entry";
+        let test_tree = TestTree::new(2, 0, entry);
+        let checkpoint = make_checkpoint(&log, 2, &test_tree.root());
+        let proof_str = make_tlog_proof(0, &test_tree.proof(0), &checkpoint);
+
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        let p = policy::Policy::parse(&format!("{}quorum none\n", log.log_line())).unwrap();
+        assert!(matches!(proof.verify(&p, b"wrong-entry"), Err(TLogProofError::RootMismatch)));
+    }
+
+    #[test]
+    fn test_serialize_roundtrip_ml_dsa_log() {
+        let log = TestIdentity::subtree_v1(FAKE_ORIGIN);
+        let entry = b"ml-dsa-roundtrip";
+        let test_tree = TestTree::new(4, 1, entry);
+        let checkpoint = make_checkpoint(&log, 4, &test_tree.root());
+        let proof_str = make_tlog_proof(1, &test_tree.proof(1), &checkpoint);
+
+        let proof = TLogProof::parse(&proof_str).unwrap();
+        let displayed = proof.serialize();
+        let reparsed = TLogProof::parse(&displayed).unwrap();
+
+        assert_eq!(reparsed, proof);
+    }
+
+    #[test]
+    fn test_verify_ml_dsa_witness_cosignature() {
+        let log = TestIdentity::fake_ed25519();
+        let witness = TestIdentity::fake_subtree_v1();
+        let entry = b"ml-dsa-witness-entry";
+        let test_tree = TestTree::new(3, 1, entry);
+        let root = test_tree.root();
+        let root_b64 = B64.encode(root);
+        let signed_payload = format!("{}\n{}\n{}\n", log.origin, 3, root_b64);
+
+        let log_sig = log.sign(&signed_payload, Instant::UNIX_EPOCH);
+        let witness_sig = witness.sign(&signed_payload, Instant::from_unix_seconds(1700000000));
+
+        let checkpoint = Checkpoint {
+            origin: log.origin.clone(),
+            tree_size: 3,
+            root_hash: root,
+            signed_payload,
+            signatures: vec![log_sig, witness_sig],
+        };
+
+        let proof_str = make_tlog_proof(1, &test_tree.proof(1), &checkpoint);
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        let policy_str = alloc::format!(
+            concat!("log {}\n", "witness w1 {}\n", "quorum w1\n"),
+            log.verifying_key.to_vkey_string(),
+            witness.verifying_key.to_vkey_string()
+        );
+        let policy = policy::Policy::parse(&policy_str).unwrap();
+
+        assert!(proof.verify(&policy, entry).is_ok());
+    }
+
+    #[test]
+    fn test_serialize_roundtrip_ml_dsa_witness() {
+        let log = TestIdentity::fake_ed25519();
+        let witness = TestIdentity::fake_subtree_v1();
+        let entry = b"ml-dsa-cosig-roundtrip";
+        let test_tree = TestTree::new(3, 1, entry);
+        let root = test_tree.root();
+        let root_b64 = B64.encode(root);
+        let signed_payload = format!("{}\n{}\n{}\n", log.origin, 3, root_b64);
+
+        let log_sig = log.sign(&signed_payload, Instant::UNIX_EPOCH);
+        let witness_sig = witness.sign(&signed_payload, Instant::from_unix_seconds(1700000000));
+
+        let checkpoint = Checkpoint {
+            origin: log.origin.clone(),
+            tree_size: 3,
+            root_hash: root,
+            signed_payload,
+            signatures: vec![log_sig, witness_sig],
+        };
+
+        let proof = TLogProof { index: 1, proof_hashes: test_tree.proof(1), checkpoint };
+        let displayed = proof.serialize();
+        let reparsed = TLogProof::parse(&displayed).unwrap();
+
+        assert_eq!(reparsed, proof);
+    }
+
+    #[test]
+    fn test_verify_ml_dsa_log_with_ed25519_witness() {
+        let log = TestIdentity::subtree_v1(FAKE_ORIGIN);
+        let witness = TestIdentity::fake_cosignature_v1();
+        let entry = b"mixed-keys-entry";
+        let test_tree = TestTree::new(4, 2, entry);
+        let root = test_tree.root();
+        let root_b64 = B64.encode(root);
+        let signed_payload = format!("{}\n{}\n{}\n", log.origin, 4, root_b64);
+
+        let log_sig = log.sign(&signed_payload, Instant::UNIX_EPOCH);
+        let witness_sig = witness.sign(&signed_payload, Instant::from_unix_seconds(1700000000));
+
+        let checkpoint = Checkpoint {
+            origin: log.origin.clone(),
+            tree_size: 4,
+            root_hash: root,
+            signed_payload,
+            signatures: vec![log_sig, witness_sig],
+        };
+
+        let proof_str = make_tlog_proof(2, &test_tree.proof(2), &checkpoint);
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        let policy_str = alloc::format!(
+            concat!("log {}\n", "witness w1 {}\n", "quorum w1\n"),
+            log.verifying_key.to_vkey_string(),
+            witness.verifying_key.to_vkey_string()
+        );
+        let policy = policy::Policy::parse(&policy_str).unwrap();
+
+        assert!(proof.verify(&policy, entry).is_ok());
+    }
+
+    #[test]
+    fn test_verify_ed25519_log_with_ml_dsa_witness() {
+        let log = TestIdentity::fake_ed25519();
+        let witness = TestIdentity::fake_subtree_v1();
+        let entry = b"ed25519-log-ml-dsa-witness";
+        let test_tree = TestTree::new(4, 3, entry);
+        let root = test_tree.root();
+        let root_b64 = B64.encode(root);
+        let signed_payload = format!("{}\n{}\n{}\n", log.origin, 4, root_b64);
+
+        let log_sig = log.sign(&signed_payload, Instant::UNIX_EPOCH);
+        let witness_sig = witness.sign(&signed_payload, Instant::from_unix_seconds(1700000002));
+
+        let checkpoint = Checkpoint {
+            origin: log.origin.clone(),
+            tree_size: 4,
+            root_hash: root,
+            signed_payload,
+            signatures: vec![log_sig, witness_sig],
+        };
+
+        let proof_str = make_tlog_proof(3, &test_tree.proof(3), &checkpoint);
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        let policy_str = alloc::format!(
+            concat!("log {}\n", "witness w1 {}\n", "quorum w1\n"),
+            log.verifying_key.to_vkey_string(),
+            witness.verifying_key.to_vkey_string()
+        );
+        let policy = policy::Policy::parse(&policy_str).unwrap();
+
+        assert!(proof.verify(&policy, entry).is_ok());
+    }
+
+    #[test]
+    fn test_verify_ml_dsa_log_with_ml_dsa_witness() {
+        let log = TestIdentity::subtree_v1(FAKE_ORIGIN);
+        let witness = TestIdentity::fake_subtree_v1();
+        let entry = b"all-ml-dsa-entry";
+        let test_tree = TestTree::new(2, 0, entry);
+        let root = test_tree.root();
+        let root_b64 = B64.encode(root);
+        let signed_payload = format!("{}\n{}\n{}\n", log.origin, 2, root_b64);
+
+        let log_sig = log.sign(&signed_payload, Instant::UNIX_EPOCH);
+        let witness_sig = witness.sign(&signed_payload, Instant::from_unix_seconds(1700000000));
+
+        let checkpoint = Checkpoint {
+            origin: log.origin.clone(),
+            tree_size: 2,
+            root_hash: root,
+            signed_payload,
+            signatures: vec![log_sig, witness_sig],
+        };
+
+        let proof_str = make_tlog_proof(0, &test_tree.proof(0), &checkpoint);
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        let policy_str = alloc::format!(
+            concat!("log {}\n", "witness w1 {}\n", "quorum w1\n"),
+            log.verifying_key.to_vkey_string(),
+            witness.verifying_key.to_vkey_string()
+        );
+        let policy = policy::Policy::parse(&policy_str).unwrap();
+
+        assert!(proof.verify(&policy, entry).is_ok());
+    }
+
+    #[test]
+    fn test_verify_policy_mixed_witnesses() {
+        let log = TestIdentity::fake_ed25519();
+        let ed_witness = TestIdentity::fake_cosignature_v1();
+        let ml_witness = TestIdentity::fake_subtree_v1();
+        let entry = b"mixed-witness-entry";
+        let test_tree = TestTree::new(4, 2, entry);
+        let root = test_tree.root();
+        let root_b64 = B64.encode(root);
+        let signed_payload = format!("{}\n{}\n{}\n", log.origin, 4, root_b64);
+
+        let log_sig = log.sign(&signed_payload, Instant::UNIX_EPOCH);
+        let ed_sig = ed_witness.sign(&signed_payload, Instant::from_unix_seconds(1700000000));
+        let ml_sig = ml_witness.sign(&signed_payload, Instant::from_unix_seconds(1700000001));
+
+        let checkpoint = Checkpoint {
+            origin: log.origin.clone(),
+            tree_size: 4,
+            root_hash: root,
+            signed_payload,
+            signatures: vec![log_sig, ed_sig, ml_sig],
+        };
+
+        let proof_str = make_tlog_proof(2, &test_tree.proof(2), &checkpoint);
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        // Policy requiring all witnesses (one Ed25519, one ML-DSA).
+        let policy_str = format!(
+            concat!(
+                "log {}\n",
+                "witness w1 {}\n",
+                "witness w2 {}\n",
+                "group g all w1 w2\n",
+                "quorum g\n",
+            ),
+            log.verifying_key.to_vkey_string(),
+            ed_witness.verifying_key.to_vkey_string(),
+            ml_witness.verifying_key.to_vkey_string()
+        );
+        let policy = policy::Policy::parse(&policy_str).unwrap();
+
+        assert!(proof.verify(&policy, entry).is_ok());
+    }
+
+    #[test]
+    fn test_verify_policy_mixed_witnesses_missing_ml_dsa() {
+        let log = TestIdentity::fake_ed25519();
+        let ed_witness = TestIdentity::fake_cosignature_v1();
+        let ml_witness = TestIdentity::fake_subtree_v1();
+        let entry = b"mixed-witness-missing";
+        let test_tree = TestTree::new(4, 2, entry);
+        let root = test_tree.root();
+        let root_b64 = B64.encode(root);
+        let signed_payload = format!("{}\n{}\n{}\n", log.origin, 4, root_b64);
+
+        let log_sig = log.sign(&signed_payload, Instant::UNIX_EPOCH);
+        // Only the Ed25519 witness cosigns; ML-DSA witness is absent.
+        let ed_sig = ed_witness.sign(&signed_payload, Instant::from_unix_seconds(1700000000));
+
+        let checkpoint = Checkpoint {
+            origin: log.origin.clone(),
+            tree_size: 4,
+            root_hash: root,
+            signed_payload,
+            signatures: vec![log_sig, ed_sig],
+        };
+
+        let proof_str = make_tlog_proof(2, &test_tree.proof(2), &checkpoint);
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        // Policy requiring ALL witnesses — should fail.
+        let policy_str = format!(
+            concat!(
+                "log {}\n",
+                "witness w1 {}\n",
+                "witness w2 {}\n",
+                "group g all w1 w2\n",
+                "quorum g\n",
+            ),
+            log.verifying_key.to_vkey_string(),
+            ed_witness.verifying_key.to_vkey_string(),
+            ml_witness.verifying_key.to_vkey_string()
+        );
+        let policy = policy::Policy::parse(&policy_str).unwrap();
+
+        assert!(matches!(proof.verify(&policy, entry), Err(TLogProofError::InsufficientWitnesses)));
     }
 }

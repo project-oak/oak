@@ -41,7 +41,7 @@ use core::fmt;
 use oak_proto_rust::oak::attestation::v1::C2sptLogProofReferenceValue;
 use thiserror::Error;
 
-use crate::note::{NoteVerifyingKey, SignatureType};
+use crate::note::{NoteVerifyingKey, VerifyingKey};
 
 /// A policy-local name identifying a witness or group within a
 /// [`Policy`].
@@ -78,11 +78,13 @@ pub enum PolicyError {
 ///
 /// Log public keys must be
 /// [C2SP verifying key strings](https://c2sp.org/signed-note#verifier-keys)
-/// with signature type `0x01` ([`SignatureType::Ed25519`]).
+/// with variant [`VerifyingKey::Ed25519`] (type 0x01) or
+/// [`VerifyingKey::MlDsa44SubtreeV1`] (type 0x06).
 ///
 /// Witness public keys must be
 /// [C2SP verifying key strings](https://c2sp.org/signed-note#verifier-keys)
-/// with signature type `0x04` ([`SignatureType::CosignatureV1`]).
+/// with variant [`VerifyingKey::Ed25519CosignatureV1`] (type 0x04) or
+/// [`VerifyingKey::MlDsa44SubtreeV1`] (type 0x06).
 #[derive(Debug)]
 pub struct Policy {
     /// Trusted log verifying keys. Multiple keys are allowed to support key
@@ -99,6 +101,7 @@ pub struct Policy {
 
 /// Internal representation of a quorum tree node.
 #[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
 enum Quorum {
     /// A single witness, identified by its C2SP verifying key.
     Witness(NoteVerifyingKey),
@@ -151,11 +154,17 @@ impl Policy {
                             reason: "log key must be a C2SP verifying key string".into(),
                         })?;
 
-                    // Validate: log keys must be Ed25519 type (0x01).
-                    if vkey.signature_type != SignatureType::Ed25519 {
+                    // Validate: log keys must be Ed25519 (0x01) or
+                    // ML-DSA-44 (0x06).
+                    #[cfg(feature = "ml_dsa")]
+                    let ml_dsa_ok = matches!(vkey.verifying_key, VerifyingKey::MlDsa44SubtreeV1(_));
+                    #[cfg(not(feature = "ml_dsa"))]
+                    let ml_dsa_ok = false;
+                    if !matches!(vkey.verifying_key, VerifyingKey::Ed25519(_)) && !ml_dsa_ok {
                         return Err(PolicyError::Parse {
                             line: lineno + 1,
-                            reason: "log key must have Ed25519 type (0x01)".into(),
+                            reason: "log key must have Ed25519 (0x01) or ML-DSA-44 (0x06) type"
+                                .into(),
                         });
                     }
 
@@ -181,11 +190,19 @@ impl Policy {
                             reason: "witness key must be a C2SP verifying key string".into(),
                         })?;
 
-                    // Validate: witness keys must be cosignature type (0x04).
-                    if vkey.signature_type != SignatureType::CosignatureV1 {
+                    // Validate: witness keys must be a cosignature type
+                    // (0x04 or 0x06).
+                    #[cfg(feature = "ml_dsa")]
+                    let ml_dsa_ok = matches!(vkey.verifying_key, VerifyingKey::MlDsa44SubtreeV1(_));
+                    #[cfg(not(feature = "ml_dsa"))]
+                    let ml_dsa_ok = false;
+                    if !matches!(vkey.verifying_key, VerifyingKey::Ed25519CosignatureV1(_))
+                        && !ml_dsa_ok
+                    {
                         return Err(PolicyError::Parse {
                             line: lineno + 1,
-                            reason: "witness key must have cosignature type (0x04)".into(),
+                            reason: "witness key must have a cosignature type (0x04 or 0x06)"
+                                .into(),
                         });
                     }
 
@@ -379,13 +396,13 @@ mod tests {
     /// Ed25519 public key from the given raw secret key bytes.
     fn make_witness_vkey(origin: &str, raw: [u8; 32]) -> NoteVerifyingKey {
         let vk = SigningKey::from_bytes(&raw).verifying_key();
-        NoteVerifyingKey::from_parts(origin, SignatureType::CosignatureV1, vk)
+        NoteVerifyingKey::new(origin, VerifyingKey::Ed25519CosignatureV1(vk))
     }
 
     /// Helper to create a log NoteVerifyingKey for testing.
     fn make_log_vkey(origin: &str, raw: [u8; 32]) -> NoteVerifyingKey {
         let vk = SigningKey::from_bytes(&raw).verifying_key();
-        NoteVerifyingKey::from_parts(origin, SignatureType::Ed25519, vk)
+        NoteVerifyingKey::new(origin, VerifyingKey::Ed25519(vk))
     }
 
     /// All tests need at least one log key; this returns a minimal policy
@@ -641,29 +658,42 @@ mod tests {
     #[test]
     fn parse_non_cosignature_witness_fails() {
         let lkey = make_log_vkey("example.com/log", [0x01; 32]);
-        // A verifying key with type 0x01 (Ed25519) should be rejected.
+        // A verifying key with type 0x01 (Ed25519Log) should be rejected
+        // as a witness key.
         let vk = SigningKey::from_bytes(&[0xAA; 32]).verifying_key();
-        let vkey =
-            NoteVerifyingKey::from_parts("witness.example.com/w1", SignatureType::Ed25519, vk);
+        let vkey = NoteVerifyingKey::new("witness.example.com/w1", VerifyingKey::Ed25519(vk));
         let policy_text = alloc::format!(
             concat!("{}witness w1 {}\n", "quorum w1\n",),
             log_line(&lkey),
             vkey.to_vkey_string()
         );
         let err = Policy::parse(&policy_text).unwrap_err();
-        assert!(err.to_string().contains("cosignature type (0x04)"));
+        assert!(err.to_string().contains("cosignature type (0x04 or 0x06)"));
     }
 
     #[test]
-    fn parse_non_ed25519_log_fails() {
-        // A log verifying key with type 0x04 (CosignatureV1) should be
-        // rejected.
+    fn parse_cosignature_v1_log_fails() {
+        // A log verifying key with type 0x04 (Ed25519Cosigner) should be
+        // rejected as a log key.
         let vk = SigningKey::from_bytes(&[0x01; 32]).verifying_key();
-        let vkey =
-            NoteVerifyingKey::from_parts("example.com/log", SignatureType::CosignatureV1, vk);
+        let vkey = NoteVerifyingKey::new("example.com/log", VerifyingKey::Ed25519CosignatureV1(vk));
         let policy_text = alloc::format!("log {}\nquorum none\n", vkey.to_vkey_string());
         let err = Policy::parse(&policy_text).unwrap_err();
-        assert!(err.to_string().contains("Ed25519 type (0x01)"));
+        assert!(err.to_string().contains("Ed25519 (0x01) or ML-DSA-44 (0x06)"));
+    }
+
+    #[test]
+    fn parse_ml_dsa_log_key_succeeds() {
+        use oak_crypto_tink::ml_dsa_44;
+
+        let kp = ml_dsa_44::generate_key_pair().unwrap();
+        let lkey = NoteVerifyingKey::new(
+            "example.com/log",
+            VerifyingKey::MlDsa44SubtreeV1(kp.verifying_key().clone()),
+        );
+        let policy_text = alloc::format!("{}quorum none\n", log_line(&lkey));
+        let policy = Policy::parse(&policy_text).unwrap();
+        assert_eq!(policy.log_keys().len(), 1);
     }
 
     #[test]

@@ -353,7 +353,8 @@ mod tests {
     use alloc::{string::ToString, vec};
 
     use base64::{Engine, engine::general_purpose::STANDARD as B64};
-    use c2sp::{Checkpoint, NoteSigningKey, SignatureType};
+    use c2sp::{Checkpoint, NoteSigningKey, SigningKey};
+    use oak_crypto_tink::ml_dsa_44;
     use oak_proto_rust::oak::attestation::v1::{
         C2sptLogProofReferenceValue, Endorsement, SignedEndorsement,
     };
@@ -376,7 +377,7 @@ mod tests {
         let root_hash = oak_digest::Sha256::from(root_hash);
         let root_b64 = B64.encode(root_hash);
         let signed_payload = alloc::format!("{origin}\n1\n{root_b64}\n");
-        let log_sig = log_key.sign(&signed_payload, Instant::UNIX_EPOCH);
+        let log_sig = log_key.sign(&signed_payload, Instant::UNIX_EPOCH).unwrap();
         let checkpoint = Checkpoint {
             origin: origin.into(),
             tree_size: 1,
@@ -385,7 +386,7 @@ mod tests {
             signatures: vec![log_sig],
         };
         let proof = TLogProof { index: 0, proof_hashes: vec![], checkpoint };
-        let vkey = log_key.verifying_key.to_vkey_string();
+        let vkey = log_key.verifying_key().to_vkey_string();
         (proof.serialize(), vkey)
     }
 
@@ -398,7 +399,10 @@ mod tests {
     fn verify_c2sp_tlog_proof_succeeds() {
         let entry = b"test endorsement data";
         let origin = "test.log.example.com/log";
-        let log_key = NoteSigningKey::from_parts(origin, SignatureType::Ed25519, [42u8; 32]);
+        let log_key = NoteSigningKey::new(
+            origin,
+            SigningKey::Ed25519(ed25519_dalek::SigningKey::from_bytes(&[42u8; 32])),
+        );
 
         let (proof_text, vkey) = make_test_tlog_proof(entry, origin, &log_key);
 
@@ -413,8 +417,11 @@ mod tests {
     #[test]
     fn verify_c2sp_tlog_proof_fails_when_proof_missing() {
         let origin = "test.log.example.com/log";
-        let log_key = NoteSigningKey::from_parts(origin, SignatureType::Ed25519, [42u8; 32]);
-        let vkey = log_key.verifying_key.to_vkey_string();
+        let log_key = NoteSigningKey::new(
+            origin,
+            SigningKey::Ed25519(ed25519_dalek::SigningKey::from_bytes(&[42u8; 32])),
+        );
+        let vkey = log_key.verifying_key().to_vkey_string();
         let c2sp_ref = C2sptLogProofReferenceValue { policy: make_log_policy(&vkey) };
         let c2sp_tlog_proof = Vec::new();
         let endorsement = Endorsement::default();
@@ -428,8 +435,11 @@ mod tests {
     #[test]
     fn verify_c2sp_tlog_proof_fails_with_invalid_proof() {
         let origin = "test.log.example.com/log";
-        let log_key = NoteSigningKey::from_parts(origin, SignatureType::Ed25519, [42u8; 32]);
-        let vkey = log_key.verifying_key.to_vkey_string();
+        let log_key = NoteSigningKey::new(
+            origin,
+            SigningKey::Ed25519(ed25519_dalek::SigningKey::from_bytes(&[42u8; 32])),
+        );
+        let vkey = log_key.verifying_key().to_vkey_string();
 
         let c2sp_tlog_proof = b"not a valid proof".to_vec();
         let endorsement = Endorsement::default();
@@ -446,7 +456,10 @@ mod tests {
         let entry = b"correct endorsement data";
         let wrong_entry = b"wrong endorsement data";
         let origin = "test.log.example.com/log";
-        let log_key = NoteSigningKey::from_parts(origin, SignatureType::Ed25519, [42u8; 32]);
+        let log_key = NoteSigningKey::new(
+            origin,
+            SigningKey::Ed25519(ed25519_dalek::SigningKey::from_bytes(&[42u8; 32])),
+        );
 
         // Build a proof over the correct entry.
         let (proof_text, vkey) = make_test_tlog_proof(entry, origin, &log_key);
@@ -466,14 +479,20 @@ mod tests {
     fn verify_c2sp_tlog_proof_fails_with_wrong_key() {
         let entry = b"test endorsement data";
         let origin = "test.log.example.com/log";
-        let log_key = NoteSigningKey::from_parts(origin, SignatureType::Ed25519, [42u8; 32]);
-        let other_key = NoteSigningKey::from_parts(origin, SignatureType::Ed25519, [99u8; 32]);
+        let log_key = NoteSigningKey::new(
+            origin,
+            SigningKey::Ed25519(ed25519_dalek::SigningKey::from_bytes(&[42u8; 32])),
+        );
+        let other_key = NoteSigningKey::new(
+            origin,
+            SigningKey::Ed25519(ed25519_dalek::SigningKey::from_bytes(&[99u8; 32])),
+        );
 
         // Build a proof signed with log_key.
         let (proof_text, _vkey) = make_test_tlog_proof(entry, origin, &log_key);
 
         // But use other_key's vkey for verification.
-        let wrong_vkey = other_key.verifying_key.to_vkey_string();
+        let wrong_vkey = other_key.verifying_key().to_vkey_string();
 
         let c2sp_tlog_proof = proof_text.into_bytes();
         let endorsement = Endorsement { serialized: entry.to_vec(), ..Default::default() };
@@ -488,9 +507,14 @@ mod tests {
         let entry = b"test endorsement data";
         let log_origin = "test.log.example.com/log";
         let witness_origin = "test-witness.example.com";
-        let log_key = NoteSigningKey::from_parts(log_origin, SignatureType::Ed25519, [42u8; 32]);
-        let witness_key =
-            NoteSigningKey::from_parts(witness_origin, SignatureType::CosignatureV1, [43u8; 32]);
+        let log_key = NoteSigningKey::new(
+            log_origin,
+            SigningKey::Ed25519(ed25519_dalek::SigningKey::from_bytes(&[42u8; 32])),
+        );
+        let witness_key = NoteSigningKey::new(
+            witness_origin,
+            SigningKey::Ed25519CosignatureV1(ed25519_dalek::SigningKey::from_bytes(&[43u8; 32])),
+        );
 
         // Build the checkpoint, then sign it with both the log and a witness.
         use sha2::{Digest, Sha256};
@@ -499,8 +523,8 @@ mod tests {
         let root_hash = oak_digest::Sha256::from(root_hash);
         let root_b64 = B64.encode(root_hash);
         let signed_payload = alloc::format!("{log_origin}\n1\n{root_b64}\n");
-        let log_sig = log_key.sign(&signed_payload, Instant::UNIX_EPOCH);
-        let cosig = witness_key.sign(&signed_payload, Instant::from_unix_seconds(1000));
+        let log_sig = log_key.sign(&signed_payload, Instant::UNIX_EPOCH).unwrap();
+        let cosig = witness_key.sign(&signed_payload, Instant::from_unix_seconds(1000)).unwrap();
         let checkpoint = Checkpoint {
             origin: log_origin.into(),
             tree_size: 1,
@@ -512,8 +536,8 @@ mod tests {
         let proof_text = proof.serialize();
 
         // Build a policy requiring this witness, including the log key.
-        let log_vkey = log_key.verifying_key.to_vkey_string();
-        let witness_vkey = witness_key.verifying_key.to_vkey_string();
+        let log_vkey = log_key.verifying_key().to_vkey_string();
+        let witness_vkey = witness_key.verifying_key().to_vkey_string();
         let policy_text = alloc::format!("log {log_vkey}\nwitness w1 {witness_vkey}\nquorum w1\n");
 
         let c2sp_tlog_proof = proof_text.into_bytes();
@@ -529,15 +553,20 @@ mod tests {
         let entry = b"test endorsement data";
         let log_origin = "test.log.example.com/log";
         let witness_origin = "test-witness.example.com";
-        let log_key = NoteSigningKey::from_parts(log_origin, SignatureType::Ed25519, [42u8; 32]);
-        let witness_key =
-            NoteSigningKey::from_parts(witness_origin, SignatureType::CosignatureV1, [43u8; 32]);
+        let log_key = NoteSigningKey::new(
+            log_origin,
+            SigningKey::Ed25519(ed25519_dalek::SigningKey::from_bytes(&[42u8; 32])),
+        );
+        let witness_key = NoteSigningKey::new(
+            witness_origin,
+            SigningKey::Ed25519CosignatureV1(ed25519_dalek::SigningKey::from_bytes(&[43u8; 32])),
+        );
 
         // Build a proof without any witness cosignatures.
         let (proof_text, log_vkey) = make_test_tlog_proof(entry, log_origin, &log_key);
 
         // But the policy requires a witness.
-        let witness_vkey = witness_key.verifying_key.to_vkey_string();
+        let witness_vkey = witness_key.verifying_key().to_vkey_string();
         let policy_text = alloc::format!("log {log_vkey}\nwitness w1 {witness_vkey}\nquorum w1\n");
 
         let c2sp_tlog_proof = proof_text.into_bytes();
@@ -626,7 +655,10 @@ mod tests {
     fn verify_tlog_all_succeeds_with_valid_c2sp() {
         let entry = b"test endorsement data";
         let origin = "test.log.example.com/log";
-        let log_key = NoteSigningKey::from_parts(origin, SignatureType::Ed25519, [42u8; 32]);
+        let log_key = NoteSigningKey::new(
+            origin,
+            SigningKey::Ed25519(ed25519_dalek::SigningKey::from_bytes(&[42u8; 32])),
+        );
         let (proof_text, vkey) = make_test_tlog_proof(entry, origin, &log_key);
 
         let tlog = create_tlog_reference_values_all(None, Some(make_log_policy(&vkey)));
@@ -691,7 +723,10 @@ mod tests {
 
         let entry = b"test endorsement data";
         let origin = "test.log.example.com/log";
-        let log_key = NoteSigningKey::from_parts(origin, SignatureType::Ed25519, [42u8; 32]);
+        let log_key = NoteSigningKey::new(
+            origin,
+            SigningKey::Ed25519(ed25519_dalek::SigningKey::from_bytes(&[42u8; 32])),
+        );
         let (proof_text, vkey) = make_test_tlog_proof(entry, origin, &log_key);
 
         let tlog = create_tlog_reference_values_all(Some(rekor_key), Some(make_log_policy(&vkey)));
@@ -738,7 +773,10 @@ mod tests {
     fn verify_tlog_any_succeeds_when_c2sp_valid() {
         let entry = b"test endorsement data";
         let origin = "test.log.example.com/log";
-        let log_key = NoteSigningKey::from_parts(origin, SignatureType::Ed25519, [42u8; 32]);
+        let log_key = NoteSigningKey::new(
+            origin,
+            SigningKey::Ed25519(ed25519_dalek::SigningKey::from_bytes(&[42u8; 32])),
+        );
         let (proof_text, vkey) = make_test_tlog_proof(entry, origin, &log_key);
 
         let tlog = create_tlog_reference_values(
@@ -762,7 +800,10 @@ mod tests {
         // the overall `Any` strategy succeed.
         let entry = b"test endorsement data";
         let origin = "test.log.example.com/log";
-        let log_key = NoteSigningKey::from_parts(origin, SignatureType::Ed25519, [42u8; 32]);
+        let log_key = NoteSigningKey::new(
+            origin,
+            SigningKey::Ed25519(ed25519_dalek::SigningKey::from_bytes(&[42u8; 32])),
+        );
         let (proof_text, vkey) = make_test_tlog_proof(entry, origin, &log_key);
 
         let tlog = create_tlog_reference_values(
@@ -853,6 +894,124 @@ mod tests {
         // Both errors should appear in the message.
         assert!(err.contains("Rekor"), "expected Rekor error in: {err}");
         assert!(err.contains("C2SP"), "expected C2SP error in: {err}");
+    }
+
+    #[test]
+    fn verify_c2sp_tlog_proof_succeeds_with_ml_dsa_log() {
+        let entry = b"ml-dsa log endorsement";
+        let origin = "test.ml-dsa.example.com/log";
+        let kp = ml_dsa_44::generate_key_pair().unwrap();
+        let log_key = NoteSigningKey::new(origin, SigningKey::MlDsa44SubtreeV1(kp));
+
+        let (proof_text, vkey) = make_test_tlog_proof(entry, origin, &log_key);
+
+        let c2sp_tlog_proof = proof_text.into_bytes();
+        let endorsement = Endorsement { serialized: entry.to_vec(), ..Default::default() };
+        let c2sp_ref = C2sptLogProofReferenceValue { policy: make_log_policy(&vkey) };
+
+        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
+        assert!(result.is_ok(), "expected success, got: {:?}", result.err());
+    }
+
+    #[test]
+    fn verify_c2sp_tlog_proof_succeeds_with_ml_dsa_log_and_ed25519_witness() {
+        let entry = b"ml-dsa log + ed25519 witness";
+        let log_origin = "test.ml-dsa.example.com/log";
+        let witness_origin = "test-witness.example.com";
+        let kp = ml_dsa_44::generate_key_pair().unwrap();
+        let log_key = NoteSigningKey::new(log_origin, SigningKey::MlDsa44SubtreeV1(kp));
+        let witness_key = NoteSigningKey::new(
+            witness_origin,
+            SigningKey::Ed25519CosignatureV1(ed25519_dalek::SigningKey::from_bytes(&[43u8; 32])),
+        );
+
+        use sha2::{Digest, Sha256};
+        let root_hash: [u8; 32] =
+            Sha256::new().chain_update([0x00]).chain_update(entry).finalize().into();
+        let root_hash = oak_digest::Sha256::from(root_hash);
+        let root_b64 = B64.encode(root_hash);
+        let signed_payload = alloc::format!("{log_origin}\n1\n{root_b64}\n");
+        let log_sig = log_key.sign(&signed_payload, Instant::UNIX_EPOCH).unwrap();
+        let cosig = witness_key.sign(&signed_payload, Instant::from_unix_seconds(1000)).unwrap();
+        let checkpoint = Checkpoint {
+            origin: log_origin.into(),
+            tree_size: 1,
+            root_hash,
+            signed_payload,
+            signatures: vec![log_sig, cosig],
+        };
+        let proof = TLogProof { index: 0, proof_hashes: vec![], checkpoint };
+
+        let log_vkey = log_key.verifying_key().to_vkey_string();
+        let witness_vkey = witness_key.verifying_key().to_vkey_string();
+        let policy_text = alloc::format!("log {log_vkey}\nwitness w1 {witness_vkey}\nquorum w1\n");
+
+        let c2sp_tlog_proof = proof.serialize().into_bytes();
+        let endorsement = Endorsement { serialized: entry.to_vec(), ..Default::default() };
+        let c2sp_ref = C2sptLogProofReferenceValue { policy: policy_text };
+
+        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
+        assert!(result.is_ok(), "expected success, got: {:?}", result.err());
+    }
+
+    #[test]
+    fn verify_c2sp_tlog_proof_succeeds_with_ed25519_log_and_ml_dsa_witness() {
+        let entry = b"ed25519 log + ml-dsa witness";
+        let log_origin = "test.log.example.com/log";
+        let witness_origin = "ml-dsa-witness.example.com";
+        let log_key = NoteSigningKey::new(
+            log_origin,
+            SigningKey::Ed25519(ed25519_dalek::SigningKey::from_bytes(&[42u8; 32])),
+        );
+        let kp = ml_dsa_44::generate_key_pair().unwrap();
+        let witness_key = NoteSigningKey::new(witness_origin, SigningKey::MlDsa44SubtreeV1(kp));
+
+        use sha2::{Digest, Sha256};
+        let root_hash: [u8; 32] =
+            Sha256::new().chain_update([0x00]).chain_update(entry).finalize().into();
+        let root_hash = oak_digest::Sha256::from(root_hash);
+        let root_b64 = B64.encode(root_hash);
+        let signed_payload = alloc::format!("{log_origin}\n1\n{root_b64}\n");
+        let log_sig = log_key.sign(&signed_payload, Instant::UNIX_EPOCH).unwrap();
+        let cosig = witness_key.sign(&signed_payload, Instant::from_unix_seconds(2000)).unwrap();
+        let checkpoint = Checkpoint {
+            origin: log_origin.into(),
+            tree_size: 1,
+            root_hash,
+            signed_payload,
+            signatures: vec![log_sig, cosig],
+        };
+        let proof = TLogProof { index: 0, proof_hashes: vec![], checkpoint };
+
+        let log_vkey = log_key.verifying_key().to_vkey_string();
+        let witness_vkey = witness_key.verifying_key().to_vkey_string();
+        let policy_text = alloc::format!("log {log_vkey}\nwitness w1 {witness_vkey}\nquorum w1\n");
+
+        let c2sp_tlog_proof = proof.serialize().into_bytes();
+        let endorsement = Endorsement { serialized: entry.to_vec(), ..Default::default() };
+        let c2sp_ref = C2sptLogProofReferenceValue { policy: policy_text };
+
+        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
+        assert!(result.is_ok(), "expected success, got: {:?}", result.err());
+    }
+
+    #[test]
+    fn verify_tlog_all_succeeds_with_ml_dsa_c2sp() {
+        let entry = b"ml-dsa all-strategy endorsement";
+        let origin = "test.ml-dsa.example.com/log";
+        let kp = ml_dsa_44::generate_key_pair().unwrap();
+        let log_key = NoteSigningKey::new(origin, SigningKey::MlDsa44SubtreeV1(kp));
+        let (proof_text, vkey) = make_test_tlog_proof(entry, origin, &log_key);
+
+        let tlog = create_tlog_reference_values_all(None, Some(make_log_policy(&vkey)));
+        let signed_endorsement = SignedEndorsement {
+            endorsement: Some(Endorsement { serialized: entry.to_vec(), ..Default::default() }),
+            c2sp_tlog_proof: proof_text.into_bytes(),
+            ..Default::default()
+        };
+
+        let result = verify_tlog(&tlog, &signed_endorsement, 0);
+        assert!(result.is_ok(), "expected success, got: {:?}", result.err());
     }
 
     #[test]
