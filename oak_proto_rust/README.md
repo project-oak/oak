@@ -8,7 +8,7 @@ build.rs file (and update the dependencies for the build script target as
 needed.)
 
 This library is imported into some environments where Prost and/or build scripts
-are not available. To support building our Rust targets in these environmnets,
+are not available. To support building our Rust targets in these environments,
 we also include pre-generated Prost Rust code in the `generated` directory.
 
 The bazel `write_source_files` helps us with this. It creates a rule for copying
@@ -34,7 +34,7 @@ When adding items to `oak_grpc` or `oak_micro_rpc`, ensure that no `message`
 via the `oak_proto_rust` crate.
 
 This can be achieved by ensuring that `ExternPath` items are included in the
-`oak_proto_utils::CodegenOptions` provided to gRPC copmilation calls or
+`oak_proto_utils::CodegenOptions` provided to gRPC compilation calls or
 `micro_rpc_build::CompileOptions` provided to microRPC compilation calls. When
 you provide an `ExternPath` mapping, then whenever a proto message in a package
 starting with the specified proto is encountered, rather than having Prost
@@ -43,7 +43,7 @@ Rust crate path, with the assumption that the messages have been compiled in
 another crate.
 
 For example, if you include an extern path mapping like `.oak` =>
-`::oak_proto_rust::oak`, then whnever the compiler encounters a proto message
+`::oak_proto_rust::oak`, then whenever the compiler encounters a proto message
 with a fully qualified name starting with `.oak`, it won't generate any code for
 that message, instead it will transform the proto package into a Rust crate name
 (essentially, it turns the `.` into `::`), and then it will replace the
