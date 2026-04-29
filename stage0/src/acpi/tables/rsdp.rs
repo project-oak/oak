@@ -20,8 +20,8 @@ use x86_64::VirtAddr;
 use zerocopy::{FromBytes, Immutable, IntoBytes};
 
 use crate::{
-    Platform, Xsdt,
-    acpi::tables::{Result, Rsdt},
+    Platform,
+    acpi::tables::{Result, Rsdt, Xsdt},
 };
 
 /// ACPI Root System Description Pointer.

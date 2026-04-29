@@ -61,11 +61,13 @@
 
 mod rsdp;
 pub mod rsdt;
+mod xsdt;
 
 use core::{any::type_name, fmt::Display, ops::Range, slice};
 
 pub use rsdp::Rsdp;
 pub use rsdt::Rsdt;
+pub use xsdt::Xsdt;
 
 type Result<T> = core::result::Result<T, &'static str>;
 /// Header common for all ACPI tables.
