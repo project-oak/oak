@@ -27,7 +27,7 @@ pub use oak_hal::{Mmio, PageAssignment};
 use oak_stage0_dice::DerivedKey;
 use zerocopy::{FromBytes, IntoBytes};
 
-use crate::{acpi_tables::Rsdp, zero_page::ZeroPage};
+use crate::{acpi::tables::Rsdp, zero_page::ZeroPage};
 
 #[cfg(test)]
 pub mod test_mocks {

@@ -33,7 +33,7 @@ use x86_64::{
 use zerocopy::{FromBytes, IntoBytes};
 
 use super::{PageAssignment, PortFactory};
-use crate::{acpi_tables::Rsdp, paging::PageEncryption, zero_page::ZeroPage};
+use crate::{acpi::tables::Rsdp, paging::PageEncryption, zero_page::ZeroPage};
 
 pub struct Base {}
 

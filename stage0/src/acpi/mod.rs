@@ -29,8 +29,8 @@ use strum::FromRepr;
 use crate::{
     Madt, ZeroPage,
     acpi_tables::{
-        DescriptionHeader, Fadt, InterruptSourceOverride, IoApic, LocalApicNmi,
-        MultiprocessorWakeup, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp,
+        Fadt, InterruptSourceOverride, IoApic, LocalApicNmi, MultiprocessorWakeup,
+        ProcessorLocalApic, ProcessorLocalX2Apic,
     },
     fw_cfg::FwCfg,
     pci::PciWindows,
@@ -38,8 +38,10 @@ use crate::{
 
 mod commands;
 mod files;
+pub mod tables;
 use commands::{Invoke, RomfileCommand};
 use files::{Files, MemFiles};
+use tables::{DescriptionHeader, Rsdp};
 
 type LowMemoryAllocator = linked_list_allocator::LockedHeap;
 /// Allocator for low memory in the EBDA: 128K of memory (where the RSDP will be
