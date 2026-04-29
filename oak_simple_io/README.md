@@ -12,7 +12,7 @@ address. The first port contains the most significant 4 bytes, and the second
 contains the least significant 4 bytes.
 
 The current implementation assumes an identity mapping for the memory so that
-guest-phsyical and guest-virtual addresses are the same.
+guest-physical and guest-virtual addresses are the same.
 
 The guest uses an additional pre-agreed 32-bit I/O port for each channel to
 represent the length of each message.
@@ -24,6 +24,6 @@ blocks until the hypervisor has copied the message out of the buffer.
 
 The guest reads from the length I/O port for the input channel. The hypervisor
 I/O handler implementation for this port writes a message to the input buffer
-(if one is availble) and returns the actual message length via the port. The
+(if one is available) and returns the actual message length via the port. The
 returned length must not exceed the length of the input buffer. If there aren't
 any messages, the hypervisor must return a length of 0.
