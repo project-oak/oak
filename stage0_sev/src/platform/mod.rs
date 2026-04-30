@@ -285,7 +285,7 @@ impl FirmwarePlatform for Sev {
         Err("SEV does not support E820 prefill")
     }
 
-    fn finalize_acpi_tables(rsdp: &mut Rsdp) -> Result<(), &'static str> {
+    fn finalize_acpi_tables(rsdp: &mut dyn Rsdp) -> Result<(), &'static str> {
         // No further changes needed to ACPI tables, but now that they're in
         // place, we can bring up other CPUs (APs).
         let result = smp::bootstrap_aps::<Sev>(rsdp);

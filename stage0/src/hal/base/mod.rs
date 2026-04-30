@@ -106,7 +106,7 @@ impl super::FirmwarePlatform for Base {
         Err("not needed")
     }
 
-    fn finalize_acpi_tables(_rsdp: &mut Rsdp) -> Result<(), &'static str> {
+    fn finalize_acpi_tables(_rsdp: &mut dyn Rsdp) -> Result<(), &'static str> {
         Ok(())
     }
 

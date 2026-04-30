@@ -154,14 +154,14 @@ pub fn build_acpi_tables<P: crate::Platform + crate::FirmwarePlatform>(
     let rsdp = files.find_file_suffix_mut(c"acpi/rsdp").ok_or("RSDP file not found")?;
 
     // Safety: we ensure that the RSDP is valid before returning a reference to it.
-    let rsdp = unsafe { &mut *(rsdp.as_ptr() as *mut Rsdp) };
-    rsdp.validate::<P>()?;
+    let rsdp = <dyn Rsdp>::try_from_bytes_mut(rsdp)?;
+
     log::info!("ACPI tables before finalizing:");
     debug_print_acpi_tables(rsdp)?;
 
     log::info!("Finalizing RSDP");
     P::finalize_acpi_tables(rsdp)?;
-    rsdp.validate::<P>()?;
+
     log::info!("ACPI tables after finalizing:");
     debug_print_acpi_tables(rsdp)?;
 
@@ -174,8 +174,8 @@ pub fn build_acpi_tables<P: crate::Platform + crate::FirmwarePlatform>(
 }
 
 /// Prints ACPI metadata including RSDP, RSDT and XSDT (if present).
-fn debug_print_acpi_tables(rsdp: &Rsdp) -> Result<(), &'static str> {
-    log::info!("RSDP location: {:#018x}", rsdp as *const _ as u64);
+fn debug_print_acpi_tables(rsdp: &dyn Rsdp) -> Result<(), &'static str> {
+    log::info!("RSDP location: {:#018x}", rsdp as *const dyn Rsdp as *const () as u64);
     log::info!("RSDP: {:?}", rsdp);
 
     if let Some(rsdt) = rsdp.rsdt() {

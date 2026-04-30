@@ -89,7 +89,7 @@ pub trait FirmwarePlatform {
 
     /// Platform-specific modifications and validations of ACPI tables, starting
     /// from RSDP, including RSDT, XSDT, APIC aka MADT.
-    fn finalize_acpi_tables(rsdp: &mut Rsdp) -> Result<(), &'static str>;
+    fn finalize_acpi_tables(rsdp: &mut dyn Rsdp) -> Result<(), &'static str>;
 
     /// Platform-specific cleanups just before stage0 jumps to the kernel.
     ///

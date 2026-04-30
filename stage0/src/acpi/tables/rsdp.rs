@@ -14,26 +14,102 @@
 // limitations under the License.
 //
 
-use core::{fmt::Debug, mem::size_of};
+use core::fmt::Debug;
 
 use x86_64::VirtAddr;
-use zerocopy::{FromBytes, Immutable, IntoBytes};
+use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
-use crate::{
-    Platform,
-    acpi::tables::{Result, Rsdt, Xsdt},
-};
+use crate::acpi::tables::{Result, Rsdt, Xsdt};
 
-/// ACPI Root System Description Pointer.
+pub trait Rsdp: Debug {
+    fn validate(&self) -> Result<()>;
+    fn rsdt(&self) -> Option<Result<&Rsdt>>;
+
+    /// # Safety
+    /// Caller must ensure only one mut ref exists at a time.
+    unsafe fn rsdt_mut(&mut self) -> Option<Result<&mut Rsdt>>;
+
+    fn xsdt(&self) -> Option<Result<&Xsdt>>;
+
+    /// # Safety
+    /// Caller must ensure only one mut ref exists at a time.
+    unsafe fn xsdt_mut(&mut self) -> Option<Result<&mut Xsdt>>;
+}
+
+#[allow(dead_code)]
+#[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+#[repr(u8)]
+enum RsdpAcpi1Version {
+    V1 = 0,
+}
+
+#[allow(dead_code)]
+#[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+#[repr(u8)]
+enum RsdpAcpi2Version {
+    V2 = 2,
+}
+
+#[allow(dead_code)]
+#[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+#[repr(u8)]
+enum R {
+    R = b'R',
+}
+
+#[allow(dead_code)]
+#[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+#[repr(u8)]
+enum S {
+    S = b'S',
+}
+
+#[allow(dead_code)]
+#[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+#[repr(u8)]
+enum D {
+    D = b'D',
+}
+
+#[allow(dead_code)]
+#[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+#[repr(u8)]
+enum Space {
+    Space = b' ',
+}
+
+#[allow(dead_code)]
+#[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+#[repr(u8)]
+enum P {
+    P = b'P',
+}
+
+#[allow(dead_code)]
+#[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+#[repr(u8)]
+enum T {
+    T = b'T',
+}
+
+// "RSD PTR " signature.
+// This uses the trick from zerocopy example, where it makes use of
+// single-element enums to ensure there is exactly one way how to represent the
+// signature.
+#[allow(dead_code)]
+#[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+pub struct RsdpSignature(R, S, D, Space, P, T, R, Space);
+
+/// ACPI Root System Description Pointer, Version 1.
 ///
-/// Used to locate either the RSDT or XSDT in memory.
+/// Used to locate the RSDT in memory.
 ///
-/// See Section 5.2.5 in the ACPI specification, Version 6.5 for more details.
-#[derive(FromBytes, IntoBytes, Immutable)]
+/// See Section 5.2.5.3 in the ACPI specification, Version 6.6 for more details.
 #[repr(C, packed)]
-pub struct Rsdp {
+#[derive(Debug, Copy, Clone, IntoBytes, Immutable, KnownLayout, TryFromBytes)]
+struct Rsdp1 {
     /// Signature: "RSD PTR " (note the trailing space).
-    signature: [u8; 8],
+    signature: RsdpSignature,
 
     /// Checksum for fields defined in the ACPI 1.0 specification.
     checksum: u8,
@@ -44,14 +120,73 @@ pub struct Rsdp {
     /// Revision of this structure.
     ///
     /// ACPI 1.0 value is zero, ACPI 2.0 value is 2.
-    revision: u8,
+    revision: RsdpAcpi1Version,
 
     /// 32-bit physical address of the RSDT.
-    pub rsdt_address: u32,
+    rsdt_address: u32,
+}
+static_assertions::assert_eq_size!(Rsdp1, [u8; 20usize]);
 
-    // ACPI 2.0 fields. Only valid if revision >= 2.
-    // Don't make these fields public directly as we'll need to ensure the ony way to access them
-    // is if revision correct.
+impl Rsdp for Rsdp1 {
+    fn validate(&self) -> Result<()> {
+        let checksum = self.as_bytes()[..20].iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs));
+
+        if checksum != 0 {
+            return Err("Invalid RSDP checksum");
+        }
+        Ok(())
+    }
+
+    fn rsdt(&self) -> Option<Result<&Rsdt>> {
+        if self.rsdt_address == 0 {
+            None
+        } else {
+            Some(Rsdt::new(VirtAddr::new(self.rsdt_address as u64)))
+        }
+    }
+
+    unsafe fn rsdt_mut(&mut self) -> Option<Result<&mut Rsdt>> {
+        if self.rsdt_address == 0 {
+            None
+        } else {
+            Some(unsafe { Rsdt::new_mut(VirtAddr::new(self.rsdt_address as u64)) })
+        }
+    }
+
+    fn xsdt(&self) -> Option<Result<&Xsdt>> {
+        None
+    }
+
+    unsafe fn xsdt_mut(&mut self) -> Option<Result<&mut Xsdt>> {
+        None
+    }
+}
+
+/// ACPI Root System Description Pointer, Version 2.
+///
+/// Used to locate either the RSDT or XSDT in memory.
+///
+/// See Section 5.2.5.3 in the ACPI specification, Version 6.6 for more details.
+#[repr(C, packed)]
+#[derive(Debug, IntoBytes, Immutable, KnownLayout, TryFromBytes)]
+struct Rsdp2 {
+    /// Signature: "RSD PTR " (note the trailing space).
+    signature: RsdpSignature,
+
+    /// Checksum for fields defined in the ACPI 1.0 specification.
+    checksum: u8,
+
+    /// OEM-supplied identification string.
+    oemid: [u8; 6],
+
+    /// Revision of this structure.
+    ///
+    /// ACPI 1.0 value is zero, ACPI 2.0 value is 2.
+    revision: RsdpAcpi2Version,
+
+    /// 32-bit physical address of the RSDT.
+    rsdt_address: u32,
+
     /// Length of the table, including the header.
     length: u32,
 
@@ -64,59 +199,19 @@ pub struct Rsdp {
     /// Reserved
     _reserved: [u8; 3],
 }
-static_assertions::assert_eq_size!(Rsdp, [u8; 36usize]);
+static_assertions::assert_eq_size!(Rsdp2, [u8; 36usize]);
 
-impl Debug for Rsdp {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let rsdt_address = self.rsdt_address;
-
-        let mut s = f.debug_struct("Rsdp");
-        s.field("signature", &self.signature)
-            .field("checksum", &self.checksum)
-            .field("oemid", &self.oemid)
-            .field("revision", &self.revision)
-            .field("rsdt_address", &rsdt_address);
-        if self.revision >= 2 {
-            let length = self.length;
-            let xsdt_address = self.xsdt_address;
-            s.field("length", &length)
-                .field("xsdt_address", &xsdt_address)
-                .field("extended_checksum", &self.extended_checksum)
-                .field("_reserved", &self._reserved);
-        }
-        s.finish()
-    }
-}
-
-impl Rsdp {
-    pub fn validate<P: Platform>(&self) -> Result<()> {
-        if &self.signature != b"RSD PTR " {
-            return Err("Invalid RSDP signature");
-        }
-        let len = if self.revision >= 2 { self.length } else { 20 } as usize;
-
-        if len > size_of::<Rsdp>() {
-            return Err("invalid RSDP size");
-        }
-
-        let checksum = self.as_bytes()[..20].iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs));
+impl Rsdp for Rsdp2 {
+    fn validate(&self) -> Result<()> {
+        let checksum = self.as_bytes().iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs));
 
         if checksum != 0 {
             return Err("Invalid RSDP checksum");
         }
 
-        if self.revision >= 2 {
-            let checksum = self.as_bytes().iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs));
-
-            if checksum != 0 {
-                return Err("Invalid RSDP extended checksum");
-            }
-        }
-
         Ok(())
     }
-
-    pub fn rsdt(&self) -> Option<Result<&Rsdt>> {
+    fn rsdt(&self) -> Option<Result<&Rsdt>> {
         if self.rsdt_address == 0 {
             None
         } else {
@@ -124,9 +219,7 @@ impl Rsdp {
         }
     }
 
-    /// # Safety
-    /// Caller must ensure only one mut ref exists at a time.
-    pub unsafe fn rsdt_mut(&mut self) -> Option<Result<&mut Rsdt>> {
+    unsafe fn rsdt_mut(&mut self) -> Option<Result<&mut Rsdt>> {
         if self.rsdt_address == 0 {
             None
         } else {
@@ -134,21 +227,85 @@ impl Rsdp {
         }
     }
 
-    pub fn xsdt(&self) -> Option<Result<&Xsdt>> {
-        if self.revision < 2 || self.xsdt_address == 0 {
+    fn xsdt(&self) -> Option<Result<&Xsdt>> {
+        if self.xsdt_address == 0 {
             None
         } else {
             Some(Xsdt::new(VirtAddr::new(self.xsdt_address)))
         }
     }
 
-    /// # Safety
-    /// Caller must ensure only one mut ref exists at a time.
-    pub unsafe fn xsdt_mut(&mut self) -> Option<Result<&mut Xsdt>> {
-        if self.revision < 2 || self.xsdt_address == 0 {
+    unsafe fn xsdt_mut(&mut self) -> Option<Result<&mut Xsdt>> {
+        if self.xsdt_address == 0 {
             None
         } else {
             Some(unsafe { Xsdt::new_mut(VirtAddr::new(self.xsdt_address)) })
         }
+    }
+}
+
+impl dyn Rsdp {
+    pub fn try_from_bytes_mut(buf: &mut [u8]) -> Result<&mut dyn Rsdp> {
+        // Try as ACPI 2.0 first.
+        let rsdp = match Rsdp2::try_mut_from_prefix(buf) {
+            Ok((rsdp, _)) => rsdp as &mut dyn Rsdp,
+            Err(err) => {
+                let (rsdp, _) =
+                    Rsdp1::try_mut_from_prefix(err.into_src()).map_err(|_| "invalid RSDP")?;
+                rsdp as &mut dyn Rsdp
+            }
+        };
+
+        rsdp.validate()?;
+
+        Ok(rsdp)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::vec::Vec;
+
+    use googletest::prelude::*;
+
+    use super::*;
+
+    #[test]
+    pub fn test_parse_valid_rsdp1() {
+        let mut buf = Vec::from(b"RSD PTR \x57 TEST \x00\x01\x02\x03\x04");
+        assert_that!(<dyn Rsdp>::try_from_bytes_mut(&mut buf[..]), ok(anything()));
+    }
+
+    #[test]
+    pub fn test_parse_valid_rsdp2() {
+        let mut buf = Vec::from(b"RSD PTR \x55 TEST \x02\x01\x02\x03\x04\0\0\0\0\x01\x02\x03\x04\x05\x06\x07\x08\xDC\x00\x00\x00");
+        assert_that!(<dyn Rsdp>::try_from_bytes_mut(&mut buf[..]), ok(anything()));
+    }
+
+    #[test]
+    pub fn test_invalid_rsdp_checksum() {
+        let mut buf = Vec::from(b"RSD PTR \x55 TEST \x00\x01\x02\x03\x04");
+        assert_that!(<dyn Rsdp>::try_from_bytes_mut(&mut buf[..]), err(anything()));
+
+        let mut buf = Vec::from(b"RSD PTR \x55 TEST \x02\x01\x02\x03\x04\0\0\0\0\x01\x02\x03\x04\x05\x06\x07\x08\xCC\x00\x00\x00");
+        assert_that!(<dyn Rsdp>::try_from_bytes_mut(&mut buf[..]), err(anything()));
+    }
+
+    #[test]
+    pub fn test_empty() {
+        let mut buf = Vec::from(b"");
+        assert_that!(<dyn Rsdp>::try_from_bytes_mut(&mut buf[..]), err(anything()));
+    }
+
+    #[test]
+    pub fn test_wrong_version() {
+        let mut buf = Vec::from(b"RSD PTR \x55 TEST \x00\x02\x02\x03\x04");
+        assert_that!(<dyn Rsdp>::try_from_bytes_mut(&mut buf[..]), err(anything()));
+    }
+
+    #[test]
+    pub fn test_garbage() {
+        let mut buf = Vec::from(b"\x01\x02\x03\x04\x05\x06\x07\x08\x55 TEST \x00\x02\x02\x03\x04");
+        assert_that!(<dyn Rsdp>::try_from_bytes_mut(&mut buf[..]), err(anything()));
     }
 }

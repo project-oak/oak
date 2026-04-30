@@ -404,7 +404,7 @@ impl FirmwarePlatform for Tdx {
         if index == 0 { Err("no valid TD HoB found") } else { Ok(index) }
     }
 
-    fn finalize_acpi_tables(rsdp: &mut Rsdp) -> Result<(), &'static str> {
+    fn finalize_acpi_tables(rsdp: &mut dyn Rsdp) -> Result<(), &'static str> {
         // In TDX, we need add a MultiprocessorWakeupStructure (ACPI specification table
         // 5.43) entry with the OS Mailbox Address to the MADT table. If
         // the MADT is not the last structure, then we need to move it down so

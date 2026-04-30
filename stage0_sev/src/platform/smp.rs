@@ -75,7 +75,7 @@ pub fn start_ap<P: Platform>(
 }
 
 // TODO(#4235): Bootstrap the APs.
-pub fn bootstrap_aps<P: Platform>(rsdp: &Rsdp) -> Result<(), &'static str> {
+pub fn bootstrap_aps<P: Platform>(rsdp: &dyn Rsdp) -> Result<(), &'static str> {
     // If XSDT exists, then per ACPI spec we have to prefer that. If it doesn't, see
     // if we can use the old RSDT. (If we have neither XSDT or RSDT, the ACPI
     // tables are broken.)
