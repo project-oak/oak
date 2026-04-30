@@ -198,7 +198,7 @@ pub fn rust64_start<P: hal::Platform + hal::FirmwarePlatform>() -> ! {
 
     let mut acpi_digest = Sha256::default();
     let rsdp = acpi::build_acpi_tables(&mut fwcfg, &mut acpi_digest, pci_windows).unwrap();
-    zero_page.set_acpi_rsdp_addr(PhysAddr::new(rsdp as *const _ as u64));
+    zero_page.set_acpi_rsdp_addr(PhysAddr::new(rsdp.as_u64()));
     let acpi_digest = acpi_digest.finalize();
     let mut acpi_sha2_256_digest = Measurement::default();
     acpi_sha2_256_digest[..].copy_from_slice(&acpi_digest[..]);

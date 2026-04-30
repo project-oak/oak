@@ -25,6 +25,7 @@ use core::{ffi::CStr, mem::MaybeUninit, ops::Deref};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use sha2::{Digest, Sha256};
 use strum::FromRepr;
+use x86_64::VirtAddr;
 
 use crate::{ZeroPage, fw_cfg::FwCfg, pci::PciWindows};
 
@@ -118,7 +119,7 @@ pub fn build_acpi_tables<P: crate::Platform + crate::FirmwarePlatform>(
     fwcfg: &mut FwCfg<P>,
     acpi_digest: &mut Sha256,
     pci_windows: Option<PciWindows>,
-) -> Result<&'static Rsdp, &'static str> {
+) -> Result<VirtAddr, &'static str> {
     let mut files = MemFiles::new(&LOW_MEMORY_ALLOCATOR, &HIGH_MEMORY_ALLOCATOR);
 
     let file =
@@ -164,10 +165,12 @@ pub fn build_acpi_tables<P: crate::Platform + crate::FirmwarePlatform>(
     log::info!("ACPI tables after finalizing:");
     debug_print_acpi_tables(rsdp)?;
 
+    let rsdp_addr = VirtAddr::from_ptr(rsdp);
+
     // Ensure the tables stick around by leaking the memory holding them.
     files.leak();
 
-    Ok(rsdp)
+    Ok(rsdp_addr)
 }
 
 /// Prints ACPI metadata including RSDP, RSDT and XSDT (if present).
