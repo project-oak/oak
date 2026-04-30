@@ -55,7 +55,7 @@ pub trait Files {
 
     /// Returns the first file with a name that matches the suffix, if it
     /// exists.
-    fn find_file_suffix(&self, suffix: &CStr) -> Option<&[u8]>;
+    fn find_file_suffix_mut(&mut self, suffix: &CStr) -> Option<&mut [u8]>;
 }
 
 /// Wrapper for a file, as they may come from different zones.
@@ -237,12 +237,12 @@ impl<L: Allocator + 'static, H: Allocator + 'static> Files for MemFiles<L, H> {
         Ok(file.borrow())
     }
 
-    fn find_file_suffix(&self, suffix: &CStr) -> Option<&[u8]> {
-        for (name, contents) in self.files.iter() {
+    fn find_file_suffix_mut(&mut self, suffix: &CStr) -> Option<&mut [u8]> {
+        for (name, contents) in self.files.iter_mut() {
             if !name.as_bytes().ends_with(suffix.to_bytes()) {
                 continue;
             }
-            return Some(contents.borrow());
+            return Some(contents.borrow_mut());
         }
         None
     }

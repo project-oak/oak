@@ -151,7 +151,7 @@ pub fn build_acpi_tables<P: crate::Platform + crate::FirmwarePlatform>(
     // but for practical purposes we know that the VMs we care about end the file
     // that contains the file with `acpi/rsdp` (the prefix may vary), so let's look
     // up just that file.
-    let rsdp = files.find_file_suffix(c"acpi/rsdp").ok_or("RSDP file not found")?;
+    let rsdp = files.find_file_suffix_mut(c"acpi/rsdp").ok_or("RSDP file not found")?;
 
     // Safety: we ensure that the RSDP is valid before returning a reference to it.
     let rsdp = unsafe { &mut *(rsdp.as_ptr() as *mut Rsdp) };
