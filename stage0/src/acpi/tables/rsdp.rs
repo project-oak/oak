@@ -51,9 +51,10 @@ enum RsdpAcpi1Version {
 }
 
 #[allow(dead_code)]
-#[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+#[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
 #[repr(u8)]
 enum RsdpAcpi2Version {
+    #[default]
     V2 = 2,
 }
 
@@ -62,7 +63,7 @@ enum RsdpAcpi2Version {
 // single-element enums to ensure there is exactly one way how to represent the
 // signature.
 #[allow(dead_code)]
-#[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+#[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
 #[repr(C)]
 pub struct RsdpSignature(
     signature::R,

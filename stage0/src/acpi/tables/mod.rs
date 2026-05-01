@@ -81,39 +81,45 @@ type Result<T> = core::result::Result<T, &'static str>;
 pub mod signature {
     use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
-    #[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+    #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
     #[repr(u8)]
     pub enum D {
+        #[default]
         D = b'D',
     }
 
-    #[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+    #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
     #[repr(u8)]
     pub enum P {
+        #[default]
         P = b'P',
     }
 
-    #[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+    #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
     #[repr(u8)]
     pub enum R {
+        #[default]
         R = b'R',
     }
 
-    #[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+    #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
     #[repr(u8)]
     pub enum S {
+        #[default]
         S = b'S',
     }
 
-    #[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+    #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
     #[repr(u8)]
     pub enum T {
+        #[default]
         T = b'T',
     }
 
-    #[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+    #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
     #[repr(u8)]
     pub enum Space {
+        #[default]
         Space = b' ',
     }
 }

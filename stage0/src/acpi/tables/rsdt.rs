@@ -22,7 +22,7 @@ use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};
 use crate::acpi::tables::{DescriptionHeader, Result, check_ptr_aligned, signature};
 
 #[allow(dead_code)]
-#[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+#[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
 #[repr(C)]
 pub struct Signature(signature::R, signature::S, signature::D, signature::T);
 
