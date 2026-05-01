@@ -123,9 +123,9 @@ pub mod signature {
 /// specification for more details.
 #[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]
-pub struct DescriptionHeader {
+pub struct DescriptionHeader<S> {
     /// ASCII string representation of the table identifer.
-    pub(super) signature: [u8; 4],
+    pub(super) signature: S,
 
     /// Length of the table, in bytes, including the header.
     length: u32,
@@ -156,7 +156,7 @@ pub struct DescriptionHeader {
     creator_revision: u32,
 }
 
-impl DescriptionHeader {
+impl DescriptionHeader<[u8; 4]> {
     #[allow(dead_code)]
     pub fn signature_as_str(&self) -> &str {
         // Per the ACPI spec, the signature is in ASCII, which is always valid UTF-8.
@@ -196,7 +196,7 @@ impl DescriptionHeader {
     }
 }
 
-impl Display for DescriptionHeader {
+impl Display for DescriptionHeader<[u8; 4]> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_fmt(format_args!(
             "Entry {} ({:#x}-{:#x}): {:?}",

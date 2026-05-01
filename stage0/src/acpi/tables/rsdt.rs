@@ -26,14 +26,14 @@ use crate::acpi::tables::{DescriptionHeader, Result, check_ptr_aligned};
 #[derive(Debug)]
 #[repr(C, align(4))]
 pub struct Rsdt {
-    pub header: DescriptionHeader,
+    pub header: DescriptionHeader<[u8; 4]>,
     // The RSDT contains an array of pointers to other tables, but unfortunately this can't be
     // expressed in Rust. By adding an zero size array here, we can make sure that `entries_arr`
     // always aligns at 4. Otherwise, the compiler will throw an error.
     entries_arr: [u32; 0],
 }
 
-pub type RsdtEntryPairMut<'a> = (&'a mut u32, &'a mut DescriptionHeader);
+pub type RsdtEntryPairMut<'a> = (&'a mut u32, &'a mut DescriptionHeader<[u8; 4]>);
 
 impl Rsdt {
     const SIGNATURE: &'static [u8; 4] = b"RSDT";
@@ -60,7 +60,7 @@ impl Rsdt {
     ///   - Ok(None) -> Search went without errors, entry not found.
     ///   - Ok(Some(&DescriptionHeader)) -> No errors, entry found.
     ///   - Err(e) -> A DescriptionHeader seen during search failed validation.
-    pub fn get(&self, signature: &[u8; 4]) -> Result<Option<&DescriptionHeader>> {
+    pub fn get(&self, signature: &[u8; 4]) -> Result<Option<&DescriptionHeader<[u8; 4]>>> {
         self.validate()?;
         let maybe_found = self.entry_headers().find(|hdr_or_err| match hdr_or_err {
             Err(_) => true, // Found an error, stop search and propagate.
@@ -74,9 +74,10 @@ impl Rsdt {
     }
 
     /// Returns an iterator over the headers pointed at by this RSDT, validated.
-    pub fn entry_headers(&self) -> impl Iterator<Item = Result<&DescriptionHeader>> {
+    pub fn entry_headers(&self) -> impl Iterator<Item = Result<&DescriptionHeader<[u8; 4]>>> {
         self.entries_arr().iter().map(|&entry| {
-            let ptr: *const DescriptionHeader = entry as usize as *const DescriptionHeader;
+            let ptr: *const DescriptionHeader<[u8; 4]> =
+                entry as usize as *const DescriptionHeader<[u8; 4]>;
             check_ptr_aligned(ptr);
             // Safety: we are validating the header.
             let header = unsafe { &*ptr };
@@ -116,7 +117,7 @@ impl Rsdt {
 
     fn entry_headers_mut(&mut self) -> impl Iterator<Item = Result<RsdtEntryPairMut<'_>>> {
         self.entries_arr_mut().iter_mut().map(|addr| {
-            let header_ptr = *addr as usize as *mut DescriptionHeader;
+            let header_ptr = *addr as usize as *mut DescriptionHeader<[u8; 4]>;
             check_ptr_aligned(header_ptr);
             // # Safety we are validating the header.
             let header = unsafe { header_ptr.as_mut().ok_or("Address 0x0 in RSDT")? };
@@ -133,7 +134,8 @@ impl Rsdt {
         unsafe {
             slice::from_raw_parts(
                 entries_base_ptr,
-                (self.header.length as usize - size_of::<DescriptionHeader>()) / size_of::<u32>(),
+                (self.header.length as usize - size_of::<DescriptionHeader<[u8; 4]>>())
+                    / size_of::<u32>(),
             )
         }
     }
@@ -146,7 +148,8 @@ impl Rsdt {
         unsafe {
             slice::from_raw_parts_mut(
                 entries_base_ptr,
-                (self.header.length as usize - size_of::<DescriptionHeader>()) / size_of::<u32>(),
+                (self.header.length as usize - size_of::<DescriptionHeader<[u8; 4]>>())
+                    / size_of::<u32>(),
             )
         }
     }
@@ -158,7 +161,7 @@ impl Rsdt {
             return Err("Invalid signature for RSDT table");
         }
 
-        if !(self.header.length as usize - size_of::<DescriptionHeader>())
+        if !(self.header.length as usize - size_of::<DescriptionHeader<[u8; 4]>>())
             .is_multiple_of(size_of::<u32>())
         {
             return Err("RSDT invalid: entries size not a multiple of pointer size");

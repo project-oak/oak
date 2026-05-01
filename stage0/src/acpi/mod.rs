@@ -208,7 +208,7 @@ fn debug_print_acpi_tables(rsdp: &dyn Rsdp) -> Result<(), &'static str> {
 
 /// Prints RSDT or XSDT entries. Prints extra detail for MADT entry.
 fn print_system_data_table_entries<'a>(
-    entries: impl Iterator<Item = Result<&'a DescriptionHeader, &'static str>>,
+    entries: impl Iterator<Item = Result<&'a DescriptionHeader<[u8; 4]>, &'static str>>,
 ) -> Result<(), &'static str> {
     for header in entries {
         let header = header?;

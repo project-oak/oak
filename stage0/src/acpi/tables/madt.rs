@@ -56,7 +56,7 @@ bitflags! {
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct Madt {
-    pub header: DescriptionHeader,
+    pub header: DescriptionHeader<[u8; 4]>,
 
     /// Physical address of the local APIC for each CPU.
     local_apic_address: u32,
@@ -244,7 +244,7 @@ impl Default for MultiprocessorWakeup {
 impl Madt {
     pub const SIGNATURE: &'static [u8; 4] = b"APIC";
 
-    pub fn new(hdr: &DescriptionHeader) -> Result<&'static Madt> {
+    pub fn new(hdr: &DescriptionHeader<[u8; 4]>) -> Result<&'static Madt> {
         // Safety: we're checking that it's a valid XSDT in `validate()`.
         let madt = unsafe { &*(hdr as *const _ as usize as *const Madt) };
         madt.validate()?;
@@ -272,7 +272,7 @@ impl Madt {
         Ok(madt)
     }
 
-    pub fn from_header_mut(hdr: &mut DescriptionHeader) -> Result<&'static mut Madt> {
+    pub fn from_header_mut(hdr: &mut DescriptionHeader<[u8; 4]>) -> Result<&'static mut Madt> {
         // Safety: we're checking that it's a valid XSDT in `validate()`.
         let madt = unsafe {
             (hdr as *mut _ as *mut Madt).as_mut().unwrap() // Pointer obtained from a ref can't be null.

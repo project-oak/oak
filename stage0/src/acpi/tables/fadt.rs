@@ -38,7 +38,7 @@ static_assertions::assert_eq_size!(GenericAddressStructure, [u8; 12usize]);
 #[repr(C, packed)]
 pub struct Fadt {
     // In FADT's table, the revision field actually refers to the FADT's major version
-    pub header: DescriptionHeader,
+    pub header: DescriptionHeader<[u8; 4]>,
     // The remaining fields are a complex list of components describing
     // fixed hardware information
     pub firmware_ctrl: u32,
@@ -142,7 +142,7 @@ impl Fadt {
     // compared to its intended name because it predates ACPI 1.0
     pub const SIGNATURE: &'static [u8; 4] = b"FACP";
 
-    pub fn new(hdr: &DescriptionHeader) -> Result<&'static Fadt> {
+    pub fn new(hdr: &DescriptionHeader<[u8; 4]>) -> Result<&'static Fadt> {
         // Safety: we're checking that it's a valid FADT in `validate()`.
         let fadt = unsafe { &*(hdr as *const _ as usize as *const Fadt) };
         fadt.validate()?;

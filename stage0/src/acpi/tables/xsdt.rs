@@ -35,7 +35,7 @@ use crate::{
 #[repr(C)]
 pub struct XsdtEntryPtr<'a> {
     addr: [u8; 8],
-    _phantom: PhantomData<&'a DescriptionHeader>,
+    _phantom: PhantomData<&'a DescriptionHeader<[u8; 4]>>,
 }
 
 impl XsdtEntryPtr<'_> {
@@ -52,10 +52,10 @@ impl XsdtEntryPtr<'_> {
 }
 
 impl Deref for XsdtEntryPtr<'_> {
-    type Target = DescriptionHeader;
+    type Target = DescriptionHeader<[u8; 4]>;
 
-    fn deref(&self) -> &DescriptionHeader {
-        let ptr = self.raw_val() as *const DescriptionHeader;
+    fn deref(&self) -> &DescriptionHeader<[u8; 4]> {
+        let ptr = self.raw_val() as *const DescriptionHeader<[u8; 4]>;
         check_ptr_aligned(ptr);
         // Safety: the address has been validated in Xsdt::validate().
         unsafe { &*ptr }
@@ -64,7 +64,7 @@ impl Deref for XsdtEntryPtr<'_> {
 
 impl DerefMut for XsdtEntryPtr<'_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        let ptr = self.raw_val() as *mut DescriptionHeader;
+        let ptr = self.raw_val() as *mut DescriptionHeader<[u8; 4]>;
         check_ptr_aligned(ptr);
         // Safety: the address has been validated in Xsdt::validate().
         unsafe { &mut *ptr }
@@ -77,7 +77,7 @@ impl DerefMut for XsdtEntryPtr<'_> {
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct Xsdt {
-    pub header: DescriptionHeader,
+    pub header: DescriptionHeader<[u8; 4]>,
     // The XSDT contains an array of pointers to other tables, but unfortunately this can't be
     // expressed in Rust.
 }
@@ -121,7 +121,7 @@ impl Xsdt {
     ///   - Ok(None) -> Search went without errors, entry not found.
     ///   - Ok(Some(&XsdtEntryPtr)) -> No errors, entry found.
     ///   - Err(e) -> An XsdtEntryPtr seen during search failed validation.
-    pub fn get(&self, signature: &[u8; 4]) -> Result<Option<&DescriptionHeader>> {
+    pub fn get(&self, signature: &[u8; 4]) -> Result<Option<&DescriptionHeader<[u8; 4]>>> {
         self.validate()?;
         let maybe_found = self.entry_ptrs().find(|ptr_or_err| match ptr_or_err {
             Err(_) => true, // Found an error, stop search and propagate.
@@ -171,30 +171,30 @@ impl Xsdt {
     }
 
     fn entries_arr(&self) -> &[XsdtEntryPtr<'_>] {
-        let entries_base_ptr =
-            (self as *const _ as usize + size_of::<DescriptionHeader>()) as *const XsdtEntryPtr;
+        let entries_base_ptr = (self as *const _ as usize + size_of::<DescriptionHeader<[u8; 4]>>())
+            as *const XsdtEntryPtr;
         check_ptr_aligned(entries_base_ptr);
         // Safety: we've validated that the address and length makes sense in
         // `validate()`. XsdtEntryPtr is 1-byte aligned.
         unsafe {
             slice::from_raw_parts(
                 entries_base_ptr,
-                (self.header.length as usize - size_of::<DescriptionHeader>())
+                (self.header.length as usize - size_of::<DescriptionHeader<[u8; 4]>>())
                     / size_of::<XsdtEntryPtr>(),
             )
         }
     }
 
     fn entries_arr_mut(&mut self) -> &mut [XsdtEntryPtr<'_>] {
-        let entries_base_ptr =
-            (self as *const _ as usize + size_of::<DescriptionHeader>()) as *mut XsdtEntryPtr;
+        let entries_base_ptr = (self as *const _ as usize + size_of::<DescriptionHeader<[u8; 4]>>())
+            as *mut XsdtEntryPtr;
         check_ptr_aligned(entries_base_ptr);
         // Safety: we've validated that the address and length makes sense in
         // `validate()`. XsdtEntryPtr is 1-byte aligned.
         unsafe {
             slice::from_raw_parts_mut(
                 entries_base_ptr,
-                (self.header.length as usize - size_of::<DescriptionHeader>())
+                (self.header.length as usize - size_of::<DescriptionHeader<[u8; 4]>>())
                     / size_of::<XsdtEntryPtr>(),
             )
         }
@@ -207,7 +207,7 @@ impl Xsdt {
             return Err("Invalid signature for XSDT table");
         }
 
-        if !(self.header.length as usize - size_of::<DescriptionHeader>())
+        if !(self.header.length as usize - size_of::<DescriptionHeader<[u8; 4]>>())
             .is_multiple_of(size_of::<usize>())
         {
             return Err("XSDT invalid: entries size not a multiple of pointer size");
