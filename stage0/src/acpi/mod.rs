@@ -20,7 +20,7 @@
 // These data structures (and constants) are derived from
 // qemu/hw/acpi/bios-linker-loader.c that defines the interface.
 
-use core::{ffi::CStr, mem::MaybeUninit, ops::Deref};
+use core::{ffi::CStr, mem::MaybeUninit, ops::Deref, option::Option::Some};
 
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use sha2::{Digest, Sha256};
@@ -181,7 +181,6 @@ fn debug_print_acpi_tables(tables: &mut AcpiTables) -> Result<(), &'static str> 
     log::info!("RSDP location: {:#018x}", tables.rsdp as *const dyn Rsdp as *const () as u64);
     log::info!("RSDP: {:?}", tables.rsdp);
 
-    // Safety: for now, we trust the RSDP pointer to point to a RSDP.
     if let Ok(Some(rsdt)) = tables.rsdt() {
         log::info!("RSDT: {:?}", rsdt);
         log::info!("RSDT entry count: {}", rsdt.entry_headers().count());
@@ -190,15 +189,8 @@ fn debug_print_acpi_tables(tables: &mut AcpiTables) -> Result<(), &'static str> 
         log::info!("No RSDT present");
     }
 
-    // Safety: for now, we trust the XSDP pointer to point to a XSDP.
-    if let Some(xsdt) = unsafe { tables.rsdp.xsdt_ref() } {
-        let xsdt = xsdt?;
-        log::info!(
-            "XSDT ({:#x}-{:#x}): {:?}",
-            xsdt.addr_range().start,
-            xsdt.addr_range().end,
-            xsdt
-        );
+    if let Ok(Some(xsdt)) = tables.xsdt() {
+        log::info!("XSDT: {:?}", xsdt);
         log::info!("XSDT entry count: {}", xsdt.entry_ptrs().count());
         print_system_data_table_entries(
             xsdt.entry_ptrs()

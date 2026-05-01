@@ -120,6 +120,13 @@ pub mod signature {
 
     #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
     #[repr(u8)]
+    pub enum X {
+        #[default]
+        X = b'X',
+    }
+
+    #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+    #[repr(u8)]
     pub enum Space {
         #[default]
         Space = b' ',
@@ -238,6 +245,7 @@ pub struct AcpiTables<'a> {
 
     pub rsdp: &'a mut dyn Rsdp,
     rsdt: Option<&'a mut Rsdt>,
+    xsdt: Option<&'a mut Xsdt>,
 }
 
 impl<'a> AcpiTables<'a> {
@@ -248,7 +256,7 @@ impl<'a> AcpiTables<'a> {
             .ok_or("RSDP not found")?;
         let rsdp = <dyn Rsdp>::try_from_bytes_mut(rsdp)?;
 
-        Ok(Self { buffers, rsdp, rsdt: None })
+        Ok(Self { buffers, rsdp, rsdt: None, xsdt: None })
     }
 
     /// Returns a reference to the RSDT table, if it exists.
@@ -265,6 +273,26 @@ impl<'a> AcpiTables<'a> {
         }
 
         Ok(self.rsdt.as_deref_mut())
+    }
+
+    /// Returns a reference to the XSDT table, if it exists.
+    pub fn xsdt(&mut self) -> Result<Option<&mut Xsdt>> {
+        if self.xsdt.is_none() {
+            if self.rsdp.xsdt().is_none() {
+                return Ok(None);
+            }
+
+            let xsdt_ptr = self.rsdp.xsdt().unwrap();
+            let buf = self.find_buf(xsdt_ptr).ok_or("invalid XSDT pointer in RSDP")?;
+
+            let (xsdt, suffix) = Xsdt::try_from_bytes_mut(buf)?;
+            if !suffix.is_empty() {
+                self.buffers.push(suffix);
+            }
+            self.xsdt = Some(xsdt)
+        }
+
+        Ok(self.xsdt.as_deref_mut())
     }
 
     /// Tries to find a buffer that contains the address in the buffers list.

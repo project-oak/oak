@@ -14,31 +14,28 @@
 // limitations under the License.
 //
 
-use core::{
-    marker::PhantomData,
-    ops::{Deref, DerefMut, Range},
-    slice,
-};
+use core::ops::{Deref, DerefMut};
 
-use x86_64::VirtAddr;
-use zerocopy::IntoBytes;
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
 use crate::{
     DescriptionHeader,
-    acpi::tables::{Result, check_ptr_aligned},
+    acpi::tables::{Result, check_ptr_aligned, signature},
 };
 
 /// A wrapper for entry addresses in XSDT table.
 ///
 /// An entry address in XSDT has 8 bytes, but they are placed from table offset
 /// 36 and not 8-byte aligned. This wrapper handles the unaligned access.
-#[repr(C)]
-pub struct XsdtEntryPtr<'a> {
+#[repr(transparent)]
+#[derive(
+    Copy, Clone, Debug, Default, Eq, FromBytes, Immutable, IntoBytes, KnownLayout, PartialEq,
+)]
+pub struct XsdtEntryPtr {
     addr: [u8; 8],
-    _phantom: PhantomData<&'a DescriptionHeader<[u8; 4]>>,
 }
 
-impl XsdtEntryPtr<'_> {
+impl XsdtEntryPtr {
     pub fn raw_val(&self) -> u64 {
         // As per Section 5.2 in the ACPI specification 6.5,
         // Address is little endian.
@@ -47,11 +44,10 @@ impl XsdtEntryPtr<'_> {
 
     pub fn set_addr(&mut self, value: u64) {
         value.to_le_bytes().write_to(self.addr[..].as_mut()).unwrap();
-        self.validate().expect("XsdtEntryPtr validate failed on set_addr");
     }
 }
 
-impl Deref for XsdtEntryPtr<'_> {
+impl Deref for XsdtEntryPtr {
     type Target = DescriptionHeader<[u8; 4]>;
 
     fn deref(&self) -> &DescriptionHeader<[u8; 4]> {
@@ -62,7 +58,7 @@ impl Deref for XsdtEntryPtr<'_> {
     }
 }
 
-impl DerefMut for XsdtEntryPtr<'_> {
+impl DerefMut for XsdtEntryPtr {
     fn deref_mut(&mut self) -> &mut Self::Target {
         let ptr = self.raw_val() as *mut DescriptionHeader<[u8; 4]>;
         check_ptr_aligned(ptr);
@@ -71,41 +67,47 @@ impl DerefMut for XsdtEntryPtr<'_> {
     }
 }
 
+impl From<u64> for XsdtEntryPtr {
+    fn from(value: u64) -> Self {
+        let mut ptr = Self::default();
+        ptr.set_addr(value);
+        ptr
+    }
+}
+
+#[allow(dead_code)]
+#[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+#[repr(C)]
+pub struct Signature(signature::X, signature::S, signature::D, signature::T);
+
 /// Extended System Description Table.
 ///
 /// See Section 5.2.8 in the ACPI specification for more details.
-#[derive(Debug)]
+#[derive(Immutable, IntoBytes, KnownLayout, TryFromBytes)]
 #[repr(C, packed)]
 pub struct Xsdt {
-    pub header: DescriptionHeader<[u8; 4]>,
-    // The XSDT contains an array of pointers to other tables, but unfortunately this can't be
-    // expressed in Rust.
+    pub header: DescriptionHeader<Signature>,
+    entries: [XsdtEntryPtr],
 }
 
 impl Xsdt {
-    const SIGNATURE: &'static [u8; 4] = b"XSDT";
+    pub fn try_from_bytes_mut(buf: &mut [u8]) -> Result<(&mut Xsdt, &mut [u8])> {
+        // First, try to parse the header.
+        let (header, _) =
+            DescriptionHeader::<Signature>::try_ref_from_prefix(buf).map_err(|_| "invalid XSDT")?;
+        // if it parses, it is a XSDT, and we can get a length from there
+        if (header.length as usize) < size_of::<DescriptionHeader<Signature>>() {
+            return Err("invalid XSDT");
+        }
+        let entries =
+            (header.length as usize - size_of::<DescriptionHeader<Signature>>()) / size_of::<u64>();
 
-    pub fn new(addr: VirtAddr) -> Result<&'static Xsdt> {
-        // Safety: we're checking that it's a valid XSDT in `validate()`.
-        let xsdt = unsafe { &*addr.as_ptr::<Xsdt>() };
+        let (xsdt, tail) =
+            Xsdt::try_mut_from_prefix_with_elems(buf, entries).map_err(|_| "invalid XSDT")?;
+
         xsdt.validate()?;
-        Ok(xsdt)
-    }
 
-    /// # Safety
-    ///
-    /// Caller must ensure only one mut ref exists at a time.
-    pub unsafe fn new_mut(addr: VirtAddr) -> Result<&'static mut Xsdt> {
-        // Safety: we're checking that it's a valid XSDT in `validate()`.
-        let xsdt = unsafe { &mut *addr.as_mut_ptr::<Xsdt>() };
-        xsdt.validate()?;
-        Ok(xsdt)
-    }
-
-    /// Returns the address range where this table is located.
-    pub fn addr_range(&self) -> Range<usize> {
-        let base = self as *const _ as usize;
-        base..base + self.header.length as usize
+        Ok((xsdt, tail))
     }
 
     /// Sets checksum field so that checksum validates.
@@ -135,8 +137,8 @@ impl Xsdt {
     }
 
     /// Returns an iterator over the entry pointers in this XSDT, validated.
-    pub fn entry_ptrs(&self) -> impl Iterator<Item = Result<&XsdtEntryPtr<'_>>> {
-        self.entries_arr().iter().map(|xsdt_ptr| {
+    pub fn entry_ptrs(&self) -> impl Iterator<Item = Result<&XsdtEntryPtr>> {
+        self.entries.iter().map(|xsdt_ptr| {
             xsdt_ptr.validate()?;
             Ok(xsdt_ptr)
         })
@@ -149,9 +151,9 @@ impl Xsdt {
     ///   - Ok(Some(EntryPairMut)) -> Search went without errors, entry found
     ///     and returned.
     ///   - Err(e) -> A DescriptionHeader seen during search failed validation.
-    pub fn get_entry_mut(&mut self, signature: &[u8; 4]) -> Result<Option<&mut XsdtEntryPtr<'_>>> {
+    pub fn get_entry_mut(&mut self, signature: &[u8; 4]) -> Result<Option<&mut XsdtEntryPtr>> {
         self.validate()?;
-        let maybe_found = self.entries_arr_mut().iter_mut().find_map(|xsdt_entry_ptr| {
+        let maybe_found = self.entries.iter_mut().find_map(|xsdt_entry_ptr| {
             match xsdt_entry_ptr.validate() {
                 Err(e) => Some(Err(e)), // Found an error, stop search and propoagate.
                 Ok(()) => {
@@ -170,42 +172,8 @@ impl Xsdt {
         }
     }
 
-    fn entries_arr(&self) -> &[XsdtEntryPtr<'_>] {
-        let entries_base_ptr = (self as *const _ as usize + size_of::<DescriptionHeader<[u8; 4]>>())
-            as *const XsdtEntryPtr;
-        check_ptr_aligned(entries_base_ptr);
-        // Safety: we've validated that the address and length makes sense in
-        // `validate()`. XsdtEntryPtr is 1-byte aligned.
-        unsafe {
-            slice::from_raw_parts(
-                entries_base_ptr,
-                (self.header.length as usize - size_of::<DescriptionHeader<[u8; 4]>>())
-                    / size_of::<XsdtEntryPtr>(),
-            )
-        }
-    }
-
-    fn entries_arr_mut(&mut self) -> &mut [XsdtEntryPtr<'_>] {
-        let entries_base_ptr = (self as *const _ as usize + size_of::<DescriptionHeader<[u8; 4]>>())
-            as *mut XsdtEntryPtr;
-        check_ptr_aligned(entries_base_ptr);
-        // Safety: we've validated that the address and length makes sense in
-        // `validate()`. XsdtEntryPtr is 1-byte aligned.
-        unsafe {
-            slice::from_raw_parts_mut(
-                entries_base_ptr,
-                (self.header.length as usize - size_of::<DescriptionHeader<[u8; 4]>>())
-                    / size_of::<XsdtEntryPtr>(),
-            )
-        }
-    }
-
     pub fn validate(&self) -> Result<()> {
         self.header.validate()?;
-
-        if self.header.signature != *Self::SIGNATURE {
-            return Err("Invalid signature for XSDT table");
-        }
 
         if !(self.header.length as usize - size_of::<DescriptionHeader<[u8; 4]>>())
             .is_multiple_of(size_of::<usize>())
@@ -214,5 +182,43 @@ impl Xsdt {
         }
 
         Ok(())
+    }
+}
+
+// We can't derive `Debug` because of alignment issues.
+impl core::fmt::Debug for Xsdt {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::result::Result<(), core::fmt::Error> {
+        let holder = self.entries.to_vec();
+        f.debug_struct("Xsdt").field("header", &self.header).field("entries", &holder).finish()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use googletest::prelude::*;
+
+    use super::*;
+
+    #[test]
+    pub fn test_parse_rsdt() {
+        let mut buf = Vec::from(b"RSDT\x24\x00\x00\x00\x01\xB0OEMOEMAAAAAAAABBBBCCCCDDDD");
+
+        assert_that!(Xsdt::try_from_bytes_mut(&mut buf[..]), err(anything()));
+    }
+
+    #[test]
+    pub fn test_empty_xsdt() {
+        let mut buf = Vec::from(b"XSDT\x24\x00\x00\x00\x01\xAAOEMOEMAAAAAAAABBBBCCCCDDDD");
+
+        let (xsdt, _) = Xsdt::try_from_bytes_mut(&mut buf[..]).unwrap();
+        assert_that!(xsdt.entries, is_empty());
+    }
+
+    #[test]
+    pub fn test_two_entries() {
+        let mut buf = Vec::from(b"XSDT\x34\x00\x00\x00\x01\x97OEMOEMAAAAAAAABBBBCCCCDDDD\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00");
+
+        let (xsdt, _) = Xsdt::try_from_bytes_mut(&mut buf[..]).unwrap();
+        assert_that!(xsdt.entries, unordered_elements_are!(eq(&1.into()), eq(&2.into())));
     }
 }

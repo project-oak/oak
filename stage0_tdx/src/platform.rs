@@ -434,8 +434,7 @@ impl FirmwarePlatform for Tdx {
         } // else: there is no RSDT.
 
         // # Safety: only one ref to XSDT is created.
-        if let Some(xsdt) = unsafe { tables.rsdp.xsdt_mut() } {
-            let xsdt = xsdt?;
+        if let Some(xsdt) = tables.xsdt()? {
             info!("Finalize ACPI: Found an XSDT, checking for MADT.");
             let maybe_madt_entry = xsdt.get_entry_mut(Madt::SIGNATURE)?;
 
