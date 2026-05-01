@@ -75,6 +75,48 @@ pub use xsdt::Xsdt;
 
 type Result<T> = core::result::Result<T, &'static str>;
 
+/// "Alphabet" to construct various ACPI table signatures.
+#[allow(dead_code)]
+pub mod signature {
+    use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};
+
+    #[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+    #[repr(u8)]
+    pub enum D {
+        D = b'D',
+    }
+
+    #[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+    #[repr(u8)]
+    pub enum P {
+        P = b'P',
+    }
+
+    #[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+    #[repr(u8)]
+    pub enum R {
+        R = b'R',
+    }
+
+    #[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+    #[repr(u8)]
+    pub enum S {
+        S = b'S',
+    }
+
+    #[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+    #[repr(u8)]
+    pub enum T {
+        T = b'T',
+    }
+
+    #[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+    #[repr(u8)]
+    pub enum Space {
+        Space = b' ',
+    }
+}
+
 /// Header common for all ACPI tables.
 ///
 /// See Section 5.2.6, System Description Table Header, in the ACPI

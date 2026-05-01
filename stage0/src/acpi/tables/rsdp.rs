@@ -19,7 +19,7 @@ use core::fmt::Debug;
 use x86_64::VirtAddr;
 use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
-use crate::acpi::tables::{Result, Rsdt, Xsdt};
+use crate::acpi::tables::{Result, Rsdt, Xsdt, signature};
 
 pub trait Rsdp: Debug {
     fn validate(&self) -> Result<()>;
@@ -50,55 +50,23 @@ enum RsdpAcpi2Version {
     V2 = 2,
 }
 
-#[allow(dead_code)]
-#[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
-#[repr(u8)]
-enum R {
-    R = b'R',
-}
-
-#[allow(dead_code)]
-#[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
-#[repr(u8)]
-enum S {
-    S = b'S',
-}
-
-#[allow(dead_code)]
-#[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
-#[repr(u8)]
-enum D {
-    D = b'D',
-}
-
-#[allow(dead_code)]
-#[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
-#[repr(u8)]
-enum Space {
-    Space = b' ',
-}
-
-#[allow(dead_code)]
-#[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
-#[repr(u8)]
-enum P {
-    P = b'P',
-}
-
-#[allow(dead_code)]
-#[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
-#[repr(u8)]
-enum T {
-    T = b'T',
-}
-
 // "RSD PTR " signature.
 // This uses the trick from zerocopy example, where it makes use of
 // single-element enums to ensure there is exactly one way how to represent the
 // signature.
 #[allow(dead_code)]
 #[derive(Copy, Clone, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
-pub struct RsdpSignature(R, S, D, Space, P, T, R, Space);
+#[repr(C)]
+pub struct RsdpSignature(
+    signature::R,
+    signature::S,
+    signature::D,
+    signature::Space,
+    signature::P,
+    signature::T,
+    signature::R,
+    signature::Space,
+);
 
 /// ACPI Root System Description Pointer, Version 1.
 ///
