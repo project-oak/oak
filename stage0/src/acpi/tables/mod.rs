@@ -72,6 +72,7 @@ pub use madt::Madt;
 pub use rsdp::Rsdp;
 pub use rsdt::Rsdt;
 pub use xsdt::Xsdt;
+use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
 type Result<T> = core::result::Result<T, &'static str>;
 
@@ -121,7 +122,7 @@ pub mod signature {
 ///
 /// See Section 5.2.6, System Description Table Header, in the ACPI
 /// specification for more details.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
 #[repr(C, packed)]
 pub struct DescriptionHeader<S> {
     /// ASCII string representation of the table identifer.
@@ -163,7 +164,9 @@ impl DescriptionHeader<[u8; 4]> {
         core::str::from_utf8(&self.signature)
             .expect("invalid ACPI table signature; not valid UTF-8")
     }
+}
 
+impl<S> DescriptionHeader<S> {
     /// Returns the address range where this table is located.
     pub fn addr_range(&self) -> Range<usize> {
         let base = self as *const _ as usize;
@@ -180,6 +183,8 @@ impl DescriptionHeader<[u8; 4]> {
 
     pub fn validate(&self) -> Result<()> {
         if self.compute_checksum() != 0 {
+            //extern crate std;
+            //std::eprintln!("checksum {}", self.compute_checksum());
             return Err("ACPI table checksum invalid");
         }
 

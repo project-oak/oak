@@ -178,7 +178,8 @@ fn debug_print_acpi_tables(rsdp: &dyn Rsdp) -> Result<(), &'static str> {
     log::info!("RSDP location: {:#018x}", rsdp as *const dyn Rsdp as *const () as u64);
     log::info!("RSDP: {:?}", rsdp);
 
-    if let Some(rsdt) = rsdp.rsdt() {
+    // Safety: for now, we trust the RSDP pointer to point to a RSDP.
+    if let Some(rsdt) = unsafe { rsdp.rsdt() } {
         let rsdt = rsdt?;
         log::info!("RSDT: {:?}", rsdt);
         log::info!("RSDT entry count: {}", rsdt.entry_headers().count());
@@ -187,7 +188,8 @@ fn debug_print_acpi_tables(rsdp: &dyn Rsdp) -> Result<(), &'static str> {
         log::info!("No RSDT present");
     }
 
-    if let Some(xsdt) = rsdp.xsdt() {
+    // Safety: for now, we trust the XSDP pointer to point to a XSDP.
+    if let Some(xsdt) = unsafe { rsdp.xsdt() } {
         let xsdt = xsdt?;
         log::info!(
             "XSDT ({:#x}-{:#x}): {:?}",

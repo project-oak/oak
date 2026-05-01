@@ -23,15 +23,22 @@ use crate::acpi::tables::{Result, Rsdt, Xsdt, signature};
 
 pub trait Rsdp: Debug {
     fn validate(&self) -> Result<()>;
-    fn rsdt(&self) -> Option<Result<&Rsdt>>;
 
     /// # Safety
+    /// Caller must guarantee the RSDT pointer is valid..
+    unsafe fn rsdt(&self) -> Option<Result<&Rsdt>>;
+
+    /// # Safety
+    /// Caller must guarantee the RSDT pointer is valid.
     /// Caller must ensure only one mut ref exists at a time.
     unsafe fn rsdt_mut(&mut self) -> Option<Result<&mut Rsdt>>;
 
-    fn xsdt(&self) -> Option<Result<&Xsdt>>;
+    /// # Safety
+    /// Caller must guarantee the RSDT pointer is valid..
+    unsafe fn xsdt(&self) -> Option<Result<&Xsdt>>;
 
     /// # Safety
+    /// Caller must guarantee the RSDT pointer is valid.
     /// Caller must ensure only one mut ref exists at a time.
     unsafe fn xsdt_mut(&mut self) -> Option<Result<&mut Xsdt>>;
 }
@@ -105,11 +112,11 @@ impl Rsdp for Rsdp1 {
         Ok(())
     }
 
-    fn rsdt(&self) -> Option<Result<&Rsdt>> {
+    unsafe fn rsdt(&self) -> Option<Result<&Rsdt>> {
         if self.rsdt_address == 0 {
             None
         } else {
-            Some(Rsdt::new(VirtAddr::new(self.rsdt_address as u64)))
+            Some(unsafe { Rsdt::new(VirtAddr::new(self.rsdt_address as u64)) })
         }
     }
 
@@ -121,7 +128,7 @@ impl Rsdp for Rsdp1 {
         }
     }
 
-    fn xsdt(&self) -> Option<Result<&Xsdt>> {
+    unsafe fn xsdt(&self) -> Option<Result<&Xsdt>> {
         None
     }
 
@@ -179,11 +186,11 @@ impl Rsdp for Rsdp2 {
 
         Ok(())
     }
-    fn rsdt(&self) -> Option<Result<&Rsdt>> {
+    unsafe fn rsdt(&self) -> Option<Result<&Rsdt>> {
         if self.rsdt_address == 0 {
             None
         } else {
-            Some(Rsdt::new(VirtAddr::new(self.rsdt_address as u64)))
+            Some(unsafe { Rsdt::new(VirtAddr::new(self.rsdt_address as u64)) })
         }
     }
 
@@ -195,7 +202,7 @@ impl Rsdp for Rsdp2 {
         }
     }
 
-    fn xsdt(&self) -> Option<Result<&Xsdt>> {
+    unsafe fn xsdt(&self) -> Option<Result<&Xsdt>> {
         if self.xsdt_address == 0 {
             None
         } else {
