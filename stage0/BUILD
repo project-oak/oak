@@ -112,5 +112,6 @@ rust_test(
     deps = [
         "//oak_file_utils",
         "@oak_crates_index//:googletest",
+        "@oak_crates_index//:libc",
     ],
 )

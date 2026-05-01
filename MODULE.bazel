@@ -956,6 +956,13 @@ crate.spec(
 crate.spec(
     default_features = True,
     features = [],
+    package = "libc",
+    repositories = ALL_STD,
+    version = "0.2.186",
+)
+crate.spec(
+    default_features = True,
+    features = [],
     package = "libm",
     repositories = ALL_REPOSITORIES,
     version = "0.2.8",
