@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use alloc::boxed::Box;
 use core::fmt::Debug;
 
 use x86_64::VirtAddr;
@@ -140,7 +141,7 @@ impl Rsdp for Rsdp1 {
 /// See Section 5.2.5.3 in the ACPI specification, Version 6.6 for more details.
 #[repr(C, packed)]
 #[derive(Debug, IntoBytes, Immutable, KnownLayout, TryFromBytes)]
-struct Rsdp2 {
+pub struct Rsdp2 {
     /// Signature: "RSD PTR " (note the trailing space).
     signature: RsdpSignature,
 
@@ -171,6 +172,41 @@ struct Rsdp2 {
     _reserved: [u8; 3],
 }
 static_assertions::assert_eq_size!(Rsdp2, [u8; 36usize]);
+
+impl Rsdp2 {
+    #[allow(unused)]
+    fn checksum(&self) -> u8 {
+        // Just the RSDP1 header.
+        self.as_bytes()[..size_of::<Rsdp1>()].iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs))
+    }
+
+    #[allow(unused)]
+    fn extended_checksum(&self) -> u8 {
+        self.as_bytes().iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs))
+    }
+
+    #[allow(unused)]
+    pub fn new(rsdt: VirtAddr) -> Result<Box<Self>> {
+        let mut rsdp = Box::new(Self {
+            signature: RsdpSignature::default(),
+            checksum: 0,
+            oemid: [0; 6],
+            revision: RsdpAcpi2Version::default(),
+            rsdt_address: rsdt
+                .as_u64()
+                .try_into()
+                .map_err(|_| "RSDT address not in low 32 bits")?,
+            length: size_of::<Rsdp2>() as u32,
+            xsdt_address: 0,
+            extended_checksum: 0,
+            _reserved: [0; 3],
+        });
+        rsdp.checksum = rsdp.checksum.wrapping_sub(rsdp.checksum());
+        rsdp.extended_checksum = rsdp.extended_checksum.wrapping_sub(rsdp.extended_checksum());
+
+        Ok(rsdp)
+    }
+}
 
 impl Rsdp for Rsdp2 {
     fn validate(&self) -> Result<()> {
@@ -255,5 +291,17 @@ mod tests {
     pub fn test_garbage() {
         let mut buf = Vec::from(b"\x01\x02\x03\x04\x05\x06\x07\x08\x55 TEST \x00\x02\x02\x03\x04");
         assert_that!(<dyn Rsdp>::try_from_bytes_mut(&mut buf[..]), err(anything()));
+    }
+
+    #[test]
+    pub fn test_new_parse() {
+        let rsdp = Rsdp2::new(VirtAddr::new(0x1000)).unwrap();
+        assert_that!(rsdp.rsdt(), some(eq(VirtAddr::new(0x1000))));
+        assert_that!(rsdp.xsdt(), none());
+
+        let mut buf = rsdp.as_bytes().to_vec();
+        let rsdp2 = <dyn Rsdp>::try_from_bytes_mut(&mut buf[..]).unwrap();
+        assert_that!(rsdp2.rsdt(), eq(rsdp.rsdt()));
+        assert_that!(rsdp2.xsdt(), eq(rsdp.xsdt()));
     }
 }
