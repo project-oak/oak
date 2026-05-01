@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-use core::slice;
+use alloc::{boxed::Box, vec};
+use core::{assert, slice};
 
 use x86_64::VirtAddr;
 use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};
@@ -25,6 +26,7 @@ use crate::acpi::tables::{DescriptionHeader, Result, check_ptr_aligned, signatur
 #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
 #[repr(C)]
 pub struct Signature(signature::R, signature::S, signature::D, signature::T);
+static_assertions::assert_eq_size!(DescriptionHeader<Signature>, [u8; 36usize]);
 
 /// Root System Description Table.
 ///
@@ -58,6 +60,50 @@ impl Rsdt {
         rsdt.validate()?;
 
         Ok((rsdt, tail))
+    }
+
+    pub fn new_with_size(num: usize) -> Box<Rsdt> {
+        let mut header = DescriptionHeader::<Signature> {
+            signature: Signature::default(),
+            length: (size_of::<DescriptionHeader<Signature>>() + num * size_of::<u32>()) as u32,
+            revision: 0,
+            checksum: 0,
+            oem_id: [0; 6],
+            oem_table_id: [0; 8],
+            oem_revision: 0,
+            creator_id: 0,
+            creator_revision: 0,
+        };
+        // For now, we can't call `header.update_checksum()` here as that uses unsafe
+        // code that references `length` and would read beyond the buffer. However, as
+        // the zeroes in the entries slice won't change the checksum, for now we can do
+        // it by hand here.
+        header.checksum = header
+            .checksum
+            .wrapping_sub(header.as_bytes().iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs)));
+
+        // Use u32 instead of u8, as that guarantees the alignment is correct.
+        let mut buf =
+            vec![0u32; size_of::<DescriptionHeader<Signature>>() / size_of::<u32>() + num]
+                .into_boxed_slice();
+        header.write_to_prefix(buf.as_mut_bytes()).unwrap();
+
+        let buf = Box::leak(buf);
+        // This `unwrap()` and assertion should never fail.
+        let (rsdt, suffix) = Rsdt::try_from_bytes_mut(buf.as_mut_bytes()).unwrap();
+        assert!(suffix.is_empty());
+
+        // Safety: the memory was leaked from a Box; the pointer does not change, and
+        // the size does not change.
+        unsafe { Box::from_raw(rsdt) }
+    }
+
+    fn checksum(&self) -> u8 {
+        self.as_bytes().iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs))
+    }
+
+    pub fn update_checksum(&mut self) {
+        self.header.checksum = self.header.checksum.wrapping_sub(self.checksum());
     }
 
     /// # Safety
@@ -148,12 +194,6 @@ impl Rsdt {
         }
     }
 
-    /// Sets checksum field so that checksum validates.
-    /// To be called after modifying any of this structures's data.
-    pub fn update_checksum(&mut self) {
-        self.header.update_checksum();
-    }
-
     fn entry_headers_mut(&mut self) -> impl Iterator<Item = Result<RsdtEntryPairMut<'_>>> {
         self.entries.iter_mut().map(|addr| {
             let header_ptr = *addr as usize as *mut DescriptionHeader<[u8; 4]>;
@@ -202,5 +242,18 @@ mod tests {
 
         let (rsdt, _) = Rsdt::try_from_bytes_mut(&mut buf[..]).unwrap();
         assert_that!(rsdt.entries, unordered_elements_are!(eq(&1), eq(&2)));
+    }
+
+    #[test]
+    pub fn test_new_rsdt() {
+        let mut rsdt = Rsdt::new_with_size(1);
+        let old_checksum = rsdt.header.checksum;
+        rsdt.entries[0] = 0x01020304;
+        rsdt.update_checksum();
+
+        assert_that!(old_checksum, not(eq(rsdt.header.checksum)));
+
+        let buf = Vec::from(b"RSDT\x28\x00\x00\x00\x00\x91\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04\x03\x02\x01");
+        assert_that!(rsdt.as_bytes(), eq(buf));
     }
 }
