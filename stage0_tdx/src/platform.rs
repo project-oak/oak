@@ -29,11 +29,10 @@ use log::info;
 use oak_hal::{MsrAccess, PageAssignment, PageEncryption, Platform};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_stage0::{
-    BOOT_ALLOC, Madt, Rsdp, RsdtEntryPairMut,
+    AcpiTables, BOOT_ALLOC, Madt, RsdtEntryPairMut,
     hal::{FirmwarePlatform, PortFactory},
     mailbox::{FirmwareMailbox, OsMailbox},
-    paging,
-    paging::PageTableRefs,
+    paging::{self, PageTableRefs},
 };
 use oak_tdx_guest::{
     tdcall::get_td_info,
@@ -401,7 +400,7 @@ impl FirmwarePlatform for Tdx {
         if index == 0 { Err("no valid TD HoB found") } else { Ok(index) }
     }
 
-    fn finalize_acpi_tables(rsdp: &mut dyn Rsdp) -> Result<(), &'static str> {
+    fn finalize_acpi_tables(tables: &mut AcpiTables) -> Result<(), &'static str> {
         // In TDX, we need add a MultiprocessorWakeupStructure (ACPI specification table
         // 5.43) entry with the OS Mailbox Address to the MADT table. If
         // the MADT is not the last structure, then we need to move it down so
@@ -416,8 +415,7 @@ impl FirmwarePlatform for Tdx {
         };
 
         // # Safety: only one ref to RSDT is created.
-        if let Some(rsdt) = unsafe { rsdp.rsdt_mut() } {
-            let rsdt = rsdt?;
+        if let Some(rsdt) = tables.rsdt()? {
             info!("Finalize ACPI: Found an RSDT, checking for MADT.");
             let maybe_madt_entry: Option<RsdtEntryPairMut> =
                 rsdt.get_entry_pair_mut(Madt::SIGNATURE)?;
@@ -436,7 +434,7 @@ impl FirmwarePlatform for Tdx {
         } // else: there is no RSDT.
 
         // # Safety: only one ref to XSDT is created.
-        if let Some(xsdt) = unsafe { rsdp.xsdt_mut() } {
+        if let Some(xsdt) = unsafe { tables.rsdp.xsdt_mut() } {
             let xsdt = xsdt?;
             info!("Finalize ACPI: Found an XSDT, checking for MADT.");
             let maybe_madt_entry = xsdt.get_entry_mut(Madt::SIGNATURE)?;

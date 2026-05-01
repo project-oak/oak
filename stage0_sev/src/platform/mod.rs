@@ -31,7 +31,7 @@ use oak_sev_guest::{
     ap_jump_table::ApJumpTable, cpuid::CpuidInput, ghcb::GhcbProtocol, msr::SevStatus,
 };
 use oak_stage0::{
-    BOOT_ALLOC, BootAllocator, Rsdp, ZeroPage,
+    AcpiTables, BOOT_ALLOC, BootAllocator, ZeroPage,
     allocator::Shared,
     hal::{Base, FirmwarePlatform, PortFactory},
 };
@@ -283,10 +283,10 @@ impl FirmwarePlatform for Sev {
         Err("SEV does not support E820 prefill")
     }
 
-    fn finalize_acpi_tables(rsdp: &mut dyn Rsdp) -> Result<(), &'static str> {
+    fn finalize_acpi_tables<'a>(tables: &mut AcpiTables) -> Result<(), &'static str> {
         // No further changes needed to ACPI tables, but now that they're in
         // place, we can bring up other CPUs (APs).
-        let result = smp::bootstrap_aps::<Sev>(rsdp);
+        let result = smp::bootstrap_aps::<Sev>(tables);
         if let Err(err) = result {
             log::warn!("Failed to bootstrap APs: {}. APs may not be properly initialized.", err);
         }

@@ -65,12 +65,14 @@ mod rsdp;
 pub mod rsdt;
 mod xsdt;
 
+use alloc::vec::Vec;
 use core::{any::type_name, fmt::Display, ops::Range, slice};
 
 pub use fadt::Fadt;
 pub use madt::Madt;
 pub use rsdp::Rsdp;
 pub use rsdt::Rsdt;
+use x86_64::VirtAddr;
 pub use xsdt::Xsdt;
 use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
@@ -222,5 +224,125 @@ impl Display for DescriptionHeader<[u8; 4]> {
 pub fn check_ptr_aligned<T>(ptr: *const T) {
     if !ptr.is_aligned() {
         panic!("Incorrect pointer {:?} alignmnt for type {}", ptr, type_name::<T>());
+    }
+}
+
+/// A generic holder for ACPI tables and the byte where we expect to find them.
+///
+/// Instead of deferencing pointers, accessing ACPI tables can be done safely
+/// through this struct as we check that any pointers are pointing to somewhere
+/// in the buffers (and ensure there is no overlap between data structures), or
+/// we fail.
+pub struct AcpiTables<'a> {
+    buffers: Vec<&'a mut [u8]>,
+
+    pub rsdp: &'a mut dyn Rsdp,
+    rsdt: Option<&'a mut Rsdt>,
+}
+
+impl<'a> AcpiTables<'a> {
+    pub fn new(mut buffers: Vec<&'a mut [u8]>, rsdp_addr: VirtAddr) -> Result<Self> {
+        let rsdp = buffers
+            .extract_if(.., |s| VirtAddr::from_ptr(*s) == rsdp_addr)
+            .next()
+            .ok_or("RSDP not found")?;
+        let rsdp = <dyn Rsdp>::try_from_bytes_mut(rsdp)?;
+
+        Ok(Self { buffers, rsdp, rsdt: None })
+    }
+
+    /// Returns a reference to the RSDT table, if it exists.
+    pub fn rsdt(&mut self) -> Result<Option<&mut Rsdt>> {
+        if self.rsdt.is_none() {
+            let rsdt_ptr = self.rsdp.rsdt().ok_or("RSDT pointer not in RSDP")?;
+            let buf = self.find_buf(rsdt_ptr).ok_or("invalid RSDT pointer in RSDP")?;
+
+            let (rsdt, suffix) = Rsdt::try_from_bytes_mut(buf)?;
+            if !suffix.is_empty() {
+                self.buffers.push(suffix);
+            }
+            self.rsdt = Some(rsdt)
+        }
+
+        Ok(self.rsdt.as_deref_mut())
+    }
+
+    /// Tries to find a buffer that contains the address in the buffers list.
+    ///
+    /// You can think of the matcher buffer being "prefix-struct-suffix", where
+    /// prefix is any number of bytes before the `addr` (may be zero), struct is
+    /// the arbitrary number of bytes needed to parse a data structure, and
+    /// suffix are the bytes left over (if any).
+    ///
+    /// This function pushes the prefix bytes (if any) back to the buffers list;
+    /// as we don't know what the size of the struct is, the caller needs to
+    /// push the suffix bytes (if any) back onto the buffers list.
+    fn find_buf(&mut self, addr: VirtAddr) -> Option<&'a mut [u8]> {
+        let buf = self
+            .buffers
+            .extract_if(.., |s| {
+                VirtAddr::from_ptr(*s) <= addr && VirtAddr::from_ptr(*s) + (s.len() as u64) > addr
+            })
+            .next()?;
+        let (prefix, buf) =
+            buf.split_at_mut_checked(addr.as_u64() as usize - (buf.as_ptr() as usize))?;
+        if !prefix.is_empty() {
+            self.buffers.push(prefix);
+        }
+        Some(buf)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use googletest::prelude::*;
+    use libc;
+
+    use super::*;
+    use crate::acpi::tables::rsdp::Rsdp2;
+
+    #[test]
+    pub fn test_rsdt() {
+        let mut rsdt = Rsdt::new_with_size(1);
+        rsdt.entries[0] = 0x12345678;
+        rsdt.update_checksum();
+        let rsdt = rsdt.as_bytes().to_vec();
+
+        // This bypasses the normal allocation methods completely as we need to
+        // guarantee that the RSDT lands somewhere in the 32-bit address space. This
+        // can't be guaranteed using the normal Rust mechanics, so we need to use the
+        // underlying libc code to mmap us a chunk of memory with a 32-bit pointer.
+        let rsdt = {
+            // Safety: mmap allocates us a new chunk of anonymous memory that was previously
+            // unused.
+            let raw_ptr = unsafe {
+                libc::mmap(
+                    std::ptr::null_mut(),
+                    rsdt.len(),
+                    libc::PROT_READ | libc::PROT_WRITE,
+                    libc::MAP_SHARED | libc::MAP_ANONYMOUS | libc::MAP_32BIT,
+                    0,
+                    0,
+                )
+            };
+            assert!(!raw_ptr.is_null());
+            // Safety: the mmap allocation succeeded, and the length is at least
+            // `rsdt.len()`.
+            let slice = unsafe { std::slice::from_raw_parts_mut(raw_ptr as *mut u8, rsdt.len()) };
+            slice.copy_from_slice(&rsdt);
+            slice
+        };
+
+        let rsdp = Rsdp2::new(VirtAddr::from_ptr(rsdt)).unwrap().as_bytes().to_vec().leak();
+
+        let rsdp_addr = VirtAddr::from_ptr(rsdp);
+        let mut tables = AcpiTables::new(vec![rsdt, rsdp], rsdp_addr).unwrap();
+
+        let test_rsdt = tables.rsdt().unwrap().unwrap();
+
+        assert_that!(test_rsdt.entries, unordered_elements_are!(eq(&0x12345678)));
+
+        // Note: we leak the `rsdt` here, but it should be okay as this is just
+        // a test.
     }
 }

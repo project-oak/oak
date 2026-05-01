@@ -21,8 +21,8 @@ use core::{
 };
 
 use oak_stage0::{
-    Lapic, LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp, disable_pic8259,
-    hal::Platform,
+    AcpiTables, Lapic, LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic,
+    disable_pic8259, hal::Platform,
 };
 use x86_64::PhysAddr;
 
@@ -75,14 +75,14 @@ pub fn start_ap<P: Platform>(
 }
 
 // TODO(#4235): Bootstrap the APs.
-pub fn bootstrap_aps<P: Platform>(rsdp: &dyn Rsdp) -> Result<(), &'static str> {
+pub fn bootstrap_aps<P: Platform>(tables: &mut AcpiTables) -> Result<(), &'static str> {
     // If XSDT exists, then per ACPI spec we have to prefer that. If it doesn't, see
     // if we can use the old RSDT. (If we have neither XSDT or RSDT, the ACPI
     // tables are broken.)
-    let madt = if let Some(xsdt) = unsafe { rsdp.xsdt_ref() } {
+    let madt = if let Some(xsdt) = unsafe { tables.rsdp.xsdt_ref() } {
         xsdt?.get(Madt::SIGNATURE)?.ok_or("MADT table not found in XSDT")?
     } else {
-        let rsdt = unsafe { rsdp.rsdt_ref() }.ok_or("RSDT not found")??;
+        let rsdt = tables.rsdt()?.ok_or("RSDT not found")?;
         rsdt.get(Madt::SIGNATURE)?.ok_or("MADT table not found in RSDT")?
     };
     let madt = Madt::new(madt).expect("invalid MADT");

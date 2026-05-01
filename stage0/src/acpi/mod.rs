@@ -35,7 +35,7 @@ pub mod tables;
 use commands::{Invoke, RomfileCommand};
 use files::{Files, MemFiles};
 use tables::{
-    DescriptionHeader, Fadt, Madt, Rsdp,
+    AcpiTables, DescriptionHeader, Fadt, Madt, Rsdp,
     madt::{
         InterruptSourceOverride, IoApic, LocalApicNmi, MultiprocessorWakeup, ProcessorLocalApic,
         ProcessorLocalX2Apic,
@@ -159,32 +159,30 @@ pub fn build_acpi_tables<P: crate::Platform + crate::FirmwarePlatform>(
         VirtAddr::from_ptr(files.find_file_suffix_mut(c"acpi/rsdp").ok_or("RSDP file not found")?);
 
     // Ensure the tables stick around by leaking the memory holding them.
-    let mut contents = files.leak();
+    let contents = files.leak();
 
     // One of these must have been the RSDP.
-    let rsdp = contents.extract_if(.., |s| VirtAddr::from_ptr(*s) == rsdp_addr).next().unwrap();
-    let rsdp = <dyn Rsdp>::try_from_bytes_mut(rsdp)?;
+    let mut tables = AcpiTables::new(contents, rsdp_addr)?;
 
     log::info!("ACPI tables before finalizing:");
-    debug_print_acpi_tables(rsdp)?;
+    debug_print_acpi_tables(&mut tables)?;
 
     log::info!("Finalizing RSDP");
-    P::finalize_acpi_tables(rsdp)?;
+    P::finalize_acpi_tables(&mut tables)?;
 
     log::info!("ACPI tables after finalizing:");
-    debug_print_acpi_tables(rsdp)?;
+    debug_print_acpi_tables(&mut tables)?;
 
     Ok(rsdp_addr)
 }
 
 /// Prints ACPI metadata including RSDP, RSDT and XSDT (if present).
-fn debug_print_acpi_tables(rsdp: &dyn Rsdp) -> Result<(), &'static str> {
-    log::info!("RSDP location: {:#018x}", rsdp as *const dyn Rsdp as *const () as u64);
-    log::info!("RSDP: {:?}", rsdp);
+fn debug_print_acpi_tables(tables: &mut AcpiTables) -> Result<(), &'static str> {
+    log::info!("RSDP location: {:#018x}", tables.rsdp as *const dyn Rsdp as *const () as u64);
+    log::info!("RSDP: {:?}", tables.rsdp);
 
     // Safety: for now, we trust the RSDP pointer to point to a RSDP.
-    if let Some(rsdt) = unsafe { rsdp.rsdt_ref() } {
-        let rsdt = rsdt?;
+    if let Ok(Some(rsdt)) = tables.rsdt() {
         log::info!("RSDT: {:?}", rsdt);
         log::info!("RSDT entry count: {}", rsdt.entry_headers().count());
         print_system_data_table_entries(rsdt.entry_headers())?;
@@ -193,7 +191,7 @@ fn debug_print_acpi_tables(rsdp: &dyn Rsdp) -> Result<(), &'static str> {
     }
 
     // Safety: for now, we trust the XSDP pointer to point to a XSDP.
-    if let Some(xsdt) = unsafe { rsdp.xsdt_ref() } {
+    if let Some(xsdt) = unsafe { tables.rsdp.xsdt_ref() } {
         let xsdt = xsdt?;
         log::info!(
             "XSDT ({:#x}-{:#x}): {:?}",

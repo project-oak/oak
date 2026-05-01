@@ -15,9 +15,8 @@
 //
 
 use alloc::{boxed::Box, vec};
-use core::{assert, slice};
+use core::assert;
 
-use x86_64::VirtAddr;
 use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
 use crate::acpi::tables::{DescriptionHeader, Result, check_ptr_aligned, signature};
@@ -37,7 +36,7 @@ static_assertions::assert_eq_size!(DescriptionHeader<Signature>, [u8; 36usize]);
 #[repr(C, align(4))]
 pub struct Rsdt {
     pub header: DescriptionHeader<Signature>,
-    entries: [u32],
+    pub entries: [u32],
 }
 
 pub type RsdtEntryPairMut<'a> = (&'a mut u32, &'a mut DescriptionHeader<[u8; 4]>);
@@ -104,39 +103,6 @@ impl Rsdt {
 
     pub fn update_checksum(&mut self) {
         self.header.checksum = self.header.checksum.wrapping_sub(self.checksum());
-    }
-
-    /// # Safety
-    /// Caller must ensure `addr` actually points to a RSDP (or where one could
-    /// reasonably be found).
-    pub unsafe fn new(addr: VirtAddr) -> Result<&'static Rsdt> {
-        // Cheat: let's first see what the length is, so that we can create an array for
-        // `try_from_bytes_mut`.
-        let header = unsafe { &*addr.as_ptr::<DescriptionHeader<Signature>>() };
-
-        // Safety: caller needs to guarantee this is valid.
-        let (rsdt, _) = Rsdt::try_from_bytes_mut(unsafe {
-            slice::from_raw_parts_mut(addr.as_mut_ptr::<u8>(), header.length as usize)
-        })?;
-
-        Ok(rsdt)
-    }
-
-    /// # Safety
-    /// Caller must ensure `addr` actually points to a RSDP (or where one could
-    /// reasonably be found). Caller must ensure only one mut ref exists at
-    /// a time.
-    pub unsafe fn new_mut(addr: VirtAddr) -> Result<&'static mut Rsdt> {
-        // Cheat: let's first see what the length is, so that we can create an array for
-        // `try_from_bytes_mut`.
-        let header = unsafe { &*addr.as_ptr::<DescriptionHeader<Signature>>() };
-
-        // Safety: caller needs to guarantee this is valid.
-        let (rsdt, _) = Rsdt::try_from_bytes_mut(unsafe {
-            slice::from_raw_parts_mut(addr.as_mut_ptr::<u8>(), header.length as usize)
-        })?;
-
-        Ok(rsdt)
     }
 
     /// Finds a validated header pointed at by this RSDT, by its

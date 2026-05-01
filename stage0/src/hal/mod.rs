@@ -27,7 +27,7 @@ pub use oak_hal::{Mmio, PageAssignment};
 use oak_stage0_dice::DerivedKey;
 use zerocopy::{FromBytes, IntoBytes};
 
-use crate::{acpi::tables::Rsdp, zero_page::ZeroPage};
+use crate::{acpi::tables::AcpiTables, zero_page::ZeroPage};
 
 #[cfg(test)]
 pub mod test_mocks {
@@ -89,7 +89,7 @@ pub trait FirmwarePlatform {
 
     /// Platform-specific modifications and validations of ACPI tables, starting
     /// from RSDP, including RSDT, XSDT, APIC aka MADT.
-    fn finalize_acpi_tables(rsdp: &mut dyn Rsdp) -> Result<(), &'static str>;
+    fn finalize_acpi_tables<'a>(acpi: &mut AcpiTables<'a>) -> Result<(), &'static str>;
 
     /// Platform-specific cleanups just before stage0 jumps to the kernel.
     ///

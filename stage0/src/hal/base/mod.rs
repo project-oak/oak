@@ -33,7 +33,7 @@ use x86_64::{
 use zerocopy::{FromBytes, IntoBytes};
 
 use super::{PageAssignment, PortFactory};
-use crate::{acpi::tables::Rsdp, paging::PageEncryption, zero_page::ZeroPage};
+use crate::{acpi::tables::AcpiTables, paging::PageEncryption, zero_page::ZeroPage};
 
 pub struct Base {}
 
@@ -106,7 +106,7 @@ impl super::FirmwarePlatform for Base {
         Err("not needed")
     }
 
-    fn finalize_acpi_tables(_rsdp: &mut dyn Rsdp) -> Result<(), &'static str> {
+    fn finalize_acpi_tables(_rsdp: &mut AcpiTables) -> Result<(), &'static str> {
         Ok(())
     }
 

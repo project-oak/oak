@@ -20,26 +20,13 @@ use core::fmt::Debug;
 use x86_64::VirtAddr;
 use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
-use crate::acpi::tables::{Result, Rsdt, Xsdt, signature};
+use crate::acpi::tables::{Result, Xsdt, signature};
 
 pub trait Rsdp: Debug {
     fn validate(&self) -> Result<()>;
 
     fn rsdt(&self) -> Option<VirtAddr>;
     fn xsdt(&self) -> Option<VirtAddr>;
-
-    /// # Safety
-    /// Caller must guarantee the RSDT pointer is valid.
-    unsafe fn rsdt_ref(&self) -> Option<Result<&Rsdt>> {
-        Some(unsafe { Rsdt::new(self.rsdt()?) })
-    }
-
-    /// # Safety
-    /// Caller must guarantee the RSDT pointer is valid.
-    /// Caller must ensure only one mut ref exists at a time.
-    unsafe fn rsdt_mut(&mut self) -> Option<Result<&mut Rsdt>> {
-        Some(unsafe { Rsdt::new_mut(self.rsdt()?) })
-    }
 
     /// # Safety
     /// Caller must guarantee the RSDT pointer is valid..
