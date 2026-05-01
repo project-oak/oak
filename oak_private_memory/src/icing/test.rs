@@ -441,4 +441,296 @@ mod tests {
         );
         assert!((search_result.results[0].score.unwrap() - 2.0).abs() < 1e-6);
     }
+
+    // ========================================================================
+    // Helpers for directory snapshot tests
+    // ========================================================================
+
+    use icing::InitializeStatsProto;
+
+    /// Returns true if `index_restoration_cause` indicates no rebuild occurred.
+    /// Proto2 uses `None` for the default value (NONE=0).
+    fn index_was_not_rebuilt(stats: &InitializeStatsProto) -> bool {
+        matches!(
+            stats.index_restoration_cause,
+            None | Some(0) // 0 == RecoveryCause::None
+        )
+    }
+
+    /// Returns true if `index_restoration_cause` indicates a rebuild occurred.
+    fn index_was_rebuilt(stats: &InitializeStatsProto) -> bool {
+        !index_was_not_rebuilt(stats)
+    }
+
+    /// Builds a simple text-only schema with a single "body" property.
+    fn build_text_schema() -> SchemaProto {
+        let body = create_property_config_builder();
+        body.set_name("body".as_bytes())
+            .set_data_type_string(
+                term_match_type::Code::Prefix.into(),
+                1, /* TOKENIZER_PLAIN */
+            )
+            .set_cardinality(property_config_proto::cardinality::Code::Required.into());
+
+        let schema_type = create_schema_type_config_builder();
+        schema_type.set_type("Message".as_bytes()).add_property(&body);
+
+        let builder = create_schema_builder();
+        builder.add_type(&schema_type);
+        builder.build().unwrap()
+    }
+
+    /// Builds a schema with "body" (text) + "embedding" (vector) properties.
+    fn build_text_and_embedding_schema() -> SchemaProto {
+        let body = create_property_config_builder();
+        body.set_name("body".as_bytes())
+            .set_data_type_string(
+                term_match_type::Code::Prefix.into(),
+                1, /* TOKENIZER_PLAIN */
+            )
+            .set_cardinality(property_config_proto::cardinality::Code::Required.into());
+
+        let embedding = create_property_config_builder();
+        embedding
+            .set_name("embedding".as_bytes())
+            .set_data_type_vector(
+                embedding_indexing_config::embedding_indexing_type::Code::LinearSearch.into(),
+            )
+            .set_cardinality(property_config_proto::cardinality::Code::Repeated.into());
+
+        let schema_type = create_schema_type_config_builder();
+        schema_type.set_type("Message".as_bytes()).add_property(&body).add_property(&embedding);
+
+        let builder = create_schema_builder();
+        builder.add_type(&schema_type);
+        builder.build().unwrap()
+    }
+
+    /// Returns `(engine, init_stats)`. The engine has schema already set.
+    fn init_engine(
+        dir: &str,
+        schema: &SchemaProto,
+    ) -> (impl std::ops::Deref<Target = IcingSearchEngine>, InitializeStatsProto) {
+        let options_bytes = get_default_icing_options(dir).encode_to_vec();
+        let engine = create_icing_search_engine(&options_bytes);
+        let result = engine.initialize().unwrap();
+        assert_eq!(result.status.unwrap().code, Some(status_proto::Code::Ok.into()));
+        let stats = result.initialize_stats.expect("initialize_stats should be present");
+        let schema_result = engine.set_schema(schema).unwrap();
+        assert_eq!(schema_result.status.unwrap().code, Some(status_proto::Code::Ok.into()));
+        (engine, stats)
+    }
+
+    /// Returns `(engine, init_stats)`. No schema is set.
+    fn init_engine_raw(
+        dir: &str,
+    ) -> (impl std::ops::Deref<Target = IcingSearchEngine>, InitializeStatsProto) {
+        let options_bytes = get_default_icing_options(dir).encode_to_vec();
+        let engine = create_icing_search_engine(&options_bytes);
+        let result = engine.initialize().unwrap();
+        assert_eq!(result.status.unwrap().code, Some(status_proto::Code::Ok.into()));
+        let stats = result.initialize_stats.expect("initialize_stats should be present");
+        (engine, stats)
+    }
+
+    /// Adds `count` documents with body "document body number {i}".
+    fn add_text_documents(engine: &IcingSearchEngine, count: usize) {
+        for i in 0..count {
+            let body = format!("document body number {}", i);
+            let uri = format!("uri{}", i);
+            let doc = create_document_builder()
+                .set_key("namespace".as_bytes(), uri.as_bytes())
+                .set_schema("Message".as_bytes())
+                .add_string_property("body".as_bytes(), &[body.as_bytes()])
+                .set_creation_timestamp_ms(1575492852000 + i as u64)
+                .build()
+                .unwrap();
+            let result = engine.put(&doc).unwrap();
+            assert_eq!(result.status.unwrap().code, Some(status_proto::Code::Ok.into()));
+        }
+    }
+
+    /// Persists to disk and exports `IcingGroundTruthFiles` (with snapshot).
+    fn export_snapshot(engine: &IcingSearchEngine, dir: &str) -> icing::IcingGroundTruthFiles {
+        let result = engine.persist_to_disk(persist_type::Code::Full.into());
+        let result = icing::PersistToDiskResultProto::decode(result.as_slice()).unwrap();
+        assert_eq!(result.status.unwrap().code, Some(status_proto::Code::Ok.into()));
+        icing::IcingGroundTruthFiles::new(dir).unwrap()
+    }
+
+    /// Runs a text search for `query` and returns the number of results.
+    fn text_search(engine: &IcingSearchEngine, query: &str) -> usize {
+        let search_spec = SearchSpecProto {
+            term_match_type: Some(term_match_type::Code::Prefix.into()),
+            query: Some(query.to_string()),
+            ..Default::default()
+        };
+        let result_spec = ResultSpecProto { num_per_page: Some(100), ..Default::default() };
+        let search_result =
+            engine.search(&search_spec, &get_default_scoring_spec(), &result_spec).unwrap();
+        search_result.results.len()
+    }
+
+    // ========================================================================
+    // Directory snapshot tests
+    // ========================================================================
+
+    /// Verifies that export captures non-ground-truth files (indices) in
+    /// `directory_snapshot`, and that proto round-trip preserves them.
+    #[test]
+    fn directory_snapshot_round_trip_test() -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempdir().unwrap();
+        let schema = build_text_schema();
+        let (engine, _stats) = init_engine(temp_dir.path().to_str().unwrap(), &schema);
+        add_text_documents(&engine, 1);
+
+        let ground_truth = export_snapshot(&engine, temp_dir.path().to_str().unwrap());
+        assert!(
+            !ground_truth.directory_snapshot.is_empty(),
+            "directory_snapshot should contain index files"
+        );
+
+        // Proto round-trip should preserve everything.
+        let encoded = ground_truth.encode_to_vec();
+        let decoded = icing::IcingGroundTruthFiles::decode(&*encoded)?;
+        assert_eq!(ground_truth, decoded);
+        assert_eq!(ground_truth.directory_snapshot.len(), decoded.directory_snapshot.len());
+
+        Ok(())
+    }
+
+    /// Verifies that migrating with directory_snapshot restores index files,
+    /// so Icing's initialize() skips index rebuild. Checks
+    /// `index_restoration_cause == NONE`.
+    #[test]
+    fn directory_snapshot_skips_index_rebuild_test() -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempdir().unwrap();
+        let schema = build_text_schema();
+        let (engine, _stats) = init_engine(temp_dir.path().to_str().unwrap(), &schema);
+        add_text_documents(&engine, 10);
+
+        let ground_truth = export_snapshot(&engine, temp_dir.path().to_str().unwrap());
+        assert!(!ground_truth.directory_snapshot.is_empty());
+
+        // Proto round-trip (simulates serialization over the wire).
+        let serialized = ground_truth.encode_to_vec();
+        let restored = icing::IcingGroundTruthFiles::decode(&*serialized)?;
+
+        // Migrate to a new directory.
+        let migrated_dir = tempdir().unwrap();
+        let migrated_dir_str = migrated_dir.path().to_str().unwrap();
+        restored.migrate(migrated_dir_str)?;
+
+        // Initialize and check that no index rebuild occurred.
+        let (engine, stats) = init_engine_raw(migrated_dir_str);
+        assert!(
+            index_was_not_rebuilt(&stats),
+            "index should NOT be rebuilt when snapshot provides index files, \
+             but got index_restoration_cause={:?}",
+            stats.index_restoration_cause,
+        );
+
+        // Set schema and verify search still works.
+        let result = engine.set_schema(&schema).unwrap();
+        assert_eq!(result.status.unwrap().code, Some(status_proto::Code::Ok.into()));
+        assert_eq!(text_search(&engine, "number"), 10);
+
+        Ok(())
+    }
+
+    /// Verifies that migrating WITHOUT directory_snapshot forces index rebuild.
+    /// Checks `index_restoration_cause == INCONSISTENT_WITH_GROUND_TRUTH`.
+    #[test]
+    fn no_snapshot_forces_index_rebuild_test() -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempdir().unwrap();
+        let schema = build_text_schema();
+        let (engine, _stats) = init_engine(temp_dir.path().to_str().unwrap(), &schema);
+        add_text_documents(&engine, 10);
+
+        let mut ground_truth = export_snapshot(&engine, temp_dir.path().to_str().unwrap());
+
+        // Clear snapshot to simulate legacy data (ground truth only).
+        ground_truth.directory_snapshot.clear();
+
+        // Migrate and initialize.
+        let migrated_dir = tempdir().unwrap();
+        let migrated_dir_str = migrated_dir.path().to_str().unwrap();
+        ground_truth.migrate(migrated_dir_str)?;
+
+        let (engine, stats) = init_engine_raw(migrated_dir_str);
+        assert!(
+            index_was_rebuilt(&stats),
+            "index SHOULD be rebuilt when no snapshot is present, \
+             but got index_restoration_cause={:?}",
+            stats.index_restoration_cause,
+        );
+
+        // Set schema and verify search still works after rebuild.
+        let result = engine.set_schema(&schema).unwrap();
+        assert_eq!(result.status.unwrap().code, Some(status_proto::Code::Ok.into()));
+        assert_eq!(text_search(&engine, "number"), 10);
+
+        Ok(())
+    }
+
+    /// Verifies that Icing gracefully handles schema changes when stale index
+    /// files from a previous schema are present via directory_snapshot.
+    #[test]
+    fn directory_snapshot_schema_change_test() -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempdir().unwrap();
+        let schema_v1 = build_text_schema();
+        let (engine, _stats) = init_engine(temp_dir.path().to_str().unwrap(), &schema_v1);
+        add_text_documents(&engine, 5);
+
+        // Export with v1 schema (snapshot contains v1 index).
+        let ground_truth = export_snapshot(&engine, temp_dir.path().to_str().unwrap());
+        assert!(!ground_truth.directory_snapshot.is_empty());
+
+        // Migrate to new directory.
+        let migrated_dir = tempdir().unwrap();
+        let migrated_dir_str = migrated_dir.path().to_str().unwrap();
+        ground_truth.migrate(migrated_dir_str)?;
+
+        // Initialize — index is present from snapshot, no rebuild.
+        let (engine, stats) = init_engine_raw(migrated_dir_str);
+        assert!(
+            index_was_not_rebuilt(&stats),
+            "initial load with matching snapshot should not rebuild, \
+             but got index_restoration_cause={:?}",
+            stats.index_restoration_cause,
+        );
+
+        // Apply schema v2 (adds embedding property) — Icing should handle
+        // the compatible schema change gracefully.
+        let schema_v2 = build_text_and_embedding_schema();
+        let set_schema_result = engine.set_schema(&schema_v2).unwrap();
+        assert_eq!(
+            set_schema_result.status.unwrap().code,
+            Some(status_proto::Code::Ok.into()),
+            "set_schema with compatible v2 schema should succeed"
+        );
+
+        // Old v1 documents should still be searchable.
+        assert_eq!(text_search(&engine, "document"), 5);
+
+        // New v2 document with embedding should be insertable.
+        let new_doc = create_document_builder()
+            .set_key("namespace".as_bytes(), "uri_v2".as_bytes())
+            .set_schema("Message".as_bytes())
+            .add_string_property("body".as_bytes(), &["new v2 document".as_bytes()])
+            .add_vector_property(
+                "embedding".as_bytes(),
+                &[create_vector_proto("model", &[1.0, 2.0, 3.0])],
+            )
+            .set_creation_timestamp_ms(1575492853000)
+            .build()
+            .unwrap();
+        let put_result = engine.put(&new_doc).unwrap();
+        assert_eq!(put_result.status.unwrap().code, Some(status_proto::Code::Ok.into()));
+
+        // All 6 documents (5 v1 + 1 v2) should be searchable.
+        assert_eq!(text_search(&engine, "document"), 6);
+
+        Ok(())
+    }
 }

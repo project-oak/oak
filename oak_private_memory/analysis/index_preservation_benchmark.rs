@@ -154,7 +154,11 @@ struct TimingStats {
     _min_ms: f64,
     avg_ms: f64,
     _max_ms: f64,
-    avg_icing_ms: f64,
+    /// Average time for migration/file restoration (proto decode + tar extract
+    /// or file copy).
+    avg_migrate_ms: f64,
+    /// Average time for icing initialize() only.
+    avg_init_ms: f64,
 }
 
 /// Strategy A: ground truth only (current approach).
@@ -162,7 +166,9 @@ struct TimingStats {
 fn measure_ground_truth_init(db: &IcingMetaDatabase, iterations: u32) -> Result<TimingStats> {
     use icing::{create_icing_search_engine, get_default_icing_options};
 
-    let ground_truth = db.export()?;
+    let mut ground_truth = db.export()?;
+    // Clear directory_snapshot to force index rebuild (ground truth only).
+    ground_truth.directory_snapshot.clear();
 
     let mut ext_ms = Vec::with_capacity(iterations as usize);
     let mut icing_ms = Vec::with_capacity(iterations as usize);
@@ -185,7 +191,8 @@ fn measure_ground_truth_init(db: &IcingMetaDatabase, iterations: u32) -> Result<
         _min_ms: ext_ms.iter().cloned().fold(f64::INFINITY, f64::min),
         avg_ms: ext_ms.iter().sum::<f64>() / iterations as f64,
         _max_ms: ext_ms.iter().cloned().fold(0.0, f64::max),
-        avg_icing_ms: icing_ms.iter().sum::<f64>() / iterations as f64,
+        avg_migrate_ms: 0.0,
+        avg_init_ms: icing_ms.iter().sum::<f64>() / iterations as f64,
     })
 }
 
@@ -223,7 +230,56 @@ fn measure_full_copy_init(source_dir: &str, iterations: u32) -> Result<TimingSta
         _min_ms: ext_ms.iter().cloned().fold(f64::INFINITY, f64::min),
         avg_ms: ext_ms.iter().sum::<f64>() / iterations as f64,
         _max_ms: ext_ms.iter().cloned().fold(0.0, f64::max),
-        avg_icing_ms: icing_ms.iter().sum::<f64>() / iterations as f64,
+        avg_migrate_ms: 0.0,
+        avg_init_ms: icing_ms.iter().sum::<f64>() / iterations as f64,
+    })
+}
+
+/// Strategy C: proto round-trip with directory_snapshot (production code path).
+/// Exports IcingGroundTruthFiles (with directory_snapshot), encodes to bytes,
+/// decodes, migrates to a new directory, and initializes.
+fn measure_snapshot_round_trip_init(
+    db: &IcingMetaDatabase,
+    iterations: u32,
+) -> Result<TimingStats> {
+    use icing::{create_icing_search_engine, get_default_icing_options};
+
+    // Export once (includes directory_snapshot).
+    let ground_truth = db.export()?;
+    let encoded = ground_truth.encode_to_vec();
+
+    let mut ext_ms = Vec::with_capacity(iterations as usize);
+    let mut migrate_ms = Vec::with_capacity(iterations as usize);
+    let mut icing_ms = Vec::with_capacity(iterations as usize);
+
+    for _ in 0..iterations {
+        let restore_dir = IcingTempDir::new("icing-snapshot-rt-");
+
+        let start = Instant::now();
+        // Decode proto (simulates deserialization from storage).
+        let decoded = icing::IcingGroundTruthFiles::decode(encoded.as_slice())?;
+        // Migrate: writes ground truth files + extracts directory_snapshot tar.
+        decoded.migrate(restore_dir.as_str())?;
+        let migrate_elapsed = start.elapsed().as_secs_f64() * 1000.0;
+
+        // Initialize (should skip index rebuild).
+        let init_start = Instant::now();
+        let options = get_default_icing_options(restore_dir.as_str()).encode_to_vec();
+        let engine = create_icing_search_engine(&options);
+        let _result = engine.initialize()?;
+        let init_elapsed = init_start.elapsed().as_secs_f64() * 1000.0;
+
+        ext_ms.push(migrate_elapsed + init_elapsed);
+        migrate_ms.push(migrate_elapsed);
+        icing_ms.push(init_elapsed);
+    }
+
+    Ok(TimingStats {
+        _min_ms: ext_ms.iter().cloned().fold(f64::INFINITY, f64::min),
+        avg_ms: ext_ms.iter().sum::<f64>() / iterations as f64,
+        _max_ms: ext_ms.iter().cloned().fold(0.0, f64::max),
+        avg_migrate_ms: migrate_ms.iter().sum::<f64>() / iterations as f64,
+        avg_init_ms: icing_ms.iter().sum::<f64>() / iterations as f64,
     })
 }
 
@@ -253,18 +309,19 @@ fn main() -> Result<()> {
 
     // Print header
     println!(
-        "| {:>10} | {:>12} | {:>12} | {:>14} | {:>14} | {:>14} | {:>14} | {:>10} |",
+        "| {:>10} | {:>12} | {:>12} | {:>14} | {:>14} | {:>14} | {:>14} | {:>14} | {:>10} |",
         "Embeddings",
         "GT Size",
         "Total Size",
         "GT Rebuild(ms)",
         "FullCopy(ms)",
-        "Init Only(ms)",
-        "Savings(ms)",
+        "Snap Tar(ms)",
+        "Snap Init(ms)",
+        "Snap Total(ms)",
         "Speedup"
     );
     println!(
-        "|------------|--------------|--------------|----------------|----------------|----------------|----------------|------------|"
+        "|------------|--------------|--------------|----------------|----------------|----------------|----------------|----------------|------------|"
     );
 
     for &count in &counts {
@@ -297,18 +354,23 @@ fn main() -> Result<()> {
         }
         let fc_stats = measure_full_copy_init(&dir_path, args.iterations)?;
 
-        let savings = gt_stats.avg_ms - fc_stats.avg_ms;
-        let speedup = gt_stats.avg_ms / fc_stats.avg_ms;
+        if args.verbose {
+            eprintln!("measuring snapshot round-trip...");
+        }
+        let snap_stats = measure_snapshot_round_trip_init(&db, args.iterations)?;
+
+        let speedup = gt_stats.avg_ms / snap_stats.avg_ms;
 
         println!(
-            "| {:>10} | {:>12} | {:>12} | {:>14.1} | {:>14.1} | {:>14.1} | {:>14.1} | {:>9.1}x |",
+            "| {:>10} | {:>12} | {:>12} | {:>14.1} | {:>14.1} | {:>14.1} | {:>14.1} | {:>14.1} | {:>9.1}x |",
             count,
             format_bytes(gt_size),
             format_bytes(total_size),
             gt_stats.avg_ms,
             fc_stats.avg_ms,
-            fc_stats.avg_icing_ms,
-            savings,
+            snap_stats.avg_migrate_ms,
+            snap_stats.avg_init_ms,
+            snap_stats.avg_ms,
             speedup,
         );
 

@@ -22,16 +22,26 @@ syntax = "proto3";
 package oak.private_memory;
 import "proto/sealed_memory.proto";
 
-// Contains all the ground truths files of an icing database.
+// Contains all the ground truth files of an icing database, plus an optional
+// tar archive of the full directory for fast cold-start recovery.
 //
-// Can be used to rebuild the original database.
-// It allows exporting an icing database as a byte array, so we can
-// store it as a blob.
+// The four ground truth fields (schema_pb, overlay_schema_pb,
+// schema_store_header, document_log) are sufficient to rebuild the database
+// from scratch. When directory_snapshot is populated, importing extracts the
+// full directory — including pre-built indices — so that Icing's initialize()
+// skips the expensive index rebuild.
 message IcingGroundTruthFiles {
   bytes schema_pb = 1;
   bytes overlay_schema_pb = 2;
   bytes schema_store_header = 3;
   bytes document_log = 4;
+
+  // Tar archive of the non-ground-truth files in the Icing directory (indices,
+  // embedding index, etc.). Excludes the four ground truth files above to avoid
+  // storing duplicate data. On import, fields 1-4 are restored first, then this
+  // archive is extracted on top to add index files. Backward compatible: old
+  // data has this empty and falls back to index rebuild on initialize().
+  bytes directory_snapshot = 5;
 }
 
 message EncryptedDataBlob {

@@ -43,6 +43,8 @@ rust_library(
         "//src/icing/proto:icing_rust_proto",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost",
+        "@oak_crates_index//:tar",
+        "@oak_crates_index//:walkdir",
         "@pm_crates//:cxx",
     ],
 )

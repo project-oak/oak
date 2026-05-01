@@ -15,7 +15,9 @@
 //
 
 use std::{
+    collections::HashSet,
     fs,
+    io::Cursor,
     path::{Path, PathBuf},
 };
 
@@ -25,6 +27,7 @@ pub use icing_ffi_bridge::*;
 use icing_rust_proto::icing::lib::scoring_spec_proto::ranking_strategy;
 pub use icing_rust_proto::icing::lib::*;
 pub use sealed_memory_rust_proto::oak::private_memory::IcingGroundTruthFiles;
+use walkdir::WalkDir;
 
 use crate::property_proto::VectorProto;
 
@@ -65,58 +68,74 @@ impl IcingGroundTruthFilesHelper for IcingGroundTruthFiles {
             );
         }
 
-        // Read file contents
+        // Read ground truth file contents.
         let schema_pb = fs::read(&schema_pb_path)
-            .with_context(|| format!("Failed to read {}", schema_pb_path.display()))?;
+            .with_context(|| format!("reading {}", schema_pb_path.display()))?;
         let schema_store_header = fs::read(&schema_store_header_path)
-            .with_context(|| format!("Failed to read {}", schema_store_header_path.display()))?;
+            .with_context(|| format!("reading {}", schema_store_header_path.display()))?;
         let document_log = fs::read(&document_log_path)
-            .with_context(|| format!("Failed to read {}", document_log_path.display()))?;
+            .with_context(|| format!("reading {}", document_log_path.display()))?;
 
         let overlay_schema_pb = if overlay_schema_pb_path.is_file() {
             fs::read(&overlay_schema_pb_path)
-                .with_context(|| format!("Failed to read {}", overlay_schema_pb_path.display()))?
+                .with_context(|| format!("reading {}", overlay_schema_pb_path.display()))?
         } else {
             vec![]
         };
 
-        Ok(Self { schema_pb, overlay_schema_pb, schema_store_header, document_log })
+        // Tar all non-ground-truth files (index, embedding index, etc.) into
+        // directory_snapshot so that import can restore them without rebuilding.
+        let directory_snapshot =
+            create_directory_snapshot(base_path).context("creating directory snapshot")?;
+
+        Ok(Self {
+            schema_pb,
+            overlay_schema_pb,
+            schema_store_header,
+            document_log,
+            directory_snapshot,
+        })
     }
 
-    /// Recreates the ground truth files in the specified new directory path.
+    /// Recreates the database files in the specified new directory path.
+    ///
+    /// First restores the four ground truth files (fields 1-4). Then, if
+    /// `directory_snapshot` is non-empty, extracts the tar archive on top to
+    /// restore index files — eliminating the need for Icing to rebuild indices
+    /// on `initialize()`.
     fn migrate(&self, new_path: &str) -> Result<()> {
         let new_base_dir = PathBuf::from(new_path);
 
-        // Ensure the target path is empty by removing it if it exists
+        // Ensure the target path is empty by removing it if it exists.
         if new_base_dir.exists() {
             if new_base_dir.is_dir() {
                 fs::remove_dir_all(&new_base_dir).with_context(|| {
-                    format!("Failed to remove existing directory {}", new_base_dir.display())
+                    format!("removing existing directory {}", new_base_dir.display())
                 })?;
             } else {
                 fs::remove_file(&new_base_dir).with_context(|| {
-                    format!("Failed to remove existing file {}", new_base_dir.display())
+                    format!("removing existing file {}", new_base_dir.display())
                 })?;
             }
         }
 
-        // Create base directory and subdirectories
+        // Create base directory and subdirectories for ground truth files.
         create_subdir(&new_base_dir, "schema_dir")?;
         create_subdir(&new_base_dir, "document_dir")?;
 
-        // Write schema_pb
+        // Write ground truth files.
         write_file(&new_base_dir, SCHEMA_PB_PATH, &self.schema_pb)?;
-
-        // Write overlay_schema_pb if it exists
         if !self.overlay_schema_pb.is_empty() {
             write_file(&new_base_dir, OVERLAY_SCHEMA_PB_PATH, &self.overlay_schema_pb)?;
         }
-
-        // Write schema_store_header
         write_file(&new_base_dir, SCHEMA_STORE_HEADER_PATH, &self.schema_store_header)?;
-
-        // Write document_log
         write_file(&new_base_dir, DOCUMENT_LOG_PATH, &self.document_log)?;
+
+        // Extract index files from the directory snapshot if present.
+        if !self.directory_snapshot.is_empty() {
+            extract_directory_snapshot(&new_base_dir, &self.directory_snapshot)
+                .context("extracting directory snapshot")?;
+        }
 
         Ok(())
     }
@@ -129,8 +148,52 @@ fn create_subdir(base_dir: &Path, subdir_name: &str) -> Result<()> {
 
 fn write_file(base_dir: &Path, relative_path: &str, data: &[u8]) -> Result<()> {
     let target_path = base_dir.join(relative_path);
-    fs::write(&target_path, data)
-        .with_context(|| format!("Failed to write {}", target_path.display()))
+    fs::write(&target_path, data).with_context(|| format!("writing {}", target_path.display()))
+}
+
+/// Ground truth relative paths that are stored in dedicated proto fields and
+/// excluded from the tar archive to avoid duplication.
+fn ground_truth_paths() -> HashSet<&'static str> {
+    HashSet::from([
+        SCHEMA_PB_PATH,
+        OVERLAY_SCHEMA_PB_PATH,
+        SCHEMA_STORE_HEADER_PATH,
+        DOCUMENT_LOG_PATH,
+    ])
+}
+
+/// Creates a tar archive of all files in `base_dir` except the ground truth
+/// files (which are stored in dedicated proto fields).
+fn create_directory_snapshot(base_dir: &Path) -> Result<Vec<u8>> {
+    let excluded = ground_truth_paths();
+    let mut builder = tar::Builder::new(Vec::new());
+
+    for entry in WalkDir::new(base_dir).into_iter() {
+        let entry = entry.context("walking directory")?;
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let relative = path.strip_prefix(base_dir).context("stripping base dir prefix")?;
+        let relative_str = relative.to_str().context("non-utf8 path")?;
+        if excluded.contains(relative_str) {
+            continue;
+        }
+        builder
+            .append_path_with_name(path, relative)
+            .with_context(|| format!("archiving {}", relative_str))?;
+    }
+
+    builder.finish().context("finishing tar archive")?;
+    builder.into_inner().context("extracting tar bytes")
+}
+
+/// Extracts a tar archive into `target_dir`, creating parent directories as
+/// needed.
+fn extract_directory_snapshot(target_dir: &Path, snapshot: &[u8]) -> Result<()> {
+    let cursor = Cursor::new(snapshot);
+    let mut archive = tar::Archive::new(cursor);
+    archive.unpack(target_dir).context("unpacking directory snapshot")
 }
 
 pub fn get_default_icing_options(base_dir: &str) -> IcingSearchEngineOptions {
