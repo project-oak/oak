@@ -147,13 +147,22 @@ pub fn build_acpi_tables<P: crate::Platform + crate::FirmwarePlatform>(
         command.invoke(&mut files, fwcfg, pci_windows.as_ref(), acpi_digest)?;
     }
 
-    // Strictly speaking we should search through the low memory to find the RSDP,
-    // but for practical purposes we know that the VMs we care about end the file
-    // that contains the file with `acpi/rsdp` (the prefix may vary), so let's look
-    // up just that file.
-    let rsdp = files.find_file_suffix_mut(c"acpi/rsdp").ok_or("RSDP file not found")?;
+    // Up until this point, we've dealt with fw_cfg files. Now we need to deal with
+    // the _contents_ of the files as data structures. Ideally there'd be a way how
+    // to take the bunch of `Box<[u8]>` structures and turn them into boxed ACPI
+    // tables _without moving_, but there is not, so we need to keep track of things
+    // by hand.
+    //
+    // When leaking the files, we lose the file name, so we first need to make a
+    // note of where the &[u8] that includes the RSDP was.
+    let rsdp_addr =
+        VirtAddr::from_ptr(files.find_file_suffix_mut(c"acpi/rsdp").ok_or("RSDP file not found")?);
 
-    // Safety: we ensure that the RSDP is valid before returning a reference to it.
+    // Ensure the tables stick around by leaking the memory holding them.
+    let mut contents = files.leak();
+
+    // One of these must have been the RSDP.
+    let rsdp = contents.extract_if(.., |s| VirtAddr::from_ptr(*s) == rsdp_addr).next().unwrap();
     let rsdp = <dyn Rsdp>::try_from_bytes_mut(rsdp)?;
 
     log::info!("ACPI tables before finalizing:");
@@ -164,11 +173,6 @@ pub fn build_acpi_tables<P: crate::Platform + crate::FirmwarePlatform>(
 
     log::info!("ACPI tables after finalizing:");
     debug_print_acpi_tables(rsdp)?;
-
-    let rsdp_addr = VirtAddr::from_ptr(rsdp);
-
-    // Ensure the tables stick around by leaking the memory holding them.
-    files.leak();
 
     Ok(rsdp_addr)
 }

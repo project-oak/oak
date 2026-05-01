@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use alloc::{alloc::Global, boxed::Box, collections::BTreeMap, ffi::CString};
+use alloc::{alloc::Global, boxed::Box, collections::BTreeMap, ffi::CString, vec::Vec};
 use core::{
     alloc::{Allocator, Layout},
     borrow::{Borrow, BorrowMut},
@@ -75,19 +75,15 @@ pub enum File<'a, 'b, L: Allocator, H: Allocator> {
     Fake(core::ptr::NonNull<u8>),
 }
 
-impl<L: Allocator, H: Allocator> File<'_, '_, L, H> {
+impl<L: Allocator, H: Allocator> File<'static, 'static, L, H> {
     /// Leaks the memory owned by this file, if any.
-    pub fn leak(self) {
+    pub fn leak<'a>(self) -> &'a mut [u8] {
         match self {
-            Self::Low(file) => {
-                Box::leak(file);
-            }
-            Self::High(file) => {
-                Box::leak(file);
-            }
+            Self::Low(file) => Box::leak(file),
+            Self::High(file) => Box::leak(file),
             #[cfg(test)]
-            Self::Fake(_) => {}
-        };
+            Self::Fake(_) => &mut [],
+        }
     }
 }
 
@@ -143,10 +139,8 @@ impl<L: Allocator + 'static, H: Allocator + 'static> MemFiles<L, H> {
     ///
     /// As MemFiles is just glorified bag of `Box`-es, this just calls
     /// `Box::leak` on all of them.
-    pub fn leak(self) {
-        for file in self.files.into_values() {
-            file.leak();
-        }
+    pub fn leak<'a>(self) -> Vec<&'a mut [u8]> {
+        self.files.into_values().map(|file| file.leak()).collect()
     }
 
     #[cfg(test)]
