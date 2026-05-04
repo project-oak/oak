@@ -65,3 +65,5 @@ printf "%05d\n" $(shuf --input-range=0-99999 --head-count=1)
   [Published binary](https://github.com/project-oak/oak/blob/main/docs/tr/claim/52637.md)
 - `75606`
   [Secure logging](https://github.com/project-oak/oak/blob/main/docs/tr/claim/75606.md)
+- `07088`
+  [Type](https://github.com/project-oak/oak/blob/main/docs/tr/claim/07088.md)
