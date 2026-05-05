@@ -17,5 +17,5 @@ fi
 
 readonly file=sysroot.tar.xz
 readonly hash=$(sha256sum "${file}" | cut -d " " -f 1)
-gsutil cp "${file}" "gs://oak-bins/sysroot/${hash}.tar.xz"
-gsutil cp "${file}" "gs://oak-files/sha2-256:${hash}"
+gcloud storage cp "${file}" "gs://oak-bins/sysroot/${hash}.tar.xz"
+gcloud storage cp "${file}" "gs://oak-files/sha2-256:${hash}"

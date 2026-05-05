@@ -31,7 +31,7 @@ usage_and_exit() {
 }
 
 copy_file() {
-  gsutil cp -n "$1" "$2"
+  gcloud storage cp --no-clobber "$1" "$2"
 }
 
 # Uploads a file and returns its SHA2_256 hash.
