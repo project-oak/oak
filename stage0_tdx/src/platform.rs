@@ -273,16 +273,13 @@ fn handle_legacy_smbios(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
 pub struct Tdx {}
 
 impl Platform for Tdx {
-    type Mmio<S: x86_64::structures::paging::page::PageSize> = Mmio;
+    type Mmio = Mmio;
 
     fn cpuid(leaf: u32) -> core::arch::x86_64::CpuidResult {
         call_cpuid(leaf, 0).unwrap()
     }
 
-    unsafe fn mmio<S>(_: x86_64::addr::PhysAddr) -> <Self as Platform>::Mmio<S>
-    where
-        S: x86_64::structures::paging::page::PageSize,
-    {
+    unsafe fn mmio(_: x86_64::addr::PhysAddr) -> <Self as Platform>::Mmio {
         todo!()
     }
 

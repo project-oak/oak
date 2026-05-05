@@ -24,7 +24,7 @@ use oak_stage0::{
     Lapic, LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp, disable_pic8259,
     hal::Platform,
 };
-use x86_64::{PhysAddr, structures::paging::Size4KiB};
+use x86_64::PhysAddr;
 
 unsafe extern "C" {
     #[link_name = "ap_start"]
@@ -39,7 +39,7 @@ unsafe extern "C" {
 static LIVE_AP_COUNT: AtomicU32 = AtomicU32::new(0);
 
 pub fn start_ap<P: Platform>(
-    lapic: &mut Lapic<P::Mmio<Size4KiB>>,
+    lapic: &mut Lapic<P::Mmio>,
     physical_apic_id: u32,
 ) -> Result<(), &'static str> {
     lapic.send_init_ipi::<P>(physical_apic_id)?;
@@ -91,7 +91,7 @@ pub fn bootstrap_aps<P: Platform>(rsdp: &dyn Rsdp) -> Result<(), &'static str> {
     // APs via the APIC. Safety: we can reasonably expect the PICs to be
     // available.
     unsafe { disable_pic8259::<P>()? };
-    let mut lapic = Lapic::<P::Mmio<Size4KiB>>::enable::<P>()?;
+    let mut lapic = Lapic::<P::Mmio>::enable::<P>()?;
 
     let local_apic_id = lapic.local_apic_id();
 

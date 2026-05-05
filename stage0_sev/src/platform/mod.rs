@@ -36,7 +36,7 @@ use oak_stage0::{
     hal::{Base, FirmwarePlatform, PortFactory},
 };
 use spinning_top::{RawSpinlock, Spinlock, lock_api::MutexGuard};
-use x86_64::{PhysAddr, VirtAddr, structures::paging::PageSize};
+use x86_64::{PhysAddr, VirtAddr};
 use zerocopy::{FromBytes, IntoBytes};
 
 #[unsafe(link_section = ".boot")]
@@ -150,7 +150,7 @@ impl IntoMsrPageAssignment for PageAssignment {
 pub struct Sev {}
 
 impl Platform for Sev {
-    type Mmio<S: PageSize> = mmio::Mmio<S>;
+    type Mmio = mmio::Mmio;
 
     fn cpuid(leaf: u32) -> CpuidResult {
         if let Some(mut ghcb) = GHCB_WRAPPER.get() {
@@ -160,9 +160,7 @@ impl Platform for Sev {
         }
     }
 
-    unsafe fn mmio<S: x86_64::structures::paging::PageSize>(
-        base_address: PhysAddr,
-    ) -> Self::Mmio<S> {
+    unsafe fn mmio(base_address: PhysAddr) -> Self::Mmio {
         unsafe { mmio::Mmio::new(base_address) }
     }
 

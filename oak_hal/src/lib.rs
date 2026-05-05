@@ -23,7 +23,7 @@ use x86_64::{
     PhysAddr,
     instructions::port::Port as X86Port,
     structures::{
-        paging::{Page, PageSize, Size4KiB},
+        paging::{Page, Size4KiB},
         port::{PortRead, PortWrite},
     },
 };
@@ -82,7 +82,7 @@ where
 /// Normally you can just access the memory directly via
 /// `read_volatile`/`write_volatile`, but for SEV-ES and above we need to go via
 /// the GHCB to do MMIO.
-pub trait Mmio<S: PageSize> {
+pub trait Mmio {
     /// Reads an u32 from the MMIO memory region.
     ///
     /// The offset is the number of u32-s (not byte offsets); that is, to read
@@ -103,6 +103,9 @@ pub trait Mmio<S: PageSize> {
     /// The caller needs to guarantee that the value is valid for the register
     /// it is written to.
     unsafe fn write_u32(&mut self, offset: usize, value: u32);
+
+    /// Gets the size in bytes of the MMIO memory region.
+    fn region_size(&self) -> usize;
 }
 
 /// Whether a memory page is private to the guest or shared with the hypervisor.
@@ -127,7 +130,7 @@ pub enum PageEncryption {
 }
 
 pub trait Platform: MsrAccess {
-    type Mmio<S: PageSize>: Mmio<S>;
+    type Mmio: Mmio;
 
     /// Performs the CPUID instruction.
     fn cpuid(leaf: u32) -> CpuidResult;
@@ -137,7 +140,7 @@ pub trait Platform: MsrAccess {
     //   - base_address is aligned to u32
     //   - we've checked it's within the page size
     //   - we were promised that he memory is valid
-    unsafe fn mmio<S: PageSize + 'static>(base_address: PhysAddr) -> Self::Mmio<S>;
+    unsafe fn mmio(base_address: PhysAddr) -> Self::Mmio;
 
     fn port_factory() -> PortFactory;
 

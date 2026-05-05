@@ -14,14 +14,28 @@
 // limitations under the License.
 //
 use oak_tdx_guest::vmcall::{mmio_read_u32, mmio_write_u32};
+use x86_64::structures::paging::{PageSize, Size4KiB};
 
 pub struct Mmio {}
 
-impl<S: x86_64::structures::paging::page::PageSize> oak_stage0::hal::Mmio<S> for Mmio {
+impl oak_stage0::hal::Mmio for Mmio {
     fn read_u32(&self, offset: usize) -> u32 {
+        let offset = offset * size_of::<u32>();
+        if offset >= Size4KiB::SIZE as usize {
+            panic!("invalid MMIO access for read: offset would read beyond memory boundary");
+        }
         mmio_read_u32(offset as *const u32).unwrap()
     }
+
     unsafe fn write_u32(&mut self, offset: usize, val: u32) {
+        let offset = offset * size_of::<u32>();
+        if offset >= Size4KiB::SIZE as usize {
+            panic!("invalid MMIO access for write: offset would write beyond memory boundary");
+        }
         mmio_write_u32(offset as *mut u32, val).unwrap()
+    }
+
+    fn region_size(&self) -> usize {
+        Size4KiB::SIZE as usize
     }
 }

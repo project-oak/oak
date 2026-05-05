@@ -17,6 +17,7 @@
 use alloc::{boxed::Box, collections::VecDeque, string::String, vec::Vec};
 use core::{
     alloc::{Allocator, Layout},
+    mem::size_of,
     ptr::NonNull,
 };
 
@@ -27,18 +28,21 @@ use aml::{
 use anyhow::anyhow;
 use bitflags::bitflags;
 use log::info;
+use oak_hal::Mmio as HalMmio;
 use spinning_top::Spinlock;
 use virtio_drivers::{
     BufferDirection, Hal, PAGE_SIZE,
     queue::VirtQueue,
-    transport::{DeviceType, Transport, mmio::MmioTransport},
+    transport::{DeviceStatus, DeviceType, InterruptStatus, Transport},
 };
 use x86_64::{PhysAddr, VirtAddr};
+use zerocopy::{FromBytes, Immutable, IntoBytes};
 
 use crate::{
     GUEST_HOST_HEAP, PAGE_TABLES,
     acpi::{Acpi, AcpiDevice, VIRTIO_MMIO},
     mm::Translator,
+    virtio_console::reg::CONFIG_SPACE,
 };
 
 /// The number of buffer descriptors in each of the queues. For now we only
@@ -81,7 +85,12 @@ struct Console<'a, H: Hal, T: Transport, A: Allocator> {
 
 impl<'a, H: Hal, T: Transport, A: Allocator> Console<'a, H, T, A> {
     fn new(mut transport: T, alloc: &'a A) -> anyhow::Result<Self> {
-        transport.begin_init(ConsoleFeatures::VERSION_1.union(ConsoleFeatures::ACCESS_PLATFORM));
+        let negotiated_features = transport
+            .begin_init(ConsoleFeatures::VERSION_1.union(ConsoleFeatures::ACCESS_PLATFORM));
+        assert!(
+            negotiated_features.contains(ConsoleFeatures::VERSION_1),
+            "legacy virtio not supported"
+        );
         let mut rx_queue = VirtQueue::new(&mut transport, RX_QUEUE_ID, false, false)?;
         let tx_queue = VirtQueue::new(&mut transport, TX_QUEUE_ID, false, false)?;
 
@@ -217,6 +226,326 @@ impl<H: Hal, T: Transport, A: Allocator> oak_channel::Write for Console<'_, H, T
     }
 }
 
+// VirtIO MMIO register offsets, expressed as u32 indices (byte offset / 4).
+//
+// See <https://docs.oasis-open.org/virtio/virtio/v1.2/cs01/virtio-v1.2-cs01.html#x1-1460002>.
+mod reg {
+    /// Magic value; must read 0x74726976 ("virt").
+    #[allow(clippy::erasing_op)]
+    pub const MAGIC: usize = 0x000 / size_of::<u32>();
+    /// Device version number (1 = legacy, 2 = modern).
+    pub const VERSION: usize = 0x004 / size_of::<u32>();
+    /// Virtio subsystem device ID.
+    pub const DEVICE_ID: usize = 0x008 / size_of::<u32>();
+    /// Virtio subsystem vendor ID.
+    pub const VENDOR_ID: usize = 0x00C / size_of::<u32>();
+    /// Flags representing features the device supports.
+    pub const DEVICE_FEATURES: usize = 0x010 / size_of::<u32>();
+    /// Device (host) features word selection.
+    pub const DEVICE_FEATURES_SEL: usize = 0x014 / size_of::<u32>();
+    /// Flags representing device features understood and activated by the
+    /// driver.
+    pub const DRIVER_FEATURES: usize = 0x020 / size_of::<u32>();
+    /// Activated (guest) features word selection.
+    pub const DRIVER_FEATURES_SEL: usize = 0x024 / size_of::<u32>();
+    /// Virtual queue index selection.
+    pub const QUEUE_SEL: usize = 0x030 / size_of::<u32>();
+    /// Maximum virtual queue size.
+    pub const QUEUE_NUM_MAX: usize = 0x034 / size_of::<u32>();
+    /// Virtual queue size.
+    pub const QUEUE_NUM: usize = 0x038 / size_of::<u32>();
+    /// Queue ready flag (modern interface).
+    pub const QUEUE_READY: usize = 0x044 / size_of::<u32>();
+    /// Queue notifier.
+    pub const QUEUE_NOTIFY: usize = 0x050 / size_of::<u32>();
+    /// Interrupt status.
+    pub const INTERRUPT_STATUS: usize = 0x060 / size_of::<u32>();
+    /// Interrupt acknowledge.
+    pub const INTERRUPT_ACK: usize = 0x064 / size_of::<u32>();
+    /// Device status.
+    pub const STATUS: usize = 0x070 / size_of::<u32>();
+    /// Queue descriptor table address (low 32 bits, modern).
+    pub const QUEUE_DESC_LOW: usize = 0x080 / size_of::<u32>();
+    /// Queue descriptor table address (high 32 bits, modern).
+    pub const QUEUE_DESC_HIGH: usize = 0x084 / size_of::<u32>();
+    /// Queue available ring address (low 32 bits, modern).
+    pub const QUEUE_DRIVER_LOW: usize = 0x090 / size_of::<u32>();
+    /// Queue available ring address (high 32 bits, modern).
+    pub const QUEUE_DRIVER_HIGH: usize = 0x094 / size_of::<u32>();
+    /// Queue used ring address (low 32 bits, modern).
+    pub const QUEUE_DEVICE_LOW: usize = 0x0A0 / size_of::<u32>();
+    /// Queue used ring address (high 32 bits, modern).
+    pub const QUEUE_DEVICE_HIGH: usize = 0x0A4 / size_of::<u32>();
+    /// Configuration atomicity value.
+    pub const CONFIG_GENERATION: usize = 0x0FC / size_of::<u32>();
+    /// Start of the device-specific configuration space.
+    pub const CONFIG_SPACE: usize = 0x100 / size_of::<u32>();
+}
+
+/// Expected magic value in the VirtIO MMIO header.
+const VIRTIO_MAGIC: u32 = 0x7472_6976;
+/// Modern VirtIO MMIO version.
+const MODERN_VERSION: u32 = 2;
+
+/// An MMIO-based VirtIO transport that delegates all MMIO access through the
+/// [`oak_hal::Mmio`] trait.
+///
+/// This allows the transport to work transparently on platforms where MMIO
+/// access cannot be performed via direct volatile reads/writes (e.g. SEV-ES
+/// and above, where MMIO must go through the GHCB).
+///
+/// Only the modern (v2) VirtIO MMIO interface is supported.
+///
+/// See <https://docs.oasis-open.org/virtio/virtio/v1.2/cs01/virtio-v1.2-cs01.html#x1-1460002>.
+struct OakMmioTransport<M: HalMmio> {
+    mmio: M,
+    /// Cached device type, read during construction.
+    device_type: DeviceType,
+}
+
+impl<M: HalMmio> OakMmioTransport<M> {
+    /// Creates a new `OakMmioTransport` by validating the VirtIO MMIO header.
+    ///
+    /// # Arguments
+    ///
+    /// * `mmio` - An implementation of the `oak_hal::Mmio` trait pointing at
+    ///   the VirtIO MMIO region.
+    /// * `region_size` - The total size of the MMIO region in bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the magic value is wrong, the version is not modern
+    /// (v2), the device ID is invalid, or the region size is too small.
+    fn new(mmio: M) -> anyhow::Result<Self> {
+        anyhow::ensure!(
+            mmio.region_size() >= CONFIG_SPACE * size_of::<u32>(),
+            "MMIO region size is too small"
+        );
+        let magic = mmio.read_u32(reg::MAGIC);
+        anyhow::ensure!(
+            magic == VIRTIO_MAGIC,
+            "invalid VirtIO MMIO magic value {magic:#010x} (expected {VIRTIO_MAGIC:#010x})"
+        );
+
+        let version = mmio.read_u32(reg::VERSION);
+        anyhow::ensure!(
+            version == MODERN_VERSION,
+            "unsupported VirtIO MMIO version {version} (only modern v2 is supported)"
+        );
+
+        let device_id = mmio.read_u32(reg::DEVICE_ID);
+        let device_type = DeviceType::try_from(device_id as u8)
+            .map_err(|e| anyhow!("invalid VirtIO device ID {device_id}: {e}"))?;
+
+        Ok(Self { mmio, device_type })
+    }
+
+    /// Returns the vendor ID reported by the device.
+    fn vendor_id(&self) -> u32 {
+        self.mmio.read_u32(reg::VENDOR_ID)
+    }
+}
+
+impl<M: HalMmio> Transport for OakMmioTransport<M> {
+    fn device_type(&self) -> DeviceType {
+        self.device_type
+    }
+
+    fn read_device_features(&mut self) -> u64 {
+        // Select and read the low 32 bits.
+        // Safety: writing the feature selection register is always valid.
+        unsafe { self.mmio.write_u32(reg::DEVICE_FEATURES_SEL, 0) };
+        let low = self.mmio.read_u32(reg::DEVICE_FEATURES);
+
+        // Select and read the high 32 bits.
+        // Safety: writing the feature selection register is always valid.
+        unsafe { self.mmio.write_u32(reg::DEVICE_FEATURES_SEL, 1) };
+        let high = self.mmio.read_u32(reg::DEVICE_FEATURES);
+
+        (high as u64) << 32 | low as u64
+    }
+
+    fn write_driver_features(&mut self, driver_features: u64) {
+        // Safety: writing the feature registers is valid during initialization.
+        unsafe {
+            // Write low 32 bits.
+            self.mmio.write_u32(reg::DRIVER_FEATURES_SEL, 0);
+            self.mmio.write_u32(reg::DRIVER_FEATURES, driver_features as u32);
+
+            // Write high 32 bits.
+            self.mmio.write_u32(reg::DRIVER_FEATURES_SEL, 1);
+            self.mmio.write_u32(reg::DRIVER_FEATURES, (driver_features >> 32) as u32);
+        }
+    }
+
+    fn max_queue_size(&mut self, queue: u16) -> u32 {
+        // Safety: selecting a queue is always valid.
+        unsafe { self.mmio.write_u32(reg::QUEUE_SEL, queue as u32) };
+        self.mmio.read_u32(reg::QUEUE_NUM_MAX)
+    }
+
+    fn notify(&mut self, queue: u16) {
+        // Safety: notifying a queue is always valid.
+        unsafe { self.mmio.write_u32(reg::QUEUE_NOTIFY, queue as u32) };
+    }
+
+    fn get_status(&self) -> DeviceStatus {
+        let bits = self.mmio.read_u32(reg::STATUS);
+        DeviceStatus::from_bits_retain(bits)
+    }
+
+    fn set_status(&mut self, status: DeviceStatus) {
+        // Safety: writing the status register is valid during
+        // initialization/reset.
+        unsafe { self.mmio.write_u32(reg::STATUS, status.bits()) };
+    }
+
+    fn set_guest_page_size(&mut self, _guest_page_size: u32) {
+        // No-op for the modern (v2) interface.
+    }
+
+    fn requires_legacy_layout(&self) -> bool {
+        // Even though we don't support legacy mode it seems QEMU doesn't like the
+        // flexible virtqueue layout even when legacy mode is disabled.
+        true
+    }
+
+    fn queue_set(
+        &mut self,
+        queue: u16,
+        size: u32,
+        descriptors: virtio_drivers::PhysAddr,
+        driver_area: virtio_drivers::PhysAddr,
+        device_area: virtio_drivers::PhysAddr,
+    ) {
+        // Safety: all queue configuration register writes are valid.
+        unsafe {
+            self.mmio.write_u32(reg::QUEUE_SEL, queue as u32);
+            self.mmio.write_u32(reg::QUEUE_NUM, size);
+
+            self.mmio.write_u32(reg::QUEUE_DESC_LOW, descriptors as u32);
+            self.mmio.write_u32(reg::QUEUE_DESC_HIGH, (descriptors >> 32) as u32);
+
+            self.mmio.write_u32(reg::QUEUE_DRIVER_LOW, driver_area as u32);
+            self.mmio.write_u32(reg::QUEUE_DRIVER_HIGH, (driver_area >> 32) as u32);
+
+            self.mmio.write_u32(reg::QUEUE_DEVICE_LOW, device_area as u32);
+            self.mmio.write_u32(reg::QUEUE_DEVICE_HIGH, (device_area >> 32) as u32);
+
+            // Mark the queue as ready.
+            self.mmio.write_u32(reg::QUEUE_READY, 1);
+        }
+    }
+
+    fn queue_unset(&mut self, queue: u16) {
+        // Safety: queue configuration register writes are always valid.
+        unsafe {
+            self.mmio.write_u32(reg::QUEUE_SEL, queue as u32);
+            self.mmio.write_u32(reg::QUEUE_READY, 0);
+            self.mmio.write_u32(reg::QUEUE_NUM, 0);
+
+            self.mmio.write_u32(reg::QUEUE_DESC_LOW, 0);
+            self.mmio.write_u32(reg::QUEUE_DESC_HIGH, 0);
+            self.mmio.write_u32(reg::QUEUE_DRIVER_LOW, 0);
+            self.mmio.write_u32(reg::QUEUE_DRIVER_HIGH, 0);
+            self.mmio.write_u32(reg::QUEUE_DEVICE_LOW, 0);
+            self.mmio.write_u32(reg::QUEUE_DEVICE_HIGH, 0);
+        }
+    }
+
+    fn queue_used(&mut self, queue: u16) -> bool {
+        // Safety: selecting a queue is always valid.
+        unsafe { self.mmio.write_u32(reg::QUEUE_SEL, queue as u32) };
+        self.mmio.read_u32(reg::QUEUE_READY) != 0
+    }
+
+    fn ack_interrupt(&mut self) -> InterruptStatus {
+        let status = self.mmio.read_u32(reg::INTERRUPT_STATUS);
+        // Safety: acknowledging an interrupt is always valid.
+        unsafe { self.mmio.write_u32(reg::INTERRUPT_ACK, status) };
+        InterruptStatus::from_bits_retain(status)
+    }
+
+    fn read_config_generation(&self) -> u32 {
+        self.mmio.read_u32(reg::CONFIG_GENERATION)
+    }
+
+    fn read_config_space<T: FromBytes + IntoBytes>(
+        &self,
+        _offset: usize,
+    ) -> virtio_drivers::Result<T> {
+        // We don't need to support config space access for our simple console
+        // implementation since we don't support a sized console.
+        Err(virtio_drivers::Error::Unsupported)
+    }
+
+    fn write_config_space<T: IntoBytes + Immutable>(
+        &mut self,
+        _offset: usize,
+        _value: T,
+    ) -> virtio_drivers::Result<()> {
+        // We don't need to support config space access for our simple console
+        // implementation since we don't support a sized console.
+        Err(virtio_drivers::Error::Unsupported)
+    }
+}
+
+/// A direct volatile MMIO implementation for use in the restricted kernel.
+///
+/// This implements [`oak_hal::Mmio`] by performing volatile reads and writes to
+/// a virtual memory region that has been mapped to the MMIO physical address
+/// through the kernel page tables.
+struct DirectMmio {
+    /// Virtual address of the MMIO region base.
+    base: VirtAddr,
+    /// Size of the MMIO region in bytes.
+    size: usize,
+}
+
+impl DirectMmio {
+    /// Creates a new `DirectMmio` for the given virtual address and size.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that `base` points to a valid MMIO region of at
+    /// least `size` bytes that is mapped in the page tables and will remain
+    /// valid for the lifetime of this struct.
+    unsafe fn new(base: VirtAddr, size: usize) -> Self {
+        Self { base, size }
+    }
+}
+
+impl HalMmio for DirectMmio {
+    fn read_u32(&self, offset: usize) -> u32 {
+        let byte_offset = offset * size_of::<u32>();
+        assert!(
+            byte_offset + size_of::<u32>() <= self.size,
+            "MMIO read at offset {offset} (byte {byte_offset}) exceeds region size {}",
+            self.size
+        );
+        // Safety: the caller of `DirectMmio::new` guaranteed the region is
+        // valid and mapped. The assertion above ensures we stay in bounds.
+        unsafe { (self.base.as_u64() as *const u32).add(offset).read_volatile() }
+    }
+
+    unsafe fn write_u32(&mut self, offset: usize, value: u32) {
+        let byte_offset = offset * size_of::<u32>();
+        assert!(
+            byte_offset + size_of::<u32>() <= self.size,
+            "MMIO write at offset {offset} (byte {byte_offset}) exceeds region size {}",
+            self.size
+        );
+        // Safety: the caller of `DirectMmio::new` guaranteed the region is
+        // valid and mapped, and the caller of `write_u32` guarantees the
+        // value is valid for the register.
+        unsafe { (self.base.as_u64() as *mut u32).add(offset).write_volatile(value) };
+    }
+
+    fn region_size(&self) -> usize {
+        self.size
+    }
+}
+
 struct OakHal;
 
 unsafe impl Hal for OakHal {
@@ -297,7 +626,7 @@ unsafe impl Hal for OakHal {
 
 #[repr(transparent)]
 pub struct MmioConsoleChannel<'a, A: Allocator> {
-    inner: Spinlock<Console<'a, OakHal, MmioTransport<'a>, A>>,
+    inner: Spinlock<Console<'a, OakHal, OakMmioTransport<DirectMmio>, A>>,
 }
 
 // Safety: for now, this is safe as we don't have threads in our kernel.
@@ -378,13 +707,12 @@ pub fn get_console_channel<'a, A: Allocator>(
             device.name, acpi_aml_range.0, acpi_aml_range.1, mmio_size
         );
 
-        let transport = unsafe {
-            MmioTransport::new(
-                core::ptr::NonNull::new(header.as_mut_ptr()).unwrap(),
-                mmio_size as usize,
-            )
-        }
-        .expect("MMIO transport setup error");
+        // Safety: the ACPI tables describe a valid MMIO region, and we just
+        // translated its physical address to a virtual address through the
+        // page tables.
+        let mmio = unsafe { DirectMmio::new(header, mmio_size as usize) };
+
+        let transport = OakMmioTransport::new(mmio).expect("MMIO transport setup error");
 
         if transport.device_type() != DeviceType::Console {
             continue;

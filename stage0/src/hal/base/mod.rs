@@ -26,7 +26,7 @@ use oak_stage0_dice::DerivedKey;
 use x86_64::{
     registers::model_specific::Msr,
     structures::{
-        paging::{Page, PageSize, Size4KiB},
+        paging::{Page, Size4KiB},
         port::{PortRead, PortWrite},
     },
 };
@@ -38,14 +38,14 @@ use crate::{acpi::tables::Rsdp, paging::PageEncryption, zero_page::ZeroPage};
 pub struct Base {}
 
 impl crate::Platform for Base {
-    type Mmio<S: PageSize> = mmio::Mmio<S>;
+    type Mmio = mmio::Mmio;
 
     fn cpuid(leaf: u32) -> CpuidResult {
         // Safety: all CPUs we care about are modern enough to support CPUID.
         __cpuid(leaf)
     }
 
-    unsafe fn mmio<S: PageSize>(base_address: x86_64::PhysAddr) -> Self::Mmio<S> {
+    unsafe fn mmio(base_address: x86_64::PhysAddr) -> Self::Mmio {
         unsafe { mmio::Mmio::new(base_address) }
     }
 

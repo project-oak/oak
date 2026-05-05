@@ -244,6 +244,7 @@ impl Instance {
         cmd.args(["-chardev", format!("socket,id=commsock,fd={guest_socket_fd}").as_str()]);
         match params.communication_channel {
             CommunicationChannel::VirtioConsole => {
+                cmd.args(["-global", "virtio-mmio.force-legacy=false"]);
                 cmd.args(["-device", "virtio-serial-device,max_ports=1"]);
                 cmd.args(["-device", "virtconsole,chardev=commsock"]);
             }

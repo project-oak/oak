@@ -37,7 +37,7 @@ pub mod test_mocks {
     use oak_linux_boot_params::BootE820Entry;
     use x86_64::{
         PhysAddr,
-        structures::paging::{Page, PageSize, Size4KiB},
+        structures::paging::{Page, Size4KiB},
     };
 
     use super::*;
@@ -46,9 +46,9 @@ pub mod test_mocks {
     mockall::mock! {
         pub Platform {}
         impl oak_hal::Platform for Platform {
-            type Mmio<S: PageSize> = <super::Base as oak_hal::Platform>::Mmio<S>;
+            type Mmio = <super::Base as oak_hal::Platform>::Mmio;
             fn cpuid(leaf: u32) -> CpuidResult;
-            unsafe fn mmio<S: PageSize + 'static>(base_address: PhysAddr) -> <Self as oak_hal::Platform>::Mmio<S>;
+            unsafe fn mmio(base_address: PhysAddr) -> <Self as oak_hal::Platform>::Mmio;
             fn port_factory() -> PortFactory;
             fn early_initialize_platform();
             fn initialize_platform(e820_table: &[BootE820Entry]);
