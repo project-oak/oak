@@ -151,6 +151,7 @@ fn main() -> anyhow::Result<()> {
             )?
         }))?
         .as_slice(),
+        &[],
     );
 
     // Create final protobufs.

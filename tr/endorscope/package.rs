@@ -90,8 +90,7 @@ impl Package {
             None => &vec![],
             Some(array) => array,
         };
-        // TODO: b/495419687 - Need to extend create_signed_endorsement.
-        let _pes_confirmation = match &self.pes_confirmation {
+        let pes_confirmation = match &self.pes_confirmation {
             None => &vec![],
             Some(array) => array,
         };
@@ -101,6 +100,7 @@ impl Package {
             KEY_ID,
             subject,
             rekor_log_entry,
+            pes_confirmation,
         ))
     }
 
@@ -125,5 +125,31 @@ impl Package {
         let ref_value = self.get_reference_value(claim_types);
         verify_endorsement(now_utc_millis, &signed_endorsement, &ref_value)
             .context("verifying endorsement")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use alloc::string::ToString;
+
+    use super::*;
+
+    #[test]
+    fn test_get_signed_endorsement_populates_pes() {
+        let pes_bytes = b"test pes confirmation".to_vec();
+        let package = Package {
+            endorsement: b"endorsement".to_vec(),
+            signature: b"signature".to_vec(),
+            rekor_log_entry: None,
+            c2sp_tlog_proof: None,
+            pes_confirmation: Some(pes_bytes.clone()),
+            subject: None,
+            endorser_public_key: "".to_string(),
+            rekor_public_key: None,
+            c2sp_policy: None,
+            pes_ref_value: None,
+        };
+        let signed_endorsement = package.get_signed_endorsement().unwrap();
+        assert_eq!(signed_endorsement.pes_confirmation, pes_bytes);
     }
 }

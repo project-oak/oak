@@ -56,12 +56,15 @@ pub const KERNEL_CLAIM_TYPE: &str =
 ///   and empty in most cases.
 /// - rekor_log_entry: The serialized Rekor log entry as JSON. Leave empty if
 ///   unavailable.
+/// - pes_confirmation: The serialized PES confirmation. Leave empty if
+///   unavailable.
 pub fn create_signed_endorsement(
     serialized_endorsement: &[u8],
     signature: &[u8],
     key_id: u32,
     subject: &[u8],
     log_entry: &[u8],
+    pes_confirmation: &[u8],
 ) -> SignedEndorsement {
     let endorsement = Endorsement {
         format: Format::EndorsementFormatJsonIntoto.into(),
@@ -72,6 +75,7 @@ pub fn create_signed_endorsement(
         endorsement: Some(endorsement),
         signature: Some(Signature { key_id, raw: signature.to_vec() }),
         rekor_log_entry: log_entry.to_vec(),
+        pes_confirmation: pes_confirmation.to_vec(),
         ..Default::default()
     }
 }
@@ -856,5 +860,19 @@ mod tests {
         );
 
         assert!(result.is_ok(), "expected PES verification success, got: {:?}", result.err());
+    }
+
+    #[test]
+    fn test_create_signed_endorsement_populates_pes() {
+        let pes_bytes = b"test pes confirmation".to_vec();
+        let signed_endorsement = create_signed_endorsement(
+            b"endorsement",
+            b"signature",
+            1,
+            b"subject",
+            b"log_entry",
+            &pes_bytes,
+        );
+        assert_eq!(signed_endorsement.pes_confirmation, pes_bytes);
     }
 }

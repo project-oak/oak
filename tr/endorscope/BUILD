@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//:internal"],
@@ -37,4 +37,9 @@ rust_library(
         "@oak_crates_index//:ureq",
         "@oak_crates_index//:url",
     ],
+)
+
+rust_test(
+    name = "endorscope_tests",
+    crate = ":endorscope",
 )

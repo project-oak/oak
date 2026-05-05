@@ -310,7 +310,7 @@ mod tests {
     ) -> SignedEndorsement {
         let serialized_endorsement = read_testdata!(endorsement_filename);
         let signature = read_testdata!(signature_filename);
-        create_signed_endorsement(&serialized_endorsement, &signature, key_id, &[], &[])
+        create_signed_endorsement(&serialized_endorsement, &signature, key_id, &[], &[], &[])
     }
 
     fn create_reference_value(key_id: u32) -> BinaryReferenceValue {
