@@ -551,6 +551,7 @@ fn get_channel<'a, A: Allocator + Sync>(
         ChannelType::VirtioConsole => Box::new(virtio_console::get_console_channel(
             acpi.expect("ACPI not available; unable to use virtio console"),
             alloc,
+            sev_status,
         )),
         #[cfg(feature = "serial_channel")]
         ChannelType::Serial => {

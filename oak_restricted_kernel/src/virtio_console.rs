@@ -29,6 +29,7 @@ use anyhow::anyhow;
 use bitflags::bitflags;
 use log::info;
 use oak_hal::Mmio as HalMmio;
+use oak_sev_guest::msr::SevStatus;
 use spinning_top::Spinlock;
 use virtio_drivers::{
     BufferDirection, Hal, PAGE_SIZE,
@@ -490,32 +491,38 @@ impl<M: HalMmio> Transport for OakMmioTransport<M> {
     }
 }
 
-/// A direct volatile MMIO implementation for use in the restricted kernel.
+/// An MMIO implementation that supports both direct volatile access and
+/// GHCB-based access.
 ///
 /// This implements [`oak_hal::Mmio`] by performing volatile reads and writes to
-/// a virtual memory region that has been mapped to the MMIO physical address
-/// through the kernel page tables.
-struct DirectMmio {
-    /// Virtual address of the MMIO region base.
-    base: VirtAddr,
+/// a virtual memory region, or by using the GHCB protocol for SEV-ES and
+/// SEV-SNP guests.
+struct SevMmio {
+    /// Virtual address of the MMIO region base. Used for direct volatile
+    /// access.
+    base_virt: VirtAddr,
+    /// Physical address of the MMIO region base. Used for GHCB-based access.
+    base_phys: PhysAddr,
     /// Size of the MMIO region in bytes.
     size: usize,
+    /// Whether to use GHCB for MMIO access.
+    use_ghcb: bool,
 }
 
-impl DirectMmio {
-    /// Creates a new `DirectMmio` for the given virtual address and size.
+impl SevMmio {
+    /// Creates a new `SevMmio` for the given addresses and size.
     ///
     /// # Safety
     ///
-    /// The caller must ensure that `base` points to a valid MMIO region of at
-    /// least `size` bytes that is mapped in the page tables and will remain
-    /// valid for the lifetime of this struct.
-    unsafe fn new(base: VirtAddr, size: usize) -> Self {
-        Self { base, size }
+    /// The caller must ensure that `base_virt` points to a valid MMIO region of
+    /// at least `size` bytes that is mapped in the page tables and will
+    /// remain valid for the lifetime of this struct.
+    unsafe fn new(base_virt: VirtAddr, base_phys: PhysAddr, size: usize, use_ghcb: bool) -> Self {
+        Self { base_virt, base_phys, size, use_ghcb }
     }
 }
 
-impl HalMmio for DirectMmio {
+impl HalMmio for SevMmio {
     fn read_u32(&self, offset: usize) -> u32 {
         let byte_offset = offset * size_of::<u32>();
         assert!(
@@ -523,9 +530,15 @@ impl HalMmio for DirectMmio {
             "MMIO read at offset {offset} (byte {byte_offset}) exceeds region size {}",
             self.size
         );
-        // Safety: the caller of `DirectMmio::new` guaranteed the region is
-        // valid and mapped. The assertion above ensures we stay in bounds.
-        unsafe { (self.base.as_u64() as *const u32).add(offset).read_volatile() }
+        if self.use_ghcb {
+            let mut ghcb = crate::ghcb::GHCB_PROTOCOL.get().expect("GHCB not initialized").lock();
+            ghcb.mmio_read_u32(self.base_phys + (byte_offset as u64))
+                .expect("couldn't read MMIO using the GHCB protocol")
+        } else {
+            // Safety: the caller of `SevMmio::new` guaranteed the region is
+            // valid and mapped. The assertion above ensures we stay in bounds.
+            unsafe { (self.base_virt.as_u64() as *const u32).add(offset).read_volatile() }
+        }
     }
 
     unsafe fn write_u32(&mut self, offset: usize, value: u32) {
@@ -535,10 +548,16 @@ impl HalMmio for DirectMmio {
             "MMIO write at offset {offset} (byte {byte_offset}) exceeds region size {}",
             self.size
         );
-        // Safety: the caller of `DirectMmio::new` guaranteed the region is
-        // valid and mapped, and the caller of `write_u32` guarantees the
-        // value is valid for the register.
-        unsafe { (self.base.as_u64() as *mut u32).add(offset).write_volatile(value) };
+        if self.use_ghcb {
+            let mut ghcb = crate::ghcb::GHCB_PROTOCOL.get().expect("GHCB not initialized").lock();
+            ghcb.mmio_write_u32(self.base_phys + (byte_offset as u64), value)
+                .expect("couldn't write MMIO using the GHCB protocol")
+        } else {
+            // Safety: the caller of `SevMmio::new` guaranteed the region is
+            // valid and mapped, and the caller of `write_u32` guarantees the
+            // value is valid for the register.
+            unsafe { (self.base_virt.as_u64() as *mut u32).add(offset).write_volatile(value) };
+        }
     }
 
     fn region_size(&self) -> usize {
@@ -626,7 +645,7 @@ unsafe impl Hal for OakHal {
 
 #[repr(transparent)]
 pub struct MmioConsoleChannel<'a, A: Allocator> {
-    inner: Spinlock<Console<'a, OakHal, OakMmioTransport<DirectMmio>, A>>,
+    inner: Spinlock<Console<'a, OakHal, OakMmioTransport<SevMmio>, A>>,
 }
 
 // Safety: for now, this is safe as we don't have threads in our kernel.
@@ -683,6 +702,7 @@ fn find_memory_range(device: &AcpiDevice, ctx: &mut AmlContext) -> Option<(PhysA
 pub fn get_console_channel<'a, A: Allocator>(
     acpi: &mut Acpi,
     alloc: &'a A,
+    sev_status: SevStatus,
 ) -> MmioConsoleChannel<'a, A> {
     let devices = acpi.devices().unwrap();
 
@@ -707,10 +727,11 @@ pub fn get_console_channel<'a, A: Allocator>(
             device.name, acpi_aml_range.0, acpi_aml_range.1, mmio_size
         );
 
+        let use_ghcb = sev_status.contains(SevStatus::SEV_ES_ENABLED);
         // Safety: the ACPI tables describe a valid MMIO region, and we just
         // translated its physical address to a virtual address through the
         // page tables.
-        let mmio = unsafe { DirectMmio::new(header, mmio_size as usize) };
+        let mmio = unsafe { SevMmio::new(header, acpi_aml_range.0, mmio_size as usize, use_ghcb) };
 
         let transport = OakMmioTransport::new(mmio).expect("MMIO transport setup error");
 
