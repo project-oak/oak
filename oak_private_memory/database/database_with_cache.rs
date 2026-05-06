@@ -70,6 +70,15 @@ impl DatabaseWithCache {
         self
     }
 
+    pub fn with_max_size(mut self, max_size: usize) -> Self {
+        self.max_size = max_size;
+        self
+    }
+
+    pub fn max_size(&self) -> usize {
+        self.max_size
+    }
+
     pub fn meta_db(&mut self) -> &mut IcingMetaDatabase {
         &mut self.database
     }

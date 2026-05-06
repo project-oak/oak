@@ -52,6 +52,7 @@ struct SealedMemoryServiceImplementation {
     session_config_factory: Arc<dyn Fn() -> SessionConfig + Send + Sync>,
     tls_server_context: Option<Arc<OakSessionTlsServerContext>>,
     clock: Arc<dyn Clock>,
+    max_database_size_bytes: usize,
 }
 
 impl SealedMemoryServiceImplementation {
@@ -66,10 +67,14 @@ impl SealedMemoryServiceImplementation {
         Self {
             metrics,
             persistence_tx,
-            db_client: Arc::new(SharedDbClient::new(application_config.database_service_host)),
+            db_client: Arc::new(SharedDbClient::new(
+                application_config.database_service_host,
+                application_config.max_grpc_decode_size_bytes,
+            )),
             session_config_factory,
             tls_server_context,
             clock,
+            max_database_size_bytes: application_config.max_database_size_bytes,
         }
     }
 
@@ -84,6 +89,7 @@ impl SealedMemoryServiceImplementation {
             (self.session_config_factory)(),
             self.clock.clone(),
             error_propagation_behavior,
+            self.max_database_size_bytes,
         )
     }
 
@@ -127,6 +133,7 @@ impl OakSessionHandler {
         session_config: SessionConfig,
         clock: Arc<dyn Clock>,
         error_propagation_behavior: ErrorPropagationBehavior,
+        max_database_size_bytes: usize,
     ) -> tonic::Result<Self> {
         let server_session = ServerSession::create(session_config)
             .into_failed_precondition("failed to initialize oak session")?;
@@ -139,6 +146,7 @@ impl OakSessionHandler {
                 db_client,
                 clock,
                 error_propagation_behavior,
+                max_database_size_bytes,
             ),
         })
     }
@@ -245,6 +253,7 @@ impl TlsSessionHandler {
         tls_session: oak_session_tls::OakSessionTls,
         clock: Arc<dyn Clock>,
         error_propagation_behavior: ErrorPropagationBehavior,
+        max_database_size_bytes: usize,
     ) -> Self {
         Self {
             metrics: metrics.clone(),
@@ -255,6 +264,7 @@ impl TlsSessionHandler {
                 db_client,
                 clock,
                 error_propagation_behavior,
+                max_database_size_bytes,
             ),
         }
     }
@@ -353,6 +363,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         let persistence_tx = self.persistence_tx.clone();
         let db_client = self.db_client.clone();
         let clock = self.clock.clone();
+        let max_database_size_bytes = self.max_database_size_bytes;
 
         let request_stream = Arc::new(tokio::sync::Mutex::new(request.into_inner()));
         let (tx, rx) = tokio::sync::mpsc::channel(32);
@@ -407,6 +418,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
                 tls_session,
                 clock,
                 behavior,
+                max_database_size_bytes,
             );
             debug!("TLS handshake completed");
 
@@ -462,6 +474,7 @@ pub async fn create(
     tls_server_context: Option<Arc<OakSessionTlsServerContext>>,
     clock: Arc<dyn Clock>,
 ) -> Result<(), anyhow::Error> {
+    let max_grpc_decode_size_bytes = application_config.max_grpc_decode_size_bytes;
     tonic::transport::Server::builder()
         .add_service(
             SealedMemoryServiceServer::new(SealedMemoryServiceImplementation::new(
@@ -472,7 +485,7 @@ pub async fn create(
                 tls_server_context,
                 clock,
             ))
-            .max_decoding_message_size(crate::db_client::MAX_GRPC_DECODE_SIZE),
+            .max_decoding_message_size(max_grpc_decode_size_bytes),
         )
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await

@@ -61,6 +61,7 @@ pub struct SealedMemorySessionHandler {
     persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
     clock: Arc<dyn Clock>,
     error_propagation_behavior: ErrorPropagationBehavior,
+    max_database_size_bytes: usize,
 }
 
 impl Drop for SealedMemorySessionHandler {
@@ -82,6 +83,7 @@ impl SealedMemorySessionHandler {
         db_client: Arc<SharedDbClient>,
         clock: Arc<dyn Clock>,
         error_propagation_behavior: ErrorPropagationBehavior,
+        max_database_size_bytes: usize,
     ) -> Self {
         Self {
             session_context: Default::default(),
@@ -90,6 +92,7 @@ impl SealedMemorySessionHandler {
             persistence_tx,
             clock,
             error_propagation_behavior,
+            max_database_size_bytes,
         }
     }
 
@@ -235,6 +238,7 @@ impl SealedMemorySessionHandler {
             key_derivation_info,
             initial_size,
         )
+        .with_max_size(self.max_database_size_bytes)
         .with_clock(self.clock.clone());
 
         *mutex_guard = Some(UserSessionContext {

@@ -28,6 +28,7 @@ use std::{
 use anyhow::Result;
 use oak_containers_launcher::{Args, Launcher, QemuParams, QemuVmType, TrustedApplicationAddress};
 pub use oak_private_memory_database::clock::{Clock, SystemClock, system_time_to_timestamp};
+use oak_private_memory_database::database_with_cache::{MAX_DATABASE_SIZE, MAX_GRPC_DECODE_SIZE};
 use oak_session_tls::OakSessionTlsServerContext;
 use private_memory_server_lib::{
     app,
@@ -87,7 +88,11 @@ pub async fn start_server_with_clock(
     let listener = TcpListener::bind(addr).await?;
     let addr = listener.local_addr()?;
 
-    let application_config = ApplicationConfig { database_service_host: db_addr };
+    let application_config = ApplicationConfig {
+        database_service_host: db_addr,
+        max_database_size_bytes: MAX_DATABASE_SIZE,
+        max_grpc_decode_size_bytes: MAX_GRPC_DECODE_SIZE,
+    };
 
     let metrics = private_memory_server_lib::metrics::get_global_metrics();
     let (persistence_tx, persistence_rx) = tokio::sync::mpsc::unbounded_channel();
@@ -131,7 +136,11 @@ pub async fn start_server_with_tls(
     let listener = TcpListener::bind(addr).await?;
     let addr = listener.local_addr()?;
 
-    let application_config = ApplicationConfig { database_service_host: db_addr };
+    let application_config = ApplicationConfig {
+        database_service_host: db_addr,
+        max_database_size_bytes: MAX_DATABASE_SIZE,
+        max_grpc_decode_size_bytes: MAX_GRPC_DECODE_SIZE,
+    };
 
     let metrics = private_memory_server_lib::metrics::get_global_metrics();
     let (persistence_tx, persistence_rx) = tokio::sync::mpsc::unbounded_channel();
@@ -172,8 +181,11 @@ pub async fn start_container_server() -> Result<(
 
     // Host IP for the enclave in default network mode.
     let host_ip = Ipv4Addr::new(10, 0, 2, 100);
-    let application_config =
-        ApplicationConfig { database_service_host: SocketAddr::new(IpAddr::V4(host_ip), db_port) };
+    let application_config = ApplicationConfig {
+        database_service_host: SocketAddr::new(IpAddr::V4(host_ip), db_port),
+        max_database_size_bytes: MAX_DATABASE_SIZE,
+        max_grpc_decode_size_bytes: MAX_GRPC_DECODE_SIZE,
+    };
     let application_config_bytes = serde_json::to_vec(&application_config)?;
 
     let vmm_binary = which::which("qemu-system-x86_64").expect("could not find qemu path");

@@ -30,6 +30,22 @@ pub use persistence_worker::run_persistence_service;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ApplicationConfig {
     pub database_service_host: SocketAddr,
+
+    /// Maximum database size in bytes. Default: 250 MB.
+    #[serde(default = "default_max_database_size_bytes")]
+    pub max_database_size_bytes: usize,
+
+    /// Maximum gRPC decode message size in bytes. Default: 100 MB.
+    #[serde(default = "default_max_grpc_decode_size_bytes")]
+    pub max_grpc_decode_size_bytes: usize,
+}
+
+fn default_max_database_size_bytes() -> usize {
+    250 * 1024 * 1024
+}
+
+fn default_max_grpc_decode_size_bytes() -> usize {
+    100 * 1024 * 1024
 }
 
 /// A convenience trait to convert various error types into tonic::Status.

@@ -51,10 +51,11 @@ async fn try_persist_database(
     let database = encrypt_database(&encrypted_info, &user_context.dek)?;
 
     let db_size = database.data.len();
-    if db_size > crate::db_client::MAX_DATABASE_SIZE {
+    let max_database_size = user_context.database.max_size();
+    if db_size > max_database_size {
         // Database exceeds the maximum allowed size.
-        info!("Database is too large to save: {}", db_size);
-        anyhow::bail!("Database is too large to save: {}", db_size);
+        info!("Database is too large to save: {} (limit: {})", db_size, max_database_size);
+        anyhow::bail!("Database is too large to save: {} (limit: {})", db_size, max_database_size);
     }
     info!("Saving db size: {}", db_size);
     get_global_metrics().record_db_size(db_size as u64);
