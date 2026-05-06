@@ -24,23 +24,34 @@ use crate::acpi::tables::{Result, Rsdt, Xsdt, signature};
 pub trait Rsdp: Debug {
     fn validate(&self) -> Result<()>;
 
+    fn rsdt(&self) -> Option<VirtAddr>;
+    fn xsdt(&self) -> Option<VirtAddr>;
+
     /// # Safety
-    /// Caller must guarantee the RSDT pointer is valid..
-    unsafe fn rsdt(&self) -> Option<Result<&Rsdt>>;
+    /// Caller must guarantee the RSDT pointer is valid.
+    unsafe fn rsdt_ref(&self) -> Option<Result<&Rsdt>> {
+        Some(unsafe { Rsdt::new(self.rsdt()?) })
+    }
 
     /// # Safety
     /// Caller must guarantee the RSDT pointer is valid.
     /// Caller must ensure only one mut ref exists at a time.
-    unsafe fn rsdt_mut(&mut self) -> Option<Result<&mut Rsdt>>;
+    unsafe fn rsdt_mut(&mut self) -> Option<Result<&mut Rsdt>> {
+        Some(unsafe { Rsdt::new_mut(self.rsdt()?) })
+    }
 
     /// # Safety
     /// Caller must guarantee the RSDT pointer is valid..
-    unsafe fn xsdt(&self) -> Option<Result<&Xsdt>>;
+    unsafe fn xsdt_ref(&self) -> Option<Result<&Xsdt>> {
+        Some(Xsdt::new(self.xsdt()?))
+    }
 
     /// # Safety
     /// Caller must guarantee the RSDT pointer is valid.
     /// Caller must ensure only one mut ref exists at a time.
-    unsafe fn xsdt_mut(&mut self) -> Option<Result<&mut Xsdt>>;
+    unsafe fn xsdt_mut(&mut self) -> Option<Result<&mut Xsdt>> {
+        Some(unsafe { Xsdt::new_mut(self.xsdt()?) })
+    }
 }
 
 #[allow(dead_code)]
@@ -113,27 +124,11 @@ impl Rsdp for Rsdp1 {
         Ok(())
     }
 
-    unsafe fn rsdt(&self) -> Option<Result<&Rsdt>> {
-        if self.rsdt_address == 0 {
-            None
-        } else {
-            Some(unsafe { Rsdt::new(VirtAddr::new(self.rsdt_address as u64)) })
-        }
+    fn rsdt(&self) -> Option<VirtAddr> {
+        if self.rsdt_address == 0 { None } else { Some(VirtAddr::new(self.rsdt_address as u64)) }
     }
 
-    unsafe fn rsdt_mut(&mut self) -> Option<Result<&mut Rsdt>> {
-        if self.rsdt_address == 0 {
-            None
-        } else {
-            Some(unsafe { Rsdt::new_mut(VirtAddr::new(self.rsdt_address as u64)) })
-        }
-    }
-
-    unsafe fn xsdt(&self) -> Option<Result<&Xsdt>> {
-        None
-    }
-
-    unsafe fn xsdt_mut(&mut self) -> Option<Result<&mut Xsdt>> {
+    fn xsdt(&self) -> Option<VirtAddr> {
         None
     }
 }
@@ -187,36 +182,13 @@ impl Rsdp for Rsdp2 {
 
         Ok(())
     }
-    unsafe fn rsdt(&self) -> Option<Result<&Rsdt>> {
-        if self.rsdt_address == 0 {
-            None
-        } else {
-            Some(unsafe { Rsdt::new(VirtAddr::new(self.rsdt_address as u64)) })
-        }
+
+    fn rsdt(&self) -> Option<VirtAddr> {
+        if self.rsdt_address == 0 { None } else { Some(VirtAddr::new(self.rsdt_address as u64)) }
     }
 
-    unsafe fn rsdt_mut(&mut self) -> Option<Result<&mut Rsdt>> {
-        if self.rsdt_address == 0 {
-            None
-        } else {
-            Some(unsafe { Rsdt::new_mut(VirtAddr::new(self.rsdt_address as u64)) })
-        }
-    }
-
-    unsafe fn xsdt(&self) -> Option<Result<&Xsdt>> {
-        if self.xsdt_address == 0 {
-            None
-        } else {
-            Some(Xsdt::new(VirtAddr::new(self.xsdt_address)))
-        }
-    }
-
-    unsafe fn xsdt_mut(&mut self) -> Option<Result<&mut Xsdt>> {
-        if self.xsdt_address == 0 {
-            None
-        } else {
-            Some(unsafe { Xsdt::new_mut(VirtAddr::new(self.xsdt_address)) })
-        }
+    fn xsdt(&self) -> Option<VirtAddr> {
+        if self.xsdt_address == 0 { None } else { Some(VirtAddr::new(self.xsdt_address)) }
     }
 }
 
