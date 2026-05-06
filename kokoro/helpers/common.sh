@@ -66,3 +66,92 @@ function collect_test_logs {
   fd "^test.xml" artifacts/bazel-testlogs --exec mv {} "{//}/sponge_log.xml"
 }
 
+# ── Timing helpers ──────────────────────────────────────────────────────────
+# Records how long each step takes and prints a summary at the end.
+#
+# Usage:
+#   time_step "step name" command arg1 arg2 ...
+#   print_timing_summary
+
+_STEP_NAMES=()
+_STEP_DURATIONS=()
+
+# Runs a command, records its wall-clock duration under the given label, and
+# propagates the command's exit status.
+# The first argument is a string label for the step, and the remaining arguments
+# are the command to execute with all of its arguments.
+function time_step() {
+  local label="$1"
+  shift
+
+  echo "[$(date --utc)] -- START: ${label} --"
+  # Reset the special bash SECONDS variable
+  SECONDS=0
+  local rc=0
+  # The remaining arguments are the command to execute.
+  "$@" || rc=$?
+
+  # Capture the SECONDS variable after running the command.
+  local elapsed_seconds=${SECONDS}
+
+  _STEP_NAMES+=("${label}")
+  _STEP_DURATIONS+=("${elapsed_seconds}")
+
+  local minutes=$(( elapsed_seconds / 60 ))
+  local seconds=$(( elapsed_seconds % 60 ))
+  local status="OK"
+  if (( rc != 0 )); then
+    status="FAIL (exit ${rc})"
+  fi
+  echo "[$(date --utc)] -- END: ${label} -- ${minutes}m${seconds}s -- ${status} --"
+
+  return "${rc}"
+}
+
+# Records a step whose start time is known. Calculates duration, prints progress,
+# and registers the step.
+# Usage:
+#   record_start_time "step name" start_epoch_seconds
+function record_start_time() {
+  local label="$1"
+  local start_epoch="${2:-}"
+
+  if [[ -n "${start_epoch}" ]]; then
+    local duration=$(( EPOCHSECONDS - start_epoch ))
+    echo "[$(date --utc)] ${label}: ${duration}s"
+    _STEP_NAMES+=("${label}")
+    _STEP_DURATIONS+=("${duration}")
+  fi
+}
+
+# Prints a table of all recorded step durations.
+function print_timing_summary() {
+  # Disable command tracing to keep the timing summary clean.
+  # `local -` localizes the shell options ($-) to this function, so
+  # disabling tracing (set +x) is automatically restored on function exit.
+  local -
+  set +x
+
+  echo ""
+  echo "+--------------------------------------------------+-----------+"
+  echo "|                   TIMING SUMMARY                             |"
+  echo "+--------------------------------------------------+-----------+"
+
+  local total=0
+  for i in "${!_STEP_NAMES[@]}"; do
+    local name="${_STEP_NAMES[$i]}"
+    local dur="${_STEP_DURATIONS[$i]}"
+    total=$(( total + dur ))
+    local m=$(( dur / 60 ))
+    local s=$(( dur % 60 ))
+    printf "| %-48s | %4dm %02ds |\n" "${name}" "${m}" "${s}"
+  done
+
+  echo "+--------------------------------------------------+-----------+"
+  local tm=$(( total / 60 ))
+  local ts=$(( total % 60 ))
+  printf "| %-48s | %4dm %02ds |\n" "TOTAL" "${tm}" "${ts}"
+  echo "+--------------------------------------------------+-----------+"
+  echo ""
+}
+
