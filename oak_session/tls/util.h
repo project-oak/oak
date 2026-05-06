@@ -49,8 +49,16 @@ absl::StatusOr<std::unique_ptr<TlsIdentityProvider>> CreateFromFiles(
     std::string key_path, std::string cert_path);
 
 /// Creates a self-signed TlsIdentityProvider with optional X.509 extensions.
+///
+/// The `server_name` parameter sets both the Common Name (CN) and the Subject
+/// Alternative Name (SAN) DNS entry in the generated certificate. It defaults
+/// to `kDefaultServerName` ("oak-session-tls").
+///
+/// The SAN must match the client's `expected_server_name` for certificate
+/// verification to succeed.
 absl::StatusOr<std::unique_ptr<TlsIdentityProvider>> CreateSelfSigned(
-    absl::Span<const X509Extension> extensions = {});
+    absl::Span<const X509Extension> extensions = {},
+    absl::string_view server_name = kDefaultServerName);
 
 }  // namespace oak::session::tls::util
 

@@ -159,6 +159,7 @@ async fn test_certificate_rotation_works() -> Result<(), Box<dyn std::error::Err
         server_trust_anchor_der: Some(ca_cert.clone()),
         tls_identity_provider: None,
         custom_cert_verifier: None,
+        expected_server_name: None,
     })
     .expect("failed to create client context");
 
@@ -186,6 +187,7 @@ async fn test_certificate_rotation_works() -> Result<(), Box<dyn std::error::Err
         server_trust_anchor_der: Some(ca_cert),
         tls_identity_provider: None,
         custom_cert_verifier: None,
+        expected_server_name: None,
     })
     .expect("failed to create second client context");
 
@@ -301,6 +303,7 @@ async fn test_custom_verifier_invalid_cert() -> Result<(), Box<dyn std::error::E
             fail: true,
             expect_inner_fail: Some(true),
         })),
+        expected_server_name: None,
     })?;
 
     let mut server = AsyncServer::spawn(server_ctx);
@@ -344,6 +347,7 @@ async fn test_custom_verifier_invalid_self_signed_succeeds_with_custom_ok()
             fail: false,
             expect_inner_fail: Some(true),
         })),
+        expected_server_name: None,
     })?;
 
     let mut server = AsyncServer::spawn(server_ctx);
@@ -383,6 +387,7 @@ async fn test_custom_verifier_invalid_self_signed_fails_with_custom_error()
             fail: true,
             expect_inner_fail: Some(true),
         })),
+        expected_server_name: None,
     })?;
 
     let mut server = AsyncServer::spawn(server_ctx);
@@ -398,6 +403,99 @@ async fn test_custom_verifier_invalid_self_signed_fails_with_custom_error()
     assert!(result.is_err(), "Handshake should have failed due to custom verifier");
 
     Ok(())
+}
+
+#[tokio::test]
+async fn test_custom_server_name_match() -> Result<(), Box<dyn std::error::Error>> {
+    let custom_name = "my-service.example.com";
+
+    // Server generates a self-signed cert with the custom SAN.
+    let server_provider = utils::create_self_signed_for(custom_name)?;
+    let server_identity = server_provider.get_identity()?;
+
+    let server_ctx = OakSessionTlsServerContext::create(ServerContextConfig {
+        tls_identity_provider: utils::create_static_cert_identity_provider(
+            server_identity.key_der.clone_key(),
+            server_identity.cert_der.clone(),
+        ),
+        client_trust_anchor_der: None,
+        custom_cert_verifier: None,
+    })?;
+
+    // Client uses a custom verifier to accept the self-signed cert, plus the
+    // matching expected_server_name for SAN verification.
+    let client_ctx = OakSessionTlsClientContext::create(ClientContextConfig {
+        server_trust_anchor_der: None,
+        tls_identity_provider: None,
+        custom_cert_verifier: Some(Box::new(MockVerifier { fail: false, expect_inner_fail: None })),
+        expected_server_name: Some(custom_name.to_string()),
+    })?;
+
+    let mut server = AsyncServer::spawn(server_ctx);
+    let mut client = do_handshake(&mut server, &client_ctx).await;
+
+    let msg = b"custom SAN test";
+    let encrypted = client.encrypt(msg)?;
+    let decrypted = server.decrypt(encrypted).await.unwrap();
+    assert_eq!(decrypted, msg);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_custom_server_name_mismatch_fails() -> Result<(), Box<dyn std::error::Error>> {
+    // Server cert has SAN "oak-session-tls" (default).
+    let server_provider = utils::create_self_signed()?;
+    let server_identity = server_provider.get_identity()?;
+
+    let server_ctx = OakSessionTlsServerContext::create(ServerContextConfig {
+        tls_identity_provider: utils::create_static_cert_identity_provider(
+            server_identity.key_der.clone_key(),
+            server_identity.cert_der.clone(),
+        ),
+        client_trust_anchor_der: None,
+        custom_cert_verifier: None,
+    })?;
+
+    // Client expects a different server name → SAN mismatch.
+    let client_ctx = OakSessionTlsClientContext::create(ClientContextConfig {
+        server_trust_anchor_der: None,
+        tls_identity_provider: None,
+        // Even if custom verifier returns ok, the SAN mismatch in the inner
+        // verifier should surface.
+        custom_cert_verifier: Some(Box::new(MockVerifier { fail: true, expect_inner_fail: None })),
+        expected_server_name: Some("wrong-name.example.com".to_string()),
+    })?;
+
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let mut server = AsyncServer::spawn(server_ctx);
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(async {
+                do_handshake(&mut server, &client_ctx).await;
+            })
+        });
+    }));
+
+    assert!(result.is_err(), "Handshake should have failed due to SAN mismatch");
+
+    Ok(())
+}
+
+#[test]
+fn test_create_self_signed_for_custom_name() {
+    let custom_name = "my-custom-service.example.com";
+    let provider =
+        utils::create_self_signed_for(custom_name).expect("create_self_signed_for failed");
+    let identity = provider.get_identity().expect("get_identity failed");
+    assert!(!identity.cert_der.is_empty());
+
+    // The custom name should appear in the DER-encoded certificate.
+    let cert_bytes = identity.cert_der.as_ref();
+    let name_bytes = custom_name.as_bytes();
+    assert!(
+        cert_bytes.windows(name_bytes.len()).any(|w| w == name_bytes),
+        "custom server name not found in certificate SAN"
+    );
 }
 
 struct TestSessionPair {
@@ -433,6 +531,7 @@ impl TestSessionPair {
             tls_identity_provider: client_identity
                 .map(|id| utils::create_static_cert_identity_provider(id.key_der, id.cert_der)),
             custom_cert_verifier,
+            expected_server_name: None,
         })
         .expect("failed to create client context");
 

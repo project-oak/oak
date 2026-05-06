@@ -59,3 +59,49 @@ validation, and expiry checks). This allows the custom verifier to:
 The custom verifier receives the standard verification result (as an error code
 in C++, or a `Result` in Rust) and must return a status indicating whether to
 accept or reject the certificate.
+
+## Server Name and SAN Verification
+
+By default, the library uses `"oak-session-tls"` as the server identity for both
+SNI (Server Name Indication) and certificate SAN (Subject Alternative Name)
+verification. This name is embedded in self-signed certificates and verified by
+the client during the TLS handshake.
+
+To use a custom server identity, set `expected_server_name` on the
+`ClientContextConfig`:
+
+```rust
+// Rust
+let config = ClientContextConfig {
+    expected_server_name: Some("my-service.example.com".to_string()),
+    ..
+};
+```
+
+```cpp
+// C++
+ClientContextConfig config{
+    .expected_server_name = "my-service.example.com",
+};
+```
+
+When using self-signed certificates, the server must generate its certificate
+with a matching SAN:
+
+```rust
+// Rust
+let provider = utils::create_self_signed_for("my-service.example.com")?;
+```
+
+```cpp
+// C++
+auto provider = util::CreateSelfSigned("my-service.example.com");
+```
+
+If `expected_server_name` is not set, it defaults to `"oak-session-tls"`,
+preserving backward compatibility with existing deployments.
+
+**Interaction with custom verifiers:** The SAN check is part of standard
+WebPKI/X.509 verification. A `CustomCertVerifier` receives the result of
+standard verification (including any SAN mismatch) and can choose to override
+failures or add additional checks.

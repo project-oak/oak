@@ -86,6 +86,7 @@ fn test_client_context() -> OakSessionTlsClientContext {
             client_cert,
         )),
         custom_cert_verifier: None,
+        expected_server_name: None,
     })
     .expect("failed to create TLS client context")
 }

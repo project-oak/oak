@@ -29,6 +29,15 @@
 
 namespace oak::session::tls {
 
+/// The default server name used for SNI and certificate SAN verification.
+///
+/// This specific string is chosen as a service identifier for Oak Session TLS.
+/// The choice of string is arbitrary, but it must be consistent between the
+/// client and the server's certificate. The client uses this name to populate
+/// the Server Name Indication (SNI) extension and, when hostname verification
+/// is enabled, to verify that the server's certificate SAN matches.
+constexpr char kDefaultServerName[] = "oak-session-tls";
+
 class OakSessionTls;
 class OakSessionTlsInitializer;
 
@@ -116,6 +125,18 @@ struct ClientContextConfig {
   // the result of standard verification, allowing it to override failures or
   // add additional checks.
   std::optional<CustomCertVerifier> custom_cert_verifier;
+
+  // The expected server name for SNI and certificate SAN verification.
+  //
+  // This value is used for two purposes:
+  // 1. It populates the Server Name Indication (SNI) extension in the
+  //    TLS ClientHello.
+  // 2. When hostname verification is enabled (which it is by default if a
+  //    trust anchor is provided), it is matched against the server
+  //    certificate's Subject Alternative Name (SAN).
+  //
+  // If not set, defaults to kDefaultServerName ("oak-session-tls").
+  std::optional<std::string> expected_server_name;
 };
 
 /**
@@ -161,17 +182,20 @@ class OakSessionTlsContext {
   OakSessionTlsContext(
       OakSessionTlsMode mode, bssl::UniquePtr<SSL_CTX> ssl_ctx,
       std::unique_ptr<TlsIdentityProvider> tls_identity_provider,
-      std::optional<CustomCertVerifier> custom_cert_verifier)
+      std::optional<CustomCertVerifier> custom_cert_verifier,
+      std::string expected_server_name = std::string(kDefaultServerName))
       : mode_(mode),
         ssl_ctx_(std::move(ssl_ctx)),
         tls_identity_provider_(std::move(tls_identity_provider)),
-        custom_cert_verifier_(std::move(custom_cert_verifier)) {}
+        custom_cert_verifier_(std::move(custom_cert_verifier)),
+        expected_server_name_(std::move(expected_server_name)) {}
 
  private:
   OakSessionTlsMode mode_;
   bssl::UniquePtr<SSL_CTX> ssl_ctx_;
   std::unique_ptr<TlsIdentityProvider> tls_identity_provider_;
   std::optional<CustomCertVerifier> custom_cert_verifier_;
+  std::string expected_server_name_;
 };
 
 /**
@@ -194,7 +218,8 @@ class OakSessionTlsInitializer {
       const CustomCertVerifier* custom_cert_verifier = nullptr);
 
   static absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> CreateClient(
-      SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity = nullptr,
+      SSL_CTX* ssl_ctx, const std::string& expected_server_name,
+      const TlsIdentity* tls_identity = nullptr,
       const CustomCertVerifier* custom_cert_verifier = nullptr);
 
   // Returns true if the handshake is complete.

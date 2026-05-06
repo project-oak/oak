@@ -23,6 +23,7 @@
 #include "openssl/err.h"
 #include "openssl/evp.h"
 #include "openssl/ssl.h"
+#include "openssl/x509.h"
 
 constexpr int kMaxTlsFrameSize = 16 * 1024;  // 16 KB
 
@@ -167,10 +168,13 @@ OakSessionTlsContext::Create(ClientContextConfig config) {
     SSL_CTX_set_cert_verify_callback(ctx.get(), VerifyCallback, nullptr);
   }
 
+  std::string expected_server_name =
+      config.expected_server_name.value_or(std::string(kDefaultServerName));
+
   return std::make_unique<OakSessionTlsContext>(
       OakSessionTlsMode::kClient, std::move(ctx),
       std::move(config.tls_identity_provider),
-      std::move(config.custom_cert_verifier));
+      std::move(config.custom_cert_verifier), std::move(expected_server_name));
 }
 
 absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>>
@@ -189,7 +193,7 @@ OakSessionTlsContext::NewSession() {
   switch (mode_) {
     case OakSessionTlsMode::kClient:
       return OakSessionTlsInitializer::CreateClient(
-          ssl_ctx_.get(), identity_ptr,
+          ssl_ctx_.get(), expected_server_name_, identity_ptr,
           custom_cert_verifier_.has_value() ? &*custom_cert_verifier_
                                             : nullptr);
     case OakSessionTlsMode::kServer:
@@ -309,13 +313,30 @@ OakSessionTlsInitializer::Create(
 
 absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>>
 OakSessionTlsInitializer::CreateClient(
-    SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity,
+    SSL_CTX* ssl_ctx, const std::string& expected_server_name,
+    const TlsIdentity* tls_identity,
     const CustomCertVerifier* custom_cert_verifier) {
   absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> initializer =
       OakSessionTlsInitializer::Create(ssl_ctx, tls_identity,
                                        custom_cert_verifier);
   if (!initializer.ok()) {
     return initializer.status();
+  }
+
+  // Set SNI (Server Name Indication) so the server knows which certificate to
+  // present.
+  if (!SSL_set_tlsext_host_name((*initializer)->ssl_.get(),
+                                expected_server_name.c_str())) {
+    return absl::InternalError("failed to set SNI hostname");
+  }
+
+  // Enable hostname verification against the server certificate's SAN.
+  X509_VERIFY_PARAM* param = SSL_get0_param((*initializer)->ssl_.get());
+  X509_VERIFY_PARAM_set_hostflags(param, 0);
+  if (!X509_VERIFY_PARAM_set1_host(param, expected_server_name.data(),
+                                   expected_server_name.size())) {
+    return absl::InternalError(
+        "failed to set expected hostname for verification");
   }
 
   // Set this SSL instance into client mode.

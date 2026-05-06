@@ -238,6 +238,7 @@ mod tests {
             ),
             server_trust_anchor_der: Some(ca_cert),
             custom_cert_verifier: None,
+            expected_server_name: Some("oak-session-tls".to_string()),
         };
         let client_context = OakSessionTlsClientContext::create(client_config).unwrap();
 

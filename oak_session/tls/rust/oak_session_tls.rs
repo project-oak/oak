@@ -172,6 +172,16 @@ pub struct ClientContextConfig {
     /// with the result of standard verification, allowing it to override
     /// failures or add additional checks.
     pub custom_cert_verifier: Option<Box<dyn CustomCertVerifier>>,
+    /// The expected server name for SNI and certificate SAN verification.
+    ///
+    /// This value is used for two purposes:
+    /// 1. It populates the Server Name Indication (SNI) extension in the TLS
+    ///    ClientHello.
+    /// 2. It is matched against the server certificate's Subject Alternative
+    ///    Name (SAN) during WebPKI verification.
+    ///
+    /// If not set, defaults to `"oak-session-tls"`.
+    pub expected_server_name: Option<String>,
 }
 
 #[derive(Debug)]
@@ -441,6 +451,7 @@ impl ClientCertVerifier for CustomOnlyClientCertVerifier {
 pub struct OakSessionTlsClientContext {
     verifier: Arc<dyn rustls::client::danger::ServerCertVerifier>,
     tls_identity_provider: Option<Box<dyn TlsIdentityProvider>>,
+    server_name: String,
 }
 
 impl OakSessionTlsClientContext {
@@ -467,7 +478,10 @@ impl OakSessionTlsClientContext {
                 }
             };
 
-        Ok(Self { verifier, tls_identity_provider: config.tls_identity_provider })
+        let server_name =
+            config.expected_server_name.unwrap_or_else(|| OAK_SESSION_TLS_SERVER_NAME.to_string());
+
+        Ok(Self { verifier, tls_identity_provider: config.tls_identity_provider, server_name })
     }
 
     /// Create a new OakSessionTlsInitializer for a new client session using
@@ -498,7 +512,7 @@ impl OakSessionTlsClientContext {
             who: "client".to_string(),
             connection: Connection::Client(ClientConnection::new(
                 Arc::new(client_config),
-                ServerName::try_from(OAK_SESSION_TLS_SERVER_NAME)?.to_owned(),
+                ServerName::try_from(self.server_name.as_str())?.to_owned(),
             )?),
         })
     }
@@ -825,12 +839,30 @@ pub mod utils {
 
     /// Creates a TlsIdentityProvider that generates an ephemeral self-signed
     /// certificate upon construction.
+    ///
+    /// The certificate's Subject Alternative Name (SAN) is set to the default
+    /// Oak Session TLS server name (`"oak-session-tls"`).
     pub fn create_self_signed() -> Result<Box<dyn TlsIdentityProvider>, ContextError> {
         create_self_signed_with_extensions(Vec::new())
     }
 
     /// Creates a TlsIdentityProvider that generates an ephemeral self-signed
+    /// certificate for the given server name.
+    ///
+    /// The `server_name` is embedded as the certificate's Subject Alternative
+    /// Name (SAN), which must match the client's `expected_server_name` for
+    /// WebPKI verification to succeed.
+    pub fn create_self_signed_for(
+        server_name: &str,
+    ) -> Result<Box<dyn TlsIdentityProvider>, ContextError> {
+        create_self_signed_with_extensions_for(server_name, Vec::new())
+    }
+
+    /// Creates a TlsIdentityProvider that generates an ephemeral self-signed
     /// certificate with the specified X.509v3 extensions.
+    ///
+    /// The certificate's SAN is set to the default Oak Session TLS server name
+    /// (`"oak-session-tls"`).
     ///
     /// Use [`rcgen::CustomExtension::from_oid_content`] to create extensions.
     ///
@@ -845,7 +877,23 @@ pub mod utils {
     pub fn create_self_signed_with_extensions(
         extensions: Vec<rcgen::CustomExtension>,
     ) -> Result<Box<dyn TlsIdentityProvider>, ContextError> {
-        let subject_alt_names = vec![OAK_SESSION_TLS_SERVER_NAME.to_string()];
+        create_self_signed_with_extensions_for(OAK_SESSION_TLS_SERVER_NAME, extensions)
+    }
+
+    /// Creates a TlsIdentityProvider that generates an ephemeral self-signed
+    /// certificate for the given server name with the specified X.509v3
+    /// extensions.
+    ///
+    /// The `server_name` is embedded as the certificate's Subject Alternative
+    /// Name (SAN), which must match the client's `expected_server_name` for
+    /// WebPKI verification to succeed.
+    ///
+    /// Use [`rcgen::CustomExtension::from_oid_content`] to create extensions.
+    pub fn create_self_signed_with_extensions_for(
+        server_name: &str,
+        extensions: Vec<rcgen::CustomExtension>,
+    ) -> Result<Box<dyn TlsIdentityProvider>, ContextError> {
+        let subject_alt_names = vec![server_name.to_string()];
         let mut params = rcgen::CertificateParams::new(subject_alt_names)
             .map_err(|e| ContextError::CertGen(e.to_string()))?;
 

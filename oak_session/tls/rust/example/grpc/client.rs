@@ -33,6 +33,9 @@ struct Args {
     client_key: String,
     #[arg(long, default_value = "oak_session/tls/testing/test_client.pem")]
     client_cert: String,
+    /// Expected server name for SNI and certificate SAN verification.
+    #[arg(long, default_value = "oak-session-tls")]
+    server_name: String,
 }
 
 fn load_cert(path: &str) -> rustls_pki_types::CertificateDer<'static> {
@@ -62,6 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )),
         server_trust_anchor_der: Some(ca_cert),
         custom_cert_verifier: None,
+        expected_server_name: Some(args.server_name),
     };
 
     let client_context = OakSessionTlsClientContext::create(config).unwrap();

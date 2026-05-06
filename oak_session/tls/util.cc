@@ -27,6 +27,7 @@
 #include "openssl/obj.h"
 #include "openssl/ssl.h"
 #include "openssl/x509.h"
+#include "openssl/x509v3.h"
 
 namespace oak::session::tls::util {
 
@@ -115,7 +116,7 @@ absl::StatusOr<std::unique_ptr<TlsIdentityProvider>> CreateFromFiles(
 }
 
 absl::StatusOr<std::unique_ptr<TlsIdentityProvider>> CreateSelfSigned(
-    absl::Span<const X509Extension> extensions) {
+    absl::Span<const X509Extension> extensions, absl::string_view server_name) {
   bssl::UniquePtr<EVP_PKEY> pkey(EVP_PKEY_new());
   if (!pkey) {
     return absl::InternalError("Failed to create EVP_PKEY");
@@ -146,8 +147,24 @@ absl::StatusOr<std::unique_ptr<TlsIdentityProvider>> CreateSelfSigned(
   X509_NAME* name = X509_get_subject_name(x509.get());
   X509_NAME_add_entry_by_txt(
       name, "CN", MBSTRING_ASC,
-      reinterpret_cast<const unsigned char*>("oak-session-tls"), -1, -1, 0);
+      reinterpret_cast<const unsigned char*>(server_name.data()),
+      server_name.size(), -1, 0);
   X509_set_issuer_name(x509.get(), name);
+
+  // Add subjectAltName extension with a DNS entry matching the server name.
+  // This is required for interoperability with clients that verify the SAN
+  // (e.g., rustls ignores the CN and requires a matching SAN).
+  std::string san_value = absl::StrCat("DNS:", server_name);
+  X509V3_CTX v3ctx;
+  X509V3_set_ctx(&v3ctx, x509.get(), x509.get(), nullptr, nullptr, 0);
+  bssl::UniquePtr<X509_EXTENSION> san_ext(
+      X509V3_EXT_nconf(nullptr, &v3ctx, "subjectAltName", san_value.c_str()));
+  if (!san_ext) {
+    return absl::InternalError("failed to create subjectAltName extension");
+  }
+  if (!X509_add_ext(x509.get(), san_ext.get(), -1)) {
+    return absl::InternalError("failed to add subjectAltName extension");
+  }
 
   // Add any requested X.509v3 extensions before signing.
   for (const auto& ext : extensions) {
