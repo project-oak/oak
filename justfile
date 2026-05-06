@@ -255,7 +255,7 @@ copy-oak-artifacts: \
     (copy-binary "enclave_apps/oak_orchestrator" "oak_orchestrator") \
     (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_bin" "oak_restricted_kernel_simple_io_init_rd_wrapper_bin") \
     (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_measurement" "") \
-    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin" "") \
+    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin" "oak_restricted_kernel_virtio_console_init_rd_wrapper_bin") \
     (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_measurement" "") \
     (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_serial_channel_bin" "") \
     (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_serial_channel_measurement" "") \
