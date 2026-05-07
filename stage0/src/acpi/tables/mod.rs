@@ -234,6 +234,43 @@ pub fn check_ptr_aligned<T>(ptr: *const T) {
     }
 }
 
+pub trait Checksum {
+    fn checksum(&self) -> u8;
+}
+
+// If the data structure can be interpreted as bytes, we can provide a default
+// implementation.
+impl<T: IntoBytes + Immutable> Checksum for T {
+    fn checksum(&self) -> u8 {
+        self.as_bytes().iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs))
+    }
+}
+
+/// An ACPI System Description Table, as per Section 5.2 of the ACPI
+/// specification.
+pub trait AcpiTable: Checksum {
+    /// Signature of the ACPI table. Must be four bytes.
+    type Signature: Default;
+
+    fn try_from_bytes(buf: &[u8]) -> Result<(&Self, &[u8])>;
+    fn try_from_bytes_mut(buf: &mut [u8]) -> Result<(&mut Self, &mut [u8])>;
+
+    fn header_mut(&mut self) -> &mut DescriptionHeader<Self::Signature>;
+
+    fn validate(&self) -> Result<()> {
+        if self.checksum() != 0 {
+            return Err("ACPI table checksum invalid");
+        }
+
+        Ok(())
+    }
+
+    fn update_checksum(&mut self) {
+        let checksum = self.header_mut().checksum.wrapping_sub(self.checksum());
+        self.header_mut().checksum = checksum;
+    }
+}
+
 /// A generic holder for ACPI tables and the byte where we expect to find them.
 ///
 /// Instead of deferencing pointers, accessing ACPI tables can be done safely

@@ -67,7 +67,7 @@ mod pic;
 mod zero_page;
 
 pub use acpi::tables::{
-    AcpiTables, DescriptionHeader, Madt, Rsdp, Rsdt, Xsdt,
+    AcpiTable, AcpiTables, DescriptionHeader, Madt, Rsdp, Rsdt, Xsdt,
     madt::{LocalApicFlags, MultiprocessorWakeup, ProcessorLocalApic, ProcessorLocalX2Apic},
     rsdt::RsdtEntryPairMut,
 };

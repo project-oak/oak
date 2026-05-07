@@ -19,7 +19,9 @@ use core::assert;
 
 use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
-use crate::acpi::tables::{DescriptionHeader, Result, check_ptr_aligned, signature};
+use crate::acpi::tables::{
+    AcpiTable, Checksum, DescriptionHeader, Result, check_ptr_aligned, signature,
+};
 
 #[allow(dead_code)]
 #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
@@ -41,8 +43,35 @@ pub struct Rsdt {
 
 pub type RsdtEntryPairMut<'a> = (&'a mut u32, &'a mut DescriptionHeader<[u8; 4]>);
 
-impl Rsdt {
-    pub fn try_from_bytes_mut(buf: &mut [u8]) -> Result<(&mut Rsdt, &mut [u8])> {
+impl Checksum for Rsdt {
+    fn checksum(&self) -> u8 {
+        self.as_bytes().iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs))
+    }
+}
+
+impl AcpiTable for Rsdt {
+    type Signature = Signature;
+
+    fn try_from_bytes(buf: &[u8]) -> Result<(&Self, &[u8])> {
+        // First, try to parse the header.
+        let (header, _) = DescriptionHeader::<Signature>::try_ref_from_prefix(buf)
+            .map_err(|_| "invalid RSDT header")?;
+        // if it parses, it is a RSDT, and we can get a length from there
+        if (header.length as usize) < size_of::<DescriptionHeader<Signature>>() {
+            return Err("invalid RSDT");
+        }
+        let entries =
+            (header.length as usize - size_of::<DescriptionHeader<Signature>>()) / size_of::<u32>();
+
+        let (rsdt, tail) = Rsdt::try_ref_from_prefix_with_elems(buf, entries)
+            .map_err(|_| "invalid RSDT elements")?;
+
+        rsdt.validate()?;
+
+        Ok((rsdt, tail))
+    }
+
+    fn try_from_bytes_mut(buf: &mut [u8]) -> Result<(&mut Rsdt, &mut [u8])> {
         // First, try to parse the header.
         let (header, _) = DescriptionHeader::<Signature>::try_ref_from_prefix(buf)
             .map_err(|_| "invalid RSDT header")?;
@@ -61,6 +90,26 @@ impl Rsdt {
         Ok((rsdt, tail))
     }
 
+    fn header_mut(&mut self) -> &mut DescriptionHeader<Self::Signature> {
+        &mut self.header
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.checksum() != 0 {
+            return Err("ACPI table checksum invalid");
+        }
+
+        if !(self.header.length as usize - size_of::<DescriptionHeader<[u8; 4]>>())
+            .is_multiple_of(size_of::<u32>())
+        {
+            return Err("RSDT invalid: entries size not a multiple of pointer size");
+        }
+
+        Ok(())
+    }
+}
+
+impl Rsdt {
     pub fn new_with_size(num: usize) -> Box<Rsdt> {
         let mut header = DescriptionHeader::<Signature> {
             signature: Signature::default(),
@@ -95,14 +144,6 @@ impl Rsdt {
         // Safety: the memory was leaked from a Box; the pointer does not change, and
         // the size does not change.
         unsafe { Box::from_raw(rsdt) }
-    }
-
-    fn checksum(&self) -> u8 {
-        self.as_bytes().iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs))
-    }
-
-    pub fn update_checksum(&mut self) {
-        self.header.checksum = self.header.checksum.wrapping_sub(self.checksum());
     }
 
     /// Finds a validated header pointed at by this RSDT, by its
@@ -170,18 +211,6 @@ impl Rsdt {
             Ok((addr, header))
         })
     }
-
-    fn validate(&self) -> Result<()> {
-        self.header.validate()?;
-
-        if !(self.header.length as usize - size_of::<DescriptionHeader<[u8; 4]>>())
-            .is_multiple_of(size_of::<u32>())
-        {
-            return Err("RSDT invalid: entries size not a multiple of pointer size");
-        }
-
-        Ok(())
-    }
 }
 
 // Slice DSTs confuse googletest ([u32] is not `Sized`), so we have to do some
@@ -200,6 +229,8 @@ mod tests {
 
         let (rsdt, _) = Rsdt::try_from_bytes_mut(&mut buf[..]).unwrap();
         assert_that!(rsdt.entries, is_empty());
+        let (rsdt, _) = Rsdt::try_from_bytes(&buf[..]).unwrap();
+        assert_that!(rsdt.entries, is_empty());
     }
 
     #[test]
@@ -207,6 +238,8 @@ mod tests {
         let mut buf = Vec::from(b"RSDT\x2C\x00\x00\x00\x01\xA5OEMOEMAAAAAAAABBBBCCCCDDDD\x01\x00\x00\x00\x02\x00\x00\x00");
 
         let (rsdt, _) = Rsdt::try_from_bytes_mut(&mut buf[..]).unwrap();
+        assert_that!(rsdt.entries, unordered_elements_are!(eq(&1), eq(&2)));
+        let (rsdt, _) = Rsdt::try_from_bytes(&buf[..]).unwrap();
         assert_that!(rsdt.entries, unordered_elements_are!(eq(&1), eq(&2)));
     }
 

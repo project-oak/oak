@@ -29,7 +29,7 @@ use log::info;
 use oak_hal::{MsrAccess, PageAssignment, PageEncryption, Platform};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_stage0::{
-    AcpiTables, BOOT_ALLOC, Madt, RsdtEntryPairMut,
+    AcpiTable, AcpiTables, BOOT_ALLOC, Madt, RsdtEntryPairMut,
     hal::{FirmwarePlatform, PortFactory},
     mailbox::{FirmwareMailbox, OsMailbox},
     paging::{self, PageTableRefs},
