@@ -54,7 +54,7 @@ filegroup(
         "pes/endorsement.json",
         "pes/endorser_public_key.pem",
         "pes/endorser_signature.sig",
-        "pes/pes_public_key.pem",
+        "pes/pes_root_cert.der",
         "pes/pes_signature.hex",
         "pes/tlog_receipt.binarypb",
         "pes/tlog_receipt.textproto",

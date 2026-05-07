@@ -32,8 +32,9 @@ use oak_proto_rust::{
         VerificationMaterial as ProtoVerificationMaterial, X509Der,
         statement::Format as StatementFormat, verification_material::VerificationMaterial,
     },
-    oak::attestation::v1::VerifyingKeySet,
+    oak::attestation::v1::{KeyType, VerifyingKeySet},
 };
+use x509_cert::der::{Decode, Encode};
 
 /// Verifies a PES confirmation (serialized PublicEndorsement) against a PES
 /// public key set.
@@ -79,19 +80,12 @@ pub fn verify_pes_confirmation(
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("missing verification_material"))?;
 
-    let endorser_public_key_der = match endorser_vm.verification_material.as_ref().ok_or_else(|| anyhow::anyhow!("missing verification_material oneof"))? {
-        oak_proto_rust::google::pes::v1::verification_material::VerificationMaterial::X509Certificate(cert) => {
-            &cert.der_bytes
-        }
-        oak_proto_rust::google::pes::v1::verification_material::VerificationMaterial::EcdsaP256Sha256(pubkey) => {
-            &pubkey.der_bytes
-        }
-    };
+    let endorser_raw_vm_bytes = extract_raw_vm_bytes(endorser_vm)?;
 
     // Construct the Pre-Authentication Encoding (PAE) canonical byte string.
     let pae_bytes = pae::calculate(
         &endorsement.serialized,
-        endorser_public_key_der,
+        endorser_raw_vm_bytes,
         &endorser_signature.signature,
         &tlog_receipt.entry_id,
     );
@@ -110,39 +104,38 @@ pub fn verify_pes_confirmation(
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("missing PES verification_material"))?;
 
-    let pes_public_key_der = match pes_vm.verification_material.as_ref().ok_or_else(|| anyhow::anyhow!("missing PES verification_material oneof"))? {
-        oak_proto_rust::google::pes::v1::verification_material::VerificationMaterial::X509Certificate(cert) => {
-            &cert.der_bytes
-        }
-        oak_proto_rust::google::pes::v1::verification_material::VerificationMaterial::EcdsaP256Sha256(pubkey) => {
-            &pubkey.der_bytes
-        }
-    };
+    let pes_public_key_der = extract_public_key_der(pes_vm)?;
 
     // Find the PES key in the trusted set (Reference Value)
-    let trusted_key = pes_key_set
-        .keys
-        .iter()
-        .find(|k| k.raw == *pes_public_key_der)
-        .ok_or_else(|| anyhow::anyhow!("PES public key not found in trusted key set"))?;
+    let trusted_key =
+        pes_key_set.keys.iter().find(|k| k.raw == pes_public_key_der).ok_or_else(|| {
+            let trusted_lengths: Vec<usize> =
+                pes_key_set.keys.iter().map(|k| k.raw.len()).collect();
+            anyhow::anyhow!(
+                "PES public key not found in trusted key set.\n\
+                 Expected key (from signature): {} bytes (hex: {})\n\
+                 Trusted keys lengths: {:?}",
+                pes_public_key_der.len(),
+                hex::encode(&pes_public_key_der),
+                trusted_lengths
+            )
+        })?;
 
     match trusted_key.r#type() {
-        oak_proto_rust::oak::attestation::v1::KeyType::Undefined => {
-            anyhow::bail!("Undefined key type")
-        }
-        oak_proto_rust::oak::attestation::v1::KeyType::EcdsaP256Sha256 => {
+        KeyType::Undefined => anyhow::bail!("Undefined key type"),
+        KeyType::EcdsaP256Sha256 => {
             key_util::verify_signature_ecdsa(
                 &pes_signature.signature,
                 &pae_bytes,
-                pes_public_key_der,
+                &pes_public_key_der,
             )
             .context("failed to verify ECDSA signature")?;
         }
-        oak_proto_rust::oak::attestation::v1::KeyType::RsaSha2256 => {
+        KeyType::RsaSha2256 => {
             key_util::verify_signature_rsa(
                 &pes_signature.signature,
                 &pae_bytes,
-                pes_public_key_der,
+                &pes_public_key_der,
             )
             .context("failed to verify RSA signature")?;
         }
@@ -159,6 +152,39 @@ pub fn verify_pes_confirmation(
     );
 
     Ok(())
+}
+
+fn extract_raw_vm_bytes(vm: &ProtoVerificationMaterial) -> anyhow::Result<&[u8]> {
+    let vm_oneof = vm
+        .verification_material
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("missing verification_material oneof"))?;
+
+    match vm_oneof {
+        VerificationMaterial::X509Certificate(cert) => Ok(&cert.der_bytes),
+        VerificationMaterial::EcdsaP256Sha256(pubkey) => Ok(&pubkey.der_bytes),
+    }
+}
+
+fn extract_public_key_der(vm: &ProtoVerificationMaterial) -> anyhow::Result<Vec<u8>> {
+    let vm_oneof = vm
+        .verification_material
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("missing verification_material oneof"))?;
+
+    match vm_oneof {
+        VerificationMaterial::X509Certificate(cert) => {
+            let parsed_cert = x509_cert::Certificate::from_der(&cert.der_bytes)
+                .map_err(|e| anyhow::anyhow!("failed to parse PES X.509 cert: {e}"))?;
+            let spki_der = parsed_cert
+                .tbs_certificate
+                .subject_public_key_info
+                .to_der()
+                .map_err(|e| anyhow::anyhow!("failed to serialize SPKI: {e}"))?;
+            Ok(spki_der)
+        }
+        VerificationMaterial::EcdsaP256Sha256(pubkey) => Ok(pubkey.der_bytes.to_vec()),
+    }
 }
 
 /// Helper to decode a base64 string from a JSON value.

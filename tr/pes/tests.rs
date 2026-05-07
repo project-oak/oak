@@ -33,37 +33,51 @@ fn test_verify_pes_confirmation_success() {
     use base64::Engine;
     use rsa::pkcs8::DecodePrivateKey;
 
-    // Static 2048-bit RSA private key provided by the user.
-    let priv_key_base64 = "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC2WuIuMUiD0eBL\
-        f0ZZiEqRBTmk+eS9N96u9+ABKb6wNE0t7OJgJ82H5fg0D1zTyBrh40i+x7seAEIH\
-        7rWUgDQzNw0ex1DySEjypKnbXnSZMfiiK0zP6X65KqZyAHJqy+G24YIikeCzI2kP\
-        iw3Ggh6zfbI2/Tbb/iheB3Q/L8gx0zocYyE2Dbd4QhMu6c2emwViO4/1ViK+2J19\
-        kbmv5T66M+Am2RrXilyMEYb8g9oQ9PagS6lfPY/8k6SD0euZ3dCkGDEdPDkpjNOu\
-        5Xmk+CSn7neBNp2D+7Q6cPwF/mGFvp4OtljoaxP5avPcmDiPBXVf1Jpmsqnvsvck\
-        W3J53DFbAgMBAAECggEACgj1UnJu2aY2kCEIZ4vrApEFi5Ee59THwdwtLRM1ha/T\
-        IXhcOstl8ZkTsBW6V4M3C4A89Ba8stlzyMj3oBzwAnOAmtWAHF0i+otaN5K6muWX\
-        l6EHYJeqXBk/QJ3KrhrbKHu/dBSQB3um3+6YiviFJP6BTKphlvilEwuY95MzEp7D\
-        mky6znVSzc2EP/4dCm6OGM1MQu2NAalbYZSxU6PJvjBQJRtfVnDG3ttZ4bUq4VBe\
-        NsAqZ4CUfGDfcCEhD5hI2ILb9wVZRQ8xpZfxgJNilBWiulylJcY9dDwvuoraXw4Q\
-        7i9bUPF7X5kDj3mvSOyKHBy1cq8MLPxhCzCEd0FNeQKBgQD4/3t/GH3I29UMH34J\
-        6fADIPPX3Q4013t7AdrtBfoQPUk1ox9QrURrmRS/nccSDkyZ2cPxzeyclynSupSV\
-        gbnFSW3m4rlcIPmfz8jWGLuF2MOXY39EU6q51r5J5WTt5ldfrhumXW2bpQ0Jfjod\
-        6pERFRZvhOMPjbW4p7xHkk9PEwKBgQC7e6S5a4cckEPajaNpqSBgh88ma/uywoiJ\
-        qVC7iINXhIsZblvP7ZMc8vjAVq1oQXW/5Q+1mouMS96ZdgHf5Ex5LeVZdoFH+dAp\
-        jwBPUz7YagBnzNcTvNXFXfA9l7P4S9xd1ykyE/dOuleEDCbld+ziBwm5fpO9KXug\
-        i30Dhm01mQKBgFsMMIA82GHF4JVaPqApZpX+Squ4LSWtVX2ZJBBfixy9DDQMvbqm\
-        YMpnY2rdqpkzmVb4hem5PrfTnntrtkEk+mTlgMZYSSci96Q0Ol/vE0LSDFMjErpN\
-        TbQ+jb4/nzROccyOwZWHvDiZlbbO7TlbOEhiyZ1lnhFl4/jtfK8/FLj5AoGAVVuv\
-        3bO1Ki4Mlp7R/bNAyHJMwAN97x9epr5twVQf6GKyKfvy1TInPpDo7DkKbmMPRzT0\
-        +AvK6S9Jw7jUlakNoEZjG1428hwsyB8RVwxhmop4cMn0Sko5Uci5LnG5QJzZUeg6\
-        G1C30iJI4hfeRa9aLHZj2Q5mGUOfw7J+UnKLmlECgYBZEhBTeh1vQ56A+ZYetNNX\
-        pelwpY3sFIxTn/wB2+iH2vjtybN0unB0+CdJbaSV9dlDLVAzf7Z8hKRszHiifRV1\
-        HbDtuPyX00hO3gBdtTL7Cxu2gccPjomjzhV3ZD0J9lKQhtndn+b1BsuJSmjEEVtx\
-        uOryJhB6vf4tLUlnixyeaA==";
+    let cert_base64 = "MIIDDTCCAfWgAwIBAgIUPBaPsaiMewIvsmo7QISZwW5kQHMwDQYJKoZIhvcNAQELBQAwFjEUMBIG\
+A1UEAwwLdGVzdF9pc3N1ZXIwHhcNMjYwNTA3MTU1MjM3WhcNMjcwNTA3MTU1MjM3WjAWMRQwEgYD\
+VQQDDAt0ZXN0X2lzc3VlcjCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAK4u+cl/SACp\
+4o+fo1CssElYp36q4MXDmOsKZZGx5eoB2CSmW6GnTCefGJ6rMr/Rnp56VWRKiAnCCCROQxTXLi9z\
+8rYGxoAGPv6wJwKHQOVMkdZoTU/pUewfSBUdBfvLUwHopPmWpOch9Xgh4ymSu9RlXIXmSfAkZNdn\
+GlIqLWIyl5z3kazR6WWCrWRwcXKL+01jCVwf+1EuWBY82gdmN5kkfQsclY5E4vBpw9buh0VhG9KE\
+i/aa0YfPZiXRPRYQlpX1rreCXmZzNz9Sy30wDU0bqh1cTEdpcYFVJh7C3q2/7sJ0Juirgso1Qb8F\
+TqOjAGZaUUk0ixp88TNGAS4BIs8CAwEAAaNTMFEwHQYDVR0OBBYEFBrhSgVcGhgGwHV0OvgMbaDd\
+m2jbMB8GA1UdIwQYMBaAFBrhSgVcGhgGwHV0OvgMbaDdm2jbMA8GA1UdEwEB/wQFMAMBAf8wDQYJ\
+KoZIhvcNAQELBQADggEBAAlrMuM8629s0VOJAVn46HzgKXgYCqNJHqkUQEn1X+6RznYRzQD2xz7n\
+yoHZGCFmRZZKJzDLwToDECDYcte+JDoFlSsGoDaMaSueSBWWilmv3Du64XNIu9syQwLUS8ehtr/P\
+s3rndIOZ92m4mUuXtzj9VOu0eiKL3bi0xT/w7Dp5hmD71tOrpndZA3b29fqEifFGDc/XatIvC2qq\
+8gTeitcgOOHOroQkOUG4lK113g4wK4FcR2SqwbRrHr9OX679LIkSypOOZUVdloS+NEBa6wTQmQm2\
+2blmc9Vg3UOS6wVt9ACd16BzcxM5u1mDueaWhT8xvuEv7MrGjrTHFt4OFFg=";
+
+    let priv_key_base64 = "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCuLvnJf0gAqeKPn6NQrLBJWKd+\
+quDFw5jrCmWRseXqAdgkpluhp0wnnxieqzK/0Z6eelVkSogJwggkTkMU1y4vc/K2BsaABj7+sCcC\
+h0DlTJHWaE1P6VHsH0gVHQX7y1MB6KT5lqTnIfV4IeMpkrvUZVyF5knwJGTXZxpSKi1iMpec95Gs\
+0ellgq1kcHFyi/tNYwlcH/tRLlgWPNoHZjeZJH0LHJWOROLwacPW7odFYRvShIv2mtGHz2Yl0T0W\
+EJaV9a63gl5mczc/Ust9MA1NG6odXExHaXGBVSYewt6tv+7CdCboq4LKNUG/BU6jowBmWlFJNIsa\
+fPEzRgEuASLPAgMBAAECggEACS5rtz3Qz0wlJ5nsE2AO6MbWCVy7fWEqidUh9nSQoG2ZdZEZSmOV\
+pY8CzrZKdgb4G/Vp0+AD3LPQFw3TBmGzSwgLFqIzy2LI5kblv4Hen1eSZmFYFerACTi65XYCrzuP\
+9A1NyOQybAaDuGHc5f+YjAENx/cUFabtc9c48XTMsJzQ0hnGXLl8JVzCU6c5x5qd2myHXyrEHO8O\
+hX1pgKcNNIvGZ5y841dwGB7Np35l87zrAkXbH/TKz+cblmj675JqEXajeJbcO3p4tg2sN35MrE+7\
+u1TCQDAOV7GhZKsOsM8dBU57rStaLbzM/ddVVHKMxmdBhnOlGCmqC/xHSfsJ1QKBgQDXGiOU/130\
+i6CLMq/o/vfieq8Gbp86dToZCUExmZiOyReaVZJwELaVxsrPT62g+98R9m9paGgsfr8HcmMxNit0\
+pfXum+/sJQzLj3bCDrxU7P06wFBAtPdBSXq+nvtPaEh5G444rsb0JHalFkfMlLT3qcOSQ4KbouH1\
+o+hL0K0RYwKBgQDPTSsHDW6OaRnF+cLMWG0eyR160S8kQgXZjwted1JuaOVagp46rc/aZ55OEE8h\
+yMuImrGeLbe4NueTPauHZ+QfKuXt43L24WraXN5/10YraswQDt2ckJuTDrBqqeAi5qALnKJY0RFB\
+Kae7svra9woamYjITqPaEJQcv59FqtG6pQKBgHcqOPorew6mZ9uVyhSHZCapFtu2XyoQlY4XLXHg\
+CL9ZsmTC8Wx6JdzWE7dECgm8X7lg0BoSSFwWH5hti3xQ6UQnSRbWdtVZNTx0jzM03Ksj26o3rn4a\
+gzw9C+4cv1cfi77kQCcw1HGe3cfZjw9MdvEZsIoQMoQseYgPNPsDcU3HAoGATOOedfsxanjpKlk9\
+O3YA405NNOSpy5UBfnRkDyHK3VDi4PNZpQIa+jM8sE+0Sh+j/oMCJl1mq1kSA7b4DD0oi7bpmZan\
+aZKqg1u220wJpsjx73LUF+I7Egx8utNPYyKPcj8iqDbDY5wDrsbv7I98m+keps0kURmdFhytArYd\
+HFECgYBGFRe4tFnyyvQOwHNruVU6K9gMZbpafMY8mVQlagVzVsAbTZHAbztmDHBxrimEJk3PbYea\
+6Oc1tkGAVKRUqRUP+Il2H8cISU+hjqg/uBKs685h10SXOs8hJy86XwaPLtfYzCQlLBZLmiAIwKjg\
+A1edf0NSAidb4q69a5aAcE+c+w==";
+
+    let cert_der = base64::engine::general_purpose::STANDARD
+        .decode(cert_base64)
+        .expect("failed to decode certificate base64");
 
     let priv_key_der = base64::engine::general_purpose::STANDARD
         .decode(priv_key_base64)
-        .expect("failed to decode base64");
+        .expect("failed to decode private key base64");
 
     let priv_key = RsaPrivateKey::from_pkcs8_der(&priv_key_der).expect("failed to parse key");
     let pub_key = priv_key.to_public_key();
@@ -91,7 +105,7 @@ fn test_verify_pes_confirmation_success() {
             signature: vec![], // Will fill after signing PAE
             verification_material: Some(VerificationMaterial {
                 verification_material: Some(VmOneof::X509Certificate(X509Der {
-                    der_bytes: pub_key_der.clone(),
+                    der_bytes: cert_der,
                 })),
             }),
         }],

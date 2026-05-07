@@ -28,6 +28,7 @@ use oak_proto_rust::oak::attestation::v1::{
 };
 use oak_time::{Instant, make_instant};
 use prost::Message;
+use x509_cert::der::{Decode, Encode};
 
 const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";
 const SIGNATURE_PATH: &str = "oak_attestation_verification/testdata/endorsement.json.sig";
@@ -39,9 +40,6 @@ const LOG_ENTRY_PATH: &str = "oak_attestation_verification/testdata/logentry.jso
 // from https://rekor.sigstore.dev/api/v1/log/publicKey.
 const REKOR_PUBLIC_KEY_PATH: &str = "oak_attestation_verification/testdata/rekor_public_key.pem";
 
-// Specific test data for PES Sunny Day integration test.
-const PES_SERVICE_PUBLIC_KEY_PATH: &str =
-    "oak_attestation_verification/testdata/pes/pes_public_key.pem";
 // Data that is provided to PES by TR
 const PES_ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/pes/endorsement.json";
 // A signature of data that is provided to PES by TR
@@ -54,6 +52,7 @@ const PES_SERVICE_SIGNATURE_HEX_PATH: &str =
     "oak_attestation_verification/testdata/pes/pes_signature.hex";
 const PES_TLOG_RECEIPT_BINARY_PATH: &str =
     "oak_attestation_verification/testdata/pes/tlog_receipt.binarypb";
+const PES_ROOT_CERT_PATH: &str = "oak_attestation_verification/testdata/pes/pes_root_cert.der";
 
 const KEY_ID: u32 = 4711;
 
@@ -68,7 +67,6 @@ pub struct EndorsementData {
     pub rekor_public_key_pem: String,
     pub endorser_public_key: Vec<u8>,
     pub rekor_public_key: Vec<u8>,
-    pub pes_public_key: Vec<u8>,
 
     // Valid populated protos, for verify_endorsement().
     pub valid_not_before: Instant,
@@ -90,15 +88,11 @@ impl EndorsementData {
             .expect("couldn't read endorser public key");
         let rekor_public_key_pem = fs::read_to_string(data_path(REKOR_PUBLIC_KEY_PATH))
             .expect("couldn't read rekor public key");
-        let pes_public_key_pem = fs::read_to_string(data_path(PES_SERVICE_PUBLIC_KEY_PATH))
-            .expect("couldn't read PES public key");
 
         let endorser_public_key = convert_pem_to_raw(endorser_public_key_pem.as_str())
             .expect("failed to convert endorser key");
         let rekor_public_key =
             convert_pem_to_raw(&rekor_public_key_pem).expect("failed to convert Rekor key");
-        let pes_public_key =
-            convert_pem_to_raw(&pes_public_key_pem).expect("failed to convert PES key");
 
         let endorsement = Endorsement {
             format: Format::EndorsementFormatJsonIntoto.into(),
@@ -122,7 +116,6 @@ impl EndorsementData {
             rekor_public_key_pem,
             endorser_public_key,
             rekor_public_key,
-            pes_public_key,
 
             valid_not_before: make_instant!("2024-02-28T09:47:12.067000Z"),
             valid_not_after: make_instant!("2025-02-27T09:47:12.067000Z"),
@@ -183,10 +176,17 @@ impl EndorsementData {
         let service_signature =
             hex::decode(pes_signature_hex.trim()).expect("failed to decode PES signature hex");
 
-        let service_public_key_pem = fs::read_to_string(data_path(PES_SERVICE_PUBLIC_KEY_PATH))
-            .expect("couldn't read PES public key");
-        let service_public_key_raw =
-            convert_pem_to_raw(&service_public_key_pem).expect("failed to convert PES key");
+        let cert_der =
+            fs::read(data_path(PES_ROOT_CERT_PATH)).expect("couldn't read PES root cert");
+
+        // Extract SPKI from cert for the trusted key set.
+        let parsed_cert =
+            x509_cert::Certificate::from_der(&cert_der).expect("failed to parse cert");
+        let service_public_key_raw = parsed_cert
+            .tbs_certificate
+            .subject_public_key_info
+            .to_der()
+            .expect("failed to serialize SPKI");
 
         let tlog_receipt_bytes = fs::read(data_path(PES_TLOG_RECEIPT_BINARY_PATH))
             .expect("couldn't read PES TLog receipt binary");
@@ -236,7 +236,7 @@ impl EndorsementData {
                     verification_material: Some(
                         oak_proto_rust::google::pes::v1::verification_material::VerificationMaterial::X509Certificate(
                             oak_proto_rust::google::pes::v1::X509Der {
-                                der_bytes: service_public_key_raw.clone(),
+                                der_bytes: cert_der,
                             }
                         )
                     ),
@@ -291,7 +291,6 @@ impl EndorsementData {
             rekor_public_key_pem: "".to_string(),
             endorser_public_key: endorser_public_key_raw,
             rekor_public_key: vec![],
-            pes_public_key: service_public_key_raw,
 
             valid_not_before: make_instant!("2024-02-28T09:47:12.067000Z"),
             valid_not_after: make_instant!("2025-02-27T09:47:12.067000Z"),
