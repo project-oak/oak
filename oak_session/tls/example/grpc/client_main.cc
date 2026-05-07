@@ -68,9 +68,15 @@ void RunClient() {
     TlsIdentity current_identity_;
   };
 
+  auto trust_anchor =
+      util::CreateTrustAnchorFromFile(absl::GetFlag(FLAGS_ca_cert));
+  if (!trust_anchor.ok()) {
+    LOG(FATAL) << "Failed to load trust anchor: " << trust_anchor.status();
+  }
+
   absl::StatusOr<std::unique_ptr<OakSessionTlsContext>> tls_context =
       OakSessionTlsContext::Create(ClientContextConfig{
-          .server_trust_anchor_path = absl::GetFlag(FLAGS_ca_cert),
+          .server_trust_anchor_provider = std::move(*trust_anchor),
           .tls_identity_provider = std::make_unique<StaticIdentityProvider>(
               *client_key_asn1, *client_cert_asn1),
       });

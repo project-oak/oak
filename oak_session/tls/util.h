@@ -60,6 +60,15 @@ absl::StatusOr<std::unique_ptr<TlsIdentityProvider>> CreateSelfSigned(
     absl::Span<const X509Extension> extensions = {},
     absl::string_view server_name = kDefaultServerName);
 
+/// Creates a TrustAnchorProvider that loads a PEM certificate from a file path.
+/// The file is read each time GetTrustAnchor() is called.
+absl::StatusOr<std::unique_ptr<TrustAnchorProvider>> CreateTrustAnchorFromFile(
+    std::string cert_path);
+
+/// Creates a TrustAnchorProvider that always returns the provided DER-encoded
+/// certificate.
+std::unique_ptr<TrustAnchorProvider> CreateStaticTrustAnchor(std::string cert_der);
+
 }  // namespace oak::session::tls::util
 
 #endif  // OAK_SESSION_TLS_SSL_UTIL_H__

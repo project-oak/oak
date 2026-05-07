@@ -174,7 +174,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             server_key,
             server_cert,
         ),
-        client_trust_anchor_der: None,
+        client_trust_anchor_provider: None,
         custom_cert_verifier: None,
     };
 
@@ -215,7 +215,7 @@ mod tests {
                 server_key,
                 server_cert,
             ),
-            client_trust_anchor_der: None,
+            client_trust_anchor_provider: None,
             custom_cert_verifier: None,
         };
         let server_context = OakSessionTlsServerContext::create(server_config).unwrap();
@@ -236,7 +236,9 @@ mod tests {
                     client_cert,
                 ),
             ),
-            server_trust_anchor_der: Some(ca_cert),
+            server_trust_anchor_provider: Some(
+                oak_session_tls::utils::create_static_trust_anchor_provider(ca_cert),
+            ),
             custom_cert_verifier: None,
             expected_server_name: Some("oak-session-tls".to_string()),
         };

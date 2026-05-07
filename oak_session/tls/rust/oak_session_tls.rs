@@ -127,6 +127,21 @@ where
     }
 }
 
+/// Provider trait that returns a trust anchor certificate.
+/// Called each time a new session is created on the context.
+pub trait TrustAnchorProvider: Send + Sync {
+    fn get_trust_anchor(&self) -> Result<CertificateDer<'static>, ContextError>;
+}
+
+impl<F> TrustAnchorProvider for F
+where
+    F: Fn() -> Result<CertificateDer<'static>, ContextError> + Send + Sync,
+{
+    fn get_trust_anchor(&self) -> Result<CertificateDer<'static>, ContextError> {
+        self()
+    }
+}
+
 /// Custom certificate verification logic that will be run in addition to
 /// standard verification.
 ///
@@ -152,9 +167,10 @@ pub struct ServerContextConfig {
     /// Provider that returns the key and certificate for this server.
     /// Called each time a new session is created.
     pub tls_identity_provider: Box<dyn TlsIdentityProvider>,
-    /// Optional trust anchor for the client.
+    /// Optional trust anchor provider for the client.
     /// If set, client verification will be required.
-    pub client_trust_anchor_der: Option<CertificateDer<'static>>,
+    /// Called each time a new session is created.
+    pub client_trust_anchor_provider: Option<Box<dyn TrustAnchorProvider>>,
     /// Optional custom certificate verifier. If provided, it will be called
     /// with the result of standard verification, allowing it to override
     /// failures or add additional checks.
@@ -163,8 +179,9 @@ pub struct ServerContextConfig {
 
 /// Parameters to configure OakSessionTlsClientContext for client behavior.
 pub struct ClientContextConfig {
-    /// The trust anchor that can verify the server.
-    pub server_trust_anchor_der: Option<CertificateDer<'static>>,
+    /// Optional trust anchor provider that can verify the server.
+    /// Called each time a new session is created.
+    pub server_trust_anchor_provider: Option<Box<dyn TrustAnchorProvider>>,
     /// If provided, called each time a new session is created to get the
     /// client's TLS identity. Enables mTLS mode.
     pub tls_identity_provider: Option<Box<dyn TlsIdentityProvider>>,
@@ -187,7 +204,7 @@ pub struct ClientContextConfig {
 #[derive(Debug)]
 struct DelegatingServerCertVerifier {
     inner: Arc<dyn ServerCertVerifier>,
-    custom: Box<dyn CustomCertVerifier>,
+    custom: Arc<dyn CustomCertVerifier>,
 }
 
 impl ServerCertVerifier for DelegatingServerCertVerifier {
@@ -249,7 +266,7 @@ impl ServerCertVerifier for DelegatingServerCertVerifier {
 #[derive(Debug)]
 struct DelegatingClientCertVerifier {
     inner: Arc<dyn ClientCertVerifier>,
-    custom: Box<dyn CustomCertVerifier>,
+    custom: Arc<dyn CustomCertVerifier>,
 }
 
 impl ClientCertVerifier for DelegatingClientCertVerifier {
@@ -319,7 +336,7 @@ impl ClientCertVerifier for DelegatingClientCertVerifier {
 /// attestation-based checks) is desired.
 #[derive(Debug)]
 struct CustomOnlyServerCertVerifier {
-    custom: Box<dyn CustomCertVerifier>,
+    custom: Arc<dyn CustomCertVerifier>,
 }
 
 impl ServerCertVerifier for CustomOnlyServerCertVerifier {
@@ -382,7 +399,7 @@ impl ServerCertVerifier for CustomOnlyServerCertVerifier {
 /// attestation-based checks) is desired.
 #[derive(Debug)]
 struct CustomOnlyClientCertVerifier {
-    custom: Box<dyn CustomCertVerifier>,
+    custom: Arc<dyn CustomCertVerifier>,
 }
 
 impl ClientCertVerifier for CustomOnlyClientCertVerifier {
@@ -449,7 +466,8 @@ impl ClientCertVerifier for CustomOnlyClientCertVerifier {
 /// Manages a TLS configuration that will be used to create Oak TLS client
 /// sessions.
 pub struct OakSessionTlsClientContext {
-    verifier: Arc<dyn rustls::client::danger::ServerCertVerifier>,
+    server_trust_anchor_provider: Option<Box<dyn TrustAnchorProvider>>,
+    custom_cert_verifier: Option<Arc<dyn CustomCertVerifier>>,
     tls_identity_provider: Option<Box<dyn TlsIdentityProvider>>,
     server_name: String,
 }
@@ -459,29 +477,58 @@ impl OakSessionTlsClientContext {
     pub fn create(config: ClientContextConfig) -> Result<Self, ContextError> {
         ensure_crypto_provider();
 
+        let server_name =
+            config.expected_server_name.unwrap_or_else(|| OAK_SESSION_TLS_SERVER_NAME.to_string());
+
+        Ok(Self {
+            server_trust_anchor_provider: config.server_trust_anchor_provider,
+            custom_cert_verifier: config.custom_cert_verifier.map(Arc::from),
+            tls_identity_provider: config.tls_identity_provider,
+            server_name,
+        })
+    }
+
+    /// Builds the server certificate verifier for a new session by resolving
+    /// the trust anchor from the provider.
+    fn build_verifier(
+        &self,
+    ) -> Result<Arc<dyn rustls::client::danger::ServerCertVerifier>, InitializationError> {
+        let trust_anchor = self
+            .server_trust_anchor_provider
+            .as_ref()
+            .map(|p| p.get_trust_anchor())
+            .transpose()
+            .map_err(|e| InitializationError::Tls(rustls::Error::General(e.to_string())))?;
+
         let verifier: Arc<dyn rustls::client::danger::ServerCertVerifier> =
-            match (config.server_trust_anchor_der, config.custom_cert_verifier) {
+            match (trust_anchor, &self.custom_cert_verifier) {
                 (Some(trust_anchor), custom) => {
                     let mut root_store = RootCertStore::empty();
-                    root_store.add(trust_anchor)?;
-                    let inner = WebPkiServerVerifier::builder(Arc::new(root_store)).build()?;
+                    root_store.add(trust_anchor).map_err(|e| {
+                        InitializationError::Tls(rustls::Error::General(e.to_string()))
+                    })?;
+                    let inner =
+                        WebPkiServerVerifier::builder(Arc::new(root_store)).build().map_err(
+                            |e| InitializationError::Tls(rustls::Error::General(e.to_string())),
+                        )?;
                     if let Some(custom) = custom {
-                        Arc::new(DelegatingServerCertVerifier { inner, custom })
+                        Arc::new(DelegatingServerCertVerifier { inner, custom: custom.clone() })
                     } else {
                         inner
                     }
                 }
-                (None, Some(custom)) => Arc::new(CustomOnlyServerCertVerifier { custom }),
+                (None, Some(custom)) => {
+                    Arc::new(CustomOnlyServerCertVerifier { custom: custom.clone() })
+                }
                 (None, None) => {
                     let root_store = RootCertStore::empty();
-                    WebPkiServerVerifier::builder(Arc::new(root_store)).build()?
+                    WebPkiServerVerifier::builder(Arc::new(root_store)).build().map_err(|e| {
+                        InitializationError::Tls(rustls::Error::General(e.to_string()))
+                    })?
                 }
             };
 
-        let server_name =
-            config.expected_server_name.unwrap_or_else(|| OAK_SESSION_TLS_SERVER_NAME.to_string());
-
-        Ok(Self { verifier, tls_identity_provider: config.tls_identity_provider, server_name })
+        Ok(verifier)
     }
 
     /// Create a new OakSessionTlsInitializer for a new client session using
@@ -491,9 +538,9 @@ impl OakSessionTlsClientContext {
     /// custom transport framing). For most use cases, prefer
     /// [`new_initialized_session`](Self::new_initialized_session) instead.
     pub fn new_session(&self) -> Result<OakSessionTlsInitializer, InitializationError> {
-        let builder = ClientConfig::builder()
-            .dangerous()
-            .with_custom_certificate_verifier(self.verifier.clone());
+        let verifier = self.build_verifier()?;
+        let builder =
+            ClientConfig::builder().dangerous().with_custom_certificate_verifier(verifier);
 
         let mut client_config = if let Some(provider) = &self.tls_identity_provider {
             let identity = provider
@@ -550,7 +597,8 @@ impl OakSessionTlsClientContext {
 /// sessions.
 pub struct OakSessionTlsServerContext {
     tls_identity_provider: Box<dyn TlsIdentityProvider>,
-    client_verifier: Option<Arc<dyn rustls::server::danger::ClientCertVerifier>>,
+    client_trust_anchor_provider: Option<Box<dyn TrustAnchorProvider>>,
+    custom_cert_verifier: Option<Arc<dyn CustomCertVerifier>>,
 }
 
 impl OakSessionTlsServerContext {
@@ -558,23 +606,11 @@ impl OakSessionTlsServerContext {
     pub fn create(config: ServerContextConfig) -> Result<Self, ContextError> {
         ensure_crypto_provider();
 
-        let client_verifier: Option<Arc<dyn rustls::server::danger::ClientCertVerifier>> =
-            match (config.client_trust_anchor_der, config.custom_cert_verifier) {
-                (Some(trust_anchor), custom) => {
-                    let mut root_store = RootCertStore::empty();
-                    root_store.add(trust_anchor)?;
-                    let inner = WebPkiClientVerifier::builder(Arc::new(root_store)).build()?;
-                    if let Some(custom) = custom {
-                        Some(Arc::new(DelegatingClientCertVerifier { inner, custom }))
-                    } else {
-                        Some(inner)
-                    }
-                }
-                (None, Some(custom)) => Some(Arc::new(CustomOnlyClientCertVerifier { custom })),
-                (None, None) => None,
-            };
-
-        Ok(Self { tls_identity_provider: config.tls_identity_provider, client_verifier })
+        Ok(Self {
+            tls_identity_provider: config.tls_identity_provider,
+            client_trust_anchor_provider: config.client_trust_anchor_provider,
+            custom_cert_verifier: config.custom_cert_verifier.map(Arc::from),
+        })
     }
 
     /// Create a new OakSessionTlsInitializer for a new server session using
@@ -584,8 +620,9 @@ impl OakSessionTlsServerContext {
     /// custom transport framing). For most use cases, prefer
     /// [`new_initialized_session`](Self::new_initialized_session) instead.
     pub fn new_session(&self) -> Result<OakSessionTlsInitializer, InitializationError> {
-        let builder = if let Some(verifier) = &self.client_verifier {
-            ServerConfig::builder().with_client_cert_verifier(verifier.clone())
+        let client_verifier = self.build_client_verifier()?;
+        let builder = if let Some(verifier) = client_verifier {
+            ServerConfig::builder().with_client_cert_verifier(verifier)
         } else {
             ServerConfig::builder().with_no_client_auth()
         };
@@ -606,6 +643,48 @@ impl OakSessionTlsServerContext {
             who: "server".to_string(),
             connection: Connection::Server(ServerConnection::new(Arc::new(server_config))?),
         })
+    }
+
+    /// Builds the client certificate verifier for a new session by resolving
+    /// the trust anchor from the provider.
+    fn build_client_verifier(
+        &self,
+    ) -> Result<Option<Arc<dyn rustls::server::danger::ClientCertVerifier>>, InitializationError>
+    {
+        let trust_anchor = self
+            .client_trust_anchor_provider
+            .as_ref()
+            .map(|p| p.get_trust_anchor())
+            .transpose()
+            .map_err(|e| InitializationError::Tls(rustls::Error::General(e.to_string())))?;
+
+        let verifier: Option<Arc<dyn rustls::server::danger::ClientCertVerifier>> =
+            match (trust_anchor, &self.custom_cert_verifier) {
+                (Some(trust_anchor), custom) => {
+                    let mut root_store = RootCertStore::empty();
+                    root_store.add(trust_anchor).map_err(|e| {
+                        InitializationError::Tls(rustls::Error::General(e.to_string()))
+                    })?;
+                    let inner =
+                        WebPkiClientVerifier::builder(Arc::new(root_store)).build().map_err(
+                            |e| InitializationError::Tls(rustls::Error::General(e.to_string())),
+                        )?;
+                    if let Some(custom) = custom {
+                        Some(Arc::new(DelegatingClientCertVerifier {
+                            inner,
+                            custom: custom.clone(),
+                        }))
+                    } else {
+                        Some(inner)
+                    }
+                }
+                (None, Some(custom)) => {
+                    Some(Arc::new(CustomOnlyClientCertVerifier { custom: custom.clone() }))
+                }
+                (None, None) => None,
+            };
+
+        Ok(verifier)
     }
 
     /// Create a new session and perform the TLS handshake using the provided
@@ -803,7 +882,10 @@ pub mod utils {
 
     use rustls_pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
 
-    use super::{ContextError, OAK_SESSION_TLS_SERVER_NAME, TlsIdentity, TlsIdentityProvider};
+    use super::{
+        ContextError, OAK_SESSION_TLS_SERVER_NAME, TlsIdentity, TlsIdentityProvider,
+        TrustAnchorProvider,
+    };
 
     pub fn load_cert_der<R: BufRead>(mut reader: R) -> CertificateDer<'static> {
         rustls_pemfile::certs(&mut reader).next().unwrap().unwrap()
@@ -835,6 +917,15 @@ pub mod utils {
                 cert_der: CertificateDer::from(cert_der_bytes.clone()),
             })
         })
+    }
+
+    /// Creates a TrustAnchorProvider that always returns the provided static
+    /// certificate.
+    pub fn create_static_trust_anchor_provider(
+        cert_der: CertificateDer<'static>,
+    ) -> Box<dyn TrustAnchorProvider> {
+        let bytes = cert_der.as_ref().to_vec();
+        Box::new(move || Ok(CertificateDer::from(bytes.clone())))
     }
 
     /// Creates a TlsIdentityProvider that generates an ephemeral self-signed

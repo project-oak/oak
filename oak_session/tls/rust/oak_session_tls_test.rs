@@ -150,13 +150,15 @@ async fn test_certificate_rotation_works() -> Result<(), Box<dyn std::error::Err
                 Ok(TlsIdentity { key_der: id.key_der.clone_key(), cert_der: id.cert_der.clone() })
             }
         }),
-        client_trust_anchor_der: None,
+        client_trust_anchor_provider: None,
         custom_cert_verifier: None,
     })
     .expect("failed to create server context");
 
     let client_ctx1 = OakSessionTlsClientContext::create(ClientContextConfig {
-        server_trust_anchor_der: Some(ca_cert.clone()),
+        server_trust_anchor_provider: Some(utils::create_static_trust_anchor_provider(
+            ca_cert.clone(),
+        )),
         tls_identity_provider: None,
         custom_cert_verifier: None,
         expected_server_name: None,
@@ -184,7 +186,7 @@ async fn test_certificate_rotation_works() -> Result<(), Box<dyn std::error::Err
     }
 
     let client_ctx2 = OakSessionTlsClientContext::create(ClientContextConfig {
-        server_trust_anchor_der: Some(ca_cert),
+        server_trust_anchor_provider: Some(utils::create_static_trust_anchor_provider(ca_cert)),
         tls_identity_provider: None,
         custom_cert_verifier: None,
         expected_server_name: None,
@@ -291,13 +293,15 @@ async fn test_custom_verifier_invalid_cert() -> Result<(), Box<dyn std::error::E
             server_key.clone_key(),
             server_cert.clone(),
         ),
-        client_trust_anchor_der: None,
+        client_trust_anchor_provider: None,
         custom_cert_verifier: None,
     })?;
 
     // Client trusts untrusted_cert (so server_cert is invalid to it)
     let client_ctx = OakSessionTlsClientContext::create(ClientContextConfig {
-        server_trust_anchor_der: Some(untrusted_cert),
+        server_trust_anchor_provider: Some(utils::create_static_trust_anchor_provider(
+            untrusted_cert,
+        )),
         tls_identity_provider: None,
         custom_cert_verifier: Some(Box::new(MockVerifier {
             fail: true,
@@ -334,14 +338,14 @@ async fn test_custom_verifier_invalid_self_signed_succeeds_with_custom_ok()
             untrusted_key.clone_key(),
             untrusted_cert.clone(),
         ),
-        client_trust_anchor_der: None,
+        client_trust_anchor_provider: None,
         custom_cert_verifier: None,
     })?;
 
     // Client trusts CA, so server's untrusted self-signed is rejected by standard
     // PKI. But custom verifier returns OK.
     let client_ctx = OakSessionTlsClientContext::create(ClientContextConfig {
-        server_trust_anchor_der: Some(ca_cert),
+        server_trust_anchor_provider: Some(utils::create_static_trust_anchor_provider(ca_cert)),
         tls_identity_provider: None,
         custom_cert_verifier: Some(Box::new(MockVerifier {
             fail: false,
@@ -374,14 +378,14 @@ async fn test_custom_verifier_invalid_self_signed_fails_with_custom_error()
             untrusted_key.clone_key(),
             untrusted_cert.clone(),
         ),
-        client_trust_anchor_der: None,
+        client_trust_anchor_provider: None,
         custom_cert_verifier: None,
     })?;
 
     // Client trusts CA, so server's untrusted self-signed is rejected.
     // Custom verifier also fails.
     let client_ctx = OakSessionTlsClientContext::create(ClientContextConfig {
-        server_trust_anchor_der: Some(ca_cert),
+        server_trust_anchor_provider: Some(utils::create_static_trust_anchor_provider(ca_cert)),
         tls_identity_provider: None,
         custom_cert_verifier: Some(Box::new(MockVerifier {
             fail: true,
@@ -418,14 +422,14 @@ async fn test_custom_server_name_match() -> Result<(), Box<dyn std::error::Error
             server_identity.key_der.clone_key(),
             server_identity.cert_der.clone(),
         ),
-        client_trust_anchor_der: None,
+        client_trust_anchor_provider: None,
         custom_cert_verifier: None,
     })?;
 
     // Client uses a custom verifier to accept the self-signed cert, plus the
     // matching expected_server_name for SAN verification.
     let client_ctx = OakSessionTlsClientContext::create(ClientContextConfig {
-        server_trust_anchor_der: None,
+        server_trust_anchor_provider: None,
         tls_identity_provider: None,
         custom_cert_verifier: Some(Box::new(MockVerifier { fail: false, expect_inner_fail: None })),
         expected_server_name: Some(custom_name.to_string()),
@@ -453,13 +457,13 @@ async fn test_custom_server_name_mismatch_fails() -> Result<(), Box<dyn std::err
             server_identity.key_der.clone_key(),
             server_identity.cert_der.clone(),
         ),
-        client_trust_anchor_der: None,
+        client_trust_anchor_provider: None,
         custom_cert_verifier: None,
     })?;
 
     // Client expects a different server name → SAN mismatch.
     let client_ctx = OakSessionTlsClientContext::create(ClientContextConfig {
-        server_trust_anchor_der: None,
+        server_trust_anchor_provider: None,
         tls_identity_provider: None,
         // Even if custom verifier returns ok, the SAN mismatch in the inner
         // verifier should surface.
@@ -521,13 +525,15 @@ impl TestSessionPair {
                 server_key.clone_key(),
                 server_cert.clone(),
             ),
-            client_trust_anchor_der: client_identity.as_ref().map(|_| ca_cert.clone()),
+            client_trust_anchor_provider: client_identity
+                .as_ref()
+                .map(|_| utils::create_static_trust_anchor_provider(ca_cert.clone())),
             custom_cert_verifier: None,
         })
         .expect("failed to create server context");
 
         let client_ctx = OakSessionTlsClientContext::create(ClientContextConfig {
-            server_trust_anchor_der: Some(ca_cert),
+            server_trust_anchor_provider: Some(utils::create_static_trust_anchor_provider(ca_cert)),
             tls_identity_provider: client_identity
                 .map(|id| utils::create_static_cert_identity_provider(id.key_der, id.cert_der)),
             custom_cert_verifier,

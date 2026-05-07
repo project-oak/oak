@@ -85,7 +85,8 @@ TEST(OakSessionTlsTest, ManualHandshake) {
   ASSERT_THAT(server_ctx, IsOk());
 
   ClientContextConfig client_config{
-      .server_trust_anchor_path = std::string(kTestCaCertPath),
+      .server_trust_anchor_provider =
+          std::move(*util::CreateTrustAnchorFromFile(kTestCaCertPath)),
   };
   auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
   ASSERT_THAT(client_ctx, IsOk());
@@ -136,7 +137,8 @@ TEST(OakSessionTlsTest, PqcKeyExchangeNegotiated) {
   ASSERT_THAT(server_ctx, IsOk());
 
   ClientContextConfig client_config{
-      .server_trust_anchor_path = std::string(kTestCaCertPath),
+      .server_trust_anchor_provider =
+          std::move(*util::CreateTrustAnchorFromFile(kTestCaCertPath)),
   };
   auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
   ASSERT_THAT(client_ctx, IsOk());
@@ -178,7 +180,8 @@ TEST(OakSessionTlsTest, UntrustedCertificateRejected) {
 
   // Client trusts only the test CA, not the untrusted self-signed cert.
   ClientContextConfig client_config{
-      .server_trust_anchor_path = std::string(kTestCaCertPath),
+      .server_trust_anchor_provider =
+          std::move(*util::CreateTrustAnchorFromFile(kTestCaCertPath)),
   };
   auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
   ASSERT_THAT(client_ctx, IsOk());
@@ -216,7 +219,8 @@ TEST(OakSessionTlsTest, CustomCertVerifierSuccess) {
 
   bool custom_verifier_called = false;
   ClientContextConfig client_config{
-      .server_trust_anchor_path = std::string(kTestCaCertPath),
+      .server_trust_anchor_provider =
+          std::move(*util::CreateTrustAnchorFromFile(kTestCaCertPath)),
       .custom_cert_verifier =
           [&](const std::vector<std::string>& chain, int err) {
             custom_verifier_called = true;
@@ -246,7 +250,8 @@ TEST(OakSessionTlsTest, CustomCertVerifierFailure) {
 
   bool custom_verifier_called = false;
   ClientContextConfig client_config{
-      .server_trust_anchor_path = std::string(kTestCaCertPath),
+      .server_trust_anchor_provider =
+          std::move(*util::CreateTrustAnchorFromFile(kTestCaCertPath)),
       .custom_cert_verifier =
           [&](const std::vector<std::string>& chain, int err) {
             custom_verifier_called = true;
@@ -290,7 +295,8 @@ TEST(OakSessionTlsTest, CustomCertVerifier_InvalidCertFails) {
   // Client trusts ONLY test_untrusted (acting as a different CA).
   // Therefore, the server's cert acts as an invalid cert.
   ClientContextConfig client_config{
-      .server_trust_anchor_path = std::string(kTestUntrustedCertPath),
+      .server_trust_anchor_provider =
+          std::move(*util::CreateTrustAnchorFromFile(kTestUntrustedCertPath)),
       .custom_cert_verifier =
           [&](const std::vector<std::string>& chain, int err) {
             custom_verifier_called = true;
@@ -328,7 +334,8 @@ TEST(OakSessionTlsTest,
 
   bool custom_verifier_called = false;
   ClientContextConfig client_config{
-      .server_trust_anchor_path = std::string(kTestCaCertPath),
+      .server_trust_anchor_provider =
+          std::move(*util::CreateTrustAnchorFromFile(kTestCaCertPath)),
       .custom_cert_verifier =
           [&](const std::vector<std::string>& chain, int err) {
             custom_verifier_called = true;
@@ -364,7 +371,8 @@ TEST(OakSessionTlsTest,
 
   bool custom_verifier_called = false;
   ClientContextConfig client_config{
-      .server_trust_anchor_path = std::string(kTestCaCertPath),
+      .server_trust_anchor_provider =
+          std::move(*util::CreateTrustAnchorFromFile(kTestCaCertPath)),
       .custom_cert_verifier =
           [&](const std::vector<std::string>& chain, int err) {
             custom_verifier_called = true;
@@ -422,7 +430,8 @@ TEST(OakSessionTlsTest, CertificateRotationWorks) {
 
   // First client session (should succeed because server uses the trusted cert).
   ClientContextConfig client_config1{
-      .server_trust_anchor_path = std::string(kTestCaCertPath),
+      .server_trust_anchor_provider =
+          std::move(*util::CreateTrustAnchorFromFile(kTestCaCertPath)),
   };
   auto client_ctx1 = OakSessionTlsContext::Create(std::move(client_config1));
   ASSERT_THAT(client_ctx1, IsOk());
@@ -443,7 +452,8 @@ TEST(OakSessionTlsTest, CertificateRotationWorks) {
   };
 
   ClientContextConfig client_config2{
-      .server_trust_anchor_path = std::string(kTestCaCertPath),
+      .server_trust_anchor_provider =
+          std::move(*util::CreateTrustAnchorFromFile(kTestCaCertPath)),
   };
   auto client_ctx2 = OakSessionTlsContext::Create(std::move(client_config2));
   ASSERT_THAT(client_ctx2, IsOk());
@@ -475,7 +485,8 @@ TEST(OakSessionTlsTest, CreateAndUseMtlsSession) {
   ASSERT_THAT(server_provider, IsOk());
   ServerContextConfig server_config{
       .tls_identity_provider = std::move(*server_provider),
-      .client_trust_anchor_path = std::string(kTestCaCertPath),
+      .client_trust_anchor_provider =
+          std::move(*util::CreateTrustAnchorFromFile(kTestCaCertPath)),
   };
   auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
   ASSERT_THAT(server_ctx, IsOk());
@@ -484,7 +495,8 @@ TEST(OakSessionTlsTest, CreateAndUseMtlsSession) {
       util::CreateFromFiles(kTestClientKeyPath, kTestClientCertPath);
   ASSERT_THAT(client_provider, IsOk());
   ClientContextConfig client_config{
-      .server_trust_anchor_path = std::string(kTestCaCertPath),
+      .server_trust_anchor_provider =
+          std::move(*util::CreateTrustAnchorFromFile(kTestCaCertPath)),
       .tls_identity_provider = std::move(*client_provider),
   };
   auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
@@ -518,7 +530,8 @@ TEST(OakSessionTlsTest, ClientSetsTlsIdentServerDoesntRequest) {
       util::CreateFromFiles(kTestClientKeyPath, kTestClientCertPath);
   ASSERT_THAT(client_provider, IsOk());
   ClientContextConfig client_config{
-      .server_trust_anchor_path = std::string(kTestCaCertPath),
+      .server_trust_anchor_provider =
+          std::move(*util::CreateTrustAnchorFromFile(kTestCaCertPath)),
       .tls_identity_provider = std::move(*client_provider),
   };
   auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
@@ -537,14 +550,16 @@ TEST(OakSessionTlsTest,
   ASSERT_THAT(server_provider, IsOk());
   ServerContextConfig server_config{
       .tls_identity_provider = std::move(*server_provider),
-      .client_trust_anchor_path = std::string(kTestCaCertPath),
+      .client_trust_anchor_provider =
+          std::move(*util::CreateTrustAnchorFromFile(kTestCaCertPath)),
   };
   auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
   ASSERT_THAT(server_ctx, IsOk());
 
   // Don't set client credentials.
   ClientContextConfig client_config{
-      .server_trust_anchor_path = std::string(kTestCaCertPath),
+      .server_trust_anchor_provider =
+          std::move(*util::CreateTrustAnchorFromFile(kTestCaCertPath)),
 
   };
   auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
@@ -582,7 +597,8 @@ TEST(OakSessionTlsTest, LargeDataTransfer) {
   ASSERT_THAT(server_ctx, IsOk());
 
   ClientContextConfig client_config{
-      .server_trust_anchor_path = std::string(kTestCaCertPath),
+      .server_trust_anchor_provider =
+          std::move(*util::CreateTrustAnchorFromFile(kTestCaCertPath)),
   };
   auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
   ASSERT_THAT(client_ctx, IsOk());

@@ -227,4 +227,29 @@ absl::StatusOr<std::unique_ptr<TlsIdentityProvider>> CreateSelfSigned(
       .key_asn1 = std::move(key_der), .cert_asn1 = std::move(cert_der)});
 }
 
+class StaticTrustAnchorProvider : public TrustAnchorProvider {
+ public:
+  StaticTrustAnchorProvider(std::string cert_der)
+      : cert_der_(std::move(cert_der)) {}
+
+  absl::StatusOr<std::string> GetTrustAnchor() override { return cert_der_; }
+
+ private:
+  std::string cert_der_;
+};
+
+absl::StatusOr<std::unique_ptr<TrustAnchorProvider>> CreateTrustAnchorFromFile(
+    std::string cert_path) {
+  auto cert_der = LoadCertificateFromFile(cert_path.c_str());
+  if (!cert_der.ok()) {
+    return cert_der.status();
+  }
+  return std::make_unique<StaticTrustAnchorProvider>(std::move(*cert_der));
+}
+
+std::unique_ptr<TrustAnchorProvider> CreateStaticTrustAnchor(
+    std::string cert_der) {
+  return std::make_unique<StaticTrustAnchorProvider>(std::move(cert_der));
+}
+
 }  // namespace oak::session::tls::util

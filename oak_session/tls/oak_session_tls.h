@@ -92,16 +92,25 @@ class TlsIdentityProvider {
   virtual absl::StatusOr<TlsIdentity> GetIdentity() = 0;
 };
 
+// Provider interface that returns a trust anchor certificate (DER-encoded).
+// Called each time a new session is created on the context.
+class TrustAnchorProvider {
+ public:
+  virtual ~TrustAnchorProvider() = default;
+  virtual absl::StatusOr<std::string> GetTrustAnchor() = 0;
+};
+
+
 // Parameters to configure OakSessionTlsContext for server behavior.
 struct ServerContextConfig {
   // Provider that returns the key and certificate for this server.
   // Called each time a new session is created.
   std::unique_ptr<TlsIdentityProvider> tls_identity_provider;
 
-  // Optional trust anchor path for the client.
+  // Optional trust anchor provider for the client.
   // If set, client verification mode will be enabled, and client verification
   // will be required.
-  std::optional<std::string> client_trust_anchor_path;
+  std::unique_ptr<TrustAnchorProvider> client_trust_anchor_provider;
 
   // Optional custom certificate verifier. If provided, it will be called with
   // the result of standard verification, allowing it to override failures or
@@ -111,10 +120,10 @@ struct ServerContextConfig {
 
 // Parameters to configure OakSessionTlsContext for client behavior.
 struct ClientContextConfig {
-  // Optional path to a trust anchor that can verify the server.
+  // Optional provider for a trust anchor that can verify the server.
   // If not set, standard PKI verification will not be configured and a
   // custom_cert_verifier must be provided to handle certificate validation.
-  std::optional<std::string> server_trust_anchor_path;
+  std::unique_ptr<TrustAnchorProvider> server_trust_anchor_provider;
 
   // If provided, called each time a new session is created to get the
   // client's TLS identity. Enables mTLS mode, allowing the server to
@@ -182,11 +191,13 @@ class OakSessionTlsContext {
   OakSessionTlsContext(
       OakSessionTlsMode mode, bssl::UniquePtr<SSL_CTX> ssl_ctx,
       std::unique_ptr<TlsIdentityProvider> tls_identity_provider,
+      std::unique_ptr<TrustAnchorProvider> trust_anchor_provider,
       std::optional<CustomCertVerifier> custom_cert_verifier,
-      std::string expected_server_name = std::string(kDefaultServerName))
+      std::string expected_server_name = "")
       : mode_(mode),
         ssl_ctx_(std::move(ssl_ctx)),
         tls_identity_provider_(std::move(tls_identity_provider)),
+        trust_anchor_provider_(std::move(trust_anchor_provider)),
         custom_cert_verifier_(std::move(custom_cert_verifier)),
         expected_server_name_(std::move(expected_server_name)) {}
 
@@ -194,6 +205,7 @@ class OakSessionTlsContext {
   OakSessionTlsMode mode_;
   bssl::UniquePtr<SSL_CTX> ssl_ctx_;
   std::unique_ptr<TlsIdentityProvider> tls_identity_provider_;
+  std::unique_ptr<TrustAnchorProvider> trust_anchor_provider_;
   std::optional<CustomCertVerifier> custom_cert_verifier_;
   std::string expected_server_name_;
 };
@@ -215,11 +227,13 @@ class OakSessionTlsInitializer {
  public:
   static absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> CreateServer(
       SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity = nullptr,
+      const std::string* trust_anchor = nullptr,
       const CustomCertVerifier* custom_cert_verifier = nullptr);
 
   static absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> CreateClient(
       SSL_CTX* ssl_ctx, const std::string& expected_server_name,
       const TlsIdentity* tls_identity = nullptr,
+      const std::string* trust_anchor = nullptr,
       const CustomCertVerifier* custom_cert_verifier = nullptr);
 
   // Returns true if the handshake is complete.
@@ -247,6 +261,7 @@ class OakSessionTlsInitializer {
  private:
   static absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> Create(
       SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity = nullptr,
+      const std::string* trust_anchor = nullptr,
       const CustomCertVerifier* custom_cert_verifier = nullptr);
   OakSessionTlsInitializer(bssl::UniquePtr<SSL> ssl, BIO* bio_read,
                            BIO* bio_write,

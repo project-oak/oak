@@ -63,7 +63,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             client_key,
             client_cert,
         )),
-        server_trust_anchor_der: Some(ca_cert),
+        server_trust_anchor_provider: Some(
+            oak_session_tls::utils::create_static_trust_anchor_provider(ca_cert),
+        ),
         custom_cert_verifier: None,
         expected_server_name: Some(args.server_name),
     };
