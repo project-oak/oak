@@ -106,7 +106,7 @@ runtime unpack them before running them.
 
 While this is definitely feasible, we've decided against it, for a few reasons:
 
-1. Additional logic and maintance overhead in the Oak Containers Orchestrator.
+1. Additional logic and maintenance overhead in the Oak Containers Orchestrator.
 2. Additional overhead when loading an image - now the runtime will have to
    unpack it, adding even more time to the container startup.
 3. Fewer transformations of the measured runtime bundle. We are unpacking your
