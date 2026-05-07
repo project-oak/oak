@@ -29,17 +29,20 @@ rust_library(
         "//tr/key_util",
         "//util/digest:oak_digest",
         "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:prost",
+        "@oak_crates_index//:base64",
+        "@oak_crates_index//:serde_json",
     ],
 )
 
 rust_test(
     name = "pes_test",
+    compile_data = ["testdata/pes_confirmation.json"],
     crate = ":pes",
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//tr/key_util",
         "@oak_crates_index//:base64",
         "@oak_crates_index//:rsa",
+        "@oak_crates_index//:serde_json",
     ],
 )

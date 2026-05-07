@@ -244,8 +244,45 @@ impl EndorsementData {
             }],
             tlog_receipt: Some(tlog_receipt),
         };
-        let mut pes_confirmation = Vec::new();
-        prost::Message::encode(&public_endorsement, &mut pes_confirmation).unwrap();
+        use base64::{Engine, engine::general_purpose::STANDARD};
+        use oak_proto_rust::google::pes::v1::verification_material::VerificationMaterial as VmOneof;
+
+        let pes_confirmation_json = serde_json::json!({
+            "name": public_endorsement.name,
+            "statement": {
+                "serialized": STANDARD.encode(public_endorsement.statement.as_ref().unwrap().serialized.as_slice()),
+                "format": "JSON_INTOTO",
+            },
+            "statementSignature": {
+                "signature": STANDARD.encode(public_endorsement.statement_signature.as_ref().unwrap().signature.as_slice()),
+                "verificationMaterial": {
+                    "ecdsaP256Sha256": {
+                        "derBytes": STANDARD.encode(match public_endorsement.statement_signature.as_ref().unwrap().verification_material.as_ref().unwrap().verification_material.as_ref().unwrap() {
+                            VmOneof::EcdsaP256Sha256(key) => &key.der_bytes,
+                            _ => panic!("unexpected VM"),
+                        }),
+                    }
+                }
+            },
+            "endorsementSignatures": [
+                {
+                    "signature": STANDARD.encode(public_endorsement.endorsement_signatures[0].signature.as_slice()),
+                    "verificationMaterial": {
+                        "x509Certificate": {
+                            "derBytes": STANDARD.encode(match public_endorsement.endorsement_signatures[0].verification_material.as_ref().unwrap().verification_material.as_ref().unwrap() {
+                                VmOneof::X509Certificate(cert) => &cert.der_bytes,
+                                _ => panic!("unexpected VM"),
+                            }),
+                        }
+                    }
+                }
+            ],
+            "tlogReceipt": {
+                "entryId": public_endorsement.tlog_receipt.as_ref().unwrap().entry_id,
+            }
+        });
+        let pes_confirmation =
+            serde_json::to_vec(&pes_confirmation_json).expect("failed to encode JSON");
 
         EndorsementData {
             endorsement: serialized_endorsement.clone(),
