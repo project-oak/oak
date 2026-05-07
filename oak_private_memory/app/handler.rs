@@ -22,7 +22,7 @@ use metrics::{RequestMetricName, get_global_metrics};
 use oak_private_memory_database::{
     IcingTempDir, MemoryId,
     clock::Clock,
-    database_with_cache::DatabaseWithCache,
+    database::Database,
     encryption::decrypt_database,
     icing::{IcingMetaDatabase, PageToken},
 };
@@ -231,7 +231,7 @@ impl SealedMemorySessionHandler {
             get_or_create_db(&mut db_client, &uid, &dek, self.clock.clone()).await?;
 
         let mut mutex_guard = self.session_context().await;
-        let database = DatabaseWithCache::new(
+        let database = Database::new(
             database,
             dek.clone(),
             db_client.clone(),

@@ -28,7 +28,7 @@ use std::{
 use anyhow::Result;
 use oak_containers_launcher::{Args, Launcher, QemuParams, QemuVmType, TrustedApplicationAddress};
 pub use oak_private_memory_database::clock::{Clock, SystemClock, system_time_to_timestamp};
-use oak_private_memory_database::database_with_cache::{MAX_DATABASE_SIZE, MAX_GRPC_DECODE_SIZE};
+use oak_private_memory_database::database::{MAX_DATABASE_SIZE, MAX_GRPC_DECODE_SIZE};
 use oak_session_tls::OakSessionTlsServerContext;
 use private_memory_server_lib::{
     app,

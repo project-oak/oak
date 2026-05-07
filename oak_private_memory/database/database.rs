@@ -26,7 +26,7 @@ use crate::{
     IcingTempDir, MemoryId,
     clock::{Clock, SystemClock, system_time_to_timestamp},
     icing::{IcingMetaDatabase, PageToken},
-    memory_cache::MemoryCache,
+    memory_blob_store::MemoryBlobStore,
 };
 
 // Maximum size of the database (metadata blob). This can exceed the gRPC
@@ -35,19 +35,19 @@ pub const MAX_DATABASE_SIZE: usize = 250 * 1024 * 1024; // 250 MB
 
 // Maximum gRPC decode size for non-streaming messages.
 pub const MAX_GRPC_DECODE_SIZE: usize = 100 * 1024 * 1024; // 100 MB
-/// A database with cache. It loads the meta database of the user at start,
-/// then loads documents at request. The loaded documents will be then cached
-/// in memory.
-pub struct DatabaseWithCache {
+/// A database that combines an Icing metadata index with encrypted blob
+/// storage. It loads the metadata index at start, then fetches memory
+/// contents from the external database on demand.
+pub struct Database {
     database: IcingMetaDatabase,
-    cache: MemoryCache,
+    blob_store: MemoryBlobStore,
     key_derivation_info: KeyDerivationInfo,
     current_size: usize,
     max_size: usize,
     clock: Arc<dyn Clock>,
 }
 
-impl DatabaseWithCache {
+impl Database {
     pub fn new(
         database: IcingMetaDatabase,
         dek: Vec<u8>,
@@ -57,7 +57,7 @@ impl DatabaseWithCache {
     ) -> Self {
         Self {
             database,
-            cache: MemoryCache::new(db_client, dek),
+            blob_store: MemoryBlobStore::new(db_client, dek),
             key_derivation_info,
             current_size: initial_size,
             max_size: MAX_DATABASE_SIZE,
@@ -155,7 +155,7 @@ impl DatabaseWithCache {
             );
         }
 
-        let blob_id = self.cache.add_memory(&memory).await?;
+        let blob_id = self.blob_store.add_memory(&memory).await?;
         self.meta_db().add_memory(&memory, blob_id)?;
         self.current_size += additional_size;
         Ok(memory.id)
@@ -175,7 +175,7 @@ impl DatabaseWithCache {
             return Ok((Vec::new(), PageToken::Start));
         }
 
-        let mut memories = self.cache.get_memories_by_blob_ids(&all_blob_ids).await?;
+        let mut memories = self.blob_store.get_memories_by_blob_ids(&all_blob_ids).await?;
         Self::apply_mask_to_memories(&mut memories, result_mask);
 
         Ok((memories, next_page_token))
@@ -187,7 +187,7 @@ impl DatabaseWithCache {
         result_mask: &Option<ResultMask>,
     ) -> anyhow::Result<Option<Memory>> {
         if let Some(blob_id) = self.meta_db().get_blob_id_by_memory_id(id.clone())? {
-            self.cache.get_memory_by_blob_id(&blob_id).await.map(|mut m| {
+            self.blob_store.get_memory_by_blob_id(&blob_id).await.map(|mut m| {
                 Self::apply_mask_to_memory(&mut m, result_mask);
                 Some(m)
             })
@@ -215,7 +215,7 @@ impl DatabaseWithCache {
             }
         }
 
-        let mut memories = self.cache.get_memories_by_blob_ids(&found_blob_ids).await?;
+        let mut memories = self.blob_store.get_memories_by_blob_ids(&found_blob_ids).await?;
         Self::apply_mask_to_memories(&mut memories, result_mask);
 
         Ok((memories, not_found_ids))
@@ -227,7 +227,7 @@ impl DatabaseWithCache {
         result_mask: &Option<ResultMask>,
     ) -> anyhow::Result<Option<Memory>> {
         if let Some(blob_id) = self.meta_db().get_memory_by_name(name)? {
-            self.cache.get_memory_by_blob_id(&blob_id).await.map(|mut m| {
+            self.blob_store.get_memory_by_blob_id(&blob_id).await.map(|mut m| {
                 Self::apply_mask_to_memory(&mut m, result_mask);
                 Some(m)
             })
@@ -264,7 +264,7 @@ impl DatabaseWithCache {
 
         let blob_ids: Vec<BlobId> =
             search_results.items.iter().map(|item| item.blob_id.clone()).collect();
-        let mut memories = self.cache.get_memories_by_blob_ids(&blob_ids).await?;
+        let mut memories = self.blob_store.get_memories_by_blob_ids(&blob_ids).await?;
         Self::apply_mask_to_memories(&mut memories, &request.result_mask);
 
         let results = memories
@@ -306,7 +306,7 @@ impl DatabaseWithCache {
 
         let blob_ids: Vec<BlobId> =
             search_results.items.iter().map(|item| item.blob_id.clone()).collect();
-        let mut memories = self.cache.get_memories_by_blob_ids(&blob_ids).await?;
+        let mut memories = self.blob_store.get_memories_by_blob_ids(&blob_ids).await?;
         Self::apply_mask_to_memories(&mut memories, &request.result_mask);
 
         Ok((memories, next_page_token))
@@ -356,7 +356,7 @@ impl DatabaseWithCache {
             .collect();
 
         self.meta_db().delete_memories(&ids)?;
-        self.cache.delete_memories(&blob_ids).await?;
+        self.blob_store.delete_memories(&blob_ids).await?;
         Ok(())
     }
 
@@ -444,7 +444,7 @@ mod tests {
     fn test_apply_mask_to_memory_no_mask() {
         let mut memory = create_memory_for_mask_test();
         let original_memory = memory.clone();
-        DatabaseWithCache::apply_mask_to_memory(&mut memory, &None);
+        Database::apply_mask_to_memory(&mut memory, &None);
         assert_eq!(memory, original_memory);
     }
 
@@ -454,7 +454,7 @@ mod tests {
         let mut memory = create_memory_for_mask_test();
         let mask =
             Some(ResultMask { include_fields: vec![MemoryField::Id as i32], ..Default::default() });
-        DatabaseWithCache::apply_mask_to_memory(&mut memory, &mask);
+        Database::apply_mask_to_memory(&mut memory, &mask);
         assert_eq!(memory.id, "test_id");
         assert!(memory.tags.is_empty());
         assert!(memory.content.is_none());
@@ -472,7 +472,7 @@ mod tests {
             include_fields: vec![MemoryField::Tags as i32],
             ..Default::default()
         });
-        DatabaseWithCache::apply_mask_to_memory(&mut memory, &mask);
+        Database::apply_mask_to_memory(&mut memory, &mask);
         assert!(memory.id.is_empty());
         assert_eq!(memory.tags, vec!["tag1".to_string(), "tag2".to_string()]);
         assert!(memory.content.is_none());
@@ -490,7 +490,7 @@ mod tests {
             include_fields: vec![MemoryField::Content as i32],
             include_content_fields: vec!["key1".to_string()],
         });
-        DatabaseWithCache::apply_mask_to_memory(&mut memory, &mask);
+        Database::apply_mask_to_memory(&mut memory, &mask);
         assert!(memory.id.is_empty());
         assert!(memory.tags.is_empty());
         assert!(memory.content.is_some());
@@ -513,7 +513,7 @@ mod tests {
             ],
             ..Default::default()
         });
-        DatabaseWithCache::apply_mask_to_memory(&mut memory, &mask);
+        Database::apply_mask_to_memory(&mut memory, &mask);
         assert!(memory.id.is_empty());
         assert!(memory.tags.is_empty());
         assert!(memory.content.is_none());
@@ -531,7 +531,7 @@ mod tests {
             include_fields: vec![MemoryField::Views as i32],
             ..Default::default()
         });
-        DatabaseWithCache::apply_mask_to_memory(&mut memory, &mask);
+        Database::apply_mask_to_memory(&mut memory, &mask);
         assert!(memory.id.is_empty());
         assert!(memory.tags.is_empty());
         assert!(memory.content.is_none());

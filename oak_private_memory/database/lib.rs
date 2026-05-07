@@ -15,14 +15,14 @@
 #![feature(negative_impls)]
 
 pub mod clock;
-pub mod database_with_cache;
+pub mod database;
 pub mod encryption;
 pub mod icing;
-pub mod memory_cache;
+pub mod memory_blob_store;
 
 pub use crate::{
     clock::{Clock, SystemClock, system_time_to_timestamp},
-    database_with_cache::DatabaseWithCache,
+    database::Database,
     icing::{
         IcingMetaDatabase, IcingTempDir, PageToken, PendingLlmViewMetadata, PendingMetadata,
         calculate_memory_icing_size,
