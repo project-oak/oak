@@ -20,7 +20,8 @@
 // These data structures (and constants) are derived from
 // qemu/hw/acpi/bios-linker-loader.c that defines the interface.
 
-use core::{ffi::CStr, mem::MaybeUninit, ops::Deref, option::Option::Some};
+use alloc::vec::Vec;
+use core::{ffi::CStr, mem::MaybeUninit, option::Option::Some};
 
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use sha2::{Digest, Sha256};
@@ -35,7 +36,7 @@ pub mod tables;
 use commands::{Invoke, RomfileCommand};
 use files::{Files, MemFiles};
 use tables::{
-    AcpiTables, DescriptionHeader, Fadt, Madt, Rsdp,
+    AcpiTables, Fadt, Madt, Rsdp,
     madt::{
         InterruptSourceOverride, IoApic, LocalApicNmi, MultiprocessorWakeup, ProcessorLocalApic,
         ProcessorLocalX2Apic,
@@ -181,33 +182,39 @@ fn debug_print_acpi_tables(tables: &mut AcpiTables) -> Result<(), &'static str> 
     log::info!("RSDP location: {:#018x}", tables.rsdp as *const dyn Rsdp as *const () as u64);
     log::info!("RSDP: {:?}", tables.rsdp);
 
-    if let Ok(Some(rsdt)) = tables.rsdt() {
+    let entries = if let Ok(Some(rsdt)) = tables.rsdt() {
         log::info!("RSDT: {:?}", rsdt);
         log::info!("RSDT entry count: {}", rsdt.entry_headers().count());
-        print_system_data_table_entries(rsdt.entry_headers())?;
+        rsdt.entries.iter().map(|x| VirtAddr::new(*x as u64)).collect()
     } else {
         log::info!("No RSDT present");
-    }
+        Vec::new()
+    };
 
-    if let Ok(Some(xsdt)) = tables.xsdt() {
+    print_system_data_table_entries(tables, &entries)?;
+
+    let entries = if let Ok(Some(xsdt)) = tables.xsdt() {
         log::info!("XSDT: {:?}", xsdt);
         log::info!("XSDT entry count: {}", xsdt.entry_ptrs().count());
-        print_system_data_table_entries(
-            xsdt.entry_ptrs()
-                .map(|entry_ptr_or_err| entry_ptr_or_err.map(|entry_ptr| entry_ptr.deref())),
-        )?;
+        xsdt.entries.iter().map(Into::into).collect()
     } else {
         log::info!("No XSDT present");
-    }
+        Vec::new()
+    };
+
+    print_system_data_table_entries(tables, &entries)?;
     Ok(())
 }
 
 /// Prints RSDT or XSDT entries. Prints extra detail for MADT entry.
-fn print_system_data_table_entries<'a>(
-    entries: impl Iterator<Item = Result<&'a DescriptionHeader<[u8; 4]>, &'static str>>,
+fn print_system_data_table_entries(
+    tables: &mut AcpiTables,
+    entries: &[VirtAddr],
 ) -> Result<(), &'static str> {
-    for header in entries {
-        let header = header?;
+    for &header in entries {
+        // Temporary hack until we've cleaned this up.
+        let header = tables.try_parse_header_at(header).ok_or("invalid header")?;
+
         log::info!("{}", header);
         if header.signature == *Madt::SIGNATURE {
             log::info!("    Entry APIC - It is a MADT, Interrupt Controller Structures:");

@@ -16,6 +16,7 @@
 
 use core::ops::{Deref, DerefMut};
 
+use x86_64::VirtAddr;
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
 use crate::{
@@ -75,6 +76,12 @@ impl From<u64> for XsdtEntryPtr {
     }
 }
 
+impl From<&XsdtEntryPtr> for VirtAddr {
+    fn from(value: &XsdtEntryPtr) -> Self {
+        VirtAddr::new(value.raw_val())
+    }
+}
+
 #[allow(dead_code)]
 #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
 #[repr(C)]
@@ -87,7 +94,7 @@ pub struct Signature(signature::X, signature::S, signature::D, signature::T);
 #[repr(C, packed)]
 pub struct Xsdt {
     pub header: DescriptionHeader<Signature>,
-    entries: [XsdtEntryPtr],
+    pub entries: [XsdtEntryPtr],
 }
 
 impl Xsdt {

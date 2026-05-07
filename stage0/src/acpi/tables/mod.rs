@@ -295,6 +295,23 @@ impl<'a> AcpiTables<'a> {
         Ok(self.xsdt.as_deref_mut())
     }
 
+    pub fn try_parse_header_at<S: TryFromBytes + Immutable>(
+        &self,
+        addr: VirtAddr,
+    ) -> Option<&DescriptionHeader<S>> {
+        for buffer in &self.buffers {
+            if VirtAddr::from_ptr(*buffer) <= addr
+                && VirtAddr::from_ptr(*buffer) + (buffer.len() as u64) > addr
+            {
+                let buffer = &buffer[addr.as_u64() as usize - (buffer.as_ptr() as usize)..];
+                let (header, _) = DescriptionHeader::<S>::try_ref_from_prefix(buffer).ok()?;
+                return Some(header);
+            }
+        }
+
+        None
+    }
+
     /// Tries to find a buffer that contains the address in the buffers list.
     ///
     /// You can think of the matcher buffer being "prefix-struct-suffix", where
