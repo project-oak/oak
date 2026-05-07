@@ -66,7 +66,7 @@ pub mod rsdt;
 mod xsdt;
 
 use alloc::vec::Vec;
-use core::{any::type_name, fmt::Display, ops::Range, slice};
+use core::{any::type_name, default::Default, fmt::Display, ops::Range, slice};
 
 pub use fadt::Fadt;
 pub use madt::Madt;
@@ -85,9 +85,30 @@ pub mod signature {
 
     #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
     #[repr(u8)]
+    pub enum A {
+        #[default]
+        A = b'A',
+    }
+
+    #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+    #[repr(u8)]
+    pub enum C {
+        #[default]
+        C = b'C',
+    }
+
+    #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+    #[repr(u8)]
     pub enum D {
         #[default]
         D = b'D',
+    }
+
+    #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+    #[repr(u8)]
+    pub enum F {
+        #[default]
+        F = b'F',
     }
 
     #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
@@ -330,6 +351,20 @@ impl<'a> AcpiTables<'a> {
         }
 
         Ok(self.xsdt.as_deref_mut())
+    }
+
+    pub fn try_parse_table_at<T: AcpiTable + ?Sized>(&self, addr: VirtAddr) -> Option<&T> {
+        for buffer in &self.buffers {
+            if VirtAddr::from_ptr(*buffer) <= addr
+                && VirtAddr::from_ptr(*buffer) + (buffer.len() as u64) > addr
+            {
+                let buffer = &buffer[addr.as_u64() as usize - (buffer.as_ptr() as usize)..];
+                let (table, _) = T::try_from_bytes(buffer).ok()?;
+                return Some(table);
+            }
+        }
+
+        None
     }
 
     pub fn try_parse_header_at<S: TryFromBytes + Immutable>(

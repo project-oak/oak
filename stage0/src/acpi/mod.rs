@@ -27,6 +27,7 @@ use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use sha2::{Digest, Sha256};
 use strum::FromRepr;
 use x86_64::VirtAddr;
+use zerocopy::IntoBytes;
 
 use crate::{ZeroPage, fw_cfg::FwCfg, pci::PciWindows};
 
@@ -36,7 +37,7 @@ pub mod tables;
 use commands::{Invoke, RomfileCommand};
 use files::{Files, MemFiles};
 use tables::{
-    AcpiTables, Fadt, Madt, Rsdp,
+    AcpiTable, AcpiTables, Fadt, Madt, Rsdp,
     madt::{
         InterruptSourceOverride, IoApic, LocalApicNmi, MultiprocessorWakeup, ProcessorLocalApic,
         ProcessorLocalX2Apic,
@@ -211,9 +212,9 @@ fn print_system_data_table_entries(
     tables: &mut AcpiTables,
     entries: &[VirtAddr],
 ) -> Result<(), &'static str> {
-    for &header in entries {
+    for &addr in entries {
         // Temporary hack until we've cleaned this up.
-        let header = tables.try_parse_header_at(header).ok_or("invalid header")?;
+        let header = tables.try_parse_header_at(addr).ok_or("invalid header")?;
 
         log::info!("{}", header);
         if header.signature == *Madt::SIGNATURE {
@@ -259,8 +260,8 @@ fn print_system_data_table_entries(
         }
         // FADT is always guaranteed in the RSDT/XSDT as per ACPI spec:
         // https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html#overview-of-the-system-description-table-architecture
-        if header.signature == *Fadt::SIGNATURE {
-            let fadt = Fadt::new(header)?;
+        if header.signature.as_bytes() == <dyn Fadt as AcpiTable>::Signature::default().as_bytes() {
+            let fadt = tables.try_parse_table_at::<dyn Fadt>(addr).ok_or("invalid FADT")?;
             log::info!("FADT: {:?}", fadt);
         }
     }
