@@ -18,7 +18,7 @@ use alloc::vec::Vec;
 use core::slice;
 
 use bitflags::bitflags;
-use zerocopy::{Immutable, IntoBytes};
+use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
 use crate::{
     DescriptionHeader,
@@ -77,16 +77,16 @@ pub struct Madt {
 /// table structure, and it will only `validate` if an instance of this type is
 /// in the expected memory region (EBDA). Not meant to be built and passed
 /// around.
-#[derive(Clone, Copy, Debug, IntoBytes, Immutable)]
+#[derive(Clone, Copy, Debug, TryFromBytes, IntoBytes, Immutable, KnownLayout)]
 #[repr(C, packed)]
-pub struct ControllerHeader {
+pub struct ControllerHeader<T: Immutable + KnownLayout + TryFromBytes> {
     // There's only 17 possible types, the rest of the range is reserved. We need
     // to use u8 (not enum) as we use this structure to parse existing memory.
-    pub structure_type: u8,
+    pub structure_type: T,
     len: u8,
 }
 
-impl ControllerHeader {
+impl<T: Immutable + KnownLayout + TryFromBytes> ControllerHeader<T> {
     fn validate(&self) -> Result<()> {
         Ok(())
     }
@@ -98,7 +98,7 @@ impl ControllerHeader {
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct ProcessorLocalApic {
-    header: ControllerHeader,
+    header: ControllerHeader<u8>,
 
     /// Deprecated; maps to a Processor object in the ACPI tree.
     processor_uid: u8,
@@ -111,12 +111,12 @@ pub struct ProcessorLocalApic {
 }
 
 // Because we cast pointers from *const ControllHeader:
-static_assertions::assert_eq_align!(ProcessorLocalApic, ControllerHeader);
+static_assertions::assert_eq_align!(ProcessorLocalApic, ControllerHeader<u8>);
 
 impl ProcessorLocalApic {
     pub const STRUCTURE_TYPE: u8 = 0;
 
-    pub fn new(header: &ControllerHeader) -> Result<&Self> {
+    pub fn new(header: &ControllerHeader<u8>) -> Result<&Self> {
         if header.structure_type != Self::STRUCTURE_TYPE {
             return Err("structure is not Processor Local APIC Structure");
         }
@@ -133,7 +133,7 @@ impl ProcessorLocalApic {
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct ProcessorLocalX2Apic {
-    header: ControllerHeader,
+    header: ControllerHeader<u8>,
 
     /// Reserverd, must be zero.
     _reserved: u16,
@@ -152,12 +152,12 @@ pub struct ProcessorLocalX2Apic {
 }
 
 // Because we cast pointers from *const ControllHeader:
-static_assertions::assert_eq_align!(ProcessorLocalX2Apic, ControllerHeader);
+static_assertions::assert_eq_align!(ProcessorLocalX2Apic, ControllerHeader<u8>);
 
 impl ProcessorLocalX2Apic {
     pub const STRUCTURE_TYPE: u8 = 9;
 
-    pub fn new(header: &ControllerHeader) -> Result<&Self> {
+    pub fn new(header: &ControllerHeader<u8>) -> Result<&Self> {
         if header.structure_type != Self::STRUCTURE_TYPE {
             return Err("structure is not Processor Local X2APIC Structure");
         }
@@ -176,7 +176,7 @@ impl ProcessorLocalX2Apic {
 pub struct MultiprocessorWakeup {
     /// Interrupt structure common header.
     /// Type must be 0x10, length must be 16.
-    header: ControllerHeader,
+    header: ControllerHeader<u8>,
 
     /// MailBox version: must be set to 0.
     mailbox_version: u16,
@@ -191,7 +191,7 @@ pub struct MultiprocessorWakeup {
 }
 
 // Because we cast pointers from *const ControllHeader:
-static_assertions::assert_eq_align!(MultiprocessorWakeup, ControllerHeader);
+static_assertions::assert_eq_align!(MultiprocessorWakeup, ControllerHeader<u8>);
 
 impl MultiprocessorWakeup {
     pub const STRUCTURE_TYPE: u8 = 0x10;
@@ -200,7 +200,7 @@ impl MultiprocessorWakeup {
     /// Gets a reference to a MultiprocessorWakeup given a reference to its
     /// first field (header). This assumes that the memory that immediately
     /// follows header is actually a MultiprocessorWakeup.
-    pub fn from_header_cast(header: &ControllerHeader) -> Result<&Self> {
+    pub fn from_header_cast(header: &ControllerHeader<u8>) -> Result<&Self> {
         Self::check_header(header)?;
 
         let header_raw_pointer = header as *const _ as *const Self;
@@ -209,14 +209,14 @@ impl MultiprocessorWakeup {
         Ok(unsafe { &*(header_raw_pointer) })
     }
 
-    pub fn from_header_mut(header: &mut ControllerHeader) -> Result<&mut Self> {
+    pub fn from_header_mut(header: &mut ControllerHeader<u8>) -> Result<&mut Self> {
         Self::check_header(header)?;
 
         // # Safety: we have validated the structure.
         Ok(unsafe { (header as *mut _ as *mut Self).as_mut().unwrap() })
     }
 
-    fn check_header(header: &ControllerHeader) -> Result<()> {
+    fn check_header(header: &ControllerHeader<u8>) -> Result<()> {
         if header.structure_type != Self::STRUCTURE_TYPE {
             return Err("structure is not MultiprocessorWakeup");
         }
@@ -354,19 +354,19 @@ impl Madt {
     fn get_controller_structure_mut(
         &mut self,
         structure_type: u8,
-    ) -> Option<&mut ControllerHeader> {
+    ) -> Option<&mut ControllerHeader<u8>> {
         self.get_controller_structure(structure_type).map(
             // Safety: we hold a mut ref to self, only one mut ref to a header can be held at time.
             // We have already checked control_header is a valid reference.
             |maybe_found| unsafe {
-                (maybe_found as *const _ as *mut ControllerHeader).as_mut().unwrap()
+                (maybe_found as *const _ as *mut ControllerHeader<u8>).as_mut().unwrap()
             },
         )
     }
 
     /// Seeks a structure with the given type in this MADT's Interrupt Controlle
     /// Structure fields and returns a reference to its header if found.
-    fn get_controller_structure(&self, structure_type: u8) -> Option<&ControllerHeader> {
+    fn get_controller_structure(&self, structure_type: u8) -> Option<&ControllerHeader<u8>> {
         self.controller_struct_headers()
             .find(|control_header| control_header.structure_type == structure_type)
     }
@@ -383,18 +383,18 @@ pub struct MadtIterator<'a> {
 }
 
 impl<'a> Iterator for MadtIterator<'a> {
-    type Item = &'a ControllerHeader;
+    type Item = &'a ControllerHeader<u8>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.offset + size_of::<ControllerHeader>() > self.madt.header.length as usize {
+        if self.offset + size_of::<ControllerHeader<u8>>() > self.madt.header.length as usize {
             // we'd overflow the MADT structure; nothing more to read
             return None;
         }
         // Safety: now we know that at least reading the header won't overflow the data
         // structure.
         let header = unsafe {
-            let header_ptr =
-                (self.madt as *const _ as *const u8).add(self.offset) as *const ControllerHeader;
+            let header_ptr = (self.madt as *const _ as *const u8).add(self.offset)
+                as *const ControllerHeader<u8>;
             check_ptr_aligned(header_ptr);
             &*header_ptr
         };
@@ -422,7 +422,7 @@ impl<'a> Iterator for MadtIterator<'a> {
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct IoApic {
-    header: ControllerHeader,
+    header: ControllerHeader<u8>,
 
     /// Processor's local APIC ID.
     pub io_apic_id: u8,
@@ -438,7 +438,7 @@ pub struct IoApic {
 }
 
 // Because we cast pointers from *const ControllHeader:
-static_assertions::assert_eq_align!(IoApic, ControllerHeader);
+static_assertions::assert_eq_align!(IoApic, ControllerHeader<u8>);
 static_assertions::assert_eq_size!(IoApic, [u8; 12usize]);
 
 impl IoApic {
@@ -446,7 +446,7 @@ impl IoApic {
     // Explicitly stated in the spec
     pub const EXPECTED_LENGTH: u8 = 12;
 
-    pub fn new(header: &ControllerHeader) -> Result<&Self> {
+    pub fn new(header: &ControllerHeader<u8>) -> Result<&Self> {
         if header.structure_type != Self::STRUCTURE_TYPE {
             return Err("structure is not an I/O APIC Structure");
         }
@@ -489,7 +489,7 @@ impl IoApic {
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct InterruptSourceOverride {
-    header: ControllerHeader,
+    header: ControllerHeader<u8>,
 
     /// Should be set to zero for ISA
     bus: u8,
@@ -510,7 +510,7 @@ impl InterruptSourceOverride {
     // Explicitly stated in the spec
     pub const EXPECTED_LENGTH: u8 = 10;
 
-    pub fn new(header: &ControllerHeader) -> Result<&Self> {
+    pub fn new(header: &ControllerHeader<u8>) -> Result<&Self> {
         if header.structure_type != Self::STRUCTURE_TYPE {
             return Err("structure is not Interrupt Source Override Structure");
         }
@@ -549,7 +549,7 @@ impl InterruptSourceOverride {
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct LocalApicNmi {
-    header: ControllerHeader,
+    header: ControllerHeader<u8>,
 
     /// Deprecated; maps to a Processor object in the ACPI tree.
     processor_uid: u8,
@@ -568,7 +568,7 @@ impl LocalApicNmi {
     // Explicitly stated in the spec
     pub const EXPECTED_LENGTH: u8 = 6;
 
-    pub fn new(header: &ControllerHeader) -> Result<&Self> {
+    pub fn new(header: &ControllerHeader<u8>) -> Result<&Self> {
         if header.structure_type != Self::STRUCTURE_TYPE {
             return Err("structure is not LocalApicNmi");
         }
