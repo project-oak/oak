@@ -442,7 +442,6 @@ mod tests {
     #[test]
     fn test_parse_acpi_2_table() {
         let (fadt, _) = FadtAcpi2::try_from_bytes(FADT).unwrap();
-        eprintln!("{:?}", fadt);
         assert_that!(
             fadt,
             matches_pattern!(FadtAcpi2 {

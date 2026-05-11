@@ -417,20 +417,21 @@ impl FirmwarePlatform for Tdx {
         // # Safety: only one ref to RSDT is created.
         if let Some(rsdt) = tables.rsdt()? {
             info!("Finalize ACPI: Found an RSDT, checking for MADT.");
-            let maybe_madt_entry: Option<RsdtEntryPairMut> =
-                rsdt.get_entry_pair_mut(Madt::SIGNATURE)?;
+            let maybe_madt_entry: Option<RsdtEntryPairMut> = rsdt.get_entry_pair_mut(
+                &<Madt as oak_stage0::AcpiTable>::Signature::default().into(),
+            )?;
 
             let mut new_madt_buf = None;
             if let Some((madt_entry_addr, madt_header)) = maybe_madt_entry {
                 info!("Finalize ACPI: Found a MADT in RSDT.");
-                let madt: &mut Madt = Madt::from_header_mut(madt_header)?;
+                // Safety: The header is in the ACPI memory range, guaranteed by `AcpiTables`,
+                // so it's safe to attempt this transmute.
+                let madt: &mut Madt = unsafe { Madt::from_header_mut(madt_header) }?;
                 let old_madt_addr = *madt_entry_addr as usize;
-                info!("Finalize ACPI: Found a MADT at {:?}", madt.as_byte_slice()?.as_ptr_range());
+                info!("Finalize ACPI: Found a MADT at {:?}", madt.as_bytes().as_ptr_range());
                 let new_madt = madt.set_or_append_mp_wakeup(os_mailbox_address)?;
 
-                *madt_entry_addr = new_madt as *const _ as u32;
-
-                if old_madt_addr != new_madt as *const _ as usize {
+                if old_madt_addr != new_madt.as_bytes().as_ptr() as usize {
                     // MADT was relocated
                     //
                     // Safety: This is bit of a hack. Ideally we'd use something like
@@ -448,6 +449,7 @@ impl FirmwarePlatform for Tdx {
                         )
                     });
                 }
+                *madt_entry_addr = new_madt.as_bytes().as_ptr() as u32;
                 rsdt.update_checksum();
                 if let Some(new_madt) = new_madt_buf {
                     tables.add_buffer(new_madt);
@@ -459,18 +461,22 @@ impl FirmwarePlatform for Tdx {
         // # Safety: only one ref to XSDT is created.
         if let Some(xsdt) = tables.xsdt()? {
             info!("Finalize ACPI: Found an XSDT, checking for MADT.");
-            let maybe_madt_entry = xsdt.get_entry_mut(Madt::SIGNATURE)?;
+            let maybe_madt_entry =
+                xsdt.get_entry_mut(&<Madt as oak_stage0::AcpiTable>::Signature::default().into())?;
 
             if let Some(madt_entry) = maybe_madt_entry {
                 info!("Finalize ACPI: Found a MADT in XSDT.");
-                let madt: &mut Madt = Madt::from_header_mut(madt_entry.deref_mut())?;
-                let old_madt_addr = madt as *const _ as usize;
-                info!("Finalize ACPI: Found a MADT at {:?}", madt.as_byte_slice()?.as_ptr_range());
+                // Safety: The header is in the ACPI memory range, guaranteed by `AcpiTables`,
+                // so it's safe to attempt this transmute.
+                let madt: &mut Madt = unsafe { Madt::from_header_mut(madt_entry.deref_mut()) }?;
+                let old_madt_addr = madt.as_bytes().as_ptr();
+                info!("Finalize ACPI: Found a MADT at {:?}", madt.as_bytes().as_ptr_range());
+
                 let new_madt = madt.set_or_append_mp_wakeup(os_mailbox_address)?;
-                madt_entry.set_addr(new_madt as *const _ as u64);
+                madt_entry.set_addr(new_madt.as_bytes().as_ptr() as u64);
                 //xsdt.entries_mut()[1].set_addr(new_madt as *const _ as u64);
                 let mut new_madt_buf = None;
-                if old_madt_addr != new_madt as *const _ as usize {
+                if old_madt_addr != new_madt.as_bytes().as_ptr() {
                     // Safety: see the RSDT section above, it's the same.
                     new_madt_buf = Some(unsafe {
                         core::slice::from_raw_parts_mut(

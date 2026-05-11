@@ -79,13 +79,7 @@ pub fn bootstrap_aps<P: Platform>(tables: &mut AcpiTables) -> Result<(), &'stati
     // If XSDT exists, then per ACPI spec we have to prefer that. If it doesn't, see
     // if we can use the old RSDT. (If we have neither XSDT or RSDT, the ACPI
     // tables are broken.)
-    let madt = if let Some(xsdt) = tables.xsdt()? {
-        xsdt.get(Madt::SIGNATURE)?.ok_or("MADT table not found in XSDT")?
-    } else {
-        let rsdt = tables.rsdt()?.ok_or("RSDT not found")?;
-        rsdt.get(Madt::SIGNATURE)?.ok_or("MADT table not found in RSDT")?
-    };
-    let madt = Madt::new(madt).expect("invalid MADT");
+    let madt = tables.try_find_table::<Madt>()?.ok_or("MADT table not found")?;
 
     // Disable the local PIC and set up our local APIC, as we need to send IPIs to
     // APs via the APIC. Safety: we can reasonably expect the PICs to be

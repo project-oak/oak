@@ -14,23 +14,37 @@
 // limitations under the License.
 //
 
-use alloc::vec::Vec;
-use core::slice;
+use alloc::{alloc::Allocator, boxed::Box, vec::Vec};
+use core::fmt::Debug;
 
 use bitflags::bitflags;
 use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
 use crate::{
-    DescriptionHeader,
+    AcpiTable, DescriptionHeader,
     acpi::{
         HIGH_MEMORY_ALLOCATOR,
-        tables::{Result, check_ptr_aligned},
+        tables::{Checksum, Result, check_ptr_aligned, signature},
     },
 };
 
+#[allow(dead_code)]
+#[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+#[repr(C)]
+pub struct Signature(signature::A, signature::P, signature::I, signature::C);
+static_assertions::assert_eq_size!(DescriptionHeader<Signature>, [u8; 36usize]);
+
+impl From<Signature> for [u8; 4] {
+    fn from(signature: Signature) -> [u8; 4] {
+        [signature.0 as u8, signature.1 as u8, signature.2 as u8, signature.3 as u8]
+    }
+}
+
+#[derive(Clone, Copy, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+pub struct MadtFlags(u32);
+
 bitflags! {
-    #[derive(Clone, Copy, Debug)]
-    struct MadtFlags: u32 {
+    impl MadtFlags: u32 {
         /// The system also has a PC-AT-compatible dual-8259 setup.
         ///
         /// The 8259 vectors must be disabled (that is, masked) when enabling the ACPI APIC operation.
@@ -53,18 +67,38 @@ bitflags! {
 /// the first few fields are the same. These common fields are represented
 /// by DescriptionHeader; here we reuse that and add the remaining fields.
 /// Table 5.19 of ACPI Spec lists the fields.
-#[derive(Debug)]
+#[derive(IntoBytes, Immutable, KnownLayout, TryFromBytes)]
 #[repr(C, packed)]
 pub struct Madt {
-    pub header: DescriptionHeader<[u8; 4]>,
+    pub header: DescriptionHeader<Signature>,
 
     /// Physical address of the local APIC for each CPU.
     local_apic_address: u32,
 
     /// Multiple APIC flags.
     flags: MadtFlags,
+
     // This is followed by a dynamic number of variable-length interrupt controller structures,
     // which unfortunately can't be expressed in safe Rust. See ControllerHeader below.
+    data: [u8],
+}
+
+impl Debug for Madt {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let local_apic_address = self.local_apic_address;
+        let flags = self.flags;
+        f.debug_struct("Madt")
+            .field("header", &self.header)
+            .field("local_apic_address", &local_apic_address)
+            .field("flags", &flags)
+            .finish_non_exhaustive()
+    }
+}
+
+impl Checksum for Madt {
+    fn checksum(&self) -> u8 {
+        self.as_bytes().iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs))
+    }
 }
 
 /// Header for values in MADT field "Interrupt Controller Structure".
@@ -241,62 +275,104 @@ impl Default for MultiprocessorWakeup {
     }
 }
 
+impl AcpiTable for Madt {
+    type Signature = Signature;
+
+    fn try_from_bytes(buf: &[u8]) -> Result<(&Self, &[u8])> {
+        // As `Madt` is `?Sized`, we can't just do `size_of()` here. The basic MADT size
+        // is the size of the header + the two `u32` fields.
+        // Hopefully there is a better way to do this.
+        const MADT_SIZE: usize = size_of::<DescriptionHeader<Signature>>() + 4 + 4;
+        // First, try to parse the header.
+        let (header, _) = DescriptionHeader::<Signature>::try_ref_from_prefix(buf)
+            .map_err(|_| "invalid MADT header")?;
+        log::info!("got MADT header");
+        // if it parses, it is a MADT, and we can get a length from there
+        if (header.length as usize) < MADT_SIZE {
+            return Err("invalid MADT");
+        }
+        let entries = header.length as usize - MADT_SIZE;
+
+        let (madt, tail) =
+            Madt::try_ref_from_prefix_with_elems(buf, entries).map_err(|_| "invalid MADT")?;
+
+        madt.validate()?;
+
+        Ok((madt, tail))
+    }
+
+    fn try_from_bytes_mut(buf: &mut [u8]) -> Result<(&mut Self, &mut [u8])> {
+        // First, try to parse the header.
+        let (header, _) = DescriptionHeader::<Signature>::try_ref_from_prefix(buf)
+            .map_err(|_| "invalid MADT header")?;
+        // if it parses, it is a MADT, and we can get a length from there
+        if (header.length as usize) < size_of::<DescriptionHeader<Signature>>() + 4 + 4 {
+            return Err("invalid MADT");
+        }
+        let entries = header.length as usize - (size_of::<DescriptionHeader<Signature>>() + 4 + 4);
+
+        let (madt, tail) =
+            Madt::try_mut_from_prefix_with_elems(buf, entries).map_err(|_| "invalid MADT")?;
+
+        madt.validate()?;
+
+        Ok((madt, tail))
+    }
+
+    fn header_mut(&mut self) -> &mut DescriptionHeader<Self::Signature> {
+        &mut self.header
+    }
+}
+
 impl Madt {
-    pub const SIGNATURE: &'static [u8; 4] = b"APIC";
-
-    pub fn new(hdr: &DescriptionHeader<[u8; 4]>) -> Result<&'static Madt> {
-        // Safety: we're checking that it's a valid XSDT in `validate()`.
-        let madt = unsafe { &*(hdr as *const _ as usize as *const Madt) };
-        madt.validate()?;
-        Ok(madt)
-    }
-
-    /// Interprets buf as a Madt, validates it, then sets the length
-    /// of the resulting Madt to match that of the given buffer.
-    pub fn from_buf_mut(buf: &mut [u8]) -> Result<&mut Madt> {
-        if buf.len() < size_of::<Madt>() {
-            return Err("Buffer too small for MADT");
-        }
-        let madt_ptr = buf.as_mut_ptr() as *mut Self;
-        check_ptr_aligned(madt_ptr);
-        // # Safety: we have checked for overrun and we're checking it's a valid MADT
-        // with `validate()`.
-        let madt = unsafe { &mut *madt_ptr };
-
-        madt.validate()?;
-
-        // Set header length to buf length for consistency. Caller can adjust.
-        madt.header.length = buf.len() as u32;
-        madt.header.update_checksum();
-
-        Ok(madt)
-    }
-
-    pub fn from_header_mut(hdr: &mut DescriptionHeader<[u8; 4]>) -> Result<&'static mut Madt> {
-        // Safety: we're checking that it's a valid XSDT in `validate()`.
-        let madt = unsafe {
-            (hdr as *mut _ as *mut Madt).as_mut().unwrap() // Pointer obtained from a ref can't be null.
+    pub fn new_with_size<A: Allocator>(num: usize, alloc: A) -> Box<Self> {
+        let mut header = DescriptionHeader::<Signature> {
+            signature: Signature::default(),
+            length: (size_of::<DescriptionHeader<Signature>>() + 8 + num) as u32,
+            revision: 0,
+            checksum: 0,
+            oem_id: [0; 6],
+            oem_table_id: [0; 8],
+            oem_revision: 0,
+            creator_id: 0,
+            creator_revision: 0,
         };
-        madt.validate()?;
+        // For now, we can't call `header.update_checksum()` here as that uses unsafe
+        // code that references `length` and would read beyond the buffer. However, as
+        // the zeroes in the entries slice won't change the checksum, for now we can do
+        // it by hand here.
+        header.checksum = header
+            .checksum
+            .wrapping_sub(header.as_bytes().iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs)));
+
+        let mut buf = Vec::with_capacity_in(header.length as usize, alloc);
+        buf.resize(header.length as usize, 0);
+
+        header.write_to_prefix(&mut buf[..]).unwrap();
+
+        let buf = Vec::leak(buf);
+        // This `unwrap()` and assertion should never fail.
+        let (madt, suffix) = Self::try_from_bytes_mut(buf.as_mut_bytes()).unwrap();
+        assert!(suffix.is_empty());
+
+        // Safety: the memory was leaked from a Box; the pointer does not change, and
+        // the size does not change.
+        unsafe { Box::from_raw(madt) }
+    }
+
+    ///
+    /// # Safety
+    /// The caller needs to guarantee that the header is a header of an actual
+    /// MADT table and that there are no other references to that memory.
+    pub unsafe fn from_header_mut(
+        hdr: &mut DescriptionHeader<[u8; 4]>,
+    ) -> Result<&'static mut Madt> {
+        // Safety: we're checking that it's a valid XSDT in `validate()`.
+        let buf = unsafe {
+            core::slice::from_raw_parts_mut(hdr as *mut _ as *mut u8, hdr.length as usize)
+        };
+        let (madt, _) = Madt::try_from_bytes_mut(buf)?;
         Ok(madt)
-    }
-
-    pub fn as_byte_slice(&self) -> Result<&'static [u8]> {
-        self.validate()?;
-        // Safety: we have just checked that the MADT is entirely in the EBDA.
-        Ok(unsafe {
-            slice::from_raw_parts(self as *const _ as *const u8, self.header.length as usize)
-        })
-    }
-
-    fn validate(&self) -> Result<()> {
-        self.header.validate()?;
-
-        if self.header.signature != *Self::SIGNATURE {
-            return Err("Invalid signature for MADT table");
-        }
-
-        Ok(())
     }
 
     /// Create an iterator over entries of field Interrupt Controller Structure
@@ -306,7 +382,7 @@ impl Madt {
         // entries (see struct Madt above) but these entries are expected to
         // exist right after the Madt struct. Therefore, we set the offset to
         // point to one byte after, which is size_of Madt.
-        MadtIterator { madt: self, offset: size_of::<Madt>() }
+        MadtIterator { madt: self, offset: 36 + 4 + 4 }
     }
 
     /// If a MultiprocessorWakeupStructure exsists in this MADT, updates its
@@ -314,6 +390,14 @@ impl Madt {
     /// EBDA and appends to it a new MultiprocessorWakeupStructure with the
     /// given os_mailbox_address. Returns a ref to the maybe relocated MADT.
     pub fn set_or_append_mp_wakeup(&mut self, os_mailbox_address: u64) -> Result<&mut Self> {
+        self.set_or_append_mp_wakeup_in(os_mailbox_address, &HIGH_MEMORY_ALLOCATOR)
+    }
+
+    pub fn set_or_append_mp_wakeup_in<A: Allocator>(
+        &mut self,
+        os_mailbox_address: u64,
+        alloc: A,
+    ) -> Result<&mut Self> {
         if let Some(prexisting_mpw_header) =
             self.get_controller_structure_mut(MultiprocessorWakeup::STRUCTURE_TYPE)
         {
@@ -321,34 +405,41 @@ impl Madt {
             // # Safety: We are not using `prexisting_mpw_header` after this call.
             let prexisting_mpw = MultiprocessorWakeup::from_header_mut(prexisting_mpw_header)?;
             prexisting_mpw.mailbox_address = os_mailbox_address;
-            self.header.update_checksum();
+            self.update_checksum();
             return Ok(self);
         }
 
         log::info!("Relocating MADT and appending a new MultiprocessorWakeup to it.");
 
-        let old_madt_len = self.header.length as usize;
+        let old_madt_len = self.header.length;
         let new_madt_len =
-            old_madt_len + MultiprocessorWakeup::MULTIPROCESSOR_WAKEUP_STRUCTURE_LENGTH as usize;
+            old_madt_len + MultiprocessorWakeup::MULTIPROCESSOR_WAKEUP_STRUCTURE_LENGTH as u32;
 
         // New contents = old contents + MPW. Allocate new length, copy old contents.
-        let mut new_madt_buf = Vec::with_capacity_in(new_madt_len, &HIGH_MEMORY_ALLOCATOR);
-        new_madt_buf.extend_from_slice(self.as_byte_slice()?);
-        log::info!("MADT contents copied to {:?}", new_madt_buf.as_ptr_range());
+        let mut new_madt = Madt::new_with_size(
+            self.data.len() + MultiprocessorWakeup::MULTIPROCESSOR_WAKEUP_STRUCTURE_LENGTH as usize,
+            alloc,
+        );
+        new_madt.header = self.header;
+        new_madt.header.length = new_madt_len;
+        new_madt.flags = self.flags;
+        new_madt.local_apic_address = self.local_apic_address;
+        new_madt.data[..self.data.len()].copy_from_slice(&self.data);
+
+        log::info!("MADT contents copied to {:?}", new_madt.as_bytes().as_ptr_range());
 
         // Make an MPW somwhere then copy over its bytes after old MADT contents.
         let temp_mpw: MultiprocessorWakeup =
             MultiprocessorWakeup { mailbox_address: os_mailbox_address, ..Default::default() };
-        new_madt_buf.extend_from_slice(temp_mpw.as_bytes());
+        new_madt.data[self.data.len()..].copy_from_slice(temp_mpw.as_bytes());
         log::info!(
             "Written Multiprocessor Wakeup Structure to: {:?}",
-            new_madt_buf[old_madt_len..new_madt_len].as_ptr_range()
+            new_madt.data[self.data.len()..].as_ptr_range()
         );
 
-        let new_madt = Madt::from_buf_mut(new_madt_buf.leak())
-            .map_err(|_| "MADT no longer valid after adding MultiprocessorWakeup")?;
-        log::info!("New MADT loaded, at {:#x}", new_madt as *const _ as usize);
-        Ok(new_madt)
+        new_madt.update_checksum();
+        log::info!("New MADT loaded, at {:p}", new_madt.as_bytes().as_ptr());
+        Ok(Box::leak(new_madt))
     }
 
     fn get_controller_structure_mut(
@@ -590,5 +681,78 @@ impl LocalApicNmi {
             return Err("Local APIC NMI length is expected to be 6");
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use googletest::prelude::*;
+
+    use super::*;
+
+    // This MADT is obtained from a machine running on GCP.
+    const MADT: &[u8] = &[
+        0x41, 0x50, 0x49, 0x43, 0x76, 0x00, 0x00, 0x00, 0x05, 0x22, 0x47, 0x6f, 0x6f, 0x67, 0x6c,
+        0x65, 0x47, 0x4f, 0x4f, 0x47, 0x41, 0x50, 0x49, 0x43, 0x01, 0x00, 0x00, 0x00, 0x47, 0x4f,
+        0x4f, 0x47, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0xe0, 0xfe, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x08, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x08, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00,
+        0x01, 0x0c, 0x00, 0x00, 0x00, 0x00, 0xc0, 0xfe, 0x00, 0x00, 0x00, 0x00, 0x02, 0x0a, 0x00,
+        0x05, 0x05, 0x00, 0x00, 0x00, 0x0d, 0x00, 0x02, 0x0a, 0x00, 0x09, 0x09, 0x00, 0x00, 0x00,
+        0x0d, 0x00, 0x02, 0x0a, 0x00, 0x0a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x00, 0x02, 0x0a, 0x00,
+        0x0b, 0x0b, 0x00, 0x00, 0x00, 0x0d, 0x00, 0x04, 0x06, 0xff, 0x00, 0x00, 0x01,
+    ];
+
+    #[test]
+    fn test_parse_madt() {
+        let (madt, _) = Madt::try_from_bytes(MADT).unwrap();
+        assert_that!(&madt.header.oem_id, eq(b"Google"));
+        assert_that!(&madt.header.oem_table_id, eq(b"GOOGAPIC"));
+    }
+
+    #[test]
+    fn test_add_mp_wakeup() {
+        let (old_madt, _) = Madt::try_from_bytes(MADT).unwrap();
+
+        let mut madt_buf = MADT.to_vec();
+        let (madt, _) = Madt::try_from_bytes_mut(&mut madt_buf).unwrap();
+
+        let new_madt = madt.set_or_append_mp_wakeup_in(0x01020304, std::alloc::Global).unwrap();
+        assert_that!(
+            new_madt.header.length,
+            eq(old_madt.header.length + size_of::<MultiprocessorWakeup>() as u32)
+        );
+
+        // Spot-check that the fields that we expect to stay the same are indeed the
+        // same.
+        assert_that!(new_madt.header.oem_id, eq(&old_madt.header.oem_id[..]));
+        assert_that!(new_madt.header.revision, eq(old_madt.header.revision));
+        assert_that!(new_madt.local_apic_address, eq(old_madt.local_apic_address));
+
+        // Strictly speaking, we're only interested that new_madt.data is contained
+        // within new_madt.data, but there is no convenient way to check that.
+        assert!(new_madt.data.starts_with(&old_madt.data));
+
+        let mp_wakeup = new_madt
+            .get_controller_structure(MultiprocessorWakeup::STRUCTURE_TYPE)
+            .map(MultiprocessorWakeup::from_header_cast)
+            .unwrap()
+            .unwrap();
+        let mailbox = mp_wakeup.mailbox_address;
+        assert_that!(mailbox, eq(0x01020304));
+
+        let new_madt_ptr = new_madt.as_bytes().as_ptr();
+        let new_madt_v2 =
+            new_madt.set_or_append_mp_wakeup_in(0x04030201, std::alloc::Global).unwrap();
+
+        // This change should have been made in-place.
+        assert_that!(new_madt_v2.as_bytes().as_ptr(), eq(new_madt_ptr));
+
+        let mp_wakeup = new_madt_v2
+            .get_controller_structure(MultiprocessorWakeup::STRUCTURE_TYPE)
+            .map(MultiprocessorWakeup::from_header_cast)
+            .unwrap()
+            .unwrap();
+        let mailbox = mp_wakeup.mailbox_address;
+        assert_that!(mailbox, eq(0x04030201));
     }
 }

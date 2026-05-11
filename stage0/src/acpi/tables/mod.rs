@@ -113,6 +113,13 @@ pub mod signature {
 
     #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
     #[repr(u8)]
+    pub enum I {
+        #[default]
+        I = b'I',
+    }
+
+    #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+    #[repr(u8)]
     pub enum P {
         #[default]
         P = b'P',
@@ -351,6 +358,32 @@ impl<'a> AcpiTables<'a> {
         }
 
         Ok(self.xsdt.as_deref_mut())
+    }
+
+    pub fn try_find_table<T: AcpiTable + ?Sized>(&mut self) -> Result<Option<&T>> {
+        let mut entries = if let Some(xsdt) = self.xsdt()? {
+            xsdt.entries.iter().map(Into::into).collect()
+        } else {
+            Vec::new()
+        };
+
+        if entries.is_empty()
+            && let Some(rsdt) = self.rsdt()?
+        {
+            entries.extend(rsdt.entries.iter().map(|x| VirtAddr::new(*x as u64)));
+        }
+
+        if entries.is_empty() {
+            return Err("neither XSDT nor RSDT found");
+        }
+
+        for entry in entries {
+            if let Some(table) = self.try_parse_table_at::<T>(entry) {
+                return Ok(Some(table));
+            }
+        }
+
+        Ok(None)
     }
 
     pub fn try_parse_table_at<T: AcpiTable + ?Sized>(&self, addr: VirtAddr) -> Option<&T> {

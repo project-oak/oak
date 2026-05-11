@@ -217,9 +217,9 @@ fn print_system_data_table_entries(
         let header = tables.try_parse_header_at(addr).ok_or("invalid header")?;
 
         log::info!("{}", header);
-        if header.signature == *Madt::SIGNATURE {
+        if header.signature.as_bytes() == <Madt as AcpiTable>::Signature::default().as_bytes() {
             log::info!("    Entry APIC - It is a MADT, Interrupt Controller Structures:");
-            let madt = Madt::new(header)?;
+            let madt = tables.try_parse_table_at::<Madt>(addr).ok_or("invalid MADT")?;
             for madt_entry in madt.controller_struct_headers() {
                 match madt_entry.structure_type {
                     ProcessorLocalApic::STRUCTURE_TYPE => {
