@@ -28,8 +28,12 @@ use oak_proto_rust::oak::{
 use oak_time::Instant;
 
 use crate::{
-    compare::{compare_kernel_layer_measurement_digests, compare_measurement_digest},
-    expect::{acquire_expected_digests, acquire_kernel_event_expected_values},
+    compare::{
+        compare_kernel_layer_measurement_digests, compare_measurement_digest, compare_text_value,
+    },
+    expect::{
+        acquire_expected_digests, acquire_kernel_event_expected_values, acquire_mpm_expected_values,
+    },
     extract::stage0_transparent_measurements_to_kernel_layer_data,
     util::decode_event_proto,
 };
@@ -169,41 +173,53 @@ impl Policy<[u8]> for TransparentLayer1Policy {
 
 /// Event policy for transparent layer 2.
 ///
-/// Decodes [`CbLayer2TransparentEvent`] from the evidence and compares the
-/// `binary_mpm` measurement against the reference values and endorsements.
-///
-/// Note: the event contains [`MpmPackage`] metadata (string version IDs) rather
-/// than raw digest measurements. The `binary_mpm` endorsement-based comparison
-/// is performed when present, but digest-level comparison against the event
-/// contents is not yet implemented.
+/// Decodes [`CbLayer2TransparentEvent`] from the evidence, and verifies that
+/// at least one package's serialized [`MpmAttachment`] digest matches the
+/// `binary_mpm` reference values and endorsements.
 pub struct TransparentLayer2Policy {
-    _reference_values: CbLayer2TransparentReferenceValues,
+    reference_values: CbLayer2TransparentReferenceValues,
 }
 
 impl TransparentLayer2Policy {
     #[allow(dead_code)]
     pub fn new(reference_values: &CbLayer2TransparentReferenceValues) -> Self {
-        Self { _reference_values: reference_values.clone() }
+        Self { reference_values: reference_values.clone() }
     }
 }
 
 impl Policy<[u8]> for TransparentLayer2Policy {
     fn verify(
         &self,
-        _verification_time: Instant,
+        verification_time: Instant,
         evidence: &[u8],
         endorsement: &Variant,
     ) -> anyhow::Result<EventAttestationResults> {
-        // Decode the event to validate it is well-formed.
-        let _event = decode_event_proto::<CbLayer2TransparentEvent>(
+        let event = decode_event_proto::<CbLayer2TransparentEvent>(
             "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
             evidence,
         )?;
-        let _endorsement: Option<CbLayer2TransparentEndorsement> =
+        let endorsement: Option<CbLayer2TransparentEndorsement> =
             endorsement.try_into().map_err(anyhow::Error::msg)?;
 
-        // TODO: b/493160251 - Implement digest-level comparison once the event
-        // proto carries measurement digests alongside the MpmPackage metadata.
+        anyhow::ensure!(!event.packages.is_empty(), "no packages in layer 2 event");
+
+        // Acquire the expected text value from the binary_mpm reference value.
+        let binary_mpm_ref_value =
+            self.reference_values.binary_mpm.as_ref().context("no binary mpm reference value")?;
+        let expected = acquire_mpm_expected_values(
+            verification_time.into_unix_millis(),
+            endorsement.as_ref().and_then(|e| e.binary_mpm.as_ref()),
+            binary_mpm_ref_value,
+        )
+        .context("acquiring binary mpm expected values")?;
+
+        // Iterate through all packages and succeed if at least one matches.
+        let matched = event
+            .packages
+            .iter()
+            .any(|package| compare_text_value(&package.mpm_version_id, &expected).is_ok());
+        anyhow::ensure!(matched, "no package matched the binary mpm expected value");
+
         Ok(EventAttestationResults { ..Default::default() })
     }
 }
@@ -297,7 +313,12 @@ mod tests {
     }
 
     #[test]
-    fn transparent_layer2_verify_succeeds() {
+    fn transparent_layer2_verify_single_package_succeeds() {
+        use oak_proto_rust::oak::attestation::v1::{
+            MpmReferenceValue, SkipVerification, mpm_reference_value::Type as MrvType,
+        };
+
+        let skip_ref = MpmReferenceValue { r#type: Some(MrvType::Skip(SkipVerification {})) };
         let event = CbLayer2TransparentEvent {
             packages: vec![MpmPackage { mpm_version_id: "test/1.0".into() }],
         };
@@ -305,11 +326,56 @@ mod tests {
             "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
             &event,
         );
-        let reference_values = CbLayer2TransparentReferenceValues::default();
+        let reference_values = CbLayer2TransparentReferenceValues { binary_mpm: Some(skip_ref) };
         let policy = TransparentLayer2Policy::new(&reference_values);
 
         let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
 
         assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+
+    #[test]
+    fn transparent_layer2_verify_multiple_packages_succeeds() {
+        use oak_proto_rust::oak::attestation::v1::{
+            MpmReferenceValue, SkipVerification, mpm_reference_value::Type as MrvType,
+        };
+
+        let skip_ref = MpmReferenceValue { r#type: Some(MrvType::Skip(SkipVerification {})) };
+        let event = CbLayer2TransparentEvent {
+            packages: vec![
+                MpmPackage { mpm_version_id: "other/2.0".into() },
+                MpmPackage { mpm_version_id: "test/1.0".into() },
+            ],
+        };
+        let evidence = encode_event_proto(
+            "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
+            &event,
+        );
+        let reference_values = CbLayer2TransparentReferenceValues { binary_mpm: Some(skip_ref) };
+        let policy = TransparentLayer2Policy::new(&reference_values);
+
+        let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
+
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+
+    #[test]
+    fn transparent_layer2_verify_empty_packages_fails() {
+        use oak_proto_rust::oak::attestation::v1::{
+            MpmReferenceValue, SkipVerification, mpm_reference_value::Type as MrvType,
+        };
+
+        let skip_ref = MpmReferenceValue { r#type: Some(MrvType::Skip(SkipVerification {})) };
+        let event = CbLayer2TransparentEvent { packages: vec![] };
+        let evidence = encode_event_proto(
+            "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
+            &event,
+        );
+        let reference_values = CbLayer2TransparentReferenceValues { binary_mpm: Some(skip_ref) };
+        let policy = TransparentLayer2Policy::new(&reference_values);
+
+        let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
+
+        assert!(result.is_err());
     }
 }

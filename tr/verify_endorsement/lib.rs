@@ -339,6 +339,15 @@ pub fn is_kernel_type(statement: &DefaultStatement) -> bool {
     statement.predicate.claims.iter().any(|x| x.r#type == KERNEL_CLAIM_TYPE)
 }
 
+/// No attempt will be made to decode the attachment of an MPM-type
+/// binary unless this claim is present in the endorsement.
+pub const MPM_CLAIM_TYPE: &str =
+    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/31543.md";
+
+pub fn is_mpm_type(statement: &DefaultStatement) -> bool {
+    statement.predicate.claims.iter().any(|x| x.r#type == MPM_CLAIM_TYPE)
+}
+
 #[cfg(test)]
 mod tests {
     use alloc::{string::ToString, vec};

@@ -39,8 +39,8 @@ use oak_proto_rust::oak::{
         FirmwareEndorsement, InsecureExpectedValues, IntelTdxExpectedValues,
         IntelTdxReferenceValues, KernelAttachment, KernelBinaryReferenceValue, KernelEndorsement,
         KernelExpectedValues, KernelLayerEndorsements, KernelLayerExpectedValues,
-        KernelLayerReferenceValues, OakContainersEndorsements, OakContainersExpectedValues,
-        OakContainersReferenceValues, OakRestrictedKernelEndorsements,
+        KernelLayerReferenceValues, MpmAttachment, MpmReferenceValue, OakContainersEndorsements,
+        OakContainersExpectedValues, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
         OakRestrictedKernelExpectedValues, OakRestrictedKernelReferenceValues, RawDigests,
         ReferenceValues, RootLayerEndorsements, RootLayerExpectedValues, RootLayerReferenceValues,
         Signature, SignedEndorsement, SystemEndorsement, SystemLayerEndorsements,
@@ -48,13 +48,13 @@ use oak_proto_rust::oak::{
         TcbVersionReferenceValue, TdxTcbSvnExpectedValue, TdxTcbSvnReferenceValue,
         TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
         binary_reference_value, endorsement::Format, endorsements, expected_digests,
-        expected_values, kernel_binary_reference_value, reference_values,
+        expected_values, kernel_binary_reference_value, mpm_reference_value, reference_values,
         tcb_version_expected_value, tcb_version_reference_value, tdx_tcb_svn_expected_value,
         tdx_tcb_svn_reference_value, text_expected_value, text_reference_value,
     },
 };
 use prost::Message;
-use verify_endorsement::{is_firmware_type, is_kernel_type, verify_endorsement};
+use verify_endorsement::{is_firmware_type, is_kernel_type, is_mpm_type, verify_endorsement};
 
 use crate::endorsement::verify_binary_endorsement;
 
@@ -961,6 +961,63 @@ fn acquire_kernel_expected_values(
             })
         }
         None => Err(anyhow::anyhow!("empty binary reference value")),
+    }
+}
+
+fn acquire_verified_mpm_attachment(
+    now_utc_millis: i64,
+    signed_endorsement: &SignedEndorsement,
+    ref_value: &EndorsementReferenceValue,
+) -> anyhow::Result<MpmAttachment> {
+    let statement = verify_endorsement(now_utc_millis, signed_endorsement, ref_value)
+        .context("verifying mpm endorsement")?;
+    if !is_mpm_type(&statement) {
+        anyhow::bail!("expected endorsement for mpm-type binary");
+    }
+
+    let expected_digest =
+        get_hex_digest_from_statement(&statement).context("getting expected digest")?;
+    let endorsement = signed_endorsement
+        .endorsement
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("missing endorsement"))?;
+    let actual_digest = raw_to_hex_digest(&raw_digest_from_contents(&endorsement.subject));
+    is_hex_digest_match(&actual_digest, &expected_digest).context("comparing expected digest")?;
+
+    let decoded = MpmAttachment::decode(&*endorsement.subject)
+        .map_err(|_| anyhow::anyhow!("couldn't parse mpm attachment"))?;
+    Ok(decoded)
+}
+
+pub(crate) fn acquire_mpm_expected_values(
+    now_utc_millis: i64,
+    signed_endorsement: Option<&SignedEndorsement>,
+    reference_value: &MpmReferenceValue,
+) -> anyhow::Result<TextExpectedValue> {
+    match reference_value.r#type.as_ref() {
+        Some(mpm_reference_value::Type::Skip(_)) => Ok(TextExpectedValue {
+            r#type: Some(text_expected_value::Type::Skipped(VerificationSkipped {})),
+        }),
+        Some(mpm_reference_value::Type::Endorsement(ref_value)) => {
+            let mpm_attachment = acquire_verified_mpm_attachment(
+                now_utc_millis,
+                signed_endorsement.context("endorsement not found")?,
+                ref_value,
+            )
+            .context("getting verified mpm attachment")?;
+
+            Ok(TextExpectedValue {
+                r#type: Some(text_expected_value::Type::StringLiterals(ExpectedStringLiterals {
+                    value: vec![mpm_attachment.package_version],
+                })),
+            })
+        }
+        Some(mpm_reference_value::Type::Versions(version_ids)) => Ok(TextExpectedValue {
+            r#type: Some(text_expected_value::Type::StringLiterals(ExpectedStringLiterals {
+                value: version_ids.versions.clone(),
+            })),
+        }),
+        None => Err(anyhow::anyhow!("empty mpm reference value")),
     }
 }
 

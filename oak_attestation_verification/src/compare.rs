@@ -329,7 +329,7 @@ pub(crate) fn compare_measurement_digest(
     }
 }
 
-fn compare_text_value(actual: &str, expected: &TextExpectedValue) -> anyhow::Result<()> {
+pub(crate) fn compare_text_value(actual: &str, expected: &TextExpectedValue) -> anyhow::Result<()> {
     match expected.r#type.as_ref() {
         Some(text_expected_value::Type::Skipped(_)) => Ok(()),
         Some(text_expected_value::Type::Regex(regex)) => {
