@@ -17,20 +17,20 @@
 
 extern crate alloc;
 
+mod json;
 mod pae;
 
 #[cfg(test)]
 mod tests;
 
-use alloc::{string::ToString, vec::Vec};
+use alloc::vec::Vec;
 
 use anyhow::Context;
 use oak_digest::Sha256;
 use oak_proto_rust::{
     google::pes::v1::{
-        EcdsaP256PublicKey, PublicEndorsement, Signature, Statement, TLogReceipt,
-        VerificationMaterial as ProtoVerificationMaterial, X509Der,
-        statement::Format as StatementFormat, verification_material::VerificationMaterial,
+        PublicEndorsement, VerificationMaterial as ProtoVerificationMaterial,
+        verification_material::VerificationMaterial,
     },
     oak::attestation::v1::{KeyType, VerifyingKeySet},
 };
@@ -187,105 +187,17 @@ fn extract_public_key_der(vm: &ProtoVerificationMaterial) -> anyhow::Result<Vec<
     }
 }
 
-/// Helper to decode a base64 string from a JSON value.
-fn parse_base64(val: Option<&serde_json::Value>) -> anyhow::Result<Vec<u8>> {
-    let s = val
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| anyhow::anyhow!("expected string for base64 decoding"))?;
-    use base64::{Engine as _, engine::general_purpose::STANDARD};
-    STANDARD.decode(s).map_err(|e| anyhow::anyhow!("invalid base64: {}", e))
-}
-
-/// Helper to parse the nested VerificationMaterial
-fn parse_verification_material(
-    val: Option<&serde_json::Value>,
-) -> anyhow::Result<Option<ProtoVerificationMaterial>> {
-    let val = match val {
-        Some(v) => v,
-        None => return Ok(None),
-    };
-
-    if let Some(x509_val) = val.get("x509Certificate") {
-        return Ok(Some(ProtoVerificationMaterial {
-            verification_material: Some(VerificationMaterial::X509Certificate(X509Der {
-                der_bytes: parse_base64(x509_val.get("derBytes"))?,
-            })),
-        }));
-    }
-
-    if let Some(ecdsa_val) = val.get("ecdsaP256Sha256") {
-        return Ok(Some(ProtoVerificationMaterial {
-            verification_material: Some(VerificationMaterial::EcdsaP256Sha256(
-                EcdsaP256PublicKey { der_bytes: parse_base64(ecdsa_val.get("derBytes"))? },
-            )),
-        }));
-    }
-
-    Ok(None)
-}
-
-/// Helper to parse a Signature
-fn parse_signature(val: &serde_json::Value) -> anyhow::Result<Signature> {
-    Ok(Signature {
-        signature: parse_base64(val.get("signature"))?,
-        verification_material: parse_verification_material(val.get("verificationMaterial"))?,
-    })
-}
-
 /// Decodes a PES confirmation from JSON format.
 fn parse_pes_confirmation(pes_confirmation_bytes: &[u8]) -> anyhow::Result<PublicEndorsement> {
-    let json_val: serde_json::Value = serde_json::from_slice(pes_confirmation_bytes)
-        .context("failed to parse PES confirmation as JSON")?;
+    let json_val = json::PublicEndorsement::try_from(pes_confirmation_bytes)
+        .context("failed to parse PES confirmation JSON")?;
 
     // Only attempt to parse as a PES JSON confirmation if it looks like an object
     // that belongs to us, avoiding false positives on random valid JSON
     // strings/numbers.
-    if !json_val.is_object()
-        || (json_val.get("statement").is_none() && json_val.get("name").is_none())
-    {
+    if json_val.statement.is_none() && json_val.name.is_none() {
         anyhow::bail!("JSON does not look like a PES confirmation");
     }
 
-    let name = json_val.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
-
-    let statement = json_val
-        .get("statement")
-        .map(|stmt_val| -> anyhow::Result<Statement> {
-            let serialized = parse_base64(stmt_val.get("serialized"))?;
-
-            let format = match stmt_val.get("format").and_then(|v| v.as_str()) {
-                Some("JSON_INTOTO") => StatementFormat::JsonIntoto.into(),
-                _ => StatementFormat::Unspecified.into(),
-            };
-
-            Ok(Statement { format, serialized })
-        })
-        .transpose()?;
-
-    let statement_signature =
-        json_val.get("statementSignature").map(parse_signature).transpose()?;
-
-    let endorsement_signatures = json_val
-        .get("endorsementSignatures")
-        .map(|v| {
-            v.as_array()
-                .context("endorsementSignatures must be an array")?
-                .iter()
-                .map(parse_signature)
-                .collect::<anyhow::Result<Vec<_>>>()
-        })
-        .transpose()?
-        .unwrap_or_default();
-
-    let tlog_receipt = json_val.get("tlogReceipt").map(|val| TLogReceipt {
-        entry_id: val.get("entryId").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-    });
-
-    Ok(PublicEndorsement {
-        name,
-        statement,
-        statement_signature,
-        endorsement_signatures,
-        tlog_receipt,
-    })
+    Ok(PublicEndorsement::from(json_val))
 }
