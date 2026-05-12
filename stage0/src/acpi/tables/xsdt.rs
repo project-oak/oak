@@ -22,6 +22,7 @@ use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, TryFromBytes};
 use crate::{
     DescriptionHeader,
     acpi::tables::{AcpiTable, Checksum, Result, check_ptr_aligned, signature},
+    acpi::acpi_memory_contains,
 };
 
 /// A wrapper for entry addresses in XSDT table.
@@ -52,18 +53,34 @@ impl Deref for XsdtEntryPtr {
     type Target = DescriptionHeader<[u8; 4]>;
 
     fn deref(&self) -> &DescriptionHeader<[u8; 4]> {
-        let ptr = self.raw_val() as *const DescriptionHeader<[u8; 4]>;
+        let addr = self.raw_val() as usize;
+        // SECURITY: `addr` is a u64 the untrusted host wrote into the XSDT
+        // contents via fw_cfg / AddPointer. The previous comment claimed
+        // validation happened in `Xsdt::validate()`, but that function does
+        // not validate entry-pointer targets. Fail closed by panicking if
+        // the address does not lie inside an ACPI memory region this stage0
+        // controls; boot failure is the correct outcome for malformed input.
+        if !acpi_memory_contains(addr, size_of::<DescriptionHeader<[u8; 4]>>()) {
+            panic!("XSDT entry points outside ACPI memory: {addr:#x}");
+        }
+        let ptr = addr as *const DescriptionHeader<[u8; 4]>;
         check_ptr_aligned(ptr);
-        // Safety: the address has been validated in Xsdt::validate().
+        // Safety: we just validated that the pointer lies within ACPI memory
+        // we own, and `check_ptr_aligned` confirms alignment.
         unsafe { &*ptr }
     }
 }
 
 impl DerefMut for XsdtEntryPtr {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        let ptr = self.raw_val() as *mut DescriptionHeader<[u8; 4]>;
+        let addr = self.raw_val() as usize;
+        // SECURITY: see `Deref::deref` above.
+        if !acpi_memory_contains(addr, size_of::<DescriptionHeader<[u8; 4]>>()) {
+            panic!("XSDT entry points outside ACPI memory: {addr:#x}");
+        }
+        let ptr = addr as *mut DescriptionHeader<[u8; 4]>;
         check_ptr_aligned(ptr);
-        // Safety: the address has been validated in Xsdt::validate().
+        // Safety: as above.
         unsafe { &mut *ptr }
     }
 }

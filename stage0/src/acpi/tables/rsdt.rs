@@ -22,6 +22,7 @@ use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};
 use crate::acpi::tables::{
     AcpiTable, Checksum, DescriptionHeader, Result, check_ptr_aligned, signature,
 };
+use crate::acpi::acpi_memory_contains;
 
 #[allow(dead_code)]
 #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
@@ -168,10 +169,19 @@ impl Rsdt {
     /// Returns an iterator over the headers pointed at by this RSDT, validated.
     pub fn entry_headers(&self) -> impl Iterator<Item = Result<&DescriptionHeader<[u8; 4]>>> {
         self.entries.iter().map(|&entry| {
+            // SECURITY: `entry` is a u32 the untrusted host wrote into the
+            // RSDT contents via fw_cfg. Before dereferencing, verify that
+            // [entry, entry + size_of::<DescriptionHeader>) lies inside an
+            // ACPI memory region this stage0 controls.
+            let addr = entry as usize;
+            if !acpi_memory_contains(addr, size_of::<DescriptionHeader<[u8; 4]>>()) {
+                return Err("RSDT entry points outside ACPI memory");
+            }
             let ptr: *const DescriptionHeader<[u8; 4]> =
-                entry as usize as *const DescriptionHeader<[u8; 4]>;
+                addr as *const DescriptionHeader<[u8; 4]>;
             check_ptr_aligned(ptr);
-            // Safety: we are validating the header.
+            // Safety: we just validated that the pointer lies within ACPI
+            // memory we own, and `check_ptr_aligned` confirms alignment.
             let header = unsafe { &*ptr };
             header.validate()?;
             Ok(header)
@@ -203,9 +213,15 @@ impl Rsdt {
 
     fn entry_headers_mut(&mut self) -> impl Iterator<Item = Result<RsdtEntryPairMut<'_>>> {
         self.entries.iter_mut().map(|addr| {
-            let header_ptr = *addr as usize as *mut DescriptionHeader<[u8; 4]>;
+            // SECURITY: see `entry_headers` — `*addr` is untrusted host input.
+            let raw = *addr as usize;
+            if !acpi_memory_contains(raw, size_of::<DescriptionHeader<[u8; 4]>>()) {
+                return Err("RSDT entry points outside ACPI memory");
+            }
+            let header_ptr = raw as *mut DescriptionHeader<[u8; 4]>;
             check_ptr_aligned(header_ptr);
-            // # Safety we are validating the header.
+            // # Safety: we just validated that the pointer lies within ACPI
+            // memory and `check_ptr_aligned` confirms alignment.
             let header = unsafe { header_ptr.as_mut().ok_or("Address 0x0 in RSDT")? };
             header.validate()?;
             Ok((addr, header))

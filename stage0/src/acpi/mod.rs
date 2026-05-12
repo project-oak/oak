@@ -62,6 +62,42 @@ type HighMemoryAllocator = linked_list_allocator::LockedHeap;
 /// Allocator for high memory (where the ACPI tables themselves will go).
 static HIGH_MEMORY_ALLOCATOR: HighMemoryAllocator = HighMemoryAllocator::empty();
 
+/// Base address of the high-memory ACPI region, recorded by
+/// `setup_high_allocator()`. Used by `acpi_memory_contains()` to validate
+/// host-supplied table pointers. 0 means "not yet initialized".
+static HIGH_MEMORY_START: core::sync::atomic::AtomicUsize =
+    core::sync::atomic::AtomicUsize::new(0);
+
+/// Returns `true` iff `[addr, addr + len)` is wholly contained in either the
+/// EBDA region or the high-memory ACPI allocator range.
+///
+/// Stage0 receives ACPI table contents from an untrusted VMM (host) via the
+/// bios-linker-loader protocol. RSDT and XSDT entries are u32/u64 values the
+/// host can set to any address. Before any code dereferences such a pointer or
+/// constructs a slice from `(pointer, length)`, it MUST first verify the
+/// pointer falls inside one of the two regions stage0 actually uses for ACPI
+/// memory. Anything else is attacker-controlled input.
+pub(crate) fn acpi_memory_contains(addr: usize, len: usize) -> bool {
+    let Some(end) = addr.checked_add(len) else { return false };
+
+    // EBDA region. EBDA is a static `[MaybeUninit<u8>; 0x2_0000]` linked at
+    // section `.ebda`. We use `&raw const` to avoid creating a reference to
+    // the static (which would require `unsafe` for the static-mut access).
+    let ebda_start = (&raw const EBDA) as *const u8 as usize;
+    let ebda_end = ebda_start + 0x2_0000;
+    if addr >= ebda_start && end <= ebda_end {
+        return true;
+    }
+
+    // High-memory ACPI region. Populated by `setup_high_allocator()`.
+    let hi_start = HIGH_MEMORY_START.load(core::sync::atomic::Ordering::Acquire);
+    if hi_start != 0 && addr >= hi_start && end <= hi_start + HIGH_MEM_SIZE {
+        return true;
+    }
+
+    false
+}
+
 const TABLE_LOADER_FILE_NAME: &CStr = c"etc/table-loader";
 
 #[repr(u8)]
@@ -111,6 +147,9 @@ pub fn setup_high_allocator(zero_page: &mut ZeroPage) -> Result<(), &'static str
     unsafe {
         HIGH_MEMORY_ALLOCATOR.lock().init(mem_start as *mut u8, HIGH_MEM_SIZE);
     }
+    // Record the high-memory base so that `acpi_memory_contains()` can
+    // validate host-supplied table pointers fall inside the high-memory range.
+    HIGH_MEMORY_START.store(mem_start, core::sync::atomic::Ordering::Release);
     Ok(())
 }
 

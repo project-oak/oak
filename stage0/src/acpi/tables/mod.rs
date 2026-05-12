@@ -229,10 +229,22 @@ impl<S> DescriptionHeader<S> {
 
     /// Computes the checksum across all data in this structure.
     fn compute_checksum(&self) -> u8 {
-        // Safety: we've ensured that the table is within EBDA.
-        let data = unsafe {
-            slice::from_raw_parts(self.addr_range().start as *const u8, self.length as usize)
-        };
+        // SECURITY: when `self` was obtained by dereferencing an entry value
+        // from an attacker-controlled RSDT/XSDT (see `rsdt.rs::entry_headers`,
+        // `xsdt.rs::Deref`), `self.length` is also attacker-controlled.
+        // Validate that `[self_addr, self_addr + length)` lies wholly inside
+        // ACPI memory this stage0 owns before constructing a slice over it.
+        // Returning a non-zero sentinel makes the surrounding `validate()`
+        // path fail with "checksum invalid", which is the correct behaviour
+        // for input that escapes our memory regions.
+        let self_addr = self as *const _ as usize;
+        let length = self.length as usize;
+        if !crate::acpi::acpi_memory_contains(self_addr, length) {
+            return 1;
+        }
+        // Safety: we just validated that `[self_addr, self_addr + length)`
+        // lies inside an ACPI memory region.
+        let data = unsafe { slice::from_raw_parts(self_addr as *const u8, length) };
         data.iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs))
     }
 }
