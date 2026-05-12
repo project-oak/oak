@@ -487,6 +487,15 @@ absl::StatusOr<std::string> OakSessionTls::Decrypt(
   return SslReadAll(ssl_.get());
 }
 
+absl::StatusOr<std::string> OakSessionTls::Shutdown() {
+  int ret = SSL_shutdown(ssl_.get());
+  if (ret < 0) {
+    int err = SSL_get_error(ssl_.get(), ret);
+    return absl::InternalError(absl::StrFormat("SSL shutdown failed: %d", err));
+  }
+  return BioReadAll(bio_write_);
+}
+
 uint16_t OakSessionTls::GetNegotiatedGroup() const {
   return SSL_get_group_id(ssl_.get());
 }
@@ -517,11 +526,11 @@ absl::StatusOr<std::string> SslReadAll(SSL* ssl) {
   while (true) {
     int read_result = SSL_read(ssl, buf, sizeof(buf));
 
-    if (read_result < 0) {
+    if (read_result <= 0) {
       int err = SSL_get_error(ssl, read_result);
 
-      if (err == SSL_ERROR_WANT_READ) {
-        // No more data available for now.
+      if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_ZERO_RETURN) {
+        // No more data available for now, or the connection was closed.
         break;
       }
 

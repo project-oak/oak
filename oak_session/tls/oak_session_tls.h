@@ -353,6 +353,9 @@ class OakSessionTls {
   // returns the application level plaintext message.
   absl::StatusOr<std::string> Decrypt(absl::string_view tls_frame);
 
+  // Shuts down the TLS session, generating a close_notify frame to send to the peer.
+  absl::StatusOr<std::string> Shutdown();
+
   // Returns the TLS group ID (key exchange algorithm) negotiated during
   // handshake. Returns 0 if no group was negotiated (e.g., for TLS < 1.3).
   // Common values:

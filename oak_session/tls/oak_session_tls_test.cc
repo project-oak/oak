@@ -961,5 +961,38 @@ TEST(OakSessionTlsTest, HandshakeWithCertChain) {
                               "hello server with chain");
 }
 
+TEST(OakSessionTlsTest, CleanShutdownDoesNotLoopInfinitely) {
+  auto server_provider =
+      util::CreateFromFiles(kTestServerKeyPath, kTestServerCertPath);
+  ASSERT_THAT(server_provider, IsOk());
+  ServerContextConfig server_config{
+      .tls_identity_provider = std::move(*server_provider),
+  };
+  auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
+  ASSERT_THAT(server_ctx, IsOk());
+
+  ClientContextConfig client_config{
+      .server_trust_anchor_provider =
+          std::move(*util::CreateTrustAnchorFromFile(kTestCaCertPath)),
+  };
+  auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
+  ASSERT_THAT(client_ctx, IsOk());
+
+  auto result = RunHandshake(**client_ctx, **server_ctx);
+  ASSERT_THAT(result.client, IsOk());
+  ASSERT_THAT(result.server, IsOk());
+
+  // Initiate client shutdown.
+  auto shutdown_frame = result.client->session->Shutdown();
+  ASSERT_THAT(shutdown_frame, IsOk());
+  EXPECT_FALSE(shutdown_frame->empty());
+
+  // Deliver the close_notify frame to the server.
+  // Before the fix, this call would enter an infinite loop and hang the test.
+  // With the fix, it returns successfully with an empty decrypted payload.
+  auto decrypted = result.server->session->Decrypt(*shutdown_frame);
+  ASSERT_THAT(decrypted, IsOk());
+  EXPECT_TRUE(decrypted->empty());
+}
 }  // namespace
 }  // namespace oak::session::tls
