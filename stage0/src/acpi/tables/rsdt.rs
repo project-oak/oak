@@ -169,10 +169,7 @@ impl Rsdt {
     /// Returns an iterator over the headers pointed at by this RSDT, validated.
     pub fn entry_headers(&self) -> impl Iterator<Item = Result<&DescriptionHeader<[u8; 4]>>> {
         self.entries.iter().map(|&entry| {
-            // SECURITY: `entry` is a u32 the untrusted host wrote into the
-            // RSDT contents via fw_cfg. Before dereferencing, verify that
-            // [entry, entry + size_of::<DescriptionHeader>) lies inside an
-            // ACPI memory region this stage0 controls.
+            // SECURITY: Untrusted host input. Bounds check before deref.
             let addr = entry as usize;
             if !acpi_memory_contains(addr, size_of::<DescriptionHeader<[u8; 4]>>()) {
                 return Err("RSDT entry points outside ACPI memory");
@@ -213,7 +210,7 @@ impl Rsdt {
 
     fn entry_headers_mut(&mut self) -> impl Iterator<Item = Result<RsdtEntryPairMut<'_>>> {
         self.entries.iter_mut().map(|addr| {
-            // SECURITY: see `entry_headers` — `*addr` is untrusted host input.
+            // SECURITY: Untrusted host input. Bounds check before deref.
             let raw = *addr as usize;
             if !acpi_memory_contains(raw, size_of::<DescriptionHeader<[u8; 4]>>()) {
                 return Err("RSDT entry points outside ACPI memory");

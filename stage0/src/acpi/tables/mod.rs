@@ -229,14 +229,8 @@ impl<S> DescriptionHeader<S> {
 
     /// Computes the checksum across all data in this structure.
     fn compute_checksum(&self) -> u8 {
-        // SECURITY: when `self` was obtained by dereferencing an entry value
-        // from an attacker-controlled RSDT/XSDT (see `rsdt.rs::entry_headers`,
-        // `xsdt.rs::Deref`), `self.length` is also attacker-controlled.
-        // Validate that `[self_addr, self_addr + length)` lies wholly inside
-        // ACPI memory this stage0 owns before constructing a slice over it.
-        // Returning a non-zero sentinel makes the surrounding `validate()`
-        // path fail with "checksum invalid", which is the correct behaviour
-        // for input that escapes our memory regions.
+        // SECURITY: `self.length` may be untrusted. Validate it falls
+        // within our ACPI memory. Returning non-zero fails the checksum.
         let self_addr = self as *const _ as usize;
         let length = self.length as usize;
         if !crate::acpi::acpi_memory_contains(self_addr, length) {

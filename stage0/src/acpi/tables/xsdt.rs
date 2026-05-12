@@ -54,12 +54,7 @@ impl Deref for XsdtEntryPtr {
 
     fn deref(&self) -> &DescriptionHeader<[u8; 4]> {
         let addr = self.raw_val() as usize;
-        // SECURITY: `addr` is a u64 the untrusted host wrote into the XSDT
-        // contents via fw_cfg / AddPointer. The previous comment claimed
-        // validation happened in `Xsdt::validate()`, but that function does
-        // not validate entry-pointer targets. Fail closed by panicking if
-        // the address does not lie inside an ACPI memory region this stage0
-        // controls; boot failure is the correct outcome for malformed input.
+        // SECURITY: Untrusted host input. Bounds check before deref.
         if !acpi_memory_contains(addr, size_of::<DescriptionHeader<[u8; 4]>>()) {
             panic!("XSDT entry points outside ACPI memory: {addr:#x}");
         }
@@ -74,7 +69,7 @@ impl Deref for XsdtEntryPtr {
 impl DerefMut for XsdtEntryPtr {
     fn deref_mut(&mut self) -> &mut Self::Target {
         let addr = self.raw_val() as usize;
-        // SECURITY: see `Deref::deref` above.
+        // SECURITY: Untrusted host input. Bounds check before deref.
         if !acpi_memory_contains(addr, size_of::<DescriptionHeader<[u8; 4]>>()) {
             panic!("XSDT entry points outside ACPI memory: {addr:#x}");
         }

@@ -70,13 +70,6 @@ static HIGH_MEMORY_START: core::sync::atomic::AtomicUsize =
 
 /// Returns `true` iff `[addr, addr + len)` is wholly contained in either the
 /// EBDA region or the high-memory ACPI allocator range.
-///
-/// Stage0 receives ACPI table contents from an untrusted VMM (host) via the
-/// bios-linker-loader protocol. RSDT and XSDT entries are u32/u64 values the
-/// host can set to any address. Before any code dereferences such a pointer or
-/// constructs a slice from `(pointer, length)`, it MUST first verify the
-/// pointer falls inside one of the two regions stage0 actually uses for ACPI
-/// memory. Anything else is attacker-controlled input.
 pub(crate) fn acpi_memory_contains(addr: usize, len: usize) -> bool {
     let Some(end) = addr.checked_add(len) else { return false };
 
