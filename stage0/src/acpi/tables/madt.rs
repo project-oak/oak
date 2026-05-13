@@ -18,7 +18,7 @@ use alloc::{alloc::Allocator, boxed::Box, vec::Vec};
 use core::fmt::Debug;
 
 use bitflags::bitflags;
-use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
 use crate::{
     AcpiTable, DescriptionHeader,
@@ -111,16 +111,16 @@ impl Checksum for Madt {
 /// table structure, and it will only `validate` if an instance of this type is
 /// in the expected memory region (EBDA). Not meant to be built and passed
 /// around.
-#[derive(Clone, Copy, Debug, TryFromBytes, IntoBytes, Immutable, KnownLayout)]
+#[derive(Copy, Clone, Debug, FromBytes, IntoBytes, Immutable, KnownLayout)]
 #[repr(C, packed)]
-pub struct ControllerHeader<T: Immutable + KnownLayout + TryFromBytes> {
+pub struct ControllerHeader<T> {
     // There's only 17 possible types, the rest of the range is reserved. We need
     // to use u8 (not enum) as we use this structure to parse existing memory.
     pub structure_type: T,
     len: u8,
 }
 
-impl<T: Immutable + KnownLayout + TryFromBytes> ControllerHeader<T> {
+impl<T> ControllerHeader<T> {
     fn validate(&self) -> Result<()> {
         Ok(())
     }
@@ -377,7 +377,7 @@ impl Madt {
 
     /// Create an iterator over entries of field Interrupt Controller Structure
     /// that returns references to the entries' headers.
-    pub fn controller_struct_headers(&self) -> MadtIterator<'_> {
+    pub fn controller_structures(&self) -> MadtIterator<'_> {
         // The Madt struct does not itself contain the interrupt controller
         // entries (see struct Madt above) but these entries are expected to
         // exist right after the Madt struct. Therefore, we set the offset to
@@ -457,10 +457,18 @@ impl Madt {
 
     /// Seeks a structure with the given type in this MADT's Interrupt Controlle
     /// Structure fields and returns a reference to its header if found.
-    fn get_controller_structure(&self, structure_type: u8) -> Option<&ControllerHeader<u8>> {
-        self.controller_struct_headers()
-            .find(|control_header| control_header.structure_type == structure_type)
+    fn get_controller_structure(&self, structure_type: u8) -> Option<&ControllerStructure> {
+        self.controller_structures()
+            .find(|structure| structure.header.structure_type == structure_type)
     }
+}
+
+/// Generic representation of a MADT entry.
+#[derive(Immutable, IntoBytes, KnownLayout, FromBytes)]
+#[repr(C, packed)]
+pub struct ControllerStructure {
+    pub header: ControllerHeader<u8>,
+    data: [u8],
 }
 
 pub struct MadtIterator<'a> {
@@ -474,25 +482,15 @@ pub struct MadtIterator<'a> {
 }
 
 impl<'a> Iterator for MadtIterator<'a> {
-    type Item = &'a ControllerHeader<u8>;
+    type Item = &'a ControllerStructure;
 
     fn next(&mut self) -> Option<Self::Item> {
         const HEADER_SIZE: usize = core::mem::size_of::<ControllerHeader<u8>>();
 
-        if self.offset + HEADER_SIZE > self.madt.data.len() {
-            // we'd overflow the MADT structure; nothing more to read
-            return None;
-        }
-
         let header = ControllerHeader::<u8>::try_ref_from_bytes(
-            &self.madt.data[self.offset..self.offset + HEADER_SIZE],
+            self.madt.data.get(self.offset..self.offset + HEADER_SIZE)?,
         )
-        .unwrap();
-
-        if self.offset + header.len as usize > self.madt.data.len() {
-            // returning this header would overflow MADT
-            return None;
-        }
+        .ok()?;
 
         // If the MADT has some zeroed space at the end, then we'll land somewhere that
         // reports a 0-length header. The following clause prevents falling in
@@ -501,8 +499,13 @@ impl<'a> Iterator for MadtIterator<'a> {
             return None; // Prevent infinite interation.
         }
 
+        let cs = ControllerStructure::ref_from_bytes(
+            self.madt.data.get(self.offset..self.offset + header.len as usize)?,
+        )
+        .ok()?;
+
         self.offset += header.len as usize;
-        Some(header)
+        Some(cs)
     }
 }
 
@@ -734,7 +737,7 @@ mod tests {
 
         let mp_wakeup = new_madt
             .get_controller_structure(MultiprocessorWakeup::STRUCTURE_TYPE)
-            .map(MultiprocessorWakeup::from_header_cast)
+            .map(|entry| MultiprocessorWakeup::from_header_cast(&entry.header))
             .unwrap()
             .unwrap();
         let mailbox = mp_wakeup.mailbox_address;
@@ -749,7 +752,7 @@ mod tests {
 
         let mp_wakeup = new_madt_v2
             .get_controller_structure(MultiprocessorWakeup::STRUCTURE_TYPE)
-            .map(MultiprocessorWakeup::from_header_cast)
+            .map(|entry| MultiprocessorWakeup::from_header_cast(&entry.header))
             .unwrap()
             .unwrap();
         let mailbox = mp_wakeup.mailbox_address;

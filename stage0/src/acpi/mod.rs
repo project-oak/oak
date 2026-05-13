@@ -220,39 +220,45 @@ fn print_system_data_table_entries(
         if header.signature.as_bytes() == <Madt as AcpiTable>::Signature::default().as_bytes() {
             log::info!("    Entry APIC - It is a MADT, Interrupt Controller Structures:");
             let madt = tables.try_parse_table_at::<Madt>(addr).ok_or("invalid MADT")?;
-            for madt_entry in madt.controller_struct_headers() {
-                match madt_entry.structure_type {
+            for madt_entry in madt.controller_structures() {
+                match madt_entry.header.structure_type {
                     ProcessorLocalApic::STRUCTURE_TYPE => {
-                        log::info!("    -> Local APIC: {:?}", ProcessorLocalApic::new(madt_entry)?);
+                        log::info!(
+                            "    -> Local APIC: {:?}",
+                            ProcessorLocalApic::new(&madt_entry.header)?
+                        );
                     }
                     ProcessorLocalX2Apic::STRUCTURE_TYPE => {
                         log::info!(
                             "    -> Local X2APIC: {:?}",
-                            ProcessorLocalX2Apic::new(madt_entry)?
+                            ProcessorLocalX2Apic::new(&madt_entry.header)?
                         );
                     }
                     MultiprocessorWakeup::STRUCTURE_TYPE => {
                         log::info!(
                             "    -> MultiprocessorWakeup: {:?}",
-                            MultiprocessorWakeup::from_header_cast(madt_entry)?
+                            MultiprocessorWakeup::from_header_cast(&madt_entry.header)?
                         );
                     }
                     IoApic::STRUCTURE_TYPE => {
-                        log::info!("    -> I/O APIC: {:?}", IoApic::new(madt_entry)?);
+                        log::info!("    -> I/O APIC: {:?}", IoApic::new(&madt_entry.header)?);
                     }
                     InterruptSourceOverride::STRUCTURE_TYPE => {
                         log::info!(
                             "    -> Interrupt Source Override: {:?}",
-                            InterruptSourceOverride::new(madt_entry)?
+                            InterruptSourceOverride::new(&madt_entry.header)?
                         );
                     }
                     LocalApicNmi::STRUCTURE_TYPE => {
-                        log::info!("    -> Local APIC NMI: {:?}", LocalApicNmi::new(madt_entry)?);
+                        log::info!(
+                            "    -> Local APIC NMI: {:?}",
+                            LocalApicNmi::new(&madt_entry.header)?
+                        );
                     }
                     _ => {
                         log::info!(
                             "    -> Unknown structure, type = {}",
-                            madt_entry.structure_type
+                            madt_entry.header.structure_type
                         );
                     }
                 }

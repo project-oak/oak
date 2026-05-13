@@ -95,15 +95,15 @@ pub fn bootstrap_aps<P: Platform>(tables: &mut AcpiTables) -> Result<(), &'stati
     // APIC and X2APIC structures are largely the same; X2APIC entries are used if
     // the APIC ID is too large to fit into the one-byte field of the APIC
     // structure (e.g. if you have more than 256 CPUs).
-    for controller_header in madt.controller_struct_headers() {
-        let (remote_lapic_id, flags) = match controller_header.structure_type {
+    for controller_struct in madt.controller_structures() {
+        let (remote_lapic_id, flags) = match controller_struct.header.structure_type {
             ProcessorLocalApic::STRUCTURE_TYPE => {
-                let remote_lapic = ProcessorLocalApic::new(controller_header)?;
+                let remote_lapic = ProcessorLocalApic::new(&controller_struct.header)?;
                 log::debug!("smp::boostrap_aps: Local APIC: {:?}", remote_lapic);
                 (remote_lapic.apic_id as u32, remote_lapic.flags)
             }
             ProcessorLocalX2Apic::STRUCTURE_TYPE => {
-                let remote_lapic = ProcessorLocalX2Apic::new(controller_header)?;
+                let remote_lapic = ProcessorLocalX2Apic::new(&controller_struct.header)?;
                 log::debug!("smp::boostrap_aps: Local X2APIC: {:?}", remote_lapic);
                 (remote_lapic.x2apic_id, remote_lapic.flags)
             }
