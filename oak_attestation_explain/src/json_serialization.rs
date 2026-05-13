@@ -597,6 +597,26 @@ pub fn serialize_binary_reference_value(instance: &BinaryReferenceValue) -> serd
     }
 }
 
+pub fn serialize_mpm_reference_value(instance: &MpmReferenceValue) -> serde_json::Value {
+    // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
+    // all fields. If a new field is added to the struct, this code won't
+    // compile unless this destructuring operation is updated, thereby reminding us
+    // to keep the serialization in sync manually.
+    let MpmReferenceValue { r#type } = instance;
+    match r#type {
+        Some(mpm_reference_value::Type::Skip(instance)) => {
+            json!({ "skip": serialize_skip_verification(instance) })
+        }
+        Some(mpm_reference_value::Type::Endorsement(instance)) => {
+            json!({ "endorsement": serialize_endorsement_reference_value(instance) })
+        }
+        Some(mpm_reference_value::Type::Versions(instance)) => {
+            json!({ "versions": serialize_mpm_version_ids(instance) })
+        }
+        None => json!(null),
+    }
+}
+
 pub fn serialize_kernel_digests(instance: &KernelDigests) -> serde_json::Value {
     // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
     // all fields. If a new field is added to the struct, this code won't
@@ -787,6 +807,15 @@ pub fn serialize_digests(instance: &Digests) -> serde_json::Value {
     json!(digests.iter().map(serialize_raw_digest).collect::<Vec<serde_json::Value>>())
 }
 
+pub fn serialize_mpm_version_ids(instance: &MpmVersionIds) -> serde_json::Value {
+    // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
+    // all fields. If a new field is added to the struct, this code won't
+    // compile unless this destructuring operation is updated, thereby reminding us
+    // to keep the serialization in sync manually.
+    let MpmVersionIds { versions } = instance;
+    json!(versions.iter().map(|v| json!(v)).collect::<Vec<serde_json::Value>>())
+}
+
 pub fn serialize_kernel_layer_reference_values(
     instance: &KernelLayerReferenceValues,
 ) -> serde_json::Value {
@@ -912,7 +941,7 @@ pub fn serialize_cb_layer2_transparent_reference_values(
 ) -> serde_json::Value {
     let CbLayer2TransparentReferenceValues { binary_mpm } = instance;
     json!({
-        "binary_mpm": binary_mpm.as_ref().map(serialize_binary_reference_value),
+        "binary_mpm": binary_mpm.as_ref().map(serialize_mpm_reference_value),
     })
 }
 
@@ -1012,5 +1041,57 @@ pub fn serialize_reference_values(instance: &ReferenceValues) -> serde_json::Val
             json!({ "cbt": serialize_cb_transparent_reference_values(instance) })
         }
         None => json!(null),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use oak_proto_rust::oak::attestation::v1::{
+        EndorsementReferenceValue, MpmReferenceValue, MpmVersionIds, SkipVerification,
+        mpm_reference_value,
+    };
+
+    use super::*;
+
+    #[test]
+    fn serialize_mpm_reference_value_none() {
+        let instance = MpmReferenceValue { r#type: None };
+        let result = serialize_mpm_reference_value(&instance);
+        assert_eq!(result, serde_json::Value::Null);
+    }
+
+    #[test]
+    fn serialize_mpm_reference_value_skip() {
+        let instance = MpmReferenceValue {
+            r#type: Some(mpm_reference_value::Type::Skip(SkipVerification {})),
+        };
+        let result = serialize_mpm_reference_value(&instance);
+        assert!(result.get("skip").is_some(), "expected 'skip' key in {result}");
+    }
+
+    #[test]
+    fn serialize_mpm_reference_value_endorsement() {
+        let instance = MpmReferenceValue {
+            r#type: Some(mpm_reference_value::Type::Endorsement(
+                EndorsementReferenceValue::default(),
+            )),
+        };
+        let result = serialize_mpm_reference_value(&instance);
+        assert!(result.get("endorsement").is_some(), "expected 'endorsement' key in {result}");
+    }
+
+    #[test]
+    fn serialize_mpm_reference_value_versions() {
+        let instance = MpmReferenceValue {
+            r#type: Some(mpm_reference_value::Type::Versions(MpmVersionIds {
+                versions: vec!["v1.0".to_string(), "v2.0".to_string()],
+            })),
+        };
+        let result = serialize_mpm_reference_value(&instance);
+        let versions = result.get("versions").expect("expected 'versions' key");
+        let arr = versions.as_array().expect("expected array");
+        assert_eq!(arr.len(), 2);
+        assert_eq!(arr[0], serde_json::json!("v1.0"));
+        assert_eq!(arr[1], serde_json::json!("v2.0"));
     }
 }

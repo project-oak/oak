@@ -224,6 +224,22 @@ message BinaryReferenceValue {
   }
 }
 
+// Verifies that the endorsed subject is one of the specified MPM versions.
+message MpmVersionIds {
+  // A match in at least one version is considered a success.
+  // No checks are performed if this is empty (discouraged but allowed use).
+  // Requires that the endorsement to be verified has the MPM claim.
+  repeated string versions = 1;
+}
+
+message MpmReferenceValue {
+  oneof type {
+    SkipVerification skip = 1;
+    EndorsementReferenceValue endorsement = 2;
+    MpmVersionIds versions = 3;
+  }
+}
+
 // Similar to the `Digests` message, but allows to specify digests for the
 // split components of the bzImage separately.
 message KernelDigests {
@@ -489,7 +505,8 @@ message CbLayer1TransparentReferenceValues {
 }
 
 message CbLayer2TransparentReferenceValues {
-  BinaryReferenceValue binary_mpm = 1;
+  reserved 1;
+  MpmReferenceValue binary_mpm = 2;
 }
 
 // Verifies a transparent CB evidence, i.e. uses the `transparent_event_log`

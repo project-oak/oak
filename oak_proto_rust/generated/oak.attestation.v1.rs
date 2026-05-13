@@ -1152,6 +1152,32 @@ pub mod binary_reference_value {
         Digests(super::Digests),
     }
 }
+/// Verifies that the endorsed subject is one of the specified MPM versions.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct MpmVersionIds {
+    /// A match in at least one version is considered a success.
+    /// No checks are performed if this is empty (discouraged but allowed use).
+    /// Requires that the endorsement to be verified has the MPM claim.
+    #[prost(string, repeated, tag = "1")]
+    pub versions: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MpmReferenceValue {
+    #[prost(oneof = "mpm_reference_value::Type", tags = "1, 2, 3")]
+    pub r#type: ::core::option::Option<mpm_reference_value::Type>,
+}
+/// Nested message and enum types in `MpmReferenceValue`.
+pub mod mpm_reference_value {
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Type {
+        #[prost(message, tag = "1")]
+        Skip(super::SkipVerification),
+        #[prost(message, tag = "2")]
+        Endorsement(super::EndorsementReferenceValue),
+        #[prost(message, tag = "3")]
+        Versions(super::MpmVersionIds),
+    }
+}
 /// Similar to the `Digests` message, but allows to specify digests for the
 /// split components of the bzImage separately.
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -1490,8 +1516,8 @@ pub struct CbLayer1TransparentReferenceValues {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CbLayer2TransparentReferenceValues {
-    #[prost(message, optional, tag = "1")]
-    pub binary_mpm: ::core::option::Option<BinaryReferenceValue>,
+    #[prost(message, optional, tag = "2")]
+    pub binary_mpm: ::core::option::Option<MpmReferenceValue>,
 }
 /// Verifies a transparent CB evidence, i.e. uses the `transparent_event_log`
 /// branch in the associated `Evidence` proto.
