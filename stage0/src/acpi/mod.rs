@@ -27,7 +27,7 @@ use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use sha2::{Digest, Sha256};
 use strum::FromRepr;
 use x86_64::VirtAddr;
-use zerocopy::IntoBytes;
+use zerocopy::{IntoBytes, TryFromBytes};
 
 use crate::{ZeroPage, fw_cfg::FwCfg, pci::PciWindows};
 
@@ -221,19 +221,14 @@ fn print_system_data_table_entries(
             log::info!("    Entry APIC - It is a MADT, Interrupt Controller Structures:");
             let madt = tables.try_parse_table_at::<Madt>(addr).ok_or("invalid MADT")?;
             for madt_entry in madt.controller_structures() {
+                if let Ok(lapic) = ProcessorLocalApic::try_ref_from_bytes(madt_entry.as_bytes()) {
+                    log::info!("    -> Local APIC: {:?}", lapic);
+                } else if let Ok(x2apic) =
+                    ProcessorLocalX2Apic::try_ref_from_bytes(madt_entry.as_bytes())
+                {
+                    log::info!("    -> Local X2APIC: {:?}", x2apic);
+                }
                 match madt_entry.header.structure_type {
-                    ProcessorLocalApic::STRUCTURE_TYPE => {
-                        log::info!(
-                            "    -> Local APIC: {:?}",
-                            ProcessorLocalApic::new(&madt_entry.header)?
-                        );
-                    }
-                    ProcessorLocalX2Apic::STRUCTURE_TYPE => {
-                        log::info!(
-                            "    -> Local X2APIC: {:?}",
-                            ProcessorLocalX2Apic::new(&madt_entry.header)?
-                        );
-                    }
                     MultiprocessorWakeup::STRUCTURE_TYPE => {
                         log::info!(
                             "    -> MultiprocessorWakeup: {:?}",

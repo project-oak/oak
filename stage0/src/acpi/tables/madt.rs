@@ -43,6 +43,9 @@ impl From<Signature> for [u8; 4] {
 #[derive(Clone, Copy, Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
 pub struct MadtFlags(u32);
 
+#[derive(Clone, Copy, Debug, Eq, FromBytes, Immutable, IntoBytes, KnownLayout, PartialEq)]
+pub struct LocalApicFlags(u32);
+
 bitflags! {
     impl MadtFlags: u32 {
         /// The system also has a PC-AT-compatible dual-8259 setup.
@@ -51,8 +54,7 @@ bitflags! {
         const PCAT_COMPAT = 1;
     }
 
-    #[derive(Clone, Copy, Debug)]
-    pub struct LocalApicFlags: u32 {
+    impl LocalApicFlags: u32 {
         /// Processor is ready to use.
         const ENABLED = 1;
 
@@ -126,13 +128,19 @@ impl<T> ControllerHeader<T> {
     }
 }
 
+#[derive(Copy, Clone, Debug, Default, IntoBytes, Immutable, KnownLayout, TryFromBytes)]
+#[repr(u8)]
+enum ProcessorLocalApicType {
+    #[default]
+    ProcessorLocalApic = 0,
+}
 /// Processor Local Apic Structure.
 /// One of the possible structures in MADT's Interrupt Controller Structure
 /// field. Documented in section 5.2.12.2 of APIC Specification.
-#[derive(Debug)]
+#[derive(Debug, IntoBytes, Immutable, KnownLayout, TryFromBytes)]
 #[repr(C, packed)]
 pub struct ProcessorLocalApic {
-    header: ControllerHeader<u8>,
+    header: ControllerHeader<ProcessorLocalApicType>,
 
     /// Deprecated; maps to a Processor object in the ACPI tree.
     processor_uid: u8,
@@ -143,33 +151,23 @@ pub struct ProcessorLocalApic {
     /// Local APIC flags.
     pub flags: LocalApicFlags,
 }
+static_assertions::assert_eq_size!(ProcessorLocalApic, [u8; 8]);
 
-// Because we cast pointers from *const ControllHeader:
-static_assertions::assert_eq_align!(ProcessorLocalApic, ControllerHeader<u8>);
-
-impl ProcessorLocalApic {
-    pub const STRUCTURE_TYPE: u8 = 0;
-
-    pub fn new(header: &ControllerHeader<u8>) -> Result<&Self> {
-        if header.structure_type != Self::STRUCTURE_TYPE {
-            return Err("structure is not Processor Local APIC Structure");
-        }
-        header.validate()?;
-
-        // Safety: we're verified that the structure type is correct.
-        Ok(unsafe { &*(header as *const _ as usize as *const Self) })
-    }
+#[derive(Copy, Clone, Debug, Default, IntoBytes, Immutable, KnownLayout, TryFromBytes)]
+#[repr(u8)]
+enum ProcessorLocalX2ApicType {
+    #[default]
+    ProcessorLocalX2Apic = 9,
 }
-
 /// Processor Local x2APIC structure.
 /// One of the possible structures in MADT's Interrupt Controller Structure
 /// field. Documented in section 5.2.12.12 of APIC Specification.
-#[derive(Debug)]
+#[derive(Debug, IntoBytes, Immutable, KnownLayout, TryFromBytes)]
 #[repr(C, packed)]
 pub struct ProcessorLocalX2Apic {
-    header: ControllerHeader<u8>,
+    header: ControllerHeader<ProcessorLocalX2ApicType>,
 
-    /// Reserverd, must be zero.
+    /// Reserved, must be zero.
     _reserved: u16,
 
     /// The processor's local X2APIC ID.
@@ -184,23 +182,7 @@ pub struct ProcessorLocalX2Apic {
     /// the numeric value with this field.
     processor_uid: u32,
 }
-
-// Because we cast pointers from *const ControllHeader:
-static_assertions::assert_eq_align!(ProcessorLocalX2Apic, ControllerHeader<u8>);
-
-impl ProcessorLocalX2Apic {
-    pub const STRUCTURE_TYPE: u8 = 9;
-
-    pub fn new(header: &ControllerHeader<u8>) -> Result<&Self> {
-        if header.structure_type != Self::STRUCTURE_TYPE {
-            return Err("structure is not Processor Local X2APIC Structure");
-        }
-        header.validate()?;
-
-        // Safety: we're verified that the structure type is correct.
-        Ok(unsafe { &*(header as *const _ as usize as *const Self) })
-    }
-}
+static_assertions::assert_eq_size!(ProcessorLocalX2Apic, [u8; 16]);
 
 /// Multiprocessor Wakeup structure.
 /// One of the possible structures in MADT's Interrupt Controller Structure
@@ -710,6 +692,45 @@ mod tests {
         let (madt, _) = Madt::try_from_bytes(MADT).unwrap();
         assert_that!(&madt.header.oem_id, eq(b"Google"));
         assert_that!(&madt.header.oem_table_id, eq(b"GOOGAPIC"));
+    }
+
+    const LAPIC: &[u8] = &[0x00, 0x08, 0x01, 0x02, 0x03, 0x00, 0x00, 0x00];
+    const LX2APIC: &[u8] = &[
+        0x09, 0x10, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, //
+        0x03, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+    ];
+
+    #[test]
+    fn test_lapic() {
+        let generic = ControllerStructure::try_ref_from_bytes(LAPIC).unwrap();
+        assert_that!(generic.header.structure_type, eq(0));
+        assert_that!(generic.header.len, eq(LAPIC.len() as u8));
+        assert_that!(generic.data.len(), eq(6));
+        assert_that!(
+            ProcessorLocalApic::try_ref_from_bytes(generic.as_bytes()),
+            ok(points_to(matches_pattern!(ProcessorLocalApic {
+                processor_uid: &1,
+                apic_id: &2,
+                ..
+            })))
+        );
+
+        // completely wrong data structure
+        assert_that!(ProcessorLocalApic::try_ref_from_bytes(LX2APIC), err(anything()));
+
+        // extra junk at the end
+        let mut invalid_lapic = LAPIC.to_vec();
+        invalid_lapic.push(0x00);
+        assert_that!(ProcessorLocalApic::try_ref_from_bytes(&invalid_lapic[..]), err(anything()));
+    }
+
+    #[test]
+    fn test_x2apic() {
+        let generic = ControllerStructure::try_ref_from_bytes(LX2APIC).unwrap();
+        assert_that!(generic.header.structure_type, eq(9));
+        assert_that!(generic.header.len, eq(LX2APIC.len() as u8));
+        assert_that!(generic.data.len(), eq(14));
+        assert_that!(ProcessorLocalX2Apic::try_ref_from_bytes(generic.as_bytes()), ok(anything()));
     }
 
     #[test]

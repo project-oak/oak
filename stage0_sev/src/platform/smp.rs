@@ -25,6 +25,7 @@ use oak_stage0::{
     disable_pic8259, hal::Platform,
 };
 use x86_64::PhysAddr;
+use zerocopy::{IntoBytes, TryFromBytes};
 
 unsafe extern "C" {
     #[link_name = "ap_start"]
@@ -96,19 +97,19 @@ pub fn bootstrap_aps<P: Platform>(tables: &mut AcpiTables) -> Result<(), &'stati
     // the APIC ID is too large to fit into the one-byte field of the APIC
     // structure (e.g. if you have more than 256 CPUs).
     for controller_struct in madt.controller_structures() {
-        let (remote_lapic_id, flags) = match controller_struct.header.structure_type {
-            ProcessorLocalApic::STRUCTURE_TYPE => {
-                let remote_lapic = ProcessorLocalApic::new(&controller_struct.header)?;
+        let (remote_lapic_id, flags) = {
+            if let Ok(remote_lapic) =
+                ProcessorLocalApic::try_ref_from_bytes(controller_struct.as_bytes())
+            {
                 log::debug!("smp::boostrap_aps: Local APIC: {:?}", remote_lapic);
                 (remote_lapic.apic_id as u32, remote_lapic.flags)
-            }
-            ProcessorLocalX2Apic::STRUCTURE_TYPE => {
-                let remote_lapic = ProcessorLocalX2Apic::new(&controller_struct.header)?;
+            } else if let Ok(remote_lapic) =
+                ProcessorLocalX2Apic::try_ref_from_bytes(controller_struct.as_bytes())
+            {
                 log::debug!("smp::boostrap_aps: Local X2APIC: {:?}", remote_lapic);
                 (remote_lapic.x2apic_id, remote_lapic.flags)
-            }
-            // We don't care about other interrupt controller structure types here.
-            _ => {
+            } else {
+                // We don't care about other interrupt controller structure types here.
                 continue;
             }
         };
