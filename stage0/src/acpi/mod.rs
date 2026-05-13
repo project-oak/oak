@@ -235,22 +235,15 @@ fn print_system_data_table_entries(
                     log::info!("    -> Interrupt Source Override: {:?}", ios);
                 } else if let Ok(nmi) = LocalApicNmi::try_ref_from_bytes(madt_entry.as_bytes()) {
                     log::info!("    -> Local APIC NMI: {:?}", nmi);
+                } else if let Ok(mpw) =
+                    MultiprocessorWakeup::try_ref_from_bytes(madt_entry.as_bytes())
+                {
+                    log::info!("    -> Multiprocessor Wakeup: {:?}", mpw);
                 } else {
-                    match madt_entry.header.structure_type {
-                        MultiprocessorWakeup::STRUCTURE_TYPE => {
-                            log::info!(
-                                "    -> MultiprocessorWakeup: {:?}",
-                                MultiprocessorWakeup::from_header_cast(&madt_entry.header)?
-                            );
-                        }
-
-                        _ => {
-                            log::info!(
-                                "    -> Unknown structure, type = {}",
-                                madt_entry.header.structure_type
-                            );
-                        }
-                    }
+                    log::info!(
+                        "    -> Unknown structure, type = {}",
+                        madt_entry.header.structure_type
+                    );
                 }
             }
         }
