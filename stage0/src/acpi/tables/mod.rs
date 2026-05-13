@@ -408,6 +408,14 @@ impl<'a> AcpiTables<'a> {
         }
         Some(buf)
     }
+
+    /// Adds a new buffer that may contains an ACPI table.
+    ///
+    /// This needs to be called whenever an ACPI table is allocated outside the
+    /// existing buffers.
+    pub fn add_buffer(&mut self, buf: &'a mut [u8]) {
+        self.buffers.push(buf);
+    }
 }
 
 #[cfg(test)]

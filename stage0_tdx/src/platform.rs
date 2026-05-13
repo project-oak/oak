@@ -420,15 +420,38 @@ impl FirmwarePlatform for Tdx {
             let maybe_madt_entry: Option<RsdtEntryPairMut> =
                 rsdt.get_entry_pair_mut(Madt::SIGNATURE)?;
 
+            let mut new_madt_buf = None;
             if let Some((madt_entry_addr, madt_header)) = maybe_madt_entry {
                 info!("Finalize ACPI: Found a MADT in RSDT.");
                 let madt: &mut Madt = Madt::from_header_mut(madt_header)?;
+                let old_madt_addr = *madt_entry_addr as usize;
                 info!("Finalize ACPI: Found a MADT at {:?}", madt.as_byte_slice()?.as_ptr_range());
                 let new_madt = madt.set_or_append_mp_wakeup(os_mailbox_address)?;
 
                 *madt_entry_addr = new_madt as *const _ as u32;
-                rsdt.update_checksum();
 
+                if old_madt_addr != new_madt as *const _ as usize {
+                    // MADT was relocated
+                    //
+                    // Safety: This is bit of a hack. Ideally we'd use something like
+                    // `IntoBytes::as_mut_bytes()` for this, but `Madt` is not `FromBytes` (it's
+                    // `TryFromBytes`, because of the header). Zerocopy insists on `FromBytes`, as
+                    // that's a way to guarantee that even if you change something in the raw byte
+                    // buffer, the `Madt` stays valid.
+                    //
+                    // Our situation here is different: we won't treat `new_madt` as a `Madt` after
+                    // this, so changing the buffer is okay.
+                    new_madt_buf = Some(unsafe {
+                        core::slice::from_raw_parts_mut(
+                            new_madt as *mut _ as *mut u8,
+                            size_of_val(new_madt),
+                        )
+                    });
+                }
+                rsdt.update_checksum();
+                if let Some(new_madt) = new_madt_buf {
+                    tables.add_buffer(new_madt);
+                }
                 return Ok(());
             } // else: there is an RSDT but it has no MADT.
         } // else: there is no RSDT.
@@ -441,12 +464,25 @@ impl FirmwarePlatform for Tdx {
             if let Some(madt_entry) = maybe_madt_entry {
                 info!("Finalize ACPI: Found a MADT in XSDT.");
                 let madt: &mut Madt = Madt::from_header_mut(madt_entry.deref_mut())?;
+                let old_madt_addr = madt as *const _ as usize;
                 info!("Finalize ACPI: Found a MADT at {:?}", madt.as_byte_slice()?.as_ptr_range());
                 let new_madt = madt.set_or_append_mp_wakeup(os_mailbox_address)?;
                 madt_entry.set_addr(new_madt as *const _ as u64);
                 //xsdt.entries_mut()[1].set_addr(new_madt as *const _ as u64);
+                let mut new_madt_buf = None;
+                if old_madt_addr != new_madt as *const _ as usize {
+                    // Safety: see the RSDT section above, it's the same.
+                    new_madt_buf = Some(unsafe {
+                        core::slice::from_raw_parts_mut(
+                            new_madt as *mut _ as *mut u8,
+                            size_of_val(new_madt),
+                        )
+                    });
+                }
                 xsdt.update_checksum();
-
+                if let Some(new_madt) = new_madt_buf {
+                    tables.add_buffer(new_madt);
+                }
                 return Ok(());
             } // else: there is an XSDT but it has no MADT.
         } // else: there is no XSDT.
