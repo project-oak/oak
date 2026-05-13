@@ -24,7 +24,7 @@ use crate::{
     AcpiTable, DescriptionHeader,
     acpi::{
         HIGH_MEMORY_ALLOCATOR,
-        tables::{Checksum, Result, check_ptr_aligned, signature},
+        tables::{Checksum, Result, signature},
     },
 };
 
@@ -382,7 +382,7 @@ impl Madt {
         // entries (see struct Madt above) but these entries are expected to
         // exist right after the Madt struct. Therefore, we set the offset to
         // point to one byte after, which is size_of Madt.
-        MadtIterator { madt: self, offset: 36 + 4 + 4 }
+        MadtIterator { madt: self, offset: 0 }
     }
 
     /// If a MultiprocessorWakeupStructure exsists in this MADT, updates its
@@ -477,19 +477,19 @@ impl<'a> Iterator for MadtIterator<'a> {
     type Item = &'a ControllerHeader<u8>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.offset + size_of::<ControllerHeader<u8>>() > self.madt.header.length as usize {
+        const HEADER_SIZE: usize = core::mem::size_of::<ControllerHeader<u8>>();
+
+        if self.offset + HEADER_SIZE > self.madt.data.len() {
             // we'd overflow the MADT structure; nothing more to read
             return None;
         }
-        // Safety: now we know that at least reading the header won't overflow the data
-        // structure.
-        let header = unsafe {
-            let header_ptr = (self.madt as *const _ as *const u8).add(self.offset)
-                as *const ControllerHeader<u8>;
-            check_ptr_aligned(header_ptr);
-            &*header_ptr
-        };
-        if self.offset + header.len as usize > self.madt.header.length as usize {
+
+        let header = ControllerHeader::<u8>::try_ref_from_bytes(
+            &self.madt.data[self.offset..self.offset + HEADER_SIZE],
+        )
+        .unwrap();
+
+        if self.offset + header.len as usize > self.madt.data.len() {
             // returning this header would overflow MADT
             return None;
         }
