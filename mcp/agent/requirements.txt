@@ -4,9 +4,6 @@
 #
 #    pip-compile --extra-index-url=https://pypi.org/simple/ --generate-hashes --output-file=requirements.txt requirements.in
 #
---index-url https://us-python.pkg.dev/artifact-foundry-prod/ah-3p-staging-python/simple/
---extra-index-url https://pypi.org/simple/
-
 a2a-sdk[http-server]==0.3.25 \
     --hash=sha256:2fce38faea82eb0b6f9f9c2bcf761b0d78612c80ef0e599b50d566db1b2654b5 \
     --hash=sha256:afda85bab8d6af0c5d15e82f326c94190f6be8a901ce562d045a338b7127242f
@@ -179,9 +176,9 @@ attrs==26.1.0 \
     #   aiohttp
     #   jsonschema
     #   referencing
-authlib==1.6.9 \
-    --hash=sha256:d8f2421e7e5980cc1ddb4e32d3f5fa659cfaf60d8eaf3281ebed192e4ab74f04 \
-    --hash=sha256:f08b4c14e08f0861dc18a32357b33fbcfd2ea86cfe3fe149484b4d764c4a0ac3
+authlib==1.6.12 \
+    --hash=sha256:0656d8482f28fc8221929d5f35b2bde5d13e10555ebc06b4561b0d622e83b1bd \
+    --hash=sha256:e9229ad7fde610b139dd12f5edbe97eab9ee78bfb85691247e767727850b99ab
     # via google-adk
 certifi==2026.2.25 \
     --hash=sha256:027692e4402ad994f1c42e52a4997a9763c646b73e4096e4d5d6db8af1d6f0fa \
