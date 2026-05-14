@@ -321,13 +321,13 @@ impl Madt {
     }
 
     /// Create an iterator over entries of field Interrupt Controller Structure
-    /// that returns references to the entries' headers.
-    pub fn controller_structures(&self) -> MadtIterator<'_> {
-        // The Madt struct does not itself contain the interrupt controller
-        // entries (see struct Madt above) but these entries are expected to
-        // exist right after the Madt struct. Therefore, we set the offset to
-        // point to one byte after, which is size_of Madt.
-        MadtIterator { madt: self, offset: 0 }
+    /// that returns references to the entries.
+    pub fn iter(&self) -> MadtIterator<'_> {
+        MadtIterator { data: &self.data }
+    }
+
+    pub fn iter_mut(&mut self) -> MadtIterMut<'_> {
+        MadtIterMut { data: &mut self.data }
     }
 
     /// If a MultiprocessorWakeupStructure exsists in this MADT, updates its
@@ -390,20 +390,12 @@ impl Madt {
         &mut self,
         structure_type: u8,
     ) -> Option<&mut ControllerStructure> {
-        self.get_controller_structure(structure_type).map(
-            // Safety: we hold a mut ref to self, only one mut ref to a header can be held at time.
-            // We have already checked control_header is a valid reference.
-            |maybe_found| unsafe {
-                (maybe_found as *const _ as *mut ControllerStructure).as_mut().unwrap()
-            },
-        )
+        self.iter_mut().find(|structure| structure.header.structure_type == structure_type)
     }
 
-    /// Seeks a structure with the given type in this MADT's Interrupt Controlle
-    /// Structure fields and returns a reference to its header if found.
+    #[cfg(test)]
     fn get_controller_structure(&self, structure_type: u8) -> Option<&ControllerStructure> {
-        self.controller_structures()
-            .find(|structure| structure.header.structure_type == structure_type)
+        self.iter().find(|structure| structure.header.structure_type == structure_type)
     }
 }
 
@@ -416,40 +408,64 @@ pub struct ControllerStructure {
 }
 
 pub struct MadtIterator<'a> {
-    madt: &'a Madt,
-
-    /// Offset with respect to where Madt starts where the first interrupt
-    /// controller entry starts. The first interrupt controller entry
-    /// should be right after the Madt struct ends, and its address should be
-    /// address of Madt (madt, above) + length of madt (offset)
-    offset: usize,
+    data: &'a [u8],
 }
 
 impl<'a> Iterator for MadtIterator<'a> {
     type Item = &'a ControllerStructure;
 
     fn next(&mut self) -> Option<Self::Item> {
-        const HEADER_SIZE: usize = core::mem::size_of::<ControllerHeader<u8>>();
-
-        let header = ControllerHeader::<u8>::try_ref_from_bytes(
-            self.madt.data.get(self.offset..self.offset + HEADER_SIZE)?,
-        )
-        .ok()?;
+        let len = {
+            let header = ControllerHeader::<u8>::try_ref_from_bytes(
+                self.data.get(..core::mem::size_of::<ControllerHeader<u8>>())?,
+            )
+            .ok()?;
+            header.len as usize
+        };
 
         // If the MADT has some zeroed space at the end, then we'll land somewhere that
         // reports a 0-length header. The following clause prevents falling in
         // an infinite loop in that case.
-        if header.len == 0 {
+        if len == 0 {
             return None; // Prevent infinite interation.
         }
 
-        let cs = ControllerStructure::ref_from_bytes(
-            self.madt.data.get(self.offset..self.offset + header.len as usize)?,
-        )
-        .ok()?;
+        let data = core::mem::take(&mut self.data);
+        let (item_data, rest) = data.split_at_checked(len)?;
+        self.data = rest;
 
-        self.offset += header.len as usize;
-        Some(cs)
+        ControllerStructure::ref_from_bytes(item_data).ok()
+    }
+}
+
+pub struct MadtIterMut<'a> {
+    data: &'a mut [u8],
+}
+
+impl<'a> Iterator for MadtIterMut<'a> {
+    type Item = &'a mut ControllerStructure;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let len = {
+            let header = ControllerHeader::<u8>::try_ref_from_bytes(
+                self.data.get(..core::mem::size_of::<ControllerHeader<u8>>())?,
+            )
+            .ok()?;
+            header.len as usize
+        };
+
+        // If the MADT has some zeroed space at the end, then we'll land somewhere that
+        // reports a 0-length header. The following clause prevents falling in
+        // an infinite loop in that case.
+        if len == 0 {
+            return None; // Prevent infinite interation.
+        }
+
+        let data = core::mem::take(&mut self.data);
+        let (item_data, rest) = data.split_at_mut_checked(len)?;
+        self.data = rest;
+
+        ControllerStructure::mut_from_bytes(item_data).ok()
     }
 }
 
@@ -564,6 +580,28 @@ mod tests {
         let (madt, _) = Madt::try_from_bytes(MADT).unwrap();
         assert_that!(&madt.header.oem_id, eq(b"Google"));
         assert_that!(&madt.header.oem_table_id, eq(b"GOOGAPIC"));
+    }
+
+    #[test]
+    fn test_madt_iter() {
+        let (madt, _) = Madt::try_from_bytes(MADT).unwrap();
+        assert_that!(
+            madt.iter().map(|entry| entry.header.structure_type).collect::<Vec<u8>>(),
+            unordered_elements_are![&0, &0, &1, &2, &2, &2, &2, &4]
+        )
+    }
+
+    #[test]
+    fn test_madt_iter_mut() {
+        let mut madt_buf = MADT.to_vec();
+        let (madt, _) = Madt::try_from_bytes_mut(&mut madt_buf).unwrap();
+        for entry in madt.iter_mut() {
+            entry.header.structure_type = 0xFF;
+        }
+        assert_that!(
+            madt.iter().map(|entry| entry.header.structure_type).collect::<Vec<u8>>(),
+            unordered_elements_are![&0xFF, &0xFF, &0xFF, &0xFF, &0xFF, &0xFF, &0xFF, &0xFF]
+        )
     }
 
     const LAPIC: &[u8] = &[0x00, 0x08, 0x01, 0x02, 0x03, 0x00, 0x00, 0x00];

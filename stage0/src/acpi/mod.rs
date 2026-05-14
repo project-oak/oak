@@ -220,7 +220,7 @@ fn print_system_data_table_entries(
         if header.signature.as_bytes() == <Madt as AcpiTable>::Signature::default().as_bytes() {
             log::info!("    Entry APIC - It is a MADT, Interrupt Controller Structures:");
             let madt = tables.try_parse_table_at::<Madt>(addr).ok_or("invalid MADT")?;
-            for madt_entry in madt.controller_structures() {
+            for madt_entry in madt.iter() {
                 if let Ok(lapic) = ProcessorLocalApic::try_ref_from_bytes(madt_entry.as_bytes()) {
                     log::info!("    -> Local APIC: {:?}", lapic);
                 } else if let Ok(x2apic) =

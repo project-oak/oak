@@ -96,7 +96,7 @@ pub fn bootstrap_aps<P: Platform>(tables: &mut AcpiTables) -> Result<(), &'stati
     // APIC and X2APIC structures are largely the same; X2APIC entries are used if
     // the APIC ID is too large to fit into the one-byte field of the APIC
     // structure (e.g. if you have more than 256 CPUs).
-    for controller_struct in madt.controller_structures() {
+    for controller_struct in madt.iter() {
         let (remote_lapic_id, flags) = {
             if let Ok(remote_lapic) =
                 ProcessorLocalApic::try_ref_from_bytes(controller_struct.as_bytes())
