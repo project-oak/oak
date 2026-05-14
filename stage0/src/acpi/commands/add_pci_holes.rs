@@ -21,12 +21,13 @@ use core::{
 };
 
 use sha2::Sha256;
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 use super::{Invoke, Pad, RomfileName};
 use crate::{acpi::files::Files, fw_cfg::Firmware, pci::PciWindows};
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, FromBytes, IntoBytes, KnownLayout, Immutable)]
 pub struct AddPciHoles {
     file: RomfileName,
     pci_start_offset_32: u32,

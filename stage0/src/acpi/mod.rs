@@ -134,16 +134,8 @@ pub fn build_acpi_tables<P: crate::Platform + crate::FirmwarePlatform>(
     let buf = fwcfg.read_file_vec(&file)?;
     acpi_digest.update(&buf);
 
-    // We can't use zerocopy::FromBytes/IntoBytes here, as the fields of the structs
-    // have padding that zerocopy doesn't support.
-    // Safety: we're using `size_of` here to ensure that we don't go over the
-    // boundaries of the original array.
-    let commands = unsafe {
-        core::slice::from_raw_parts(
-            buf.as_ptr() as *const _ as *const RomfileCommand,
-            buf.len() / core::mem::size_of::<RomfileCommand>(),
-        )
-    };
+    let commands = <[RomfileCommand]>::try_ref_from_bytes(&buf[..])
+        .map_err(|_| "invalid 'etc/table-loader'")?;
 
     for command in commands {
         command.invoke(&mut files, fwcfg, pci_windows.as_ref(), acpi_digest)?;
@@ -289,12 +281,7 @@ mod tests {
     pub fn test_table_loader_interpretation() {
         let raw = std::fs::read(oak_file_utils::data_path("stage0/testdata/table_loader"))
             .expect("failed to read test data");
-        let commands = unsafe {
-            core::slice::from_raw_parts(
-                raw.as_ptr() as *const _ as *const RomfileCommand,
-                raw.len() / core::mem::size_of::<RomfileCommand>(),
-            )
-        };
+        let commands = <[RomfileCommand]>::try_ref_from_bytes(&raw[..]).unwrap();
 
         let expected_commands: [RomfileCommand; 20] = [
             Allocate::new("etc/acpi/rsdp", 16, Zone::FSeg).into(),

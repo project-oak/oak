@@ -20,6 +20,7 @@ use core::{
 };
 
 use sha2::Sha256;
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 use super::{Invoke, Pad, RomfileName};
 use crate::{acpi::files::Files, fw_cfg::Firmware, pci::PciWindows};
@@ -30,7 +31,7 @@ use crate::{acpi::files::Files, fw_cfg::Firmware, pci::PciWindows};
 ///
 /// 1,2,4 or 8 byte unsigned addition is used depending on `size`.
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, FromBytes, IntoBytes, KnownLayout, Immutable)]
 pub struct WritePointer {
     dest_file: RomfileName,
     src_file: RomfileName,

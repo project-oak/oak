@@ -17,6 +17,7 @@
 use core::{ffi::CStr, fmt::Debug, iter::zip};
 
 use sha2::Sha256;
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 use crate::{
     acpi::{
@@ -30,7 +31,7 @@ use crate::{
 pub const PCI_ROOT_STAGE1_ALLOWLIST_OFFSET_COUNT: usize = 4;
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, FromBytes, IntoBytes, KnownLayout, Immutable)]
 pub struct AllowlistOffset {
     pub start: u32,
     pub end: u32,
@@ -38,7 +39,7 @@ pub struct AllowlistOffset {
 static_assertions::assert_eq_size!(AllowlistOffset, u64);
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, FromBytes, IntoBytes, KnownLayout, Immutable)]
 pub struct AddPciRootStage1 {
     file: RomfileName,
 
@@ -53,6 +54,7 @@ pub struct AddPciRootStage1 {
     // 8 offsets in 4 pairs.
     allowlist_offsets: [AllowlistOffset; PCI_ROOT_STAGE1_ALLOWLIST_OFFSET_COUNT],
     bus_index: u8,
+    _reserved: [u8; 3],
 }
 static_assertions::assert_eq_size!(AddPciRootStage1, Pad);
 

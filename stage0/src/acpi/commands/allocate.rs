@@ -20,8 +20,7 @@ use core::{
 };
 
 use sha2::{Digest, Sha256};
-#[cfg(test)]
-use zerocopy::{Immutable, IntoBytes};
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 use super::{Invoke, Pad, RomfileName};
 use crate::{
@@ -37,7 +36,7 @@ use crate::{
 /// Must appear exactly once for each file, and before this file is referenced
 /// by any other command.
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, FromBytes, IntoBytes, KnownLayout, Immutable)]
 pub struct Allocate {
     file: RomfileName,
     align: u32,

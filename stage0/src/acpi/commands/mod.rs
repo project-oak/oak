@@ -16,6 +16,7 @@
 
 use sha2::Sha256;
 use strum::FromRepr;
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
 use crate::{acpi::files::Files, fw_cfg::Firmware, pci::PciWindows};
 
@@ -39,7 +40,9 @@ pub use allocate::Allocate;
 pub use write_pointer::WritePointer;
 
 #[repr(u32)]
-#[derive(Debug, Eq, FromRepr, Ord, PartialEq, PartialOrd)]
+#[derive(
+    Debug, Eq, FromRepr, Immutable, IntoBytes, Ord, KnownLayout, PartialEq, PartialOrd, TryFromBytes,
+)]
 pub enum CommandTag {
     Allocate = 1,
     AddPointer = 2,
@@ -70,6 +73,7 @@ pub trait Invoke<FW: Firmware, F: Files> {
 
 type Pad = [u8; 124];
 
+#[derive(FromBytes, Immutable, KnownLayout)]
 #[repr(C)]
 union Body {
     allocate: Allocate,
@@ -97,7 +101,7 @@ impl PartialEq for Body {
 }
 
 #[repr(C)]
-#[derive(Default, PartialEq)]
+#[derive(Default, Immutable, PartialEq, TryFromBytes)]
 pub struct RomfileCommand {
     tag: u32,
     body: Body,

@@ -17,6 +17,7 @@
 use core::{ffi::CStr, fmt::Debug, iter::zip};
 
 use sha2::Sha256;
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 use crate::{
     acpi::{
@@ -34,7 +35,7 @@ const PCI_ROOT_STAGE2_ALLOWLIST_OFFSET_COUNT: usize =
     PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT - PCI_ROOT_STAGE1_ALLOWLIST_OFFSET_COUNT;
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, FromBytes, IntoBytes, KnownLayout, Immutable)]
 pub struct AddPciRootStage2 {
     file: RomfileName,
     // 4 of them in Stage1; rest (11-4) here.

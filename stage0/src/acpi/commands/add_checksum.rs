@@ -20,8 +20,7 @@ use core::{
 };
 
 use sha2::Sha256;
-#[cfg(test)]
-use zerocopy::{Immutable, IntoBytes};
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 use super::{Invoke, Pad, RomfileName};
 use crate::{acpi::files::Files, fw_cfg::Firmware, pci::PciWindows};
@@ -35,7 +34,7 @@ use crate::{acpi::files::Files, fw_cfg::Firmware, pci::PciWindows};
 /// See `bios_linker_loader_add_checksum()` in QEMU
 /// `hw/acpi/bios-linker-loader.c` for the best available documentation.
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, FromBytes, IntoBytes, KnownLayout, Immutable)]
 pub struct AddChecksum {
     file: RomfileName,
     /// Location of the checksum to be patched within the file, relative to the
