@@ -134,20 +134,6 @@ pub struct FadtAcpi2 {
 }
 static_assertions::assert_eq_size!(FadtAcpi2, [u8; 244usize]);
 
-impl FadtAcpi2 {
-    fn validate(&self) -> Result<()> {
-        if self.checksum() != 0 {
-            return Err("ACPI table checksum invalid");
-        }
-
-        if self.header.length != size_of::<Self>() as u32 {
-            return Err("invalid FADT size");
-        }
-
-        Ok(())
-    }
-}
-
 impl AcpiTable for FadtAcpi2 {
     type Signature = Signature;
 
@@ -179,6 +165,10 @@ impl AcpiTable for FadtAcpi2 {
         Ok((fadt, tail))
     }
 
+    fn header(&self) -> &DescriptionHeader<Self::Signature> {
+        &self.header
+    }
+
     fn header_mut(&mut self) -> &mut DescriptionHeader<Self::Signature> {
         &mut self.header
     }
@@ -206,20 +196,6 @@ impl Debug for FadtAcpi5 {
             .field("sleep_control_register", &self.sleep_control_register)
             .field("sleep_status_register", &self.sleep_status_register)
             .finish()
-    }
-}
-
-impl FadtAcpi5 {
-    fn validate(&self) -> Result<()> {
-        if self.checksum() != 0 {
-            return Err("ACPI table checksum invalid");
-        }
-
-        if self.fadt_acpi_2.header.length != size_of::<Self>() as u32 {
-            return Err("invalid FADT size");
-        }
-
-        Ok(())
     }
 }
 
@@ -254,6 +230,10 @@ impl AcpiTable for FadtAcpi5 {
         Ok((fadt, tail))
     }
 
+    fn header(&self) -> &DescriptionHeader<Self::Signature> {
+        &self.fadt_acpi_2.header
+    }
+
     fn header_mut(&mut self) -> &mut DescriptionHeader<Self::Signature> {
         &mut self.fadt_acpi_2.header
     }
@@ -283,20 +263,6 @@ impl Debug for FadtAcpi6 {
             .field("fadt_acpi_5", &self.fadt_acpi_5)
             .field("hypervisor_vendor_identity", &hypervisor_vendor_identity)
             .finish()
-    }
-}
-
-impl FadtAcpi6 {
-    fn validate(&self) -> Result<()> {
-        if self.checksum() != 0 {
-            return Err("ACPI table checksum invalid");
-        }
-
-        if self.fadt_acpi_5.fadt_acpi_2.header.length != size_of::<Self>() as u32 {
-            return Err("invalid FADT size");
-        }
-
-        Ok(())
     }
 }
 
@@ -340,6 +306,10 @@ impl AcpiTable for FadtAcpi6 {
         Ok((fadt, tail))
     }
 
+    fn header(&self) -> &DescriptionHeader<Self::Signature> {
+        &self.fadt_acpi_5.fadt_acpi_2.header
+    }
+
     fn header_mut(&mut self) -> &mut DescriptionHeader<Self::Signature> {
         &mut self.fadt_acpi_5.fadt_acpi_2.header
     }
@@ -348,20 +318,33 @@ impl AcpiTable for FadtAcpi6 {
 // Note: this can't be `Fadt: AcpiTable` as that'd make `Fadt` not
 // dyn-compatible (because of `try_ref_from_prefix` and other zerocopy friends).
 pub trait Fadt: Checksum + Debug {
+    fn header(&self) -> &DescriptionHeader<Signature>;
     fn header_mut(&mut self) -> &mut DescriptionHeader<Signature>;
 }
 
 impl Fadt for FadtAcpi2 {
+    fn header(&self) -> &DescriptionHeader<Signature> {
+        AcpiTable::header(self)
+    }
+
     fn header_mut(&mut self) -> &mut DescriptionHeader<Signature> {
         AcpiTable::header_mut(self)
     }
 }
 impl Fadt for FadtAcpi5 {
+    fn header(&self) -> &DescriptionHeader<Signature> {
+        AcpiTable::header(self)
+    }
+
     fn header_mut(&mut self) -> &mut DescriptionHeader<Signature> {
         AcpiTable::header_mut(self)
     }
 }
 impl Fadt for FadtAcpi6 {
+    fn header(&self) -> &DescriptionHeader<Signature> {
+        AcpiTable::header(self)
+    }
+
     fn header_mut(&mut self) -> &mut DescriptionHeader<Signature> {
         AcpiTable::header_mut(self)
     }
@@ -400,6 +383,10 @@ impl AcpiTable for dyn Fadt {
             5 => FadtAcpi5::try_from_bytes(buf).map(|(fadt, tail)| (fadt as &dyn Fadt, tail)),
             6.. => FadtAcpi6::try_from_bytes(buf).map(|(fadt, tail)| (fadt as &dyn Fadt, tail)),
         }
+    }
+
+    fn header(&self) -> &DescriptionHeader<Self::Signature> {
+        Fadt::header(self)
     }
 
     fn header_mut(&mut self) -> &mut DescriptionHeader<Self::Signature> {

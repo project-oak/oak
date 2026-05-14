@@ -228,7 +228,7 @@ pub trait Checksum {
 
 // If the data structure can be interpreted as bytes, we can provide a default
 // implementation.
-impl<T: IntoBytes + Immutable> Checksum for T {
+impl<T: IntoBytes + Immutable + ?Sized> Checksum for T {
     fn checksum(&self) -> u8 {
         self.as_bytes().iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs))
     }
@@ -243,11 +243,16 @@ pub trait AcpiTable: Checksum {
     fn try_from_bytes(buf: &[u8]) -> Result<(&Self, &[u8])>;
     fn try_from_bytes_mut(buf: &mut [u8]) -> Result<(&mut Self, &mut [u8])>;
 
+    fn header(&self) -> &DescriptionHeader<Self::Signature>;
     fn header_mut(&mut self) -> &mut DescriptionHeader<Self::Signature>;
 
     fn validate(&self) -> Result<()> {
         if self.checksum() != 0 {
             return Err("ACPI table checksum invalid");
+        }
+
+        if self.header().length != size_of_val(self) as u32 {
+            return Err("ACPI table length invalid");
         }
 
         Ok(())

@@ -81,12 +81,6 @@ pub struct Xsdt {
     entries: [XsdtEntryPtr],
 }
 
-impl Checksum for Xsdt {
-    fn checksum(&self) -> u8 {
-        self.as_bytes().iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs))
-    }
-}
-
 impl AcpiTable for Xsdt {
     type Signature = Signature;
 
@@ -126,6 +120,10 @@ impl AcpiTable for Xsdt {
         xsdt.validate()?;
 
         Ok((xsdt, tail))
+    }
+
+    fn header(&self) -> &DescriptionHeader<Self::Signature> {
+        &self.header
     }
 
     fn header_mut(&mut self) -> &mut DescriptionHeader<Self::Signature> {

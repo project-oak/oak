@@ -44,12 +44,6 @@ pub struct Rsdt {
     entries: [u32],
 }
 
-impl Checksum for Rsdt {
-    fn checksum(&self) -> u8 {
-        self.as_bytes().iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs))
-    }
-}
-
 impl AcpiTable for Rsdt {
     type Signature = Signature;
 
@@ -89,6 +83,10 @@ impl AcpiTable for Rsdt {
         rsdt.validate()?;
 
         Ok((rsdt, tail))
+    }
+
+    fn header(&self) -> &DescriptionHeader<Self::Signature> {
+        &self.header
     }
 
     fn header_mut(&mut self) -> &mut DescriptionHeader<Self::Signature> {

@@ -24,7 +24,7 @@ use crate::{
     AcpiTable, DescriptionHeader,
     acpi::{
         HIGH_MEMORY_ALLOCATOR,
-        tables::{Checksum, Result, signature},
+        tables::{Result, signature},
     },
 };
 
@@ -94,12 +94,6 @@ impl Debug for Madt {
             .field("local_apic_address", &local_apic_address)
             .field("flags", &flags)
             .finish_non_exhaustive()
-    }
-}
-
-impl Checksum for Madt {
-    fn checksum(&self) -> u8 {
-        self.as_bytes().iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs))
     }
 }
 
@@ -262,6 +256,10 @@ impl AcpiTable for Madt {
         madt.validate()?;
 
         Ok((madt, tail))
+    }
+
+    fn header(&self) -> &DescriptionHeader<Self::Signature> {
+        &self.header
     }
 
     fn header_mut(&mut self) -> &mut DescriptionHeader<Self::Signature> {
