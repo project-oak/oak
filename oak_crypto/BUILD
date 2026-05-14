@@ -29,12 +29,14 @@ rust_library(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_crypto",
+        "//cc/crypto/tink/signature:ml_dsa_44-ffi",
         "//cc/crypto/tink/signature:verification-ffi",
         "//oak_ffi:cxx_string",
         "//oak_ffi:oak_ffi_bytes",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:static_assertions",
+        "@oak_crates_index//:thiserror",
     ],
 )
 

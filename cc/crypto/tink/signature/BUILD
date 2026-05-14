@@ -112,3 +112,57 @@ cc_library(
         "@com_google_absl//absl/strings:string_view",
     ],
 )
+
+cc_library(
+    name = "ml_dsa_44_utils",
+    srcs = ["ml_dsa_44_utils.cc"],
+    hdrs = ["ml_dsa_44_utils.h"],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        "//cc/utils/status",
+        "@com_github_tink_crypto_tink_cc//tink:insecure_secret_key_access",
+        "@com_github_tink_crypto_tink_cc//tink:key_status",
+        "@com_github_tink_crypto_tink_cc//tink:keyset_handle",
+        "@com_github_tink_crypto_tink_cc//tink:keyset_handle_builder",
+        "@com_github_tink_crypto_tink_cc//tink:partial_key_access",
+        "@com_github_tink_crypto_tink_cc//tink:public_key_sign",
+        "@com_github_tink_crypto_tink_cc//tink:public_key_verify",
+        "@com_github_tink_crypto_tink_cc//tink/config:global_registry",
+        "@com_github_tink_crypto_tink_cc//tink/signature:ml_dsa_parameters",
+        "@com_github_tink_crypto_tink_cc//tink/signature:ml_dsa_private_key",
+        "@com_github_tink_crypto_tink_cc//tink/signature:ml_dsa_public_key",
+        "@com_github_tink_crypto_tink_cc//tink/signature:signature_config",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:string_view",
+    ],
+)
+
+cc_library(
+    name = "ml_dsa_44-ffi",
+    srcs = ["ml_dsa_44-ffi.cc"],
+    hdrs = ["ml_dsa_44-ffi.h"],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        ":ml_dsa_44_utils",
+        ":verification-ffi",
+        "//cc/ffi:bytes_view",
+        "//cc/ffi:cxx_string",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_test(
+    name = "ml_dsa_44_utils_test",
+    size = "small",
+    srcs = ["ml_dsa_44_utils_test.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        ":ml_dsa_44_utils",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:status_matchers",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

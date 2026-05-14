@@ -19,6 +19,7 @@ extern crate alloc;
 #[cfg(test)]
 extern crate std;
 
+pub mod ml_dsa_44;
 pub mod signature_verifier;
 
 #[cfg(test)]

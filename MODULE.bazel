@@ -109,7 +109,7 @@ bazel_dep(name = "rules_pkg", version = "1.0.1")
 bazel_dep(name = "google_benchmark", version = "1.9.1", repo_name = "com_github_google_benchmark")
 
 # https://github.com/tink-crypto/tink-cc
-bazel_dep(name = "tink_cc", version = "2.4.0", repo_name = "com_github_tink_crypto_tink_cc")
+bazel_dep(name = "tink_cc", version = "2.7.0", repo_name = "com_github_tink_crypto_tink_cc")
 
 # https://github.com/bazel-contrib/rules_python
 bazel_dep(name = "rules_python", version = "1.5.1", dev_dependency = True)
