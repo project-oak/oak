@@ -185,8 +185,8 @@ fn debug_print_acpi_tables(tables: &mut AcpiTables) -> Result<(), &'static str> 
 
     let entries = if let Ok(Some(rsdt)) = tables.rsdt() {
         log::info!("RSDT: {:?}", rsdt);
-        log::info!("RSDT entry count: {}", rsdt.entry_headers().count());
-        rsdt.entries.iter().map(|x| VirtAddr::new(*x as u64)).collect()
+        log::info!("RSDT entry count: {}", rsdt.len());
+        rsdt.iter().collect()
     } else {
         log::info!("No RSDT present");
         Vec::new()
@@ -196,8 +196,8 @@ fn debug_print_acpi_tables(tables: &mut AcpiTables) -> Result<(), &'static str> 
 
     let entries = if let Ok(Some(xsdt)) = tables.xsdt() {
         log::info!("XSDT: {:?}", xsdt);
-        log::info!("XSDT entry count: {}", xsdt.entry_ptrs().count());
-        xsdt.entries.iter().map(Into::into).collect()
+        log::info!("XSDT entry count: {}", xsdt.len());
+        xsdt.iter().collect()
     } else {
         log::info!("No XSDT present");
         Vec::new()

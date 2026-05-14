@@ -69,7 +69,6 @@ mod zero_page;
 pub use acpi::tables::{
     AcpiTable, AcpiTables, DescriptionHeader, Madt, Rsdp, Rsdt, Xsdt,
     madt::{LocalApicFlags, MultiprocessorWakeup, ProcessorLocalApic, ProcessorLocalX2Apic},
-    rsdt::RsdtEntryPairMut,
 };
 pub use apic::Lapic;
 pub use hal::{FirmwarePlatform, Platform};

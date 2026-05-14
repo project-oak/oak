@@ -15,13 +15,16 @@
 //
 
 use alloc::{boxed::Box, vec};
-use core::assert;
+use core::{
+    assert,
+    iter::Iterator,
+    ops::{Index, IndexMut},
+};
 
+use x86_64::VirtAddr;
 use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
-use crate::acpi::tables::{
-    AcpiTable, Checksum, DescriptionHeader, Result, check_ptr_aligned, signature,
-};
+use crate::acpi::tables::{AcpiTable, Checksum, DescriptionHeader, Result, signature};
 
 #[allow(dead_code)]
 #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
@@ -38,10 +41,8 @@ static_assertions::assert_eq_size!(DescriptionHeader<Signature>, [u8; 36usize]);
 #[repr(C, align(4))]
 pub struct Rsdt {
     pub header: DescriptionHeader<Signature>,
-    pub entries: [u32],
+    entries: [u32],
 }
-
-pub type RsdtEntryPairMut<'a> = (&'a mut u32, &'a mut DescriptionHeader<[u8; 4]>);
 
 impl Checksum for Rsdt {
     fn checksum(&self) -> u8 {
@@ -146,70 +147,34 @@ impl Rsdt {
         unsafe { Box::from_raw(rsdt) }
     }
 
-    /// Finds a validated header pointed at by this RSDT, by its
-    /// signature, if present. All headers seen on the way are validated too
-    /// and errors propagated. Returns:
-    ///   - Ok(None) -> Search went without errors, entry not found.
-    ///   - Ok(Some(&DescriptionHeader)) -> No errors, entry found.
-    ///   - Err(e) -> A DescriptionHeader seen during search failed validation.
-    pub fn get(&self, signature: &[u8; 4]) -> Result<Option<&DescriptionHeader<[u8; 4]>>> {
-        self.validate()?;
-        let maybe_found = self.entry_headers().find(|hdr_or_err| match hdr_or_err {
-            Err(_) => true, // Found an error, stop search and propagate.
-            Ok(header) => header.signature == *signature,
-        });
-        match maybe_found {
-            None => Ok(None),
-            Some(Err(e)) => Err(e),
-            Some(Ok(header)) => Ok(Some(header)),
-        }
+    pub const fn is_empty(&self) -> bool {
+        self.entries.is_empty()
     }
 
-    /// Returns an iterator over the headers pointed at by this RSDT, validated.
-    pub fn entry_headers(&self) -> impl Iterator<Item = Result<&DescriptionHeader<[u8; 4]>>> {
-        self.entries.iter().map(|&entry| {
-            let ptr: *const DescriptionHeader<[u8; 4]> =
-                entry as usize as *const DescriptionHeader<[u8; 4]>;
-            check_ptr_aligned(ptr);
-            // Safety: we are validating the header.
-            let header = unsafe { &*ptr };
-            header.validate()?;
-            Ok(header)
-        })
+    pub const fn len(&self) -> usize {
+        self.entries.len()
     }
 
-    /// Mutable finds a validated header pointed at by this RSDT, by its
-    /// signature, if present. All headers seen on the way are validated too
-    /// and errors propagated. Returns:
-    ///   - Ok(None) -> Search went without errors, entry not found.
-    ///   - Ok(Some(EntryPairMut)) -> Search went without errors, entry found.
-    ///   - Err(e) -> A DescriptionHeader seen during search failed validation.
-    pub fn get_entry_pair_mut(
-        &mut self,
-        signature: &[u8; 4],
-    ) -> Result<Option<RsdtEntryPairMut<'_>>> {
-        self.validate()?;
-        let maybe_found: Option<Result<RsdtEntryPairMut>> =
-            self.entry_headers_mut().find(|hdr_or_err| match hdr_or_err {
-                Err(_) => true, // Found an error, stop search and propoagate.
-                Ok((_addr, header)) => header.signature == *signature,
-            });
-        match maybe_found {
-            None => Ok(None),
-            Some(Err(e)) => Err(e),
-            Some(Ok(result)) => Ok(Some(result)),
-        }
+    pub fn iter(&self) -> impl Iterator<Item = VirtAddr> {
+        self.entries.iter().map(|&entry| VirtAddr::new(entry as u64))
     }
 
-    fn entry_headers_mut(&mut self) -> impl Iterator<Item = Result<RsdtEntryPairMut<'_>>> {
-        self.entries.iter_mut().map(|addr| {
-            let header_ptr = *addr as usize as *mut DescriptionHeader<[u8; 4]>;
-            check_ptr_aligned(header_ptr);
-            // # Safety we are validating the header.
-            let header = unsafe { header_ptr.as_mut().ok_or("Address 0x0 in RSDT")? };
-            header.validate()?;
-            Ok((addr, header))
-        })
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut u32> {
+        self.entries.iter_mut()
+    }
+}
+
+impl Index<usize> for Rsdt {
+    type Output = u32;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.entries[index]
+    }
+}
+
+impl IndexMut<usize> for Rsdt {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.entries[index]
     }
 }
 

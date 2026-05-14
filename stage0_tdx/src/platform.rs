@@ -19,7 +19,7 @@ extern crate alloc;
 use alloc::boxed::Box;
 use core::{
     mem::size_of,
-    ops::{DerefMut, Index, IndexMut},
+    ops::{Index, IndexMut},
     pin::pin,
     ptr::addr_of,
     sync::atomic::Ordering,
@@ -29,7 +29,7 @@ use log::info;
 use oak_hal::{MsrAccess, PageAssignment, PageEncryption, Platform};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_stage0::{
-    AcpiTable, AcpiTables, BOOT_ALLOC, Madt, RsdtEntryPairMut,
+    AcpiTables, BOOT_ALLOC, Madt,
     hal::{FirmwarePlatform, PortFactory},
     mailbox::{FirmwareMailbox, OsMailbox},
     paging::{self, PageTableRefs},
@@ -414,86 +414,46 @@ impl FirmwarePlatform for Tdx {
                 .expect("Expected TD_MAILBOX to contain OS Mailbox address")
         };
 
-        // # Safety: only one ref to RSDT is created.
-        if let Some(rsdt) = tables.rsdt()? {
-            info!("Finalize ACPI: Found an RSDT, checking for MADT.");
-            let maybe_madt_entry: Option<RsdtEntryPairMut> = rsdt.get_entry_pair_mut(
-                &<Madt as oak_stage0::AcpiTable>::Signature::default().into(),
-            )?;
+        let mut new_madt_buf = None;
+        if let Some(madt) = tables.try_find_table_mut::<Madt>()? {
+            info!("Finalize ACPI: Found a MADT in RSDT/XSDT.");
+            // Safety: The header is in the ACPI memory range, guaranteed by `AcpiTables`,
+            // so it's safe to attempt this transmute.
+            let old_madt_addr = madt.as_bytes().as_ptr();
+            info!("Finalize ACPI: Found a MADT at {:?}", madt.as_bytes().as_ptr_range());
+            let new_madt = madt.set_or_append_mp_wakeup(os_mailbox_address)?;
 
-            let mut new_madt_buf = None;
-            if let Some((madt_entry_addr, madt_header)) = maybe_madt_entry {
-                info!("Finalize ACPI: Found a MADT in RSDT.");
-                // Safety: The header is in the ACPI memory range, guaranteed by `AcpiTables`,
-                // so it's safe to attempt this transmute.
-                let madt: &mut Madt = unsafe { Madt::from_header_mut(madt_header) }?;
-                let old_madt_addr = *madt_entry_addr as usize;
-                info!("Finalize ACPI: Found a MADT at {:?}", madt.as_bytes().as_ptr_range());
-                let new_madt = madt.set_or_append_mp_wakeup(os_mailbox_address)?;
+            if old_madt_addr != new_madt.as_bytes().as_ptr() {
+                // MADT was relocated
+                //
+                // Safety: This is bit of a hack. Ideally we'd use something like
+                // `IntoBytes::as_mut_bytes()` for this, but `Madt` is not `FromBytes` (it's
+                // `TryFromBytes`, because of the header). Zerocopy insists on `FromBytes`, as
+                // that's a way to guarantee that even if you change something in the raw byte
+                // buffer, the `Madt` stays valid.
+                //
+                // Our situation here is different: we won't treat `new_madt` as a `Madt` after
+                // this, so changing the buffer is okay.
+                new_madt_buf = Some((VirtAddr::from_ptr(old_madt_addr), unsafe {
+                    core::slice::from_raw_parts_mut(
+                        new_madt as *mut _ as *mut u8,
+                        size_of_val(new_madt),
+                    )
+                }));
+            }
+        } else {
+            return Err(
+                "Could not find a MADT where to update or add a Multiprocessor Wakeup structure.",
+            );
+        }
 
-                if old_madt_addr != new_madt.as_bytes().as_ptr() as usize {
-                    // MADT was relocated
-                    //
-                    // Safety: This is bit of a hack. Ideally we'd use something like
-                    // `IntoBytes::as_mut_bytes()` for this, but `Madt` is not `FromBytes` (it's
-                    // `TryFromBytes`, because of the header). Zerocopy insists on `FromBytes`, as
-                    // that's a way to guarantee that even if you change something in the raw byte
-                    // buffer, the `Madt` stays valid.
-                    //
-                    // Our situation here is different: we won't treat `new_madt` as a `Madt` after
-                    // this, so changing the buffer is okay.
-                    new_madt_buf = Some(unsafe {
-                        core::slice::from_raw_parts_mut(
-                            new_madt as *mut _ as *mut u8,
-                            size_of_val(new_madt),
-                        )
-                    });
-                }
-                *madt_entry_addr = new_madt.as_bytes().as_ptr() as u32;
-                rsdt.update_checksum();
-                if let Some(new_madt) = new_madt_buf {
-                    tables.add_buffer(new_madt);
-                }
-                return Ok(());
-            } // else: there is an RSDT but it has no MADT.
-        } // else: there is no RSDT.
+        if let Some((old_madt_addr, new_madt)) = new_madt_buf {
+            let new_madt_addr = VirtAddr::from_ptr(new_madt);
+            tables.add_buffer(new_madt);
+            tables.replace_table_ref(old_madt_addr, new_madt_addr)?;
+        }
 
-        // # Safety: only one ref to XSDT is created.
-        if let Some(xsdt) = tables.xsdt()? {
-            info!("Finalize ACPI: Found an XSDT, checking for MADT.");
-            let maybe_madt_entry =
-                xsdt.get_entry_mut(&<Madt as oak_stage0::AcpiTable>::Signature::default().into())?;
-
-            if let Some(madt_entry) = maybe_madt_entry {
-                info!("Finalize ACPI: Found a MADT in XSDT.");
-                // Safety: The header is in the ACPI memory range, guaranteed by `AcpiTables`,
-                // so it's safe to attempt this transmute.
-                let madt: &mut Madt = unsafe { Madt::from_header_mut(madt_entry.deref_mut()) }?;
-                let old_madt_addr = madt.as_bytes().as_ptr();
-                info!("Finalize ACPI: Found a MADT at {:?}", madt.as_bytes().as_ptr_range());
-
-                let new_madt = madt.set_or_append_mp_wakeup(os_mailbox_address)?;
-                madt_entry.set_addr(new_madt.as_bytes().as_ptr() as u64);
-                //xsdt.entries_mut()[1].set_addr(new_madt as *const _ as u64);
-                let mut new_madt_buf = None;
-                if old_madt_addr != new_madt.as_bytes().as_ptr() {
-                    // Safety: see the RSDT section above, it's the same.
-                    new_madt_buf = Some(unsafe {
-                        core::slice::from_raw_parts_mut(
-                            new_madt as *mut _ as *mut u8,
-                            size_of_val(new_madt),
-                        )
-                    });
-                }
-                xsdt.update_checksum();
-                if let Some(new_madt) = new_madt_buf {
-                    tables.add_buffer(new_madt);
-                }
-                return Ok(());
-            } // else: there is an XSDT but it has no MADT.
-        } // else: there is no XSDT.
-
-        Err("Could not find a MADT where to update or add a Multiprocessor Wakeup structure.")
+        Ok(())
     }
 
     fn deinit_platform() {

@@ -14,14 +14,12 @@
 // limitations under the License.
 //
 
-use core::ops::{Deref, DerefMut};
-
 use x86_64::VirtAddr;
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
 use crate::{
     DescriptionHeader,
-    acpi::tables::{AcpiTable, Checksum, Result, check_ptr_aligned, signature},
+    acpi::tables::{AcpiTable, Checksum, Result, signature},
 };
 
 /// A wrapper for entry addresses in XSDT table.
@@ -48,26 +46,6 @@ impl XsdtEntryPtr {
     }
 }
 
-impl Deref for XsdtEntryPtr {
-    type Target = DescriptionHeader<[u8; 4]>;
-
-    fn deref(&self) -> &DescriptionHeader<[u8; 4]> {
-        let ptr = self.raw_val() as *const DescriptionHeader<[u8; 4]>;
-        check_ptr_aligned(ptr);
-        // Safety: the address has been validated in Xsdt::validate().
-        unsafe { &*ptr }
-    }
-}
-
-impl DerefMut for XsdtEntryPtr {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        let ptr = self.raw_val() as *mut DescriptionHeader<[u8; 4]>;
-        check_ptr_aligned(ptr);
-        // Safety: the address has been validated in Xsdt::validate().
-        unsafe { &mut *ptr }
-    }
-}
-
 impl From<u64> for XsdtEntryPtr {
     fn from(value: u64) -> Self {
         let mut ptr = Self::default();
@@ -78,6 +56,12 @@ impl From<u64> for XsdtEntryPtr {
 
 impl From<&XsdtEntryPtr> for VirtAddr {
     fn from(value: &XsdtEntryPtr) -> Self {
+        VirtAddr::new(value.raw_val())
+    }
+}
+
+impl From<&mut XsdtEntryPtr> for VirtAddr {
+    fn from(value: &mut XsdtEntryPtr) -> Self {
         VirtAddr::new(value.raw_val())
     }
 }
@@ -94,7 +78,7 @@ pub struct Signature(signature::X, signature::S, signature::D, signature::T);
 #[repr(C, packed)]
 pub struct Xsdt {
     pub header: DescriptionHeader<Signature>,
-    pub entries: [XsdtEntryPtr],
+    entries: [XsdtEntryPtr],
 }
 
 impl Checksum for Xsdt {
@@ -164,60 +148,20 @@ impl AcpiTable for Xsdt {
 }
 
 impl Xsdt {
-    /// Finds a table based on the signature, if it is present.
-    /// Finds a validated XSDT pointer in this RSDT, by its signature, if
-    /// present. All `XsdtEntryPtr`s seen on the way are validated
-    /// too and errors propagated. Returns:
-    ///   - Ok(None) -> Search went without errors, entry not found.
-    ///   - Ok(Some(&XsdtEntryPtr)) -> No errors, entry found.
-    ///   - Err(e) -> An XsdtEntryPtr seen during search failed validation.
-    pub fn get(&self, signature: &[u8; 4]) -> Result<Option<&DescriptionHeader<[u8; 4]>>> {
-        self.validate()?;
-        let maybe_found = self.entry_ptrs().find(|ptr_or_err| match ptr_or_err {
-            Err(_) => true, // Found an error, stop search and propagate.
-            Ok(entry_ptr) => entry_ptr.signature == *signature,
-        });
-        match maybe_found {
-            None => Ok(None),
-            Some(Err(e)) => Err(e),
-            Some(Ok(entry_ptr)) => Ok(Some(entry_ptr)),
-        }
+    pub const fn is_empty(&self) -> bool {
+        self.entries.is_empty()
     }
 
-    /// Returns an iterator over the entry pointers in this XSDT, validated.
-    pub fn entry_ptrs(&self) -> impl Iterator<Item = Result<&XsdtEntryPtr>> {
-        self.entries.iter().map(|xsdt_ptr| {
-            xsdt_ptr.validate()?;
-            Ok(xsdt_ptr)
-        })
+    pub const fn len(&self) -> usize {
+        self.entries.len()
     }
 
-    /// Mutable finds a validated header based on the signature on the RSDT, if
-    /// present. All headers seen on the way are validated too and errors
-    /// propagated. Returns:
-    ///   - Ok(None) -> Search went without errors, entry not found.
-    ///   - Ok(Some(EntryPairMut)) -> Search went without errors, entry found
-    ///     and returned.
-    ///   - Err(e) -> A DescriptionHeader seen during search failed validation.
-    pub fn get_entry_mut(&mut self, signature: &[u8; 4]) -> Result<Option<&mut XsdtEntryPtr>> {
-        self.validate()?;
-        let maybe_found = self.entries.iter_mut().find_map(|xsdt_entry_ptr| {
-            match xsdt_entry_ptr.validate() {
-                Err(e) => Some(Err(e)), // Found an error, stop search and propoagate.
-                Ok(()) => {
-                    if xsdt_entry_ptr.signature == *signature {
-                        Some(Ok(xsdt_entry_ptr))
-                    } else {
-                        None
-                    }
-                }
-            }
-        });
-        match maybe_found {
-            None => Ok(None),
-            Some(Err(e)) => Err(e),
-            Some(Ok(entry)) => Ok(Some(entry)),
-        }
+    pub fn iter(&self) -> impl Iterator<Item = VirtAddr> {
+        self.entries.iter().map(Into::into)
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut XsdtEntryPtr> {
+        self.entries.iter_mut()
     }
 }
 

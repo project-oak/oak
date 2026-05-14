@@ -66,7 +66,7 @@ pub mod rsdt;
 mod xsdt;
 
 use alloc::vec::Vec;
-use core::{any::type_name, default::Default, fmt::Display, ops::Range, slice};
+use core::{default::Default, fmt::Display, ops::Range, slice};
 
 pub use fadt::Fadt;
 pub use madt::Madt;
@@ -256,12 +256,6 @@ impl Display for DescriptionHeader<[u8; 4]> {
     }
 }
 
-pub fn check_ptr_aligned<T>(ptr: *const T) {
-    if !ptr.is_aligned() {
-        panic!("Incorrect pointer {:?} alignmnt for type {}", ptr, type_name::<T>());
-    }
-}
-
 pub trait Checksum {
     fn checksum(&self) -> u8;
 }
@@ -361,16 +355,13 @@ impl<'a> AcpiTables<'a> {
     }
 
     pub fn try_find_table<T: AcpiTable + ?Sized>(&mut self) -> Result<Option<&T>> {
-        let mut entries = if let Some(xsdt) = self.xsdt()? {
-            xsdt.entries.iter().map(Into::into).collect()
-        } else {
-            Vec::new()
-        };
+        let mut entries =
+            if let Some(xsdt) = self.xsdt()? { xsdt.iter().collect() } else { Vec::new() };
 
         if entries.is_empty()
             && let Some(rsdt) = self.rsdt()?
         {
-            entries.extend(rsdt.entries.iter().map(|x| VirtAddr::new(*x as u64)));
+            entries.extend(rsdt.iter());
         }
 
         if entries.is_empty() {
@@ -384,6 +375,50 @@ impl<'a> AcpiTables<'a> {
         }
 
         Ok(None)
+    }
+
+    pub fn try_find_table_mut<T: AcpiTable + ?Sized>(&mut self) -> Result<Option<&mut T>> {
+        let mut entries =
+            if let Some(xsdt) = self.xsdt()? { xsdt.iter().collect() } else { Vec::new() };
+
+        if entries.is_empty()
+            && let Some(rsdt) = self.rsdt()?
+        {
+            entries.extend(rsdt.iter());
+        }
+
+        if entries.is_empty() {
+            return Err("neither XSDT nor RSDT found");
+        }
+
+        let mut addr: Option<VirtAddr> = None;
+
+        for entry in entries {
+            if self.try_parse_table_at::<T>(entry).is_some() {
+                addr = Some(entry);
+                break;
+            }
+        }
+
+        Ok(addr.and_then(|addr| self.try_parse_table_at_mut::<T>(addr)))
+    }
+
+    pub fn try_parse_table_at_mut<T: AcpiTable + ?Sized>(
+        &mut self,
+        addr: VirtAddr,
+    ) -> Option<&mut T> {
+        for buffer in &mut self.buffers {
+            if VirtAddr::from_ptr(*buffer) <= addr
+                && VirtAddr::from_ptr(*buffer) + (buffer.len() as u64) > addr
+            {
+                let start = addr.as_u64() as usize - (buffer.as_ptr() as usize);
+                let buffer = &mut buffer[start..];
+                let (table, _) = T::try_from_bytes_mut(buffer).ok()?;
+                return Some(table);
+            }
+        }
+
+        None
     }
 
     pub fn try_parse_table_at<T: AcpiTable + ?Sized>(&self, addr: VirtAddr) -> Option<&T> {
@@ -449,6 +484,31 @@ impl<'a> AcpiTables<'a> {
     pub fn add_buffer(&mut self, buf: &'a mut [u8]) {
         self.buffers.push(buf);
     }
+
+    /// Replace old_addr with new_addr in the XSDT/ RSDT tables.
+    pub fn replace_table_ref(&mut self, old_addr: VirtAddr, new_addr: VirtAddr) -> Result<()> {
+        if let Some(xsdt) = self.xsdt()? {
+            for entry in xsdt.iter_mut() {
+                let entry_addr: VirtAddr = entry.into();
+                if entry_addr == old_addr {
+                    entry.set_addr(new_addr.as_u64());
+                }
+            }
+            xsdt.update_checksum();
+        }
+
+        if let Some(rsdt) = self.rsdt()? {
+            for entry in rsdt.iter_mut() {
+                let entry_addr = VirtAddr::new(*entry as u64);
+                if entry_addr == old_addr {
+                    *entry = new_addr.as_u64() as u32;
+                }
+            }
+            rsdt.update_checksum();
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -462,7 +522,7 @@ mod tests {
     #[test]
     pub fn test_rsdt() {
         let mut rsdt = Rsdt::new_with_size(1);
-        rsdt.entries[0] = 0x12345678;
+        rsdt[0] = 0x12345678;
         rsdt.update_checksum();
         let rsdt = rsdt.as_bytes().to_vec();
 
@@ -498,7 +558,10 @@ mod tests {
 
         let test_rsdt = tables.rsdt().unwrap().unwrap();
 
-        assert_that!(test_rsdt.entries, unordered_elements_are!(eq(&0x12345678)));
+        assert_that!(
+            test_rsdt.iter().collect::<Vec<VirtAddr>>(),
+            unordered_elements_are!(eq(&VirtAddr::new(0x12345678)))
+        );
 
         // Note: we leak the `rsdt` here, but it should be okay as this is just
         // a test.
