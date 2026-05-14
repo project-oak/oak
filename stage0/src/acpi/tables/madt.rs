@@ -305,21 +305,6 @@ impl Madt {
         unsafe { Box::from_raw(madt) }
     }
 
-    ///
-    /// # Safety
-    /// The caller needs to guarantee that the header is a header of an actual
-    /// MADT table and that there are no other references to that memory.
-    pub unsafe fn from_header_mut(
-        hdr: &mut DescriptionHeader<[u8; 4]>,
-    ) -> Result<&'static mut Madt> {
-        // Safety: we're checking that it's a valid XSDT in `validate()`.
-        let buf = unsafe {
-            core::slice::from_raw_parts_mut(hdr as *mut _ as *mut u8, hdr.length as usize)
-        };
-        let (madt, _) = Madt::try_from_bytes_mut(buf)?;
-        Ok(madt)
-    }
-
     /// Create an iterator over entries of field Interrupt Controller Structure
     /// that returns references to the entries.
     pub fn iter(&self) -> MadtIterator<'_> {

@@ -66,7 +66,7 @@ pub mod rsdt;
 mod xsdt;
 
 use alloc::vec::Vec;
-use core::{default::Default, fmt::Display, ops::Range, slice};
+use core::{default::Default, fmt::Display, ops::Range};
 
 pub use fadt::Fadt;
 pub use madt::Madt;
@@ -200,47 +200,11 @@ pub struct DescriptionHeader<S> {
     creator_revision: u32,
 }
 
-impl DescriptionHeader<[u8; 4]> {
-    #[allow(dead_code)]
-    pub fn signature_as_str(&self) -> &str {
-        // Per the ACPI spec, the signature is in ASCII, which is always valid UTF-8.
-        core::str::from_utf8(&self.signature)
-            .expect("invalid ACPI table signature; not valid UTF-8")
-    }
-}
-
 impl<S> DescriptionHeader<S> {
     /// Returns the address range where this table is located.
     pub fn addr_range(&self) -> Range<usize> {
         let base = self as *const _ as usize;
         base..base + self.length as usize
-    }
-
-    /// Sets checksum field so that checksum validates.
-    /// To be called after modifying any of this structures's data.
-    pub fn update_checksum(&mut self) {
-        log::info!("Checksum before update: {}, {}", self.checksum, self.compute_checksum());
-        self.checksum = self.checksum.wrapping_sub(self.compute_checksum());
-        log::info!("Checksum after: {}, {}", self.checksum, self.compute_checksum());
-    }
-
-    pub fn validate(&self) -> Result<()> {
-        if self.compute_checksum() != 0 {
-            //extern crate std;
-            //std::eprintln!("checksum {}", self.compute_checksum());
-            return Err("ACPI table checksum invalid");
-        }
-
-        Ok(())
-    }
-
-    /// Computes the checksum across all data in this structure.
-    fn compute_checksum(&self) -> u8 {
-        // Safety: we've ensured that the table is within EBDA.
-        let data = unsafe {
-            slice::from_raw_parts(self.addr_range().start as *const u8, self.length as usize)
-        };
-        data.iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs))
     }
 }
 
@@ -248,7 +212,9 @@ impl Display for DescriptionHeader<[u8; 4]> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_fmt(format_args!(
             "Entry {} ({:#x}-{:#x}): {:?}",
-            self.signature_as_str(),
+            // Per the ACPI spec, the signature is in ASCII, which is always valid UTF-8.
+            core::str::from_utf8(&self.signature)
+                .expect("invalid ACPI table signature; not valid UTF-8"),
             self.addr_range().start,
             self.addr_range().end,
             self
