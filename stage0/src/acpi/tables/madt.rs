@@ -491,14 +491,20 @@ impl<'a> Iterator for MadtIterator<'a> {
     }
 }
 
+#[derive(Copy, Clone, Debug, Default, IntoBytes, Immutable, KnownLayout, TryFromBytes)]
+#[repr(u8)]
+enum IoApicType {
+    #[default]
+    IoApic = 1,
+}
 /// I/O Apic Structure.
 /// One of the possible structures in MADT's Interrupt Controller Structure
 /// field. There is at at least one or more IO APIC in an APIC implementation.
 /// Documented in section 5.2.12.3 of APIC Specification.
-#[derive(Debug)]
+#[derive(Debug, IntoBytes, Immutable, KnownLayout, TryFromBytes)]
 #[repr(C, packed)]
 pub struct IoApic {
-    header: ControllerHeader<u8>,
+    header: ControllerHeader<IoApicType>,
 
     /// Processor's local APIC ID.
     pub io_apic_id: u8,
@@ -512,60 +518,24 @@ pub struct IoApic {
     /// Global interrupt number where the interrupt inputs start at
     global_system_interrupt_base: u32,
 }
-
-// Because we cast pointers from *const ControllHeader:
-static_assertions::assert_eq_align!(IoApic, ControllerHeader<u8>);
 static_assertions::assert_eq_size!(IoApic, [u8; 12usize]);
 
-impl IoApic {
-    pub const STRUCTURE_TYPE: u8 = 1;
-    // Explicitly stated in the spec
-    pub const EXPECTED_LENGTH: u8 = 12;
-
-    pub fn new(header: &ControllerHeader<u8>) -> Result<&Self> {
-        if header.structure_type != Self::STRUCTURE_TYPE {
-            return Err("structure is not an I/O APIC Structure");
-        }
-        header.validate()?;
-
-        if header.len != Self::EXPECTED_LENGTH {
-            log::error!(
-                "IO APIC struct expected length of {}, got {}",
-                Self::EXPECTED_LENGTH,
-                header.len
-            );
-            return Err("IO APIC length is expected to be 12");
-        }
-
-        // Safety: we're verified that the structure type is correct.
-        let io_apic = unsafe { &*(header as *const _ as usize as *const Self) };
-        io_apic.validate()?;
-        Ok(io_apic)
-    }
-
-    fn validate(&self) -> Result<()> {
-        if self.header.len != Self::EXPECTED_LENGTH {
-            log::error!(
-                "IO APIC struct expected length of {}, got {}",
-                Self::EXPECTED_LENGTH,
-                self.header.len
-            );
-            return Err("IO APIC length is expected to be 12");
-        }
-        Ok(())
-    }
+#[derive(Copy, Clone, Debug, Default, IntoBytes, Immutable, KnownLayout, TryFromBytes)]
+#[repr(u8)]
+enum InterruptSourceOverrideType {
+    #[default]
+    InterruptSourceOverride = 2,
 }
-
 /// Interrupt Source Override structure.
 /// One of the possible structures in MADT's Interrupt Controller Structure
 /// field. It describes variances between the IA-PC standard dual 8259 and
 /// the actual platform implementation.
 ///
 /// Documented in section 5.2.12.5 of APIC Specification.
-#[derive(Debug)]
+#[derive(Debug, IntoBytes, Immutable, KnownLayout, TryFromBytes)]
 #[repr(C, packed)]
 pub struct InterruptSourceOverride {
-    header: ControllerHeader<u8>,
+    header: ControllerHeader<InterruptSourceOverrideType>,
 
     /// Should be set to zero for ISA
     bus: u8,
@@ -581,51 +551,22 @@ pub struct InterruptSourceOverride {
 }
 static_assertions::assert_eq_size!(InterruptSourceOverride, [u8; 10usize]);
 
-impl InterruptSourceOverride {
-    pub const STRUCTURE_TYPE: u8 = 2;
-    // Explicitly stated in the spec
-    pub const EXPECTED_LENGTH: u8 = 10;
-
-    pub fn new(header: &ControllerHeader<u8>) -> Result<&Self> {
-        if header.structure_type != Self::STRUCTURE_TYPE {
-            return Err("structure is not Interrupt Source Override Structure");
-        }
-        header.validate()?;
-
-        // Safety: we're verified that the structure type is correct.
-        let interrupt_source_override = unsafe { &*(header as *const _ as usize as *const Self) };
-        interrupt_source_override.validate()?;
-        Ok(interrupt_source_override)
-    }
-
-    fn validate(&self) -> Result<()> {
-        if self.header.len != Self::EXPECTED_LENGTH {
-            log::error!(
-                "Interrupt source override struct expected length of {}, got {}",
-                Self::EXPECTED_LENGTH,
-                self.header.len
-            );
-            return Err("Interrupt Source Override length is expected to be 10");
-        }
-
-        if self.bus != 0 {
-            // Stated in spec as 0 (constant) for ISA
-            return Err("Interrupt Source Override bus was not set to 0 for ISA");
-        }
-        Ok(())
-    }
+#[derive(Copy, Clone, Debug, Default, IntoBytes, Immutable, KnownLayout, TryFromBytes)]
+#[repr(u8)]
+enum LocalApicNmiType {
+    #[default]
+    LocalApicNmiType = 4,
 }
-
 /// Local APIC NMI (Non-Maskable Interrupt) structure.
 /// One of the possible structures in MADT's Interrupt Controller Structure
 /// field. If provided, describes the Local APIC interrupt input for a
 /// processor. It's needed by Linux to enable an appropriate APIC entry.
 ///
 /// Documented in section 5.2.12.7 of APIC Specification.
-#[derive(Debug)]
+#[derive(Debug, IntoBytes, Immutable, KnownLayout, TryFromBytes)]
 #[repr(C, packed)]
 pub struct LocalApicNmi {
-    header: ControllerHeader<u8>,
+    header: ControllerHeader<LocalApicNmiType>,
 
     /// Deprecated; maps to a Processor object in the ACPI tree.
     processor_uid: u8,
@@ -636,38 +577,7 @@ pub struct LocalApicNmi {
     /// Describe which local interrupt number is connected to NMI
     local_apic_lint_num: u8,
 }
-
 static_assertions::assert_eq_size!(LocalApicNmi, [u8; 6usize]);
-
-impl LocalApicNmi {
-    pub const STRUCTURE_TYPE: u8 = 4;
-    // Explicitly stated in the spec
-    pub const EXPECTED_LENGTH: u8 = 6;
-
-    pub fn new(header: &ControllerHeader<u8>) -> Result<&Self> {
-        if header.structure_type != Self::STRUCTURE_TYPE {
-            return Err("structure is not LocalApicNmi");
-        }
-        header.validate()?;
-
-        // Safety: we're verified that the structure type is correct.
-        let local_apic_nmi = unsafe { &*(header as *const _ as usize as *const Self) };
-        local_apic_nmi.validate()?;
-        Ok(local_apic_nmi)
-    }
-
-    fn validate(&self) -> Result<()> {
-        if self.header.len != Self::EXPECTED_LENGTH {
-            log::error!(
-                "Local APIC NMI struct expected length of {}, got {}",
-                Self::EXPECTED_LENGTH,
-                self.header.len
-            );
-            return Err("Local APIC NMI length is expected to be 6");
-        }
-        Ok(())
-    }
-}
 
 #[cfg(test)]
 mod tests {
