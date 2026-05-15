@@ -268,7 +268,7 @@ impl AcpiTable for Madt {
 }
 
 impl Madt {
-    pub fn new_with_size<A: Allocator>(num: usize, alloc: A) -> Box<Self> {
+    pub fn new_with_size<A: Allocator + Clone>(num: usize, alloc: A) -> Box<Self, A> {
         let mut header = DescriptionHeader::<Signature> {
             signature: Signature::default(),
             length: (size_of::<DescriptionHeader<Signature>>() + 8 + num) as u32,
@@ -288,7 +288,7 @@ impl Madt {
             .checksum
             .wrapping_sub(header.as_bytes().iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs)));
 
-        let mut buf = Vec::with_capacity_in(header.length as usize, alloc);
+        let mut buf = Vec::with_capacity_in(header.length as usize, alloc.clone());
         buf.resize(header.length as usize, 0);
 
         header.write_to_prefix(&mut buf[..]).unwrap();
@@ -300,7 +300,7 @@ impl Madt {
 
         // Safety: the memory was leaked from a Box; the pointer does not change, and
         // the size does not change.
-        unsafe { Box::from_raw(madt) }
+        unsafe { Box::from_raw_in(madt, alloc) }
     }
 
     /// Create an iterator over entries of field Interrupt Controller Structure
@@ -325,7 +325,7 @@ impl Madt {
         self.set_or_append_mp_wakeup_in(os_mailbox_address, &HIGH_MEMORY_ALLOCATOR)
     }
 
-    pub fn set_or_append_mp_wakeup_in<A: Allocator>(
+    pub fn set_or_append_mp_wakeup_in<A: Allocator + Clone + 'static>(
         &mut self,
         os_mailbox_address: u64,
         alloc: A,
