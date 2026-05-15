@@ -462,7 +462,7 @@ impl<'a> AcpiTables<'a> {
             for entry in xsdt.iter_mut() {
                 let entry_addr: VirtAddr = entry.into();
                 if entry_addr == old_addr {
-                    entry.set_addr(new_addr.as_u64());
+                    *entry = new_addr.into();
                 }
             }
             xsdt.update_checksum();

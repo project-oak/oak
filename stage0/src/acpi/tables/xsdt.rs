@@ -34,35 +34,35 @@ pub struct XsdtEntryPtr {
     addr: [u8; 8],
 }
 
-impl XsdtEntryPtr {
-    pub fn raw_val(&self) -> u64 {
+impl From<XsdtEntryPtr> for u64 {
+    fn from(value: XsdtEntryPtr) -> Self {
         // As per Section 5.2 in the ACPI specification 6.5,
         // Address is little endian.
-        u64::from_le_bytes(self.addr)
-    }
-
-    pub fn set_addr(&mut self, value: u64) {
-        value.to_le_bytes().write_to(self.addr[..].as_mut()).unwrap();
+        u64::from_le_bytes(value.addr)
     }
 }
 
 impl From<u64> for XsdtEntryPtr {
     fn from(value: u64) -> Self {
-        let mut ptr = Self::default();
-        ptr.set_addr(value);
-        ptr
+        Self { addr: value.to_le_bytes() }
     }
 }
 
 impl From<&XsdtEntryPtr> for VirtAddr {
     fn from(value: &XsdtEntryPtr) -> Self {
-        VirtAddr::new(value.raw_val())
+        VirtAddr::new((*value).into())
     }
 }
 
 impl From<&mut XsdtEntryPtr> for VirtAddr {
     fn from(value: &mut XsdtEntryPtr) -> Self {
-        VirtAddr::new(value.raw_val())
+        VirtAddr::new((*value).into())
+    }
+}
+
+impl From<VirtAddr> for XsdtEntryPtr {
+    fn from(value: VirtAddr) -> Self {
+        Self { addr: value.as_u64().to_le_bytes() }
     }
 }
 
