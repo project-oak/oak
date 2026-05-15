@@ -394,6 +394,15 @@ pub struct ControllerStructure {
     data: [u8],
 }
 
+impl core::fmt::Debug for ControllerStructure {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("ControllerStructure")
+            .field("header", &self.header)
+            .field("data", &self.data.iter())
+            .finish()
+    }
+}
+
 pub struct MadtIterator<'a> {
     data: &'a [u8],
 }
@@ -675,5 +684,47 @@ mod tests {
             .unwrap();
         let mailbox = mp_wakeup.mailbox_address;
         assert_that!(mailbox, eq(0x04030201));
+    }
+
+    #[test]
+    fn test_madt_iter_len_too_short() {
+        let data = &[0x00, 0x01]; // Type 0, Len 1
+        let mut iter = MadtIterator { data: &data[..] };
+        assert_that!(iter.next(), none());
+    }
+
+    #[test]
+    fn test_madt_iter_len_too_long() {
+        let data = &[0x00, 0x05, 0x01, 0x02];
+        let mut iter = MadtIterator { data: &data[..] };
+        assert_that!(iter.next(), none());
+    }
+
+    #[test]
+    fn test_madt_iter_len_inconsistent_type() {
+        let data = &[0x00, 0x04, 0x01, 0x02];
+        let mut iter = MadtIterator { data: &data[..] };
+        let entry = iter.next().unwrap();
+        assert_that!(entry.header.structure_type, eq(0));
+        assert_that!(entry.header.len, eq(4));
+        assert_that!(ProcessorLocalApic::try_ref_from_bytes(entry.as_bytes()), err(anything()));
+    }
+
+    #[test]
+    fn test_madt_iter_success() {
+        let mut data = LAPIC.to_vec();
+        data.extend_from_slice(LX2APIC);
+
+        let mut iter = MadtIterator { data: &data[..] };
+
+        let entry = iter.next().unwrap();
+        assert_that!(entry.header.structure_type, eq(0));
+        assert_that!(entry.header.len, eq(LAPIC.len() as u8));
+
+        let entry = iter.next().unwrap();
+        assert_that!(entry.header.structure_type, eq(9));
+        assert_that!(entry.header.len, eq(LX2APIC.len() as u8));
+
+        assert!(iter.next().is_none());
     }
 }
