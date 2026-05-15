@@ -313,6 +313,34 @@ impl Madt {
         MadtIterMut { data: &mut self.data }
     }
 
+    /// Returns a new MADT, with the additional ControllerStructure appended.
+    pub fn new_push_back_in<
+        'a,
+        T: Into<&'a ControllerStructure>,
+        A: Allocator + Clone + 'static,
+    >(
+        &self,
+        entry: T,
+        alloc: A,
+    ) -> Box<Madt, A> {
+        let entry = entry.into();
+        let mut new_madt = Madt::new_with_size(self.data.len() + size_of_val(entry), alloc);
+
+        // Clone the MADT header and existing data into the new MADT.
+        new_madt.header = self.header;
+        new_madt.header.length = self.header.length + size_of_val(entry) as u32;
+        new_madt.flags = self.flags;
+        new_madt.local_apic_address = self.local_apic_address;
+        new_madt.data[..self.data.len()].copy_from_slice(&self.data);
+
+        // Append the new data structure.
+        new_madt.data[self.data.len()..].copy_from_slice(entry.as_bytes());
+
+        new_madt.update_checksum();
+
+        new_madt
+    }
+
     /// If a MultiprocessorWakeupStructure exsists in this MADT, updates its
     /// mailbox_address. Otherwise, relocates this MADT to somewhere free in
     /// EBDA and appends to it a new MultiprocessorWakeupStructure with the
@@ -330,59 +358,38 @@ impl Madt {
         os_mailbox_address: u64,
         alloc: A,
     ) -> Result<Option<&mut Self>> {
-        if let Some(preexisting_mpw) =
-            self.get_controller_structure_mut(MultiprocessorWakeupType::default() as u8)
-        {
+        if let Some(preexisting_mpw) = self.get_controller_structure_mut::<MultiprocessorWakeup>() {
             log::info!("A MultiprocessorWakeup structure already exists in MADT, updating.");
 
-            let preexisting_mpw =
-                MultiprocessorWakeup::try_mut_from_bytes(preexisting_mpw.as_mut_bytes())
-                    .map_err(|_| "invalid MultiprocessorWakeup in MADT")?;
             preexisting_mpw.mailbox_address = os_mailbox_address;
             self.update_checksum();
             return Ok(None);
         }
 
         log::info!("Relocating MADT and appending a new MultiprocessorWakeup to it.");
-
-        let old_madt_len = self.header.length;
-        let new_madt_len = old_madt_len + size_of::<MultiprocessorWakeup>() as u32;
-
-        // New contents = old contents + MPW. Allocate new length, copy old contents.
-        let mut new_madt =
-            Madt::new_with_size(self.data.len() + size_of::<MultiprocessorWakeup>(), alloc);
-        new_madt.header = self.header;
-        new_madt.header.length = new_madt_len;
-        new_madt.flags = self.flags;
-        new_madt.local_apic_address = self.local_apic_address;
-        new_madt.data[..self.data.len()].copy_from_slice(&self.data);
-
-        log::info!("MADT contents copied to {:?}", new_madt.as_bytes().as_ptr_range());
-
-        // Make an MPW somwhere then copy over its bytes after old MADT contents.
-        let temp_mpw: MultiprocessorWakeup =
-            MultiprocessorWakeup { mailbox_address: os_mailbox_address, ..Default::default() };
-        new_madt.data[self.data.len()..].copy_from_slice(temp_mpw.as_bytes());
-        log::info!(
-            "Written Multiprocessor Wakeup Structure to: {:?}",
-            new_madt.data[self.data.len()..].as_ptr_range()
+        let new_madt = self.new_push_back_in(
+            &MultiprocessorWakeup { mailbox_address: os_mailbox_address, ..Default::default() },
+            alloc,
         );
-
-        new_madt.update_checksum();
         log::info!("New MADT loaded, at {:p}", new_madt.as_bytes().as_ptr());
         Ok(Some(Box::leak(new_madt)))
     }
 
-    fn get_controller_structure_mut(
-        &mut self,
-        structure_type: u8,
-    ) -> Option<&mut ControllerStructure> {
-        self.iter_mut().find(|structure| structure.header.structure_type == structure_type)
+    fn get_controller_structure_mut<'a, T>(&'a mut self) -> Option<&'a mut T>
+    where
+        T: 'static,
+        &'a mut T: TryFrom<&'a mut ControllerStructure>,
+    {
+        self.iter_mut().find_map(|entry| entry.try_into().ok())
     }
 
     #[cfg(test)]
-    fn get_controller_structure(&self, structure_type: u8) -> Option<&ControllerStructure> {
-        self.iter().find(|structure| structure.header.structure_type == structure_type)
+    fn get_controller_structure<'a, T>(&'a self) -> Option<&'a T>
+    where
+        T: 'static,
+        &'a T: TryFrom<&'a ControllerStructure>,
+    {
+        self.iter().find_map(|entry| entry.try_into().ok())
     }
 }
 
@@ -400,6 +407,27 @@ impl core::fmt::Debug for ControllerStructure {
             .field("header", &self.header)
             .field("data", &self.data.iter())
             .finish()
+    }
+}
+
+impl<'a> From<&'a MultiprocessorWakeup> for &'a ControllerStructure {
+    fn from(value: &'a MultiprocessorWakeup) -> Self {
+        ControllerStructure::ref_from_bytes(value.as_bytes())
+            .expect("invalid MultiprocessorWakeup structure")
+    }
+}
+
+impl<'a> TryFrom<&'a mut ControllerStructure> for &'a mut MultiprocessorWakeup {
+    type Error = zerocopy::TryCastError<&'a mut [u8], MultiprocessorWakeup>;
+    fn try_from(value: &'a mut ControllerStructure) -> core::result::Result<Self, Self::Error> {
+        MultiprocessorWakeup::try_mut_from_bytes(value.as_mut_bytes())
+    }
+}
+
+impl<'a> TryFrom<&'a ControllerStructure> for &'a MultiprocessorWakeup {
+    type Error = zerocopy::TryCastError<&'a [u8], MultiprocessorWakeup>;
+    fn try_from(value: &'a ControllerStructure) -> core::result::Result<Self, Self::Error> {
+        MultiprocessorWakeup::try_ref_from_bytes(value.as_bytes())
     }
 }
 
@@ -640,6 +668,30 @@ mod tests {
     }
 
     #[test]
+    fn test_new_push_back_in() {
+        let (madt, _) = Madt::try_from_bytes(MADT).unwrap();
+
+        let new_madt = madt.new_push_back_in(
+            &MultiprocessorWakeup { mailbox_address: 0x01020304, ..Default::default() },
+            std::alloc::Global,
+        );
+
+        // Spot-check that the fields that we expect to stay the same are indeed the
+        // same.
+        assert_that!(new_madt.header.oem_id, eq(&madt.header.oem_id[..]));
+        assert_that!(new_madt.header.revision, eq(madt.header.revision));
+        assert_that!(new_madt.local_apic_address, eq(madt.local_apic_address));
+
+        // Strictly speaking, we're only interested that new_madt.data is contained
+        // within new_madt.data, but there is no convenient way to check that.
+        assert!(new_madt.data.starts_with(&madt.data));
+
+        let mp_wakeup = new_madt.get_controller_structure::<MultiprocessorWakeup>().unwrap();
+        let mailbox = mp_wakeup.mailbox_address;
+        assert_that!(mailbox, eq(0x01020304));
+    }
+
+    #[test]
     fn test_add_mp_wakeup() {
         let (old_madt, _) = Madt::try_from_bytes(MADT).unwrap();
 
@@ -663,11 +715,7 @@ mod tests {
         // within new_madt.data, but there is no convenient way to check that.
         assert!(new_madt.data.starts_with(&old_madt.data));
 
-        let mp_wakeup = new_madt
-            .get_controller_structure(MultiprocessorWakeupType::default() as u8)
-            .map(|entry| MultiprocessorWakeup::try_ref_from_bytes(entry.as_bytes()))
-            .unwrap()
-            .unwrap();
+        let mp_wakeup = new_madt.get_controller_structure::<MultiprocessorWakeup>().unwrap();
         let mailbox = mp_wakeup.mailbox_address;
         assert_that!(mailbox, eq(0x01020304));
 
@@ -677,11 +725,7 @@ mod tests {
             ok(none())
         );
 
-        let mp_wakeup = new_madt
-            .get_controller_structure(MultiprocessorWakeupType::default() as u8)
-            .map(|entry| MultiprocessorWakeup::try_ref_from_bytes(entry.as_bytes()))
-            .unwrap()
-            .unwrap();
+        let mp_wakeup = new_madt.get_controller_structure::<MultiprocessorWakeup>().unwrap();
         let mailbox = mp_wakeup.mailbox_address;
         assert_that!(mailbox, eq(0x04030201));
     }
