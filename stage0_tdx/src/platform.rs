@@ -477,6 +477,16 @@ impl FirmwarePlatform for Tdx {
     fn tee_platform() -> oak_dice::evidence::TeePlatform {
         oak_dice::evidence::TeePlatform::IntelTdx
     }
+
+    fn validate_measured_boot(
+        _cmdline: &[u8],
+        _initrd_digest: &[u8],
+        _kernel_setup_data: &[u8],
+        _kernel_bytes: &[u8],
+    ) -> bool {
+        log::debug!("Empty implementation for measured boot");
+        true
+    }
 }
 
 impl MsrAccess for Tdx {

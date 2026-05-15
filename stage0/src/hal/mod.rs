@@ -118,6 +118,15 @@ pub trait FirmwarePlatform {
     fn get_derived_key() -> Result<DerivedKey, &'static str>;
 
     fn tee_platform() -> TeePlatform;
+
+    // Validate required components for measured boot. In SEV-SNP, these launch
+    // primitives are found in the kernel hashes table
+    fn validate_measured_boot(
+        cmdline: &[u8],
+        initrd_digest: &[u8],
+        kernel_setup_data: &[u8],
+        kernel_bytes: &[u8],
+    ) -> bool;
 }
 
 pub use oak_hal::{Msr, Port, PortFactory};

@@ -99,6 +99,8 @@ impl SnpRomParsing for Stage0Info {
         self.bytes[sev_metadata_header_end..metadata_entries_end]
             .chunks(SEV_METADATA_ENTRY_SIZE)
             .map(SevMetadataPageInfo::parse)
+            // Ignore kernel hashes page for now when calculating the measurement.
+            .filter(|info| info.page_type != PageType::Normal)
             .collect()
     }
 
@@ -181,6 +183,7 @@ enum SevMetadataPageType {
     Unmeasured = 1,
     Secrets = 2,
     Cpuid = 3,
+    KernelHashes = 0x10,
 }
 
 impl From<SevMetadataPageType> for PageType {
@@ -190,6 +193,7 @@ impl From<SevMetadataPageType> for PageType {
             SevMetadataPageType::Cpuid => PageType::Cpuid,
             SevMetadataPageType::Secrets => PageType::Secrets,
             SevMetadataPageType::Unmeasured => PageType::Unmeasured,
+            SevMetadataPageType::KernelHashes => PageType::Normal,
         }
     }
 }

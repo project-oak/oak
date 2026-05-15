@@ -25,6 +25,8 @@ package(
 rust_library(
     name = "stage0",
     srcs = glob(["src/**"]),
+    # Enable if you want to use kernel hashes
+    # crate_features = ["sev_kernel_hashes"],
     target_compatible_with = any_platform([
         "//:x86_64-none-setting",
         "//:x86_64-none-no_avx-setting",
