@@ -48,7 +48,6 @@ pub struct TransparentStage0Policy {
 }
 
 impl TransparentStage0Policy {
-    #[allow(dead_code)]
     pub fn new(reference_values: &KernelLayerReferenceValues) -> Self {
         Self { reference_values: reference_values.clone() }
     }
@@ -94,7 +93,6 @@ pub struct TransparentLayer1Policy {
 }
 
 impl TransparentLayer1Policy {
-    #[allow(dead_code)]
     pub fn new(reference_values: &CbLayer1TransparentReferenceValues) -> Self {
         Self { reference_values: reference_values.clone() }
     }
@@ -181,7 +179,6 @@ pub struct TransparentLayer2Policy {
 }
 
 impl TransparentLayer2Policy {
-    #[allow(dead_code)]
     pub fn new(reference_values: &CbLayer2TransparentReferenceValues) -> Self {
         Self { reference_values: reference_values.clone() }
     }
