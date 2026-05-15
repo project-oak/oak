@@ -316,8 +316,12 @@ impl Madt {
     /// If a MultiprocessorWakeupStructure exsists in this MADT, updates its
     /// mailbox_address. Otherwise, relocates this MADT to somewhere free in
     /// EBDA and appends to it a new MultiprocessorWakeupStructure with the
-    /// given os_mailbox_address. Returns a ref to the maybe relocated MADT.
-    pub fn set_or_append_mp_wakeup(&mut self, os_mailbox_address: u64) -> Result<&mut Self> {
+    /// given os_mailbox_address. Returns a ref to the new MADT, if it was
+    /// created.
+    pub fn set_or_append_mp_wakeup(
+        &mut self,
+        os_mailbox_address: u64,
+    ) -> Result<Option<&mut Self>> {
         self.set_or_append_mp_wakeup_in(os_mailbox_address, &HIGH_MEMORY_ALLOCATOR)
     }
 
@@ -325,7 +329,7 @@ impl Madt {
         &mut self,
         os_mailbox_address: u64,
         alloc: A,
-    ) -> Result<&mut Self> {
+    ) -> Result<Option<&mut Self>> {
         if let Some(preexisting_mpw) =
             self.get_controller_structure_mut(MultiprocessorWakeupType::default() as u8)
         {
@@ -336,7 +340,7 @@ impl Madt {
                     .map_err(|_| "invalid MultiprocessorWakeup in MADT")?;
             preexisting_mpw.mailbox_address = os_mailbox_address;
             self.update_checksum();
-            return Ok(self);
+            return Ok(None);
         }
 
         log::info!("Relocating MADT and appending a new MultiprocessorWakeup to it.");
@@ -366,7 +370,7 @@ impl Madt {
 
         new_madt.update_checksum();
         log::info!("New MADT loaded, at {:p}", new_madt.as_bytes().as_ptr());
-        Ok(Box::leak(new_madt))
+        Ok(Some(Box::leak(new_madt)))
     }
 
     fn get_controller_structure_mut(
@@ -633,7 +637,8 @@ mod tests {
         let mut madt_buf = MADT.to_vec();
         let (madt, _) = Madt::try_from_bytes_mut(&mut madt_buf).unwrap();
 
-        let new_madt = madt.set_or_append_mp_wakeup_in(0x01020304, std::alloc::Global).unwrap();
+        let new_madt =
+            madt.set_or_append_mp_wakeup_in(0x01020304, std::alloc::Global).unwrap().unwrap();
         assert_that!(
             new_madt.header.length,
             eq(old_madt.header.length + size_of::<MultiprocessorWakeup>() as u32)
@@ -657,14 +662,13 @@ mod tests {
         let mailbox = mp_wakeup.mailbox_address;
         assert_that!(mailbox, eq(0x01020304));
 
-        let new_madt_ptr = new_madt.as_bytes().as_ptr();
-        let new_madt_v2 =
-            new_madt.set_or_append_mp_wakeup_in(0x04030201, std::alloc::Global).unwrap();
-
         // This change should have been made in-place.
-        assert_that!(new_madt_v2.as_bytes().as_ptr(), eq(new_madt_ptr));
+        assert_that!(
+            new_madt.set_or_append_mp_wakeup_in(0x04030201, std::alloc::Global),
+            ok(none())
+        );
 
-        let mp_wakeup = new_madt_v2
+        let mp_wakeup = new_madt
             .get_controller_structure(MultiprocessorWakeupType::default() as u8)
             .map(|entry| MultiprocessorWakeup::try_ref_from_bytes(entry.as_bytes()))
             .unwrap()

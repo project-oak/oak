@@ -419,11 +419,11 @@ impl FirmwarePlatform for Tdx {
             info!("Finalize ACPI: Found a MADT in RSDT/XSDT.");
             // Safety: The header is in the ACPI memory range, guaranteed by `AcpiTables`,
             // so it's safe to attempt this transmute.
-            let old_madt_addr = madt.as_bytes().as_ptr();
+            let old_madt_addr = VirtAddr::from_ptr(madt.as_bytes().as_ptr());
             info!("Finalize ACPI: Found a MADT at {:?}", madt.as_bytes().as_ptr_range());
             let new_madt = madt.set_or_append_mp_wakeup(os_mailbox_address)?;
 
-            if old_madt_addr != new_madt.as_bytes().as_ptr() {
+            if let Some(new_madt) = new_madt {
                 // MADT was relocated
                 //
                 // Safety: This is bit of a hack. Ideally we'd use something like
@@ -434,7 +434,7 @@ impl FirmwarePlatform for Tdx {
                 //
                 // Our situation here is different: we won't treat `new_madt` as a `Madt` after
                 // this, so changing the buffer is okay.
-                new_madt_buf = Some((VirtAddr::from_ptr(old_madt_addr), unsafe {
+                new_madt_buf = Some((old_madt_addr, unsafe {
                     core::slice::from_raw_parts_mut(
                         new_madt as *mut _ as *mut u8,
                         size_of_val(new_madt),
