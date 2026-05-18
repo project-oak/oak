@@ -22,10 +22,7 @@ use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
 use crate::{
     AcpiTable, DescriptionHeader,
-    acpi::{
-        HIGH_MEMORY_ALLOCATOR,
-        tables::{Result, signature},
-    },
+    acpi::tables::{Result, signature},
 };
 
 #[allow(dead_code)]
@@ -214,6 +211,12 @@ impl Default for MultiprocessorWakeup {
     }
 }
 
+impl MultiprocessorWakeup {
+    pub fn new(mailbox_address: u64) -> Self {
+        Self { mailbox_address, ..Default::default() }
+    }
+}
+
 impl AcpiTable for Madt {
     type Signature = Signature;
 
@@ -341,41 +344,7 @@ impl Madt {
         new_madt
     }
 
-    /// If a MultiprocessorWakeupStructure exsists in this MADT, updates its
-    /// mailbox_address. Otherwise, relocates this MADT to somewhere free in
-    /// EBDA and appends to it a new MultiprocessorWakeupStructure with the
-    /// given os_mailbox_address. Returns a ref to the new MADT, if it was
-    /// created.
-    pub fn set_or_append_mp_wakeup(
-        &mut self,
-        os_mailbox_address: u64,
-    ) -> Result<Option<&mut Self>> {
-        self.set_or_append_mp_wakeup_in(os_mailbox_address, &HIGH_MEMORY_ALLOCATOR)
-    }
-
-    pub fn set_or_append_mp_wakeup_in<A: Allocator + Clone + 'static>(
-        &mut self,
-        os_mailbox_address: u64,
-        alloc: A,
-    ) -> Result<Option<&mut Self>> {
-        if let Some(preexisting_mpw) = self.get_controller_structure_mut::<MultiprocessorWakeup>() {
-            log::info!("A MultiprocessorWakeup structure already exists in MADT, updating.");
-
-            preexisting_mpw.mailbox_address = os_mailbox_address;
-            self.update_checksum();
-            return Ok(None);
-        }
-
-        log::info!("Relocating MADT and appending a new MultiprocessorWakeup to it.");
-        let new_madt = self.new_push_back_in(
-            &MultiprocessorWakeup { mailbox_address: os_mailbox_address, ..Default::default() },
-            alloc,
-        );
-        log::info!("New MADT loaded, at {:p}", new_madt.as_bytes().as_ptr());
-        Ok(Some(Box::leak(new_madt)))
-    }
-
-    fn get_controller_structure_mut<'a, T>(&'a mut self) -> Option<&'a mut T>
+    pub fn get_controller_structure_mut<'a, T>(&'a mut self) -> Option<&'a mut T>
     where
         T: 'static,
         &'a mut T: TryFrom<&'a mut ControllerStructure>,
@@ -689,45 +658,6 @@ mod tests {
         let mp_wakeup = new_madt.get_controller_structure::<MultiprocessorWakeup>().unwrap();
         let mailbox = mp_wakeup.mailbox_address;
         assert_that!(mailbox, eq(0x01020304));
-    }
-
-    #[test]
-    fn test_add_mp_wakeup() {
-        let (old_madt, _) = Madt::try_from_bytes(MADT).unwrap();
-
-        let mut madt_buf = MADT.to_vec();
-        let (madt, _) = Madt::try_from_bytes_mut(&mut madt_buf).unwrap();
-
-        let new_madt =
-            madt.set_or_append_mp_wakeup_in(0x01020304, std::alloc::Global).unwrap().unwrap();
-        assert_that!(
-            new_madt.header.length,
-            eq(old_madt.header.length + size_of::<MultiprocessorWakeup>() as u32)
-        );
-
-        // Spot-check that the fields that we expect to stay the same are indeed the
-        // same.
-        assert_that!(new_madt.header.oem_id, eq(&old_madt.header.oem_id[..]));
-        assert_that!(new_madt.header.revision, eq(old_madt.header.revision));
-        assert_that!(new_madt.local_apic_address, eq(old_madt.local_apic_address));
-
-        // Strictly speaking, we're only interested that new_madt.data is contained
-        // within new_madt.data, but there is no convenient way to check that.
-        assert!(new_madt.data.starts_with(&old_madt.data));
-
-        let mp_wakeup = new_madt.get_controller_structure::<MultiprocessorWakeup>().unwrap();
-        let mailbox = mp_wakeup.mailbox_address;
-        assert_that!(mailbox, eq(0x01020304));
-
-        // This change should have been made in-place.
-        assert_that!(
-            new_madt.set_or_append_mp_wakeup_in(0x04030201, std::alloc::Global),
-            ok(none())
-        );
-
-        let mp_wakeup = new_madt.get_controller_structure::<MultiprocessorWakeup>().unwrap();
-        let mailbox = mp_wakeup.mailbox_address;
-        assert_that!(mailbox, eq(0x04030201));
     }
 
     #[test]

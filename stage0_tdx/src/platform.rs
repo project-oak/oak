@@ -16,7 +16,7 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
+use alloc::{alloc::Allocator, boxed::Box};
 use core::{
     mem::size_of,
     ops::{Index, IndexMut},
@@ -29,7 +29,7 @@ use log::info;
 use oak_hal::{MsrAccess, PageAssignment, PageEncryption, Platform};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_stage0::{
-    AcpiTables, BOOT_ALLOC, Madt,
+    AcpiTable, AcpiTables, BOOT_ALLOC, HIGH_MEMORY_ALLOCATOR, Madt, MultiprocessorWakeup,
     hal::{FirmwarePlatform, PortFactory},
     mailbox::{FirmwareMailbox, OsMailbox},
     paging::{self, PageTableRefs},
@@ -269,6 +269,37 @@ fn handle_legacy_smbios(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
     legacy_smbios_range_bytes.zeroize();
 }
 
+/// If a MultiprocessorWakeupStructure exsists in this MADT, updates its
+/// mailbox_address. Otherwise, relocates this MADT to somewhere free in
+/// EBDA and appends to it a new MultiprocessorWakeupStructure with the
+/// given os_mailbox_address. Returns a ref to the new MADT, if it was
+/// created.
+pub fn set_or_append_mp_wakeup(
+    madt: &mut Madt,
+    os_mailbox_address: u64,
+) -> Result<Option<&mut Madt>, &'static str> {
+    set_or_append_mp_wakeup_in(madt, os_mailbox_address, &HIGH_MEMORY_ALLOCATOR)
+}
+
+pub fn set_or_append_mp_wakeup_in<A: Allocator + Clone + 'static>(
+    madt: &mut Madt,
+    os_mailbox_address: u64,
+    alloc: A,
+) -> Result<Option<&mut Madt>, &'static str> {
+    if let Some(preexisting_mpw) = madt.get_controller_structure_mut::<MultiprocessorWakeup>() {
+        log::info!("A MultiprocessorWakeup structure already exists in MADT, updating.");
+
+        preexisting_mpw.mailbox_address = os_mailbox_address;
+        madt.update_checksum();
+        return Ok(None);
+    }
+
+    log::info!("Relocating MADT and appending a new MultiprocessorWakeup to it.");
+    let new_madt = madt.new_push_back_in(&MultiprocessorWakeup::new(os_mailbox_address), alloc);
+    log::info!("New MADT loaded, at {:p}", new_madt.as_bytes().as_ptr());
+    Ok(Some(Box::leak(new_madt)))
+}
+
 pub struct Tdx {}
 
 impl Platform for Tdx {
@@ -421,7 +452,7 @@ impl FirmwarePlatform for Tdx {
             // so it's safe to attempt this transmute.
             let old_madt_addr = VirtAddr::from_ptr(madt.as_bytes().as_ptr());
             info!("Finalize ACPI: Found a MADT at {:?}", madt.as_bytes().as_ptr_range());
-            let new_madt = madt.set_or_append_mp_wakeup(os_mailbox_address)?;
+            let new_madt = set_or_append_mp_wakeup(madt, os_mailbox_address)?;
 
             if let Some(new_madt) = new_madt {
                 // MADT was relocated

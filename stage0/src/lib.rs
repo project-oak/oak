@@ -66,9 +66,12 @@ mod pci;
 mod pic;
 mod zero_page;
 
-pub use acpi::tables::{
-    AcpiTable, AcpiTables, DescriptionHeader, Madt, Rsdp, Rsdt, Xsdt,
-    madt::{LocalApicFlags, MultiprocessorWakeup, ProcessorLocalApic, ProcessorLocalX2Apic},
+pub use acpi::{
+    HIGH_MEMORY_ALLOCATOR,
+    tables::{
+        AcpiTable, AcpiTables, DescriptionHeader, Madt, Rsdp, Rsdt, Xsdt,
+        madt::{LocalApicFlags, MultiprocessorWakeup, ProcessorLocalApic, ProcessorLocalX2Apic},
+    },
 };
 pub use apic::Lapic;
 pub use hal::{FirmwarePlatform, Platform};

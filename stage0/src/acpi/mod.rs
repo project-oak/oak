@@ -60,7 +60,7 @@ const HIGH_MEM_SIZE: usize = 0x10_0000;
 // memory backing the allocator will go.
 type HighMemoryAllocator = linked_list_allocator::LockedHeap;
 /// Allocator for high memory (where the ACPI tables themselves will go).
-static HIGH_MEMORY_ALLOCATOR: HighMemoryAllocator = HighMemoryAllocator::empty();
+pub static HIGH_MEMORY_ALLOCATOR: HighMemoryAllocator = HighMemoryAllocator::empty();
 
 const TABLE_LOADER_FILE_NAME: &CStr = c"etc/table-loader";
 
