@@ -49,23 +49,8 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
-      # Needed for GCS upload.
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v3
-        with:
-          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY_JSON }}
-
-      # Needed for GCS upload.
-      - name: Setup Google Cloud
-        uses: google-github-actions/setup-gcloud@v3
-
-      - name: Mount main branch
-        uses: actions/checkout@v4
-
-      # The following needs review, since we migrated to Ubuntu2404.
-      #
       # The runner comes with all this software pre-installed:
-      # https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2004-Readme.md
+      # https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md
       # To avoid failures due to lack of disk space, we delete some large packages
       # which are irrelevant for building. Sources:
       # https://github.com/jens-maus/RaspberryMatic/blob/ea6b8ce0dd2d53ea88b2766ba8d7f8e1d667281f/.github/workflows/ci.yml#L34-L40
@@ -77,8 +62,7 @@ jobs:
           set -o xtrace
           df --human-readable
           sudo apt-get remove --yes \
-              '^dotnet-.*' '^llvm-.*' 'php.*' \
-              '^haskell-.*' '^ghc-.*' '^cabal-.*' \
+              '^llvm-.*' '^php.*' \
               google-chrome-stable firefox microsoft-edge-stable \
               azure-cli powershell
           df --human-readable
@@ -95,6 +79,19 @@ jobs:
           sudo rm --recursive --force /usr/share/dotnet
           df --human-readable
           dpkg --list
+
+      # Needed for GCS upload.
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY_JSON }}
+
+      # Needed for GCS upload.
+      - name: Setup Google Cloud
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Mount main branch
+        uses: actions/checkout@v4
 
       # Keeps two versions of SUBJECT_PATHS, with space resp. comma as
       # path separator. Both are needed in later steps.
