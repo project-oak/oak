@@ -80,6 +80,9 @@ jobs:
           df --human-readable
           dpkg --list
 
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       # Needed for GCS upload.
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
@@ -89,9 +92,6 @@ jobs:
       # Needed for GCS upload.
       - name: Setup Google Cloud
         uses: google-github-actions/setup-gcloud@v3
-
-      - name: Mount main branch
-        uses: actions/checkout@v4
 
       # Keeps two versions of SUBJECT_PATHS, with space resp. comma as
       # path separator. Both are needed in later steps.
