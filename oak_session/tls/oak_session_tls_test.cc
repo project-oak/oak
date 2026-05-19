@@ -580,6 +580,84 @@ TEST(OakSessionTlsTest, ClientSetsTlsIdentServerDoesntRequest) {
   ASSERT_THAT(result.server, IsOk());
 }
 
+TEST(OakSessionTlsTest, CustomServerNameMatch) {
+  const std::string custom_name = "service.example.com";
+
+  // Server generates a self-signed cert with the custom SAN.
+  auto server_provider = util::CreateSelfSigned({}, custom_name);
+  ASSERT_THAT(server_provider, IsOk());
+  ServerContextConfig server_config{
+      .tls_identity_provider = std::move(*server_provider),
+  };
+  auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
+  ASSERT_THAT(server_ctx, IsOk());
+
+  // Client sets expected_server_name to match the custom name.
+  // Since the certificate is self-signed and not signed by a trusted CA,
+  // standard verification will fail, but a custom_cert_verifier that returns
+  // absl::OkStatus() will override it.
+  ClientContextConfig client_config{
+      .custom_cert_verifier =
+          [](const std::vector<std::string>& chain, int err) {
+            EXPECT_EQ(err, X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT);
+            return absl::OkStatus();
+          },
+      .expected_server_name = custom_name,
+  };
+  auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
+  ASSERT_THAT(client_ctx, IsOk());
+
+  auto result = RunHandshake(**client_ctx, **server_ctx);
+  ASSERT_THAT(result.client, IsOk());
+  ASSERT_THAT(result.server, IsOk());
+}
+
+TEST(OakSessionTlsTest, CustomServerNameMismatchFails) {
+  const std::string custom_name = "service.example.com";
+
+  // Server generates a self-signed cert with the custom SAN.
+  auto server_provider = util::CreateSelfSigned({}, custom_name);
+  ASSERT_THAT(server_provider, IsOk());
+  ServerContextConfig server_config{
+      .tls_identity_provider = std::move(*server_provider),
+  };
+  auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
+  ASSERT_THAT(server_ctx, IsOk());
+
+  // Client sets a mismatched expected_server_name.
+  // Standard verification will fail with hostname mismatch (since it doesn't
+  // match the SAN). The custom verifier does not override the failure and
+  // returns an error.
+  ClientContextConfig client_config{
+      .custom_cert_verifier =
+          [](const std::vector<std::string>& chain, int err) {
+            EXPECT_NE(err, X509_V_OK);
+            return absl::FailedPreconditionError("reject mismatch");
+          },
+      .expected_server_name = "wrong-name.example.com",
+  };
+  auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
+  ASSERT_THAT(client_ctx, IsOk());
+
+  auto server_initializer = (*server_ctx)->NewSession();
+  ASSERT_THAT(server_initializer, IsOk());
+  auto client_initializer = (*client_ctx)->NewSession();
+  ASSERT_THAT(client_initializer, IsOk());
+
+  auto client_hello = (*client_initializer)->GetTLSFrame();
+  ASSERT_THAT(client_hello, IsOk());
+
+  ASSERT_THAT((*server_initializer)->PutTLSFrame(*client_hello), IsOk());
+
+  auto server_hello = (*server_initializer)->GetTLSFrame();
+  ASSERT_THAT(server_hello, IsOk());
+
+  // Client should reject due to mismatch (standard verification failure and
+  // custom verifier returning error).
+  auto result = (*client_initializer)->PutTLSFrame(*server_hello);
+  EXPECT_THAT(result, StatusIs(absl::StatusCode::kFailedPrecondition));
+}
+
 TEST(OakSessionTlsTest,
      ServerRequestsClientCertButClientDoesntSetFailsHandshake) {
   // Enable a client trust anchor, which will trigger client cert request.
