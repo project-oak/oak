@@ -14,7 +14,7 @@
 
 use std::sync::Arc;
 
-use anyhow::{Context, bail};
+use anyhow::bail;
 use external_db_client::{BlobId, ExternalDbClient};
 use icing::OptimizeResultProto;
 use log::info;
@@ -248,50 +248,6 @@ impl Database {
         Ok(())
     }
 
-    pub async fn search_memory(
-        &mut self,
-        request: SearchMemoryRequest,
-    ) -> anyhow::Result<(Vec<SearchMemoryResultItem>, PageToken)> {
-        let query = request.query.as_ref().context("the query must be non-empty")?;
-        let page_token = PageToken::try_from(request.page_token)
-            .map_err(|e| anyhow::anyhow!("Invalid page token: {}", e))?;
-        let (search_results, next_page_token) =
-            self.meta_db().search(query, request.page_size, page_token)?;
-
-        if search_results.items.is_empty() {
-            return Ok((Vec::new(), next_page_token));
-        }
-
-        let blob_ids: Vec<BlobId> =
-            search_results.items.iter().map(|item| item.blob_id.clone()).collect();
-        let mut memories = self.blob_store.get_memories_by_blob_ids(&blob_ids).await?;
-        Self::apply_mask_to_memories(&mut memories, &request.result_mask);
-
-        let results = memories
-            .into_iter()
-            .zip(search_results.items)
-            .map(|(mut memory, item)| {
-                let score = item.score;
-                let view_scores = item.view_scores;
-                if !request.keep_all_llm_views {
-                    let view_ids = item.view_ids;
-                    if let Some(views) = memory.views.as_mut() {
-                        let mut ordered_views = Vec::new();
-                        for view_id in view_ids {
-                            if let Some(view) = views.llm_views.iter().find(|v| v.id == view_id) {
-                                ordered_views.push(view.clone());
-                            }
-                        }
-                        views.llm_views = ordered_views;
-                    }
-                }
-                SearchMemoryResultItem { memory: Some(memory), score, view_scores }
-            })
-            .collect();
-
-        Ok((results, next_page_token))
-    }
-
     /// Search API v2 entry point: delegates to
     /// `IcingMetaDatabase::search_memories`.
     pub async fn search_memories(
@@ -380,9 +336,6 @@ impl Database {
             if !mask.include_fields.contains(&(MemoryField::ExpirationTimestamp as i32)) {
                 memory.expiration_timestamp = None;
             }
-            if !mask.include_fields.contains(&(MemoryField::Views as i32)) {
-                memory.views = None;
-            }
 
             if !mask.include_fields.contains(&(MemoryField::Content as i32)) {
                 memory.content = None;
@@ -461,7 +414,7 @@ mod tests {
         assert!(memory.created_timestamp.is_none());
         assert!(memory.event_timestamp.is_none());
         assert!(memory.expiration_timestamp.is_none());
-        assert!(memory.views.is_none());
+        assert!(memory.views.is_some());
     }
 
     #[test]
@@ -479,7 +432,7 @@ mod tests {
         assert!(memory.created_timestamp.is_none());
         assert!(memory.event_timestamp.is_none());
         assert!(memory.expiration_timestamp.is_none());
-        assert!(memory.views.is_none());
+        assert!(memory.views.is_some());
     }
 
     #[test]
@@ -498,7 +451,7 @@ mod tests {
         assert!(memory.created_timestamp.is_none());
         assert!(memory.event_timestamp.is_none());
         assert!(memory.expiration_timestamp.is_none());
-        assert!(memory.views.is_none());
+        assert!(memory.views.is_some());
     }
 
     #[test]
@@ -520,24 +473,6 @@ mod tests {
         assert!(memory.created_timestamp.is_some());
         assert!(memory.event_timestamp.is_some());
         assert!(memory.expiration_timestamp.is_some());
-        assert!(memory.views.is_none());
-    }
-
-    #[test]
-    #[allow(deprecated)]
-    fn test_apply_mask_to_memory_include_views() {
-        let mut memory = create_memory_for_mask_test();
-        let mask = Some(ResultMask {
-            include_fields: vec![MemoryField::Views as i32],
-            ..Default::default()
-        });
-        Database::apply_mask_to_memory(&mut memory, &mask);
-        assert!(memory.id.is_empty());
-        assert!(memory.tags.is_empty());
-        assert!(memory.content.is_none());
-        assert!(memory.created_timestamp.is_none());
-        assert!(memory.event_timestamp.is_none());
-        assert!(memory.expiration_timestamp.is_none());
         assert!(memory.views.is_some());
     }
 }

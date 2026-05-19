@@ -287,26 +287,6 @@ pub trait PrivateMemoryAppClient {
         expect_response_type!(response, sealed_memory_response::Response::GetMemoryByIdResponse)
     }
 
-    async fn search_memory(
-        &mut self,
-        query: SearchMemoryQuery,
-        page_size: i32,
-        result_mask: Option<ResultMask>,
-        page_token: &str,
-        keep_all_llm_views: bool,
-    ) -> Result<SearchMemoryResponse> {
-        let request = SearchMemoryRequest {
-            query: Some(query),
-            page_size,
-            result_mask,
-            page_token: page_token.to_string(),
-            keep_all_llm_views,
-        };
-        let response =
-            self.invoke(sealed_memory_request::Request::SearchMemoryRequest(request)).await?;
-        expect_response_type!(response, sealed_memory_response::Response::SearchMemoryResponse)
-    }
-
     async fn delete_memory(&mut self, ids: Vec<String>) -> Result<DeleteMemoryResponse> {
         let request = DeleteMemoryRequest { ids };
         let response =

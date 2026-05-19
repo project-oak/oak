@@ -28,10 +28,11 @@ use std::time::Instant;
 use anyhow::Result;
 use clap::Parser;
 use icing::set_logging;
-use oak_private_memory_database::icing::{IcingMetaDatabase, IcingTempDir, PageToken};
+use oak_private_memory_database::icing::{IcingMetaDatabase, IcingTempDir};
 use rand::random;
 use sealed_memory_rust_proto::oak::private_memory::{
-    Embedding, EmbeddingQuery, LlmView, LlmViews, Memory, SearchMemoryQuery, search_memory_query,
+    Embedding, EmbeddingFilter, EmbeddingSort, LlmView, LlmViews, Memory, SearchMemoriesFilter,
+    SearchMemoriesRequest, SearchMemoriesSort, SortOrder,
 };
 
 /// Eigen embedding search benchmark.
@@ -71,16 +72,41 @@ fn create_memory_with_embedding(index: u32, embedding_size: usize) -> Memory {
     }
 }
 
-/// Create a random query embedding wrapped in SearchMemoryQuery.
-fn create_query(embedding_size: usize) -> (SearchMemoryQuery, EmbeddingQuery) {
+/// Create a SearchMemoriesRequest for embedding search.
+fn create_request(embedding_size: usize) -> SearchMemoriesRequest {
     let values: Vec<f32> = (0..embedding_size).map(|_| random::<f32>()).collect();
-    let eq = EmbeddingQuery {
-        embedding: vec![Embedding { model_signature: "benchmark_model".to_string(), values }],
+    SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::EmbeddingFilter(
+                    EmbeddingFilter {
+                        embedding: Some(Embedding {
+                            model_signature: "benchmark_model".to_string(),
+                            values,
+                        }),
+                        ..Default::default()
+                    },
+                ),
+            ),
+        }),
+        sort: vec![SearchMemoriesSort {
+            sort: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memories_sort::Sort::EmbeddingSort(
+                    EmbeddingSort {
+                        order: SortOrder::OrderDescending.into(),
+                        embedding: Some(Embedding {
+                            model_signature: "benchmark_model".to_string(),
+                            values: (0..embedding_size).map(|_| random::<f32>()).collect(),
+                        }),
+                        ..Default::default()
+                    },
+                ),
+            ),
+        }],
+        limit: 10,
+        page_size: 10,
         ..Default::default()
-    };
-    let smq =
-        SearchMemoryQuery { clause: Some(search_memory_query::Clause::EmbeddingQuery(eq.clone())) };
-    (smq, eq)
+    }
 }
 
 /// Generate embedding counts (1k, 2k, 4k, ...).
@@ -97,14 +123,14 @@ fn get_embedding_counts(max: u32) -> Vec<u32> {
 /// Measure embedding search latency over multiple iterations.
 fn measure_search_latency(
     db: &IcingMetaDatabase,
-    embedding_query: &EmbeddingQuery,
+    request: &SearchMemoriesRequest,
     iterations: u32,
 ) -> Result<(f64, f64, f64)> {
     let mut times = Vec::with_capacity(iterations as usize);
 
     for _ in 0..iterations {
         let start = Instant::now();
-        let _results = db.embedding_search(embedding_query, 10, PageToken::Start, false)?;
+        let _results = db.search_memories(request)?;
         let elapsed = start.elapsed().as_secs_f64() * 1000.0;
         times.push(elapsed);
     }
@@ -134,7 +160,7 @@ fn main() -> Result<()> {
         "| {:>10} | {:>12} | {:>12} | {:>12} |",
         "Embeddings", "Min (ms)", "Avg (ms)", "Max (ms)"
     );
-    println!("|------------|--------------|--------------|--------------|");
+    println!("|------------|--------------|--------------|--------------| ");
 
     for &count in &counts {
         let temp_dir = IcingTempDir::new("icing-eigen-bench-");
@@ -147,14 +173,14 @@ fn main() -> Result<()> {
         }
         db.optimize()?;
 
-        // Create query
-        let (_smq, eq) = create_query(args.embedding_size);
+        // Create request
+        let request = create_request(args.embedding_size);
 
         // Warmup
-        let _ = db.embedding_search(&eq, 10, PageToken::Start, false)?;
+        let _ = db.search_memories(&request)?;
 
         // Measure
-        let (min, avg, max) = measure_search_latency(&db, &eq, args.iterations)?;
+        let (min, avg, max) = measure_search_latency(&db, &request, args.iterations)?;
 
         println!("| {:>10} | {:>12.2} | {:>12.2} | {:>12.2} |", count, min, avg, max);
 

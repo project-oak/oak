@@ -35,7 +35,8 @@ use oak_private_memory_database::icing::{IcingMetaDatabase, IcingTempDir};
 use prost::Message;
 use rand::random;
 use sealed_memory_rust_proto::oak::private_memory::{
-    Embedding, EmbeddingQuery, LlmView, LlmViews, Memory,
+    Embedding, EmbeddingFilter, LlmView, LlmViews, Memory, SearchMemoriesFilter,
+    SearchMemoriesRequest,
 };
 
 /// Large database persistence test.
@@ -196,21 +197,27 @@ fn main() -> Result<()> {
 
     // Embedding search (diagnostic — may return 0 due to index rebuild issues).
     let query_values: Vec<f32> = (0..args.embedding_size).map(|_| random::<f32>()).collect();
-    let eq = EmbeddingQuery {
-        embedding: vec![Embedding {
-            model_signature: "test_model".to_string(),
-            values: query_values,
-        }],
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::EmbeddingFilter(
+                    EmbeddingFilter {
+                        embedding: Some(Embedding {
+                            model_signature: "test_model".to_string(),
+                            values: query_values,
+                        }),
+                        ..Default::default()
+                    },
+                ),
+            ),
+        }),
+        limit: 10,
+        page_size: 10,
         ..Default::default()
     };
-    let (results, _scores, _token) = imported_db.embedding_search(
-        &eq,
-        10,
-        oak_private_memory_database::icing::PageToken::Start,
-        true,
-    )?;
-    println!("  Embedding search returned {} results", results.len());
-    assert_eq!(results.len(), 10, "embedding search should return 10 results");
+    let (results, _) = imported_db.search_memories(&request)?;
+    println!("  Embedding search returned {} results", results.items.len());
+    assert_eq!(results.items.len(), 10, "embedding search should return 10 results");
 
     println!("\n=== ALL CHECKS PASSED ===");
     println!("Summary:");
@@ -230,7 +237,7 @@ fn main() -> Result<()> {
         "  Doc counts:         {} memories, {} views (capped by 30k query limit)",
         post_memory_count, post_view_count
     );
-    println!("  Embedding search:   {} results", results.len());
+    println!("  Embedding search:   {} results", results.items.len());
 
     Ok(())
 }

@@ -39,7 +39,8 @@ use clap::Parser;
 use icing::set_logging;
 use oak_private_memory_database::icing::{IcingMetaDatabase, IcingTempDir};
 use sealed_memory_rust_proto::oak::private_memory::{
-    Embedding, EmbeddingQuery, LlmView, LlmViews, Memory,
+    Embedding, EmbeddingFilter, LlmView, LlmViews, Memory, SearchMemoriesFilter,
+    SearchMemoriesRequest,
 };
 
 /// Embedding scoring limit test.
@@ -72,6 +73,29 @@ fn create_memory(index: u32, embedding_size: usize, fill_value: f32) -> Memory {
     }
 }
 
+/// Create a SearchMemoriesRequest for embedding search.
+fn create_request(embedding_size: usize) -> SearchMemoriesRequest {
+    let query_values: Vec<f32> = vec![1.0; embedding_size];
+    SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::EmbeddingFilter(
+                    EmbeddingFilter {
+                        embedding: Some(Embedding {
+                            model_signature: "test_model".to_string(),
+                            values: query_values,
+                        }),
+                        ..Default::default()
+                    },
+                ),
+            ),
+        }),
+        limit: 10,
+        page_size: 10,
+        ..Default::default()
+    }
+}
+
 fn main() -> Result<()> {
     let args = Args::parse();
     set_logging(false);
@@ -80,17 +104,7 @@ fn main() -> Result<()> {
     println!("============================\n");
     println!("num_docs: {}, embedding_size: {}\n", args.num_docs, args.embedding_size);
 
-    // The query vector: all 1.0s.
-    // Dot product with [1.0, 1.0, ...] = embedding_size (max score).
-    // Dot product with [0.001, 0.001, ...] ≈ embedding_size * 0.001 (low score).
-    let query_values: Vec<f32> = vec![1.0; args.embedding_size];
-    let eq = EmbeddingQuery {
-        embedding: vec![Embedding {
-            model_signature: "test_model".to_string(),
-            values: query_values,
-        }],
-        ..Default::default()
-    };
+    let request = create_request(args.embedding_size);
 
     // Phase 1: Create database and insert documents.
     println!("Phase 1: Populating database...");
@@ -129,16 +143,11 @@ fn main() -> Result<()> {
     // Phase 3: Run embedding search — does sorting consider all docs?
     println!("Phase 3: Embedding search (top 10)...");
     let start = Instant::now();
-    let (results, scores, _token) = db.embedding_search(
-        &eq,
-        10,
-        oak_private_memory_database::icing::PageToken::Start,
-        true, // search views (which have embeddings)
-    )?;
+    let (results, _) = db.search_memories(&request)?;
     let search_duration = start.elapsed();
 
     println!("  Search completed in {:.1}ms", search_duration.as_secs_f64() * 1000.0);
-    println!("  Returned {} results", results.len());
+    println!("  Returned {} results", results.items.len());
 
     // Display top results.
     let needle_blob_id = format!("blob_{}", needle_index);
@@ -146,10 +155,10 @@ fn main() -> Result<()> {
     let mut needle_rank: Option<usize> = None;
 
     println!("\n  Top results:");
-    for (i, (blob_id, score)) in results.iter().zip(scores.iter()).enumerate() {
-        let is_needle = blob_id == &needle_blob_id;
+    for (i, item) in results.items.iter().enumerate() {
+        let is_needle = item.blob_id == needle_blob_id;
         let marker = if is_needle { " ← NEEDLE" } else { "" };
-        println!("    #{}: blob_id={}, score={:.4}{}", i + 1, blob_id, score, marker);
+        println!("    #{}: blob_id={}, score={:.4}{}", i + 1, item.blob_id, item.score, marker);
         if is_needle {
             needle_found = true;
             needle_rank = Some(i + 1);
@@ -187,13 +196,6 @@ fn main() -> Result<()> {
             needle_index
         );
         println!("  → Sorting is INCOMPLETE: results may not reflect the true top-k.");
-
-        if let Some(top_score) = scores.first() {
-            println!(
-                "\n  Top score received: {:.4} (expected needle: {:.4})",
-                top_score, expected_needle_score
-            );
-        }
     }
 
     // Phase 5: Control tests — confirm the scoring window is biased toward
@@ -211,16 +213,16 @@ fn main() -> Result<()> {
         db_a.add_memory(&create_memory(i, args.embedding_size, 0.001), format!("blob_{}", i))?;
     }
 
-    let (results_a, scores_a, _) =
-        db_a.embedding_search(&eq, 10, oak_private_memory_database::icing::PageToken::Start, true)?;
-    let ctrl_a_found = results_a.iter().any(|id| id == "blob_needle");
-    let ctrl_a_rank = results_a.iter().position(|id| id == "blob_needle").map(|p| p + 1);
+    let (results_a, _) = db_a.search_memories(&request)?;
+    let ctrl_a_found = results_a.items.iter().any(|item| item.blob_id == "blob_needle");
+    let ctrl_a_rank =
+        results_a.items.iter().position(|item| item.blob_id == "blob_needle").map(|p| p + 1);
 
     if ctrl_a_found {
         println!(
             "    ✅ Found at rank #{} (score={:.4})",
             ctrl_a_rank.unwrap(),
-            scores_a[ctrl_a_rank.unwrap() - 1]
+            results_a.items[ctrl_a_rank.unwrap() - 1].score
         );
     } else {
         println!("    ❌ NOT found (needle is oldest doc, outside 30k scoring window)");
@@ -243,16 +245,16 @@ fn main() -> Result<()> {
         }
     }
 
-    let (results_b, scores_b, _) =
-        db_b.embedding_search(&eq, 10, oak_private_memory_database::icing::PageToken::Start, true)?;
-    let ctrl_b_found = results_b.iter().any(|id| id == "blob_needle_mid");
-    let ctrl_b_rank = results_b.iter().position(|id| id == "blob_needle_mid").map(|p| p + 1);
+    let (results_b, _) = db_b.search_memories(&request)?;
+    let ctrl_b_found = results_b.items.iter().any(|item| item.blob_id == "blob_needle_mid");
+    let ctrl_b_rank =
+        results_b.items.iter().position(|item| item.blob_id == "blob_needle_mid").map(|p| p + 1);
 
     if ctrl_b_found {
         println!(
             "    ✅ Found at rank #{} (score={:.4})",
             ctrl_b_rank.unwrap(),
-            scores_b[ctrl_b_rank.unwrap() - 1]
+            results_b.items[ctrl_b_rank.unwrap() - 1].score
         );
     } else {
         println!("    ❌ NOT found (needle at middle, outside 30k scoring window)");

@@ -423,21 +423,6 @@ impl SealedMemorySessionHandler {
         Ok(())
     }
 
-    pub async fn search_memory_handler(
-        &self,
-        request: SearchMemoryRequest,
-    ) -> tonic::Result<SearchMemoryResponse> {
-        let mut mutex_guard = self.session_context().await;
-        let database =
-            &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
-
-        // The extraction of embedding details is now done in
-        // IcingMetaDatabase::embedding_search
-        let (results, next_page_token) =
-            database.search_memory(request).await.into_internal_error("failed to search memory")?;
-        Ok(SearchMemoryResponse { results, next_page_token: next_page_token.into() })
-    }
-
     pub async fn search_memories_handler(
         &self,
         request: SearchMemoriesRequest,
@@ -558,9 +543,6 @@ impl SealedMemorySessionHandler {
             }
             sealed_memory_request::Request::GetMemoryByNameRequest(request) => {
                 self.get_memory_by_name_handler(request).await?.into_response()
-            }
-            sealed_memory_request::Request::SearchMemoryRequest(request) => {
-                self.search_memory_handler(request).await?.into_response()
             }
             sealed_memory_request::Request::DeleteMemoryRequest(request) => {
                 self.delete_memory_handler(request).await?.into_response()

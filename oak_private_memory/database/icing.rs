@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use std::{collections::HashMap, time::SystemTime};
+use std::time::SystemTime;
 
 use anyhow::{Context, bail, ensure};
 use external_db_client::BlobId;
@@ -21,10 +21,7 @@ use log::{debug, error, info};
 use prost::Message;
 use rand::Rng;
 use sealed_memory_rust_proto::{
-    oak::private_memory::{
-        EmbeddingQuery, LlmView, MatchType, QueryClauses, QueryOperator, SearchMemoryQuery,
-        TextQuery, search_memories_filter, search_memory_query, text_query,
-    },
+    oak::private_memory::{LlmView, search_memories_filter},
     prelude::v1::*,
 };
 
@@ -32,46 +29,6 @@ use crate::{MemoryId, ViewId, clock::system_time_to_timestamp};
 
 fn timestamp_to_i64(timestamp: &prost_types::Timestamp) -> i64 {
     timestamp.seconds * 1_000_000_000 + (timestamp.nanos as i64)
-}
-
-/// Trait for building text queries based on MatchType.
-trait TextQueryBuilder {
-    fn build_timestamp_query(&self, field_name: &str, value: i64) -> anyhow::Result<String>;
-    fn build_string_query(&self, field_name: &str, value: &str) -> anyhow::Result<String>;
-}
-
-/// Implementation of TextQueryBuilder for MatchType.
-impl TextQueryBuilder for MatchType {
-    fn build_timestamp_query(&self, field_name: &str, value: i64) -> anyhow::Result<String> {
-        match self {
-            MatchType::Equal => Ok(format!("({field_name} == {value})")),
-            MatchType::Gte => Ok(format!("({field_name} >= {value})")),
-            MatchType::Lte => Ok(format!("({field_name} <= {value})")),
-            MatchType::Gt => Ok(format!("({field_name} > {value})")),
-            MatchType::Lt => Ok(format!("({field_name} < {value})")),
-            _ => bail!("unsupported match type {:?} for timestamp search", self),
-        }
-    }
-
-    fn build_string_query(&self, field_name: &str, value: &str) -> anyhow::Result<String> {
-        match self {
-            MatchType::Equal => {
-                if field_name == CREATED_TIMESTAMP_NAME
-                    || field_name == EVENT_TIMESTAMP_NAME
-                    || field_name == EXPIRATION_TIMESTAMP_NAME
-                {
-                    Ok(format!("({field_name} == {value})"))
-                } else {
-                    Ok(format!("({field_name}:{value})"))
-                }
-            }
-            MatchType::Gte => Ok(format!("({field_name} >= {value})")),
-            MatchType::Lte => Ok(format!("({field_name} <= {value})")),
-            MatchType::Gt => Ok(format!("({field_name} > {value})")),
-            MatchType::Lt => Ok(format!("({field_name} < {value})")),
-            _ => bail!("unsupported match type {:?} for text search", self),
-        }
-    }
 }
 
 // A simple struct to manage the temporary location of the icing database.
@@ -682,23 +639,27 @@ impl IcingMetaDatabase {
             bail!("Invalid page token provided");
         }
 
-        let query = SearchMemoryQuery {
-            clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
-                field: MemoryField::Tags as i32,
-                match_type: MatchType::Equal as i32,
-                value: Some(text_query::Value::StringVal(tag.to_string())),
-            })),
+        let query_str = build_non_expired_query_str(TAG_NAME, tag);
+        let search_spec = icing::SearchSpecProto {
+            query: Some(query_str),
+            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+            schema_type_filters: vec![SCHEMA_NAME.to_string()],
+            enabled_features: vec![
+                "NUMERIC_SEARCH".to_string(),
+                icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
+                icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string(),
+            ],
+            ..Default::default()
         };
-        let (search_spec, scoring_spec) =
-            self.build_query_specs_filtering_expired_memories(&query, SCHEMA_NAME)?;
+        let scoring_spec = icing::ScoringSpecProto {
+            rank_by: Some(
+                icing::scoring_spec_proto::ranking_strategy::Code::CreationTimestamp.into(),
+            ),
+            ..Default::default()
+        };
         let projection = Self::create_blob_id_projection(SCHEMA_NAME);
-        let (search_result, next_page_token) = self.execute_search(
-            &search_spec,
-            &scoring_spec.unwrap_or_default(),
-            page_size,
-            page_token,
-            projection,
-        )?;
+        let (search_result, next_page_token) =
+            self.execute_search(&search_spec, &scoring_spec, page_size, page_token, projection)?;
         let blob_ids = Self::extract_blob_ids_from_search_result(search_result);
         if blob_ids.is_empty() {
             return Ok((blob_ids, PageToken::Start));
@@ -994,14 +955,14 @@ impl IcingMetaDatabase {
         page_size: i32,
         page_token: PageToken,
     ) -> anyhow::Result<(Vec<MemoryId>, PageToken)> {
-        let text_query = TextQuery {
-            match_type: MatchType::Lt as i32,
-            field: MemoryField::ExpirationTimestamp as i32,
-            value: Some(text_query::Value::TimestampVal(system_time_to_timestamp(
-                SystemTime::now(),
-            ))),
+        let now_ts = timestamp_to_i64(&system_time_to_timestamp(SystemTime::now()));
+        let search_spec = icing::SearchSpecProto {
+            query: Some(format!("({} < {})", EXPIRATION_TIMESTAMP_NAME, now_ts)),
+            enabled_features: vec!["NUMERIC_SEARCH".to_string()],
+            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+            schema_type_filters: vec![SCHEMA_NAME.to_string()],
+            ..Default::default()
         };
-        let (search_spec, _) = self.build_text_query_specs(&text_query, SCHEMA_NAME)?;
         let projection = Self::create_memory_id_projection(SCHEMA_NAME);
         let (search_result, next_page_token) = self.execute_search(
             &search_spec,
@@ -1073,368 +1034,6 @@ impl IcingMetaDatabase {
         let next_page_token =
             search_result.next_page_token.map(PageToken::from).unwrap_or(PageToken::Start);
         Ok((search_result, next_page_token))
-    }
-
-    pub fn search(
-        &self,
-        query: &SearchMemoryQuery,
-        page_size: i32,
-        page_token: PageToken,
-    ) -> anyhow::Result<(SearchResultIds, PageToken)> {
-        let search_views = Self::is_embedding_search(query);
-        let (schema_name, projection) = if search_views {
-            (
-                LLM_VIEW_SCHEMA_NAME,
-                icing::TypePropertyMask {
-                    schema_type: Some(LLM_VIEW_SCHEMA_NAME.to_string()),
-                    paths: vec![BLOB_ID_NAME.to_string(), VIEW_ID_NAME.to_string()],
-                },
-            )
-        } else {
-            (
-                SCHEMA_NAME,
-                icing::TypePropertyMask {
-                    schema_type: Some(SCHEMA_NAME.to_string()),
-                    paths: vec![BLOB_ID_NAME.to_string()],
-                },
-            )
-        };
-        let (search_spec, scoring_spec) =
-            self.build_query_specs_filtering_expired_memories(query, schema_name)?;
-        let scoring_spec = scoring_spec.unwrap_or_default();
-        let mut page_token = page_token;
-
-        // For text-only queries, Icing returns results already sorted by
-        // CreationTimestamp descending. We build results directly from the
-        // ordered output to preserve this ordering (a HashMap would lose it).
-        if !search_views {
-            let (search_result, next_page_token) = self.execute_search(
-                &search_spec,
-                &scoring_spec,
-                page_size,
-                page_token,
-                projection.clone(),
-            )?;
-            let mut search_result_ids = SearchResultIds::default();
-            for result in &search_result.results {
-                if let Some(blob_id) = Self::extract_blob_id_from_doc(result) {
-                    let score = result.score.map(|s| s as f32).unwrap_or(0.0);
-                    search_result_ids.items.push(SearchResultId {
-                        blob_id,
-                        score,
-                        view_ids: Vec::new(),
-                        view_scores: Vec::new(),
-                    });
-                }
-            }
-            return Ok((search_result_ids, next_page_token));
-        }
-
-        // When embedding search is used, we are matching against views instead
-        // of memories. Therefore, we might match mulitple views of the same memory.
-        // We need to aggregate the results and scores by memory id.
-        // The tricky part is how we handle pagination. We want to return
-        // `page_size` results to the user, but we need to keep searching to
-        // find views for the same memory. We can't just search for `page_size`
-        // because we don't know which memories the user has already seen.
-        // Therefore, we keep search for one view until we find `page_size`
-        // distinct memories.
-        // Icing provides a new api called `get_next_page` that allows us to
-        // some items of a page instead of the whole page. But the OSS version
-        // does not have it yet.
-        // TODO: yongheng - Add support for Icing's new get_next_page api.
-        ensure!(page_size > 0, "page_size must be positive for embedding search");
-        let mut id_maps: HashMap<BlobId, Vec<(ViewId, f32)>> = HashMap::new();
-        loop {
-            let (search_result, next_page_token) = self.execute_search(
-                &search_spec,
-                &scoring_spec,
-                1,
-                page_token,
-                projection.clone(),
-            )?;
-            page_token = next_page_token;
-
-            for result in &search_result.results {
-                if let (Some(blob_id), Some(view_id), score) = (
-                    Self::extract_blob_id_from_doc(result),
-                    Self::extract_view_id_from_doc(result),
-                    result.score.map(|s| s as f32).unwrap_or(0.0),
-                ) {
-                    id_maps.entry(blob_id).or_default().push((view_id, score));
-                }
-            }
-            if id_maps.len() == page_size as usize || page_token == PageToken::Start {
-                break;
-            }
-        }
-
-        let mut search_result_ids = SearchResultIds::default();
-
-        for (blob_id, views) in id_maps.into_iter() {
-            let mut view_ids = Vec::new();
-            let mut view_scores = Vec::new();
-            let mut total_score = 0.0;
-            for (view_id, score) in views {
-                view_ids.push(view_id);
-                view_scores.push(score);
-                total_score += score;
-            }
-            search_result_ids.items.push(SearchResultId {
-                blob_id,
-                view_ids,
-                score: total_score,
-                view_scores,
-            });
-        }
-        search_result_ids
-            .items
-            .sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Less));
-
-        Ok((search_result_ids, page_token))
-    }
-
-    fn is_embedding_search(query: &SearchMemoryQuery) -> bool {
-        match query.clause.as_ref() {
-            Some(search_memory_query::Clause::EmbeddingQuery(_)) => true,
-            Some(search_memory_query::Clause::QueryClauses(clauses)) => {
-                clauses.clauses.iter().any(Self::is_embedding_search)
-            }
-            _ => false,
-        }
-    }
-
-    fn build_query_specs_filtering_expired_memories(
-        &self,
-        query: &SearchMemoryQuery,
-        schema_name: &str,
-    ) -> anyhow::Result<(icing::SearchSpecProto, Option<icing::ScoringSpecProto>)> {
-        let (mut query_specs, score_spec) = self.build_query_specs(query, schema_name)?;
-
-        // A memory is considered not expired if its expiration timestamp is in the
-        // future, or if it has no expiration timestamp set.
-        let now_ts = timestamp_to_i64(&system_time_to_timestamp(SystemTime::now()));
-        query_specs.query = Some(format!(
-            "({}) AND (({} > {}) OR (NOT hasProperty(\"{}\")))",
-            query_specs.query.context("no query")?,
-            EXPIRATION_TIMESTAMP_NAME,
-            now_ts,
-            EXPIRATION_TIMESTAMP_NAME,
-        ));
-
-        query_specs.enabled_features.push(icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string());
-        if !query_specs.enabled_features.contains(&String::from("NUMERIC_SEARCH")) {
-            query_specs.enabled_features.push("NUMERIC_SEARCH".to_string());
-        }
-        if !query_specs
-            .enabled_features
-            .contains(&String::from(icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE))
-        {
-            query_specs
-                .enabled_features
-                .push(icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string());
-        }
-
-        Ok((query_specs, score_spec))
-    }
-
-    fn build_query_specs(
-        &self,
-        query: &SearchMemoryQuery,
-        schema_name: &str,
-    ) -> anyhow::Result<(icing::SearchSpecProto, Option<icing::ScoringSpecProto>)> {
-        match query.clause.as_ref().context("no clause")? {
-            search_memory_query::Clause::TextQuery(text_query) => {
-                self.build_text_query_specs(text_query, schema_name)
-            }
-            search_memory_query::Clause::EmbeddingQuery(embedding_query) => {
-                self.build_embedding_query_specs(embedding_query, schema_name)
-            }
-            search_memory_query::Clause::QueryClauses(clauses) => {
-                self.build_clauses_query_specs(clauses, schema_name)
-            }
-        }
-    }
-
-    fn build_clauses_query_specs(
-        &self,
-        clauses: &QueryClauses,
-        schema_name: &str,
-    ) -> anyhow::Result<(icing::SearchSpecProto, Option<icing::ScoringSpecProto>)> {
-        let operator = match clauses.query_operator() {
-            QueryOperator::And => "AND",
-            QueryOperator::Or => "OR",
-            _ => bail!("unsupported operator"),
-        };
-
-        // Check upfront if any clause involves embedding search.
-        // If so, use embedding-based scoring; otherwise use text-based scoring.
-        let has_embedding_search = clauses.clauses.iter().any(Self::is_embedding_search);
-
-        let mut sub_queries = Vec::new();
-        let mut embedding_vectors = Vec::new();
-        let mut metric_type = None;
-        for clause in &clauses.clauses {
-            let (spec, _) = self.build_query_specs(clause, schema_name)?;
-            if spec.embedding_query_metric_type.is_some() {
-                metric_type = spec.embedding_query_metric_type;
-            }
-            sub_queries.push(format!("({})", spec.query.context("no sub query")?));
-            embedding_vectors.extend(spec.embedding_query_vectors);
-        }
-
-        let query = sub_queries.join(&format!(" {} ", operator));
-        let mut search_spec = icing::SearchSpecProto {
-            query: Some(query),
-            embedding_query_vectors: embedding_vectors,
-            embedding_query_metric_type: metric_type,
-            enabled_features: vec![
-                "NUMERIC_SEARCH".to_string(),
-                icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
-            ],
-            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
-            ..Default::default()
-        };
-        if !schema_name.is_empty() {
-            search_spec.schema_type_filters.push(schema_name.to_string());
-        }
-
-        // Use embedding scoring if any clause involves embedding search,
-        // otherwise use text-based CreationTimestamp scoring.
-        let score_spec = if has_embedding_search {
-            Some(self.build_scoring_spec())
-        } else {
-            Some(icing::ScoringSpecProto {
-                rank_by: Some(
-                    icing::scoring_spec_proto::ranking_strategy::Code::CreationTimestamp.into(),
-                ),
-                ..Default::default()
-            })
-        };
-
-        Ok((search_spec, score_spec))
-    }
-
-    fn build_text_query_specs(
-        &self,
-        text_query: &TextQuery,
-        schema_name: &str,
-    ) -> anyhow::Result<(icing::SearchSpecProto, Option<icing::ScoringSpecProto>)> {
-        let field_name = match text_query.field() {
-            MemoryField::CreatedTimestamp => CREATED_TIMESTAMP_NAME,
-            MemoryField::EventTimestamp => EVENT_TIMESTAMP_NAME,
-            MemoryField::ExpirationTimestamp => EXPIRATION_TIMESTAMP_NAME,
-            MemoryField::Id => MEMORY_ID_NAME,
-            MemoryField::Tags => TAG_NAME,
-            _ => bail!("unsupported field for text search"),
-        };
-
-        let match_type = text_query.match_type();
-
-        // Handle empty/None values: when no value is provided, generate
-        // a query that checks for field existence (hasProperty).
-        let (query, needs_has_property_feature) = match text_query.value.as_ref() {
-            Some(text_query::Value::TimestampVal(timestamp)) => {
-                let value = timestamp_to_i64(timestamp);
-                (match_type.build_timestamp_query(field_name, value)?, false)
-            }
-            Some(text_query::Value::StringVal(text)) => {
-                let value = text.to_string();
-                if matches!(match_type, MatchType::Equal) && value.is_empty() {
-                    // Empty string value with Equal match type: check for field existence
-                    (format!("hasProperty(\"{field_name}\")"), true)
-                } else {
-                    (match_type.build_string_query(field_name, &value)?, false)
-                }
-            }
-            None => {
-                // No value provided: generate a hasProperty check for EQUAL match type,
-                // otherwise return an error since comparison operators need a value.
-                match match_type {
-                    MatchType::Equal => (format!("hasProperty(\"{field_name}\")"), true),
-                    _ => bail!("comparison operators require a value"),
-                }
-            }
-        };
-
-        let mut enabled_features = vec!["NUMERIC_SEARCH".to_string()];
-        if needs_has_property_feature {
-            enabled_features.push(icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string());
-            enabled_features.push(icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string());
-        }
-
-        let mut search_spec = icing::SearchSpecProto {
-            query: Some(query),
-            enabled_features,
-            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
-            ..Default::default()
-        };
-        if !schema_name.is_empty() {
-            search_spec.schema_type_filters.push(schema_name.to_string());
-        }
-
-        // Sort text search results by created_timestamp (descending, i.e. newest
-        // first).
-        let scoring_spec = icing::ScoringSpecProto {
-            rank_by: Some(
-                icing::scoring_spec_proto::ranking_strategy::Code::CreationTimestamp.into(),
-            ),
-            ..Default::default()
-        };
-
-        Ok((search_spec, Some(scoring_spec)))
-    }
-
-    fn build_scoring_spec(&self) -> icing::ScoringSpecProto {
-        // Caculate the sum of the scores of all matching embeddings.
-        const SUM_ALL_MATCHING_EMBEDDING: &str =
-            "sum(this.matchedSemanticScores(getEmbeddingParameter(0)))";
-        let mut scoring_spec = icing::get_default_scoring_spec();
-        scoring_spec.rank_by = Some(
-            icing::scoring_spec_proto::ranking_strategy::Code::AdvancedScoringExpression.into(),
-        );
-        scoring_spec.advanced_scoring_expression = Some(SUM_ALL_MATCHING_EMBEDDING.to_string());
-        scoring_spec
-    }
-
-    fn build_embedding_query_specs(
-        &self,
-        embedding_query: &EmbeddingQuery,
-        schema_name: &str,
-    ) -> anyhow::Result<(icing::SearchSpecProto, Option<icing::ScoringSpecProto>)> {
-        let query_embeddings: &[Embedding] = &embedding_query.embedding;
-        let score_op: Option<ScoreRange> = embedding_query.score_range;
-
-        // Search the first embedding property, specified by `EMBEDDING_NAME`.
-        // Since we have only one embedding property, this is the one to go.
-        let query_string = if let Some(score_op) = score_op {
-            let score_min = score_op.min;
-            let score_max = score_op.max;
-            format!("semanticSearch(getEmbeddingParameter(0), {score_min}, {score_max})")
-        } else {
-            "semanticSearch(getEmbeddingParameter(0))".to_string()
-        };
-
-        let mut search_spec = icing::SearchSpecProto {
-            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
-            embedding_query_metric_type: Some(
-                icing::search_spec_proto::embedding_query_metric_type::Code::DotProduct.into(),
-            ),
-
-            embedding_query_vectors: query_embeddings
-                .iter()
-                .map(|x| icing::create_vector_proto(x.model_signature.as_str(), &x.values))
-                .collect(),
-
-            query: Some(query_string),
-            enabled_features: vec![icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string()],
-            ..Default::default()
-        };
-        if !schema_name.is_empty() {
-            search_spec.schema_type_filters.push(schema_name.to_string());
-        }
-
-        Ok((search_spec, Some(self.build_scoring_spec())))
     }
 
     // =========================================================================
@@ -1859,94 +1458,6 @@ impl IcingMetaDatabase {
         Ok(search_spec)
     }
 
-    /// Search based on the document embedding.
-    /// The process is as follow:
-    /// 1. For each memory, we find all the document embeddings that matches the
-    ///    name of the search embedding, say `[doc_embeding1, doc_embedding2,
-    ///    ...]`.
-    /// 2. Perform a dot product on `search_embedding` and the matched
-    ///    `[doc1_embedding, ...]`, which gives a list of scores `[score1,
-    ///    score2, ...]`.
-    /// 3. Sum the scores, and the corresponding memory has the final score
-    ///    `score_sum`.
-    /// 4. We repeat 1-3 for all memories, rank the memories by `score_sum`, and
-    ///    return the first `limit` ones with highest scores.
-    pub fn embedding_search(
-        &self,
-        embedding_query: &EmbeddingQuery,
-        page_size: i32,
-        page_token: PageToken,
-        search_views: bool,
-    ) -> anyhow::Result<(Vec<BlobId>, Vec<f32>, PageToken)> {
-        let (schema_name, id_name) = if search_views {
-            (LLM_VIEW_SCHEMA_NAME, BLOB_ID_NAME)
-        } else {
-            (SCHEMA_NAME, BLOB_ID_NAME)
-        };
-        let (search_spec, scoring_spec) =
-            self.build_embedding_query_specs(embedding_query, schema_name)?;
-
-        let projection = icing::TypePropertyMask {
-            schema_type: Some(schema_name.to_string()),
-            paths: vec![id_name.to_string()],
-        };
-
-        let (search_result, next_page_token) = self.execute_search(
-            &search_spec,
-            &scoring_spec.unwrap_or_default(),
-            page_size,
-            page_token,
-            projection,
-        )?;
-
-        let scores: Vec<f32> = search_result
-            .results
-            .iter()
-            .map(|x| x.score.map(|s| s as f32).unwrap_or(0.0))
-            .collect();
-
-        let ids = Self::extract_blob_ids_from_search_result(search_result);
-        ensure!(ids.len() == scores.len());
-        if ids.is_empty() {
-            return Ok((ids, scores, PageToken::Start));
-        }
-        Ok((ids, scores, next_page_token))
-    }
-
-    pub fn text_search(
-        &self,
-        text_query: &TextQuery,
-        page_size: i32,
-        page_token: PageToken,
-    ) -> anyhow::Result<(SearchResultIds, PageToken)> {
-        let (search_spec, scoring_spec) = self.build_text_query_specs(text_query, SCHEMA_NAME)?;
-        let projection = Self::create_blob_id_projection(SCHEMA_NAME);
-        let (search_result, next_page_token) = self.execute_search(
-            &search_spec,
-            &scoring_spec.unwrap_or_default(),
-            page_size,
-            page_token,
-            projection,
-        )?;
-        let scores: Vec<f32> = search_result
-            .results
-            .iter()
-            .map(|x| x.score.map(|s| s as f32).unwrap_or(0.0))
-            .collect();
-        let ids = Self::extract_blob_ids_from_search_result(search_result);
-        ensure!(ids.len() == scores.len());
-        if ids.is_empty() {
-            return Ok((SearchResultIds::default(), PageToken::Start));
-        }
-        let search_result_ids = SearchResultIds {
-            items: ids
-                .into_iter()
-                .map(|id| SearchResultId { blob_id: id, ..Default::default() })
-                .collect(),
-        };
-        Ok((search_result_ids, next_page_token))
-    }
-
     pub fn delete_document(&mut self, blob_id: &BlobId) -> anyhow::Result<()> {
         let result =
             self.icing_search_engine.delete(NAMESPACE_NAME.as_bytes(), blob_id.as_bytes())?;
@@ -2215,19 +1726,6 @@ mod tests {
         }
     }
 
-    /// Builds an embedding search query with "test_model".
-    fn embedding_query(values: &[f32]) -> SearchMemoryQuery {
-        SearchMemoryQuery {
-            clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
-                embedding: vec![Embedding {
-                    model_signature: "test_model".to_string(),
-                    values: values.to_vec(),
-                }],
-                ..Default::default()
-            })),
-        }
-    }
-
     fn add_test_memory(db: &mut IcingMetaDatabase, suffix: &str) -> (MemoryId, BlobId) {
         let memory_id = format!("memory_id_{suffix}");
         let blob_id = format!("blob_id_{suffix}");
@@ -2349,13 +1847,6 @@ mod tests {
             ]
         );
 
-        // 4. Embedding search works (requires LLM view schema).
-        let query = embedding_query(&[1.0, 0.0, 0.0]);
-        let (search_results, _) = imported_db.search(&query, 10, PageToken::Start)?;
-        let blob_ids: Vec<String> =
-            search_results.items.iter().map(|r| r.blob_id.clone()).collect();
-        assert_that!(blob_ids, unordered_elements_are![eq(&"golden_blob_view".to_string())]);
-
         // 5. Writing new memories after import succeeds (schema must be set).
         let new_mem = mem_with_view("new_mem", &["new_tag"], "v_new", &[0.0, 1.0, 0.0]);
         imported_db.add_memory(&new_mem, "new_blob".into())?;
@@ -2388,59 +1879,6 @@ mod tests {
     }
 
     #[gtest]
-    fn icing_embedding_search_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
-
-        let bid1 = 98765.to_string();
-        db.add_memory(
-            &mem_with_view("memory_embed_1", &["embed_tag"], "view1", &[1.0, 0.0, 0.0]),
-            bid1.clone(),
-        )?;
-
-        let bid2 = 98766.to_string();
-        db.add_memory(
-            &mem_with_view("memory_embed_2", &["embed_tag"], "view2", &[0.0, 1.0, 0.0]),
-            bid2.clone(),
-        )?;
-
-        let query = embedding_query(&[0.9, 0.1, 0.0]);
-
-        // Query embedding close to embedding1
-        let (results, _) = db.search(&query, 10, PageToken::Start)?;
-        let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-        let scores: Vec<f32> = results.items.iter().map(|r| r.score).collect();
-        assert_that!(blob_ids, elements_are![eq(&bid1), eq(&bid2)]);
-        assert_that!(scores, elements_are![eq(&0.9), eq(&0.1)]);
-
-        // With limit=1, only top result
-        let (results, _) = db.search(&query, 1, PageToken::Start)?;
-        let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-        let scores: Vec<f32> = results.items.iter().map(|r| r.score).collect();
-        assert_that!(blob_ids, elements_are![eq(&bid1)]);
-        assert_that!(scores, elements_are![eq(&0.9)]);
-        Ok(())
-    }
-
-    #[gtest]
-    fn embedding_search_zero_page_size_fails() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
-
-        let bid = 98765.to_string();
-        db.add_memory(
-            &mem_with_view("memory_embed_1", &["embed_tag"], "view1", &[1.0, 0.0, 0.0]),
-            bid,
-        )?;
-
-        let query = embedding_query(&[1.0, 0.0, 0.0]);
-
-        // Query with page_size = 0 should fail
-        let result = db.search(&query, 0, PageToken::Start);
-        assert!(result.is_err());
-
-        Ok(())
-    }
-
-    #[gtest]
     fn get_all_memory_ids_finds_memory_without_timestamp() -> anyhow::Result<()> {
         let mut db = IcingMetaDatabase::new(tempdir())?;
 
@@ -2453,53 +1891,6 @@ mod tests {
 
         let memory_ids = db.get_all_memory_ids()?;
         assert_that!(memory_ids, elements_are![eq("no_ts")]);
-
-        Ok(())
-    }
-
-    #[gtest]
-    fn icing_embedding_search_expired_memory_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
-
-        let past = SystemTime::now() - std::time::Duration::from_secs(3600);
-        let future = SystemTime::now() + std::time::Duration::from_secs(3600);
-
-        // Expired memory
-        let mut m_expired =
-            mem_with_view("expired_memory_embed", &["embed_tag"], "expired_view", &[1.0, 0.0, 0.0]);
-        m_expired.expiration_timestamp = Some(system_time_to_timestamp(past));
-        db.add_memory(&m_expired, "expired_blob_embed".into())?;
-
-        // Non-expired memory (future expiration)
-        let mut m_future = mem_with_view(
-            "non_expired_memory_embed",
-            &["embed_tag"],
-            "non_expired_view",
-            &[1.0, 0.0, 0.0],
-        );
-        m_future.expiration_timestamp = Some(system_time_to_timestamp(future));
-        db.add_memory(&m_future, "non_expired_blob_embed".into())?;
-
-        // Never-expired memory (no expiration)
-        db.add_memory(
-            &mem_with_view(
-                "never_expired_memory_embed",
-                &["embed_tag"],
-                "never_expired_view",
-                &[1.0, 0.0, 0.0],
-            ),
-            "never_expired_blob_embed".into(),
-        )?;
-
-        let query = embedding_query(&[1.0, 0.0, 0.0]);
-        let (results, _) = db.search(&query, 10, PageToken::Start)?;
-        let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-
-        // Only non-expired and never-expired memories should appear.
-        assert_that!(
-            blob_ids,
-            unordered_elements_are![eq(&"non_expired_blob_embed"), eq(&"never_expired_blob_embed")]
-        );
 
         Ok(())
     }
@@ -2631,12 +2022,6 @@ mod tests {
             ))
         );
 
-        // The view should also be searchable in the rebased db.
-        let query = embedding_query(&[1.0, 0.0, 0.0]);
-        let (results, _) = db3_prime.search(&query, 10, PageToken::Start)?;
-        let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-        assert_that!(blob_ids, elements_are![eq(&bid_c)]);
-
         Ok(())
     }
 
@@ -2722,40 +2107,6 @@ mod tests {
     }
 
     #[gtest]
-    fn icing_deduplicate_search_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
-
-        let mut blob_ids_expected = vec![];
-        for i in 0..5 {
-            let blob_id = (1000 + i).to_string();
-            let views: Vec<LlmView> = (0..2)
-                .map(|j| {
-                    let score = 1.0 - (i as f32 * 0.2 + j as f32 * 0.1);
-                    llm_view(&format!("view_{i}_{j}"), &[score, 0.0, 0.0])
-                })
-                .collect();
-            db.add_memory(
-                &mem_with_views(&format!("memory_embed_{i}"), &["embed_tag"], views),
-                blob_id.clone(),
-            )?;
-            blob_ids_expected.push(blob_id);
-        }
-
-        let query = embedding_query(&[1.0, 0.0, 0.0]);
-        let (results, _) = db.search(&query, 2, PageToken::Start)?;
-        assert_that!(results.items, len(eq(2)));
-
-        let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-        let scores: Vec<f32> = results.items.iter().map(|r| r.score).collect();
-
-        // Memory 0: views score 1.0+0.9=1.9. Memory 1: first matching view 0.8.
-        assert_that!(blob_ids, elements_are![eq(&blob_ids_expected[0]), eq(&blob_ids_expected[1])]);
-        assert_that!(scores, elements_are![eq(&1.9), eq(&0.8)]);
-
-        Ok(())
-    }
-
-    #[gtest]
     fn icing_delete_memory_also_deletes_views_test() -> anyhow::Result<()> {
         let mut db = IcingMetaDatabase::new(tempdir())?;
         let mid = "memory_id".to_string();
@@ -2800,26 +2151,6 @@ mod tests {
             "blob_id_3".into(),
         )?;
         assert_that!(db.get_view_ids_by_memory_id(mid)?, is_empty());
-
-        Ok(())
-    }
-
-    #[gtest]
-    fn icing_search_with_view_scores_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
-        let blob_id = "blob_id_view_scores".to_string();
-        let views = vec![llm_view("view1", &[1.0, 0.0, 0.0]), llm_view("view2", &[0.0, 1.0, 0.0])];
-        db.add_memory(&mem_with_views("memory_id_view_scores", &["tag"], views), blob_id.clone())?;
-
-        let query = embedding_query(&[0.7, 0.3, 0.0]);
-        let (results, _) = db.search(&query, 10, PageToken::Start)?;
-
-        assert_that!(results.items, len(eq(1)));
-        let result = &results.items[0];
-        assert_eq!(result.blob_id, blob_id);
-        assert_that!(&result.view_ids, elements_are![eq("view1"), eq("view2")]);
-        assert_that!(&result.view_scores, elements_are![eq(&0.7), eq(&0.3)]);
-        assert_eq!(result.score, 1.0);
 
         Ok(())
     }
@@ -2941,106 +2272,6 @@ mod tests {
         Ok(())
     }
 
-    #[gtest]
-    fn build_text_query_specs_with_no_value_test() -> anyhow::Result<()> {
-        let icing_database = IcingMetaDatabase::new(tempdir())?;
-
-        // Test with None value and EQUAL match type - should generate hasProperty query
-        let text_query = TextQuery {
-            match_type: MatchType::Equal.into(),
-            field: MemoryField::Tags.into(),
-            value: None,
-        };
-
-        let (search_spec, _) = icing_database.build_text_query_specs(&text_query, SCHEMA_NAME)?;
-
-        // Verify query uses hasProperty
-        expect_that!(search_spec.query.as_ref().unwrap(), eq(&"hasProperty(\"tag\")".to_string()));
-
-        // Verify enabled features include HAS_PROPERTY_FUNCTION_FEATURE
-        expect_that!(
-            search_spec.enabled_features,
-            contains(eq(&icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string()))
-        );
-        expect_that!(
-            search_spec.enabled_features,
-            contains(eq(&icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string()))
-        );
-
-        Ok(())
-    }
-
-    #[gtest]
-    fn build_text_query_specs_with_empty_string_value_test() -> anyhow::Result<()> {
-        let icing_database = IcingMetaDatabase::new(tempdir())?;
-
-        // Test with empty string value and EQUAL match type - should generate
-        // hasProperty query
-        let text_query = TextQuery {
-            match_type: MatchType::Equal.into(),
-            field: MemoryField::Id.into(),
-            value: Some(text_query::Value::StringVal("".to_string())),
-        };
-
-        let (search_spec, _) = icing_database.build_text_query_specs(&text_query, SCHEMA_NAME)?;
-
-        // Verify query uses hasProperty
-        expect_that!(
-            search_spec.query.as_ref().unwrap(),
-            eq(&"hasProperty(\"memoryId\")".to_string())
-        );
-
-        // Verify enabled features include HAS_PROPERTY_FUNCTION_FEATURE
-        expect_that!(
-            search_spec.enabled_features,
-            contains(eq(&icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string()))
-        );
-
-        Ok(())
-    }
-
-    #[gtest]
-    fn build_text_query_specs_comparison_with_no_value_fails_test() -> anyhow::Result<()> {
-        let icing_database = IcingMetaDatabase::new(tempdir())?;
-
-        // Test with None value and GTE match type - should fail
-        let text_query = TextQuery {
-            match_type: MatchType::Gte.into(),
-            field: MemoryField::CreatedTimestamp.into(),
-            value: None,
-        };
-
-        let result = icing_database.build_text_query_specs(&text_query, SCHEMA_NAME);
-        expect_that!(result.is_err(), eq(true));
-
-        Ok(())
-    }
-
-    #[gtest]
-    fn build_text_query_specs_with_string_value_test() -> anyhow::Result<()> {
-        let icing_database = IcingMetaDatabase::new(tempdir())?;
-
-        // Test with a non-empty string value - should work as before
-        let text_query = TextQuery {
-            match_type: MatchType::Equal.into(),
-            field: MemoryField::Tags.into(),
-            value: Some(text_query::Value::StringVal("my_tag".to_string())),
-        };
-
-        let (search_spec, _) = icing_database.build_text_query_specs(&text_query, SCHEMA_NAME)?;
-
-        // Verify query uses standard term search
-        expect_that!(search_spec.query.as_ref().unwrap(), eq(&"(tag:my_tag)".to_string()));
-
-        // Verify HAS_PROPERTY_FUNCTION_FEATURE is NOT included (not needed)
-        expect_that!(
-            search_spec.enabled_features,
-            not(contains(eq(&icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string())))
-        );
-
-        Ok(())
-    }
-
     /// Verifies delete_memories uses MemoryId (not BlobId) for deletion.
     #[gtest]
     fn delete_memories_uses_correct_id_types_test() -> anyhow::Result<()> {
@@ -3062,39 +2293,6 @@ mod tests {
         let (results, _) = db.get_memories_by_tag("test_tag", 10, PageToken::Start)?;
         expect_that!(results, is_empty());
 
-        Ok(())
-    }
-
-    /// text_search returns results sorted by created_timestamp descending.
-    #[gtest]
-    fn text_search_sorts_by_created_timestamp_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
-
-        // Insert in non-sorted order: old, new, mid.
-        for (id, blob, secs) in [
-            ("memory_old", "blob_old", 1000),
-            ("memory_new", "blob_new", 3000),
-            ("memory_mid", "blob_mid", 2000),
-        ] {
-            let m = Memory {
-                id: id.into(),
-                tags: vec!["sort_test".into()],
-                created_timestamp: Some(ts(secs)),
-                ..Default::default()
-            };
-            db.add_memory(&m, blob.into())?;
-        }
-
-        let text_query = TextQuery {
-            field: MemoryField::Tags as i32,
-            match_type: MatchType::Equal as i32,
-            value: Some(text_query::Value::StringVal("sort_test".into())),
-        };
-        let (results, _) = db.text_search(&text_query, 10, PageToken::Start)?;
-        let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-
-        expect_that!(blob_ids.len(), eq(3));
-        expect_that!(blob_ids, elements_are![eq("blob_new"), eq("blob_mid"), eq("blob_old")]);
         Ok(())
     }
 

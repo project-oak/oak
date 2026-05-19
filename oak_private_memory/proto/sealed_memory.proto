@@ -95,6 +95,8 @@ message LLMView {
     LLMViewContent multimodal_view = 13;
   }
 
+  // ==== Following fields are for prototyping, clients should ignore. ====
+
   // The unique identifier of the view.
   string id = 20;
 
@@ -138,7 +140,6 @@ enum MemoryField {
   EVENT_TIMESTAMP = 6;       // The 'event_timestamp' field.
   EXPIRATION_TIMESTAMP = 7;  // The 'expiration_timestamp' field.
   NAME = 8;                  // The 'name' field.
-  VIEWS = 9;                 // The 'views' field.
   reserved 3;
 }
 
@@ -249,37 +250,6 @@ message GetMemoryByNameResponse {
   Memory memory = 2;
 }
 
-// Metric type for comparing embeddings.
-enum EmbeddingQueryMetricType {
-  DOT_PRODUCT = 0;
-  // COSINE, EUCLIDEAN, etc
-}
-
-message ScoreRange {
-  float min = 1;
-  float max = 2;
-}
-
-// Defines the query for an embedding search.
-message EmbeddingQuery {
-  EmbeddingQueryMetricType metric_type = 1;
-  repeated Embedding embedding = 2;
-
-  // If score_range is set, only the embeddings with scores in the
-  // range will be returned.
-  // For example, if the search embedding is [1,1,1], and we have two documents:
-  // Document 1:
-  //   embedding: [{"model1": [1, 0, 1]}, {"model1": [1, 1, 1]}]
-  // Document 2:
-  //   embedding: [{"model1": [1, 0, 0]}, {"model1": [0, 1, 1]}]
-  // If the score_range is [2.5, 4.0] and the aggregate type is SUM with
-  // DOT_PRODUCT metric, then the second document will be filtered out because
-  // none of the embeddings has the score in the range. The first document will
-  // be returned, because its second embedding has the score of 3.0 in the range
-  // [2.5, 4.0]. And its first embedding is filtered out.
-  ScoreRange score_range = 3;
-}
-
 enum MatchType {
   MATCH_TYPE_UNSPECIFIED = 0;
   MATCH_TYPE_EQUAL = 1;
@@ -287,46 +257,6 @@ enum MatchType {
   MATCH_TYPE_LTE = 3;
   MATCH_TYPE_LT = 4;
   MATCH_TYPE_GT = 5;
-}
-
-// Represents a single clause in a query.
-message TextQuery {
-  MatchType match_type = 1;
-  // The field to search within (e.g., "tags", "id").
-  MemoryField field = 2;
-  // The value to search for in the specified 'field'.
-  oneof value {
-    string string_val = 3;
-    google.protobuf.Timestamp timestamp_val = 4;
-  }
-}
-
-// Logical operator for combining query clauses.
-enum QueryOperator {
-  QUERY_OPERATOR_UNSPECIFIED = 0;
-  QUERY_OPERATOR_AND = 1;  // All clauses must match.
-  QUERY_OPERATOR_OR = 2;   // Any clause can match.
-}
-
-// Query for searching memories. Supports text-based queries, embedding-based
-// (semantic) queries, and combinations using QueryClauses.
-//
-// Sorting behavior:
-// - If the query involves any embedding search (at any nesting level), results
-//   are sorted by embedding similarity (highest score first).
-// - If the query involves only text-based queries, results are sorted by
-//   creation timestamp (newest first).
-message SearchMemoryQuery {
-  oneof clause {
-    EmbeddingQuery embedding_query = 1;
-    TextQuery text_query = 2;
-    QueryClauses query_clauses = 3;
-  }
-}
-
-message QueryClauses {
-  QueryOperator query_operator = 1;
-  repeated SearchMemoryQuery clauses = 2;
 }
 
 // Defines which parts of the Memory object to return.
@@ -487,49 +417,6 @@ message SearchMemoriesResultItem {
   // Sorting and scoring information to be added in the future, pending design.
 }
 
-message SearchMemoryRequest {
-  SearchMemoryQuery query = 1;
-  // The maximum number of memories to return. The service may return fewer than
-  // this value.
-  // The `page_size` should keep the same as the previous request if
-  // `page_token` is set.
-  int32 page_size = 2;
-  // A page token, received from a previous `SearchMemory` call.
-  // Provide this to retrieve the subsequent page.
-  //
-  // When paginating, all other parameters provided to `SearchMemory` must match
-  // the call that provided the page token.
-  string page_token = 3;
-  // Specifies which fields of the matching Memory objects to return or not to
-  // return.
-  ResultMask result_mask = 4;
-
-  // By default, the LLM views are removed if we are using text only search.
-  // Also, when using embedding search, only the matched llm views are returned.
-  // Set this to true to keep all the LLM views.
-  bool keep_all_llm_views = 5;
-}
-
-message SearchMemoryResultItem {
-  Memory memory = 1;
-  // The score for the matched memory, which is the sum of the scores for each
-  // matched view in the memory.
-  float score = 2;
-  // The scores for each matched view in the memory.
-  // The order of the scores corresponds to the order of the views in the
-  // memory.
-  // Note: This is only populated if `keep_all_llm_views` is not set in the
-  // request.
-  repeated float view_scores = 3;
-}
-
-message SearchMemoryResponse {
-  repeated SearchMemoryResultItem results = 1;
-  // A token to retrieve the next page of results.
-  // If this field is omitted, there are no more results.
-  string next_page_token = 2;
-}
-
 message KeyDerivationInfo {
   bytes kek_salt = 1;     // Salt used for KEK derivation.
   int32 kek_version = 2;  // Version of the KEK derivation method or key.
@@ -584,6 +471,7 @@ message GetDatabaseMetricsRequest {
 message GetDatabaseMetricsResponse {
   message MemoryInfo {
     int64 memory_count = 1;
+    // Total number of LLM view entities across all memories.
     int64 llm_view_count = 2;
   }
 
@@ -616,8 +504,6 @@ message SealedMemoryRequest {
     GetMemoryByNameRequest get_memory_by_name_request = 11;
 
     SearchMemoriesRequest search_memories_request = 12;
-    // Note: to be deprecated once SearchMemoriesRequest is implemented.
-    SearchMemoryRequest search_memory_request = 7;
 
     // Caution: this deletes all of the user's memories, across all products.
     ResetMemoryRequest reset_memory_request = 3;
@@ -626,16 +512,15 @@ message SealedMemoryRequest {
 
     SyncDatabaseRequest sync_database_request = 14;
 
-    // Use SearchMemoryRequest.
+    // Use SearchMemoriesRequest instead.
     GetMemoriesRequest get_memories_request = 2 [deprecated = true];
   }
-
-  // Reserved so that request and response have the same field order.
-  reserved 4;
 
   // Optional unique identifier for this request within the session.
   // It is set by the clients.
   int32 request_id = 50;
+
+  reserved 4, 7;
 }
 
 message SealedMemoryResponse {
@@ -653,8 +538,6 @@ message SealedMemoryResponse {
     ResetMemoryResponse reset_memory_response = 3;
 
     SearchMemoriesResponse search_memories_response = 12;
-    // Note: to be deprecated once SearchMemoriesRequest is implemented.
-    SearchMemoryResponse search_memory_response = 7;
 
     GetDatabaseMetricsResponse get_database_metrics_response = 13;
 
@@ -684,6 +567,8 @@ message SealedMemoryResponse {
 
   // Propagated from the request_id from the request.
   int32 request_id = 50;
+
+  reserved 7;
 }
 
 message SealedMemorySessionRequest {
