@@ -90,12 +90,22 @@ fn main() -> anyhow::Result<()> {
     }
 
     for snp_page in stage0.get_snp_pages() {
-        let page_type = if cli.qemu && snp_page.page_type == PageType::Unmeasured {
-            // QEMU uses page type Zero for unmeasured pages as well.
-            PageType::Zero
-        } else {
-            snp_page.page_type
-        };
+        // Ignore kernel hashes page for now when calculating the measurement for non
+        // qemu vmms
+        if !cli.qemu && snp_page.page_type == PageType::Normal {
+            continue;
+        }
+        let page_type =
+            if cli.qemu && matches!(snp_page.page_type, PageType::Unmeasured | PageType::Normal) {
+                // QEMU calls KVM_SEV_SNP_LAUNCH_UPDATE with page_type = ZERO for
+                // both Unmeasured pages and the kernel-hashes page when
+                // `kernel-hashes=on` is not set on the sev-snp-guest object. The
+                // PSP folds those into the digest as Zero pages (contents = 48
+                // zero bytes, not SHA-384 of a zero 4 KiB page).
+                PageType::Zero
+            } else {
+                snp_page.page_type
+            };
         for page_number in 0..snp_page.page_count {
             base_page_info.update_from_snp_page(
                 page_type,

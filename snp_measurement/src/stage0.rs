@@ -99,8 +99,6 @@ impl SnpRomParsing for Stage0Info {
         self.bytes[sev_metadata_header_end..metadata_entries_end]
             .chunks(SEV_METADATA_ENTRY_SIZE)
             .map(SevMetadataPageInfo::parse)
-            // Ignore kernel hashes page for now when calculating the measurement.
-            .filter(|info| info.page_type != PageType::Normal)
             .collect()
     }
 
