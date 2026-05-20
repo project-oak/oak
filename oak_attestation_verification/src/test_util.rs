@@ -17,11 +17,13 @@
 use intoto::statement::{
     DefaultPredicate, DefaultStatement, Statement, make_statement, serialize_statement,
 };
+use oak_digest::{hex_digest_from_contents, raw_to_hex_digest};
 use oak_proto_rust::oak::{
-    HexDigest,
+    HexDigest, RawDigest,
     attestation::v1::{
-        BinaryReferenceValue, EndorsementReferenceValue, KernelBinaryReferenceValue,
-        binary_reference_value, kernel_binary_reference_value,
+        BinaryReferenceValue, Endorsement, EndorsementReferenceValue, KernelBinaryReferenceValue,
+        Signature, SignedEndorsement, binary_reference_value, endorsement::Format,
+        kernel_binary_reference_value,
     },
 };
 use oak_time::{Instant, make_instant};
@@ -87,7 +89,7 @@ pub fn kernel_binary_reference_value_for_endorser_pk(
     }
 }
 
-fn endorsement_reference_value(public_key: PublicKey) -> EndorsementReferenceValue {
+pub fn endorsement_reference_value(public_key: PublicKey) -> EndorsementReferenceValue {
     let endorser_public_key =
         public_key.to_public_key_der().expect("Couldn't convert public key to DER").into_vec();
     let endorser_key = create_verifying_key_from_raw(&endorser_public_key, 1);
@@ -96,6 +98,72 @@ fn endorsement_reference_value(public_key: PublicKey) -> EndorsementReferenceVal
         Vec::new(),
         create_tlog_reference_values_skip(),
     )
+}
+
+/// Creates a [`SignedEndorsement`] from a pre-built in-toto statement.
+pub fn sign_endorsement(
+    statement: &DefaultStatement,
+    signing_key: &p256::ecdsa::SigningKey,
+    subject: &[u8],
+) -> SignedEndorsement {
+    let (serialized, signature) = serialize_and_sign_endorsement(statement, signing_key.clone());
+    SignedEndorsement {
+        endorsement: Some(Endorsement {
+            format: Format::EndorsementFormatJsonIntoto.into(),
+            serialized,
+            subject: subject.to_vec(),
+        }),
+        signature: Some(Signature { key_id: 1, raw: signature.as_bytes().to_vec() }),
+        ..Default::default()
+    }
+}
+
+/// Creates a [`SignedEndorsement`] where the in-toto statement's subject
+/// digest is the sha2_256 measurement itself (not a hash of it).
+///
+/// Use this for cases where `acquire_expected_digests` is called — it
+/// extracts the `HexDigest` from the statement and converts it to a
+/// `RawDigest` to compare against the evidence measurement directly.
+pub fn make_signed_endorsement_for_digest(
+    measurement: &[u8],
+    not_before: Instant,
+    not_after: Instant,
+    signing_key: &p256::ecdsa::SigningKey,
+    claim_types: Vec<&str>,
+) -> SignedEndorsement {
+    let hex_digest =
+        raw_to_hex_digest(&RawDigest { sha2_256: measurement.to_vec(), ..Default::default() });
+    let statement = make_statement(
+        "fake_subject_name",
+        &hex_digest,
+        not_before,
+        not_before,
+        not_after,
+        claim_types,
+    );
+    sign_endorsement(&statement, signing_key, measurement)
+}
+
+/// Creates a [`SignedEndorsement`] for serialized contents (e.g.
+/// `KernelAttachment` or `MpmAttachment`). The in-toto statement's
+/// subject digest is the SHA-256 of `contents`.
+pub fn make_signed_endorsement_for_contents(
+    contents: &[u8],
+    not_before: Instant,
+    not_after: Instant,
+    signing_key: &p256::ecdsa::SigningKey,
+    claim_types: Vec<&str>,
+) -> SignedEndorsement {
+    let hex_digest = hex_digest_from_contents(contents);
+    let statement = make_statement(
+        "fake_subject_name",
+        &hex_digest,
+        not_before,
+        not_before,
+        not_after,
+        claim_types,
+    );
+    sign_endorsement(&statement, signing_key, contents)
 }
 
 pub trait GetValidity {
