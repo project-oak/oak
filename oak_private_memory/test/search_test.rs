@@ -234,6 +234,49 @@ fn test_search_memories_v2_name_filter_with_missing_name() -> anyhow::Result<()>
 }
 
 #[gtest]
+fn test_search_memories_v2_limit_field() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-limit-test"))?;
+
+    for i in 0..10 {
+        db.add_memory(&mem_tagged(&format!("m{i}"), &["limit_tag"]), format!("blob{i}"))?;
+    }
+
+    let req = SearchMemoriesRequest {
+        filter: Some(tag_filter("limit_tag")),
+        limit: 5,
+        ..Default::default()
+    };
+
+    assert_that!(search_blob_ids(&db, &req)?, len(eq(5)));
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_limit_across_pages() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-limit-pages-test"))?;
+
+    for i in 0..10 {
+        db.add_memory(&mem_tagged(&format!("m{i}"), &["limit_page_tag"]), format!("blob{i}"))?;
+    }
+
+    let mut req = SearchMemoriesRequest {
+        filter: Some(tag_filter("limit_page_tag")),
+        page_size: 5,
+        limit: 7,
+        ..Default::default()
+    };
+
+    let (res1, token1) = db.search_memories(&req)?;
+    assert_that!(res1.items, len(eq(5)));
+
+    req.page_token = token1.into();
+    let (res2, token2) = db.search_memories(&req)?;
+    assert_that!(res2.items, len(eq(2)));
+    assert_that!(String::from(token2), eq(""));
+    Ok(())
+}
+
+#[gtest]
 fn test_search_memories_v2_timestamp_gte() -> anyhow::Result<()> {
     let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-ts-gte-test"))?;
     for (id, blob, secs) in [("m1", "blob1", 100), ("m2", "blob2", 200), ("m3", "blob3", 300)] {

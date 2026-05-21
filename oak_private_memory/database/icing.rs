@@ -658,8 +658,14 @@ impl IcingMetaDatabase {
             ..Default::default()
         };
         let projection = Self::create_blob_id_projection(SCHEMA_NAME);
-        let (search_result, next_page_token) =
-            self.execute_search(&search_spec, &scoring_spec, page_size, page_token, projection)?;
+        let (search_result, next_page_token) = self.execute_search(
+            &search_spec,
+            &scoring_spec,
+            page_size,
+            None,
+            page_token,
+            projection,
+        )?;
         let blob_ids = Self::extract_blob_ids_from_search_result(search_result);
         if blob_ids.is_empty() {
             return Ok((blob_ids, PageToken::Start));
@@ -968,6 +974,7 @@ impl IcingMetaDatabase {
             &search_spec,
             &icing::ScoringSpecProto::default(),
             page_size,
+            None,
             page_token,
             projection,
         )?;
@@ -1003,17 +1010,30 @@ impl IcingMetaDatabase {
         search_spec: &icing::SearchSpecProto,
         scoring_spec: &icing::ScoringSpecProto,
         page_size: i32,
+        limit: Option<i32>,
         page_token: PageToken,
         result_projection: icing::TypePropertyMask,
     ) -> anyhow::Result<(icing::SearchResultProto, PageToken)> {
-        const DEFAULT_LIMIT: i32 = 10;
-        let limit = if page_size > 0 { page_size } else { DEFAULT_LIMIT };
+        const DEFAULT_PAGE_SIZE: i32 = 10;
+        let num_per_page = if page_size > 0 { page_size } else { DEFAULT_PAGE_SIZE };
 
         let mut result_spec = icing::ResultSpecProto {
-            num_per_page: Some(limit),
+            num_per_page: Some(num_per_page),
             num_to_score: Some(i32::MAX),
             ..Default::default()
         };
+
+        if let Some(limit_val) = limit {
+            result_spec.result_group_type =
+                Some(icing::result_spec_proto::ResultGroupingType::Namespace as i32);
+            result_spec.result_groupings = vec![icing::result_spec_proto::ResultGrouping {
+                entry_groupings: vec![icing::result_spec_proto::result_grouping::Entry {
+                    namespace: Some(NAMESPACE_NAME.to_string()),
+                    schema: None,
+                }],
+                max_results: Some(limit_val),
+            }];
+        }
 
         result_spec.type_property_masks.push(result_projection);
 
@@ -1066,8 +1086,16 @@ impl IcingMetaDatabase {
             paths: vec![BLOB_ID_NAME.to_string()],
         };
 
-        let (search_result, next_page_token) =
-            self.execute_search(&search_spec, &scoring_spec, page_size, page_token, projection)?;
+        let limit = if request.limit > 0 { Some(request.limit) } else { None };
+
+        let (search_result, next_page_token) = self.execute_search(
+            &search_spec,
+            &scoring_spec,
+            page_size,
+            limit,
+            page_token,
+            projection,
+        )?;
 
         debug!("search_result: {:?}", search_result);
 
