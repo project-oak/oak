@@ -336,6 +336,9 @@ impl Database {
             if !mask.include_fields.contains(&(MemoryField::ExpirationTimestamp as i32)) {
                 memory.expiration_timestamp = None;
             }
+            if !mask.include_fields.contains(&(MemoryField::Views as i32)) {
+                memory.views = None;
+            }
 
             if !mask.include_fields.contains(&(MemoryField::Content as i32)) {
                 memory.content = None;
@@ -414,7 +417,7 @@ mod tests {
         assert!(memory.created_timestamp.is_none());
         assert!(memory.event_timestamp.is_none());
         assert!(memory.expiration_timestamp.is_none());
-        assert!(memory.views.is_some());
+        assert!(memory.views.is_none());
     }
 
     #[test]
@@ -432,7 +435,7 @@ mod tests {
         assert!(memory.created_timestamp.is_none());
         assert!(memory.event_timestamp.is_none());
         assert!(memory.expiration_timestamp.is_none());
-        assert!(memory.views.is_some());
+        assert!(memory.views.is_none());
     }
 
     #[test]
@@ -451,7 +454,7 @@ mod tests {
         assert!(memory.created_timestamp.is_none());
         assert!(memory.event_timestamp.is_none());
         assert!(memory.expiration_timestamp.is_none());
-        assert!(memory.views.is_some());
+        assert!(memory.views.is_none());
     }
 
     #[test]
@@ -473,6 +476,6 @@ mod tests {
         assert!(memory.created_timestamp.is_some());
         assert!(memory.event_timestamp.is_some());
         assert!(memory.expiration_timestamp.is_some());
-        assert!(memory.views.is_some());
+        assert!(memory.views.is_none());
     }
 }
