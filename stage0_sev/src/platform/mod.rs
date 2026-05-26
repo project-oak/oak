@@ -53,7 +53,7 @@ static SEV_CPUID: MaybeUninit<oak_sev_guest::cpuid::CpuidPage> = MaybeUninit::un
 pub static AP_JUMP_TABLE: MaybeUninit<ApJumpTable> = MaybeUninit::uninit();
 #[cfg(feature = "sev_kernel_hashes")]
 #[unsafe(link_section = ".snp_hash_table")]
-#[no_mangle]
+#[unsafe(no_mangle)]
 static mut SEV_HASH_TABLE: MaybeUninit<kernel_hash_tables::PaddedSevHashTable> =
     MaybeUninit::uninit();
 
