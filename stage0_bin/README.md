@@ -136,6 +136,17 @@ launching the guest VM.
            0x0 +------------------------------------------------+
 ```
 
+### Kernel hashes and measured boot
+
+It may be desirable to have your launch digest include the initrd, kernel, and
+kernel cmdline into your trusted computing base for measured boot. To this end,
+you can enable the `sev_kernel_hashes` feature when building stage0 so that
+[QEMU](https://www.qemu.org/docs/master/system/i386/amd-memory-encryption.html#calculating-expected-guest-launch-measurement)
+include the hashes of these components into your launch digest.
+
+Stage0 will then verify that the kernel, initrd, and cmdline loaded in from
+`fw_cfg` match the hashes found in the hash table at boot time or panick.
+
 ## Related projects
 
 There are several other projects in similar firmware space that may be of

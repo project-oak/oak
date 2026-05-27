@@ -220,7 +220,7 @@ pub fn rust64_start<P: hal::Platform + hal::FirmwarePlatform>() -> ! {
         // supplied, do a quick check to verify that the launch primitives are
         // valid via measured direct boot
         assert!(P::validate_measured_boot(
-            cmdline.as_bytes(),
+            kernel_cmdline.as_bytes(),
             &ram_disk_sha2_256_digest,
             setup_data.as_bytes(),
             kernel.as_bytes()
