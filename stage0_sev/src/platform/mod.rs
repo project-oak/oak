@@ -168,8 +168,8 @@ impl Platform for Sev {
         }
     }
 
-    unsafe fn mmio(base_address: PhysAddr) -> Self::Mmio {
-        unsafe { mmio::Mmio::new(base_address) }
+    unsafe fn mmio(base_address: PhysAddr, size: usize) -> Self::Mmio {
+        unsafe { mmio::Mmio::new(base_address, size) }
     }
 
     fn port_factory() -> PortFactory {

@@ -28,7 +28,7 @@ use crate::paging::{PAGE_TABLE_REFS, PageEncryption, PageTableEntry, page_table_
 
 pub struct Mmio {
     pub base_address: PhysAddr,
-    layout: Layout,
+    pub layout: Layout,
     mmio_memory: VirtAddr,
     old_pte: PageTableEntry<PT>,
 }
@@ -38,14 +38,13 @@ impl Mmio {
     ///
     /// The caller must ensure that the base address is the start of a valid
     /// 4KiB MMIO region.
-    pub unsafe fn new(base_address: PhysAddr) -> Self {
+    pub unsafe fn new(base_address: PhysAddr, size: usize) -> Self {
         // Tehcnically we only need a chunk of virtual memory (as we remap the physical
         // memory backing it anyway), but the easiest way how to get a chunk of virtual
         // memory is just to allocate it using the normal mechanisms. This means there
         // will be a chunk of physical memory sitting unmapped and unused, but that
         // should not matter for our use case.
-        let layout =
-            Layout::from_size_align(Size4KiB::SIZE as usize, Size4KiB::SIZE as usize).unwrap();
+        let layout = Layout::from_size_align(size, Size4KiB::SIZE as usize).unwrap();
         let mmio_memory = VirtAddr::from_ptr(unsafe { alloc(layout) });
 
         // Remap our mmio_memory to base_address.
@@ -68,7 +67,7 @@ impl Mmio {
 impl crate::hal::Mmio for Mmio {
     fn read_u32(&self, offset: usize) -> u32 {
         let offset = offset * size_of::<u32>();
-        if offset >= Size4KiB::SIZE as usize {
+        if offset >= self.layout.size() {
             panic!("invalid MMIO access for read: offset would read beyond memory boundary");
         }
         // # Safety
@@ -80,7 +79,7 @@ impl crate::hal::Mmio for Mmio {
 
     unsafe fn write_u32(&mut self, offset: usize, value: u32) {
         let offset = offset * size_of::<u32>();
-        if offset >= Size4KiB::SIZE as usize {
+        if offset >= self.layout.size() {
             panic!("invalid MMIO access for write: offset would write beyond memory boundary");
         }
         // # Safety

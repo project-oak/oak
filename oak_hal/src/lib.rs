@@ -140,20 +140,18 @@ pub trait Platform: MsrAccess {
     //   - base_address is aligned to u32
     //   - we've checked it's within the page size
     //   - we were promised that he memory is valid
-    unsafe fn mmio(base_address: PhysAddr) -> Self::Mmio;
+    unsafe fn mmio(base_address: PhysAddr, size: usize) -> Self::Mmio;
 
     fn port_factory() -> PortFactory;
 
     /// Platform-specific early initialization.
     ///
-    /// This sets up the bare minimum to get things going; for example, under
-    /// SEV-ES and above, we set up the GHCB here, but nothing more.
+    /// This sets up the bare minimum to be able to set up logging; for example,
+    /// under SEV-ES and above, we set up the GHCB here, but nothing more.
     ///
-    /// This gets executed very soon after stage0 starts and comes with many
-    /// restrictions:
+    /// This gets executed very early and comes with many restrictions:
     ///   - You do not have access to logging.
-    ///   - You do not have access to heap allocator (BOOT_ALLOCATOR will still
-    ///     work).
+    ///   - You do not have access to the heap allocator.
     fn early_initialize_platform();
 
     /// Platform-specific intialization.
@@ -267,11 +265,35 @@ impl Msr {
 /// needs to be Sized.
 #[derive(Clone)]
 pub struct PortFactory {
+    /// # Safety
+    ///
+    /// The caller must ensure that side effects caused by reading from this
+    /// port does not violate memory safety assumptions.
     pub read_u8: unsafe fn(u16) -> Result<u8, &'static str>,
+    /// # Safety
+    ///
+    /// The caller must ensure that side effects caused by reading from this
+    /// port does not violate memory safety assumptions.
     pub read_u16: unsafe fn(u16) -> Result<u16, &'static str>,
+    /// # Safety
+    ///
+    /// The caller must ensure that side effects caused by reading from this
+    /// port does not violate memory safety assumptions.
     pub read_u32: unsafe fn(u16) -> Result<u32, &'static str>,
+    /// # Safety
+    ///
+    /// The caller must ensure that side effects caused by writing to this
+    /// port does not violate memory safety assumptions.
     pub write_u8: unsafe fn(u16, u8) -> Result<(), &'static str>,
+    /// # Safety
+    ///
+    /// The caller must ensure that side effects caused by writing to this
+    /// port does not violate memory safety assumptions.
     pub write_u16: unsafe fn(u16, u16) -> Result<(), &'static str>,
+    /// # Safety
+    ///
+    /// The caller must ensure that side effects caused by writing to this
+    /// port does not violate memory safety assumptions.
     pub write_u32: unsafe fn(u16, u32) -> Result<(), &'static str>,
 }
 

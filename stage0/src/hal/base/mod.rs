@@ -45,8 +45,8 @@ impl crate::Platform for Base {
         __cpuid(leaf)
     }
 
-    unsafe fn mmio(base_address: x86_64::PhysAddr) -> Self::Mmio {
-        unsafe { mmio::Mmio::new(base_address) }
+    unsafe fn mmio(base_address: x86_64::PhysAddr, size: usize) -> Self::Mmio {
+        unsafe { mmio::Mmio::new(base_address, size) }
     }
 
     fn port_factory() -> PortFactory {

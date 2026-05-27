@@ -41,6 +41,7 @@ mod avx;
 mod descriptors;
 mod elf;
 mod ghcb;
+pub mod hal;
 mod interrupts;
 mod libm;
 mod logging;
@@ -73,6 +74,7 @@ use mm::{
 };
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
+use oak_hal::Platform;
 use oak_linux_boot_params::BootParams;
 use oak_sev_guest::msr::{PageAssignment, SevStatus, change_snp_state_for_frame, get_sev_status};
 use spinning_top::Spinlock;
@@ -123,7 +125,7 @@ pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =
     )));
 
 /// Main entry point for the kernel, to be called from bootloader.
-pub fn start_kernel(info: &BootParams) -> ! {
+pub fn start_kernel<P: Platform + 'static>(info: &BootParams) -> ! {
     avx::enable_avx();
     descriptors::init_gdt_early();
     interrupts::init_idt_early();
@@ -452,8 +454,12 @@ pub fn start_kernel(info: &BootParams) -> ! {
         }
     };
 
-    let channel =
-        get_channel(&kernel_args, GUEST_HOST_HEAP.get().unwrap(), acpi.as_mut(), sev_status);
+    let channel = get_channel::<_, P>(
+        &kernel_args,
+        GUEST_HOST_HEAP.get().unwrap(),
+        acpi.as_mut(),
+        sev_status,
+    );
 
     let application_bytes: Box<[u8]> = {
         let virt_addr = {
@@ -532,7 +538,8 @@ enum ChannelType {
 
 /// Create a channel for communicating with the Untrusted Launcher.
 #[allow(unused_variables)]
-fn get_channel<'a, A: Allocator + Sync>(
+#[allow(clippy::extra_unused_type_parameters)]
+fn get_channel<'a, A: Allocator + Sync, P: Platform + 'a>(
     kernel_args: &args::Args,
     alloc: &'a A,
     acpi: Option<&mut Acpi>,
@@ -548,10 +555,9 @@ fn get_channel<'a, A: Allocator + Sync>(
 
     match chan_type {
         #[cfg(feature = "virtio_console_channel")]
-        ChannelType::VirtioConsole => Box::new(virtio_console::get_console_channel(
+        ChannelType::VirtioConsole => Box::new(virtio_console::get_console_channel::<_, P>(
             acpi.expect("ACPI not available; unable to use virtio console"),
             alloc,
-            sev_status,
         )),
         #[cfg(feature = "serial_channel")]
         ChannelType::Serial => {

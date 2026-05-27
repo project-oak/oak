@@ -24,7 +24,7 @@ use oak_linux_boot_params::BootParams;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn rust64_start(_rdi: u64, rsi: &BootParams) -> ! {
-    oak_restricted_kernel::start_kernel(rsi);
+    oak_restricted_kernel::start_kernel::<oak_restricted_kernel::hal::sev::Sev>(rsi);
 }
 
 #[alloc_error_handler]

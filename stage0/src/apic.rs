@@ -83,7 +83,10 @@ trait SpuriousInterrupts<P> {
 }
 
 mod xapic {
-    use x86_64::PhysAddr;
+    use x86_64::{
+        PhysAddr,
+        structures::paging::{PageSize, Size4KiB},
+    };
 
     use super::{ApicErrorFlags, SpuriousInterruptFlags};
     use crate::{Platform, hal};
@@ -188,7 +191,7 @@ mod xapic {
     /// Safety: caller needs to guarantee that `apic_base` points to the APIC
     /// MMIO memory.
     pub(crate) unsafe fn init<P: Platform>(apic_base: PhysAddr) -> Xapic<P::Mmio> {
-        Xapic { mmio: unsafe { P::mmio(apic_base) } }
+        Xapic { mmio: unsafe { P::mmio(apic_base, Size4KiB::SIZE as usize) } }
     }
 }
 

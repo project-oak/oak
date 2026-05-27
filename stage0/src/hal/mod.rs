@@ -48,7 +48,7 @@ pub mod test_mocks {
         impl oak_hal::Platform for Platform {
             type Mmio = <super::Base as oak_hal::Platform>::Mmio;
             fn cpuid(leaf: u32) -> CpuidResult;
-            unsafe fn mmio(base_address: PhysAddr) -> <Self as oak_hal::Platform>::Mmio;
+            unsafe fn mmio(base_address: PhysAddr, size: usize) -> <Self as oak_hal::Platform>::Mmio;
             fn port_factory() -> PortFactory;
             fn early_initialize_platform();
             fn initialize_platform(e820_table: &[BootE820Entry]);

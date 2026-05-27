@@ -309,7 +309,7 @@ impl Platform for Tdx {
         call_cpuid(leaf, 0).unwrap()
     }
 
-    unsafe fn mmio(_: x86_64::addr::PhysAddr) -> <Self as Platform>::Mmio {
+    unsafe fn mmio(_: x86_64::addr::PhysAddr, _size: usize) -> <Self as Platform>::Mmio {
         todo!()
     }
 

@@ -17,10 +17,7 @@
 use core::mem::size_of;
 
 use oak_stage0::hal::base::Mmio as BaseMmio;
-use x86_64::{
-    PhysAddr,
-    structures::paging::{PageSize, Size4KiB},
-};
+use x86_64::PhysAddr;
 
 use super::GHCB_WRAPPER;
 
@@ -33,8 +30,8 @@ impl Mmio {
     ///
     /// The caller must ensure that the base address is the start of a valid
     /// 4KiB MMIO region.
-    pub unsafe fn new(base_address: PhysAddr) -> Self {
-        Self { mmio: unsafe { BaseMmio::new(base_address) } }
+    pub unsafe fn new(base_address: PhysAddr, size: usize) -> Self {
+        Self { mmio: unsafe { BaseMmio::new(base_address, size) } }
     }
 }
 
@@ -42,7 +39,7 @@ impl oak_stage0::hal::Mmio for Mmio {
     fn read_u32(&self, offset: usize) -> u32 {
         if let Some(mut ghcb) = GHCB_WRAPPER.get() {
             let offset = offset * size_of::<u32>();
-            if offset >= Size4KiB::SIZE as usize {
+            if offset >= self.mmio.layout.size() {
                 panic!("invalid MMIO access for read: offset would read beyond memory boundary");
             }
             ghcb.mmio_read_u32(self.mmio.base_address + (offset as u64))
@@ -55,7 +52,7 @@ impl oak_stage0::hal::Mmio for Mmio {
     unsafe fn write_u32(&mut self, offset: usize, value: u32) {
         if let Some(mut ghcb) = GHCB_WRAPPER.get() {
             let offset = offset * size_of::<u32>();
-            if offset >= Size4KiB::SIZE as usize {
+            if offset >= self.mmio.layout.size() {
                 panic!("invalid MMIO access for write: offset would write beyond memory boundary");
             }
             ghcb.mmio_write_u32(self.mmio.base_address + (offset as u64), value)
