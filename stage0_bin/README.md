@@ -138,9 +138,9 @@ launching the guest VM.
 
 ### Kernel hashes and measured boot
 
-It may be desirable to have your launch digest include the initrd, kernel,
-and kernel cmdline into your trusted computing base for measured boot. To this
-end, you can enable the `sev_kernel_hashes` feature when building stage0 so that
+It may be desirable to have your launch digest include the initrd, kernel, and
+kernel cmdline into your trusted computing base for measured boot. To this end,
+you can enable the `sev_kernel_hashes` feature when building stage0 so that
 [QEMU](https://www.qemu.org/docs/master/system/i386/amd-memory-encryption.html#calculating-expected-guest-launch-measurement)
 include the hashes of these components into your launch digest.
 
