@@ -52,7 +52,7 @@ struct SealedMemoryServiceImplementation {
     session_config_factory: Arc<dyn Fn() -> SessionConfig + Send + Sync>,
     tls_server_context: Option<Arc<OakSessionTlsServerContext>>,
     clock: Arc<dyn Clock>,
-    max_database_size_bytes: usize,
+    application_config: ApplicationConfig,
 }
 
 impl SealedMemoryServiceImplementation {
@@ -74,7 +74,7 @@ impl SealedMemoryServiceImplementation {
             session_config_factory,
             tls_server_context,
             clock,
-            max_database_size_bytes: application_config.max_database_size_bytes,
+            application_config,
         }
     }
 
@@ -89,7 +89,7 @@ impl SealedMemoryServiceImplementation {
             (self.session_config_factory)(),
             self.clock.clone(),
             error_propagation_behavior,
-            self.max_database_size_bytes,
+            self.application_config.max_database_size_bytes,
         )
     }
 
@@ -99,8 +99,14 @@ impl SealedMemoryServiceImplementation {
     /// Once all clients move to the new in-response error handling, we will
     /// make it the default and remove the header.
     fn get_error_propagation_behavior(
+        &self,
         metadata: &tonic::metadata::MetadataMap,
     ) -> ErrorPropagationBehavior {
+        let default_behavior = if self.application_config.default_error_propagation_in_response {
+            ErrorPropagationBehavior::PropagateInResponseProto
+        } else {
+            ErrorPropagationBehavior::PropagateAsGrpcStatus
+        };
         metadata
             .get("x-error-propagation")
             .map(|v| v.to_str().unwrap_or(""))
@@ -111,7 +117,7 @@ impl SealedMemoryServiceImplementation {
                     ErrorPropagationBehavior::PropagateAsGrpcStatus
                 }
             })
-            .unwrap_or(ErrorPropagationBehavior::PropagateAsGrpcStatus)
+            .unwrap_or(default_behavior)
     }
 }
 
@@ -313,7 +319,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         &self,
         request: tonic::Request<tonic::Streaming<SessionRequest>>,
     ) -> Result<tonic::Response<Self::InvokeStream>, tonic::Status> {
-        let behavior = Self::get_error_propagation_behavior(request.metadata());
+        let behavior = self.get_error_propagation_behavior(request.metadata());
         let mut oak_session_handler = self.new_oak_session_handler(behavior)?;
 
         let mut request_stream = request.into_inner();
@@ -332,7 +338,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         &self,
         request: tonic::Request<tonic::Streaming<SealedMemorySessionRequest>>,
     ) -> Result<tonic::Response<Self::StartSessionStream>, tonic::Status> {
-        let behavior = Self::get_error_propagation_behavior(request.metadata());
+        let behavior = self.get_error_propagation_behavior(request.metadata());
         let mut oak_session_handler = self.new_oak_session_handler(behavior)?;
 
         let mut request_stream = request.into_inner();
@@ -353,7 +359,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         &self,
         request: tonic::Request<tonic::Streaming<TlsSessionFrame>>,
     ) -> Result<tonic::Response<Self::StartTlsSessionStream>, tonic::Status> {
-        let behavior = Self::get_error_propagation_behavior(request.metadata());
+        let behavior = self.get_error_propagation_behavior(request.metadata());
         let tls_ctx = self
             .tls_server_context
             .as_ref()
@@ -363,7 +369,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         let persistence_tx = self.persistence_tx.clone();
         let db_client = self.db_client.clone();
         let clock = self.clock.clone();
-        let max_database_size_bytes = self.max_database_size_bytes;
+        let max_database_size_bytes = self.application_config.max_database_size_bytes;
 
         let request_stream = Arc::new(tokio::sync::Mutex::new(request.into_inner()));
         let (tx, rx) = tokio::sync::mpsc::channel(32);

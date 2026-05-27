@@ -22,7 +22,7 @@ use attestation_testing::{
 };
 use client::{PrivateMemoryAppClient, PrivateMemoryClient};
 use oak_session::{attestation::AttestationType, config::SessionConfig, handshake::HandshakeType};
-use private_memory_test_utils::{start_server, system_time_to_timestamp};
+use private_memory_test_utils::{start_server, start_server_with_config, system_time_to_timestamp};
 use sealed_memory_rust_proto::{
     oak::private_memory::{LlmView, LlmViews},
     prelude::v1::*,
@@ -458,6 +458,102 @@ async fn test_error_propagation_behavior() {
     .unwrap();
 
     let response = client_proto
+        .invoke(sealed_memory_request::Request::UserRegistrationRequest(request))
+        .await
+        .unwrap();
+
+    match response {
+        sealed_memory_response::Response::Error(status) => {
+            assert_eq!(status.code, tonic::Code::InvalidArgument as i32);
+            assert!(status.message.contains("key_encryption_key not set"));
+        }
+        _ => panic!("expected error response, got {:?}", response),
+    }
+}
+
+/// Verifies that `default_error_propagation_in_response = true` in
+/// `ApplicationConfig` causes errors to be returned inside the response
+/// proto even when the client does NOT set the `x-error-propagation` header.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_default_error_propagation_in_response_config() {
+    fn config_with_error_in_response(
+        db_addr: std::net::SocketAddr,
+    ) -> private_memory_server_lib::app::ApplicationConfig {
+        let mut config = private_memory_test_utils::default_test_application_config(db_addr);
+        config.default_error_propagation_in_response = true;
+        config
+    }
+
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server_with_config(config_with_error_in_response, None).await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_config_error_user";
+
+    // Create a client WITHOUT the x-error-propagation header
+    // (propagate_errors_in_proto = false).
+    let mut client = PrivateMemoryClient::create_with_start_session_config(
+        &url,
+        pm_uid,
+        TEST_EK,
+        dummy_client_session_config(),
+        false, // No x-error-propagation header
+    )
+    .await
+    .unwrap();
+
+    // Send an invalid request to trigger an error.
+    let request = UserRegistrationRequest {
+        pm_uid: pm_uid.to_string(),
+        key_encryption_key: vec![], // Invalid!
+        ..Default::default()
+    };
+
+    // Because the server config has default_error_propagation_in_response = true,
+    // the error should come back inside the response proto (not as a gRPC status
+    // error).
+    let response = client
+        .invoke(sealed_memory_request::Request::UserRegistrationRequest(request))
+        .await
+        .unwrap();
+
+    match response {
+        sealed_memory_response::Response::Error(status) => {
+            assert_eq!(status.code, tonic::Code::InvalidArgument as i32);
+            assert!(status.message.contains("key_encryption_key not set"));
+        }
+        _ => panic!("expected error response, got {:?}", response),
+    }
+}
+
+/// Verifies that the `x-error-propagation` header can still override the
+/// config. Even with `default_error_propagation_in_response = false`,
+/// sending the header should propagate errors in the response proto.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_error_propagation_header_overrides_config() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_override_error_user";
+
+    // Server has default_error_propagation_in_response = false,
+    // but the client sets the x-error-propagation header.
+    let mut client = PrivateMemoryClient::create_with_start_session_config(
+        &url,
+        pm_uid,
+        TEST_EK,
+        dummy_client_session_config(),
+        true, // Sets x-error-propagation: response-proto
+    )
+    .await
+    .unwrap();
+
+    let request = UserRegistrationRequest {
+        pm_uid: pm_uid.to_string(),
+        key_encryption_key: vec![],
+        ..Default::default()
+    };
+
+    let response = client
         .invoke(sealed_memory_request::Request::UserRegistrationRequest(request))
         .await
         .unwrap();

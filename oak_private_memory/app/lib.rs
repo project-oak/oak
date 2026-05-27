@@ -38,6 +38,14 @@ pub struct ApplicationConfig {
     /// Maximum gRPC decode message size in bytes. Default: 100 MB.
     #[serde(default = "default_max_grpc_decode_size_bytes")]
     pub max_grpc_decode_size_bytes: usize,
+
+    /// When true, errors are returned inside `SealedMemoryResponse.error`
+    /// (as `google.rpc.Status`) by default, keeping the gRPC stream open.
+    /// When false (default), errors are returned as `tonic::Status`, which
+    /// may terminate the stream.
+    /// The `x-error-propagation` header can still override per-request.
+    #[serde(default)]
+    pub default_error_propagation_in_response: bool,
 }
 
 fn default_max_database_size_bytes() -> usize {

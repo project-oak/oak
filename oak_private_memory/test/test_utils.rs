@@ -54,7 +54,8 @@ pub async fn start_test_database() -> Result<(SocketAddr, tokio::task::JoinHandl
     Ok((db_addr, db_handle))
 }
 
-/// Starts the Private Memory server in the current process (host mode).
+/// Starts the Private Memory server in the current process (host mode)
+/// with default configuration.
 ///
 /// This function spins up the main application service, a test database
 /// service, and the persistence worker.
@@ -66,13 +67,31 @@ pub async fn start_server() -> Result<(
     tokio::task::JoinHandle<Result<()>>,
     tokio::task::JoinHandle<()>,
 )> {
-    start_server_with_clock(None).await
+    start_server_with_config(default_test_application_config, None).await
 }
 
 /// Starts the Private Memory server in host mode with an optional custom clock.
 ///
 /// If no clock is provided, the standard [`SystemClock`] is used.
 pub async fn start_server_with_clock(
+    clock: Option<Arc<dyn Clock>>,
+) -> Result<(
+    SocketAddr,
+    tokio::task::JoinHandle<Result<()>>,
+    tokio::task::JoinHandle<Result<()>>,
+    tokio::task::JoinHandle<()>,
+)> {
+    start_server_with_config(default_test_application_config, clock).await
+}
+
+/// Starts the Private Memory server in host mode with a custom
+/// `ApplicationConfig`.
+///
+/// `config_fn` receives the database address and returns the desired
+/// `ApplicationConfig`. Use [`default_test_application_config`] for the
+/// standard test configuration.
+pub async fn start_server_with_config(
+    config_fn: fn(SocketAddr) -> ApplicationConfig,
     clock: Option<Arc<dyn Clock>>,
 ) -> Result<(
     SocketAddr,
@@ -88,11 +107,7 @@ pub async fn start_server_with_clock(
     let listener = TcpListener::bind(addr).await?;
     let addr = listener.local_addr()?;
 
-    let application_config = ApplicationConfig {
-        database_service_host: db_addr,
-        max_database_size_bytes: MAX_DATABASE_SIZE,
-        max_grpc_decode_size_bytes: MAX_GRPC_DECODE_SIZE,
-    };
+    let application_config = config_fn(db_addr);
 
     let metrics = private_memory_server_lib::metrics::get_global_metrics();
     let (persistence_tx, persistence_rx) = tokio::sync::mpsc::unbounded_channel();
@@ -114,6 +129,17 @@ pub async fn start_server_with_clock(
         db_handle,
         persistence_join_handle,
     ))
+}
+
+/// Returns the default `ApplicationConfig` for tests, pointing at the given
+/// database address.
+pub fn default_test_application_config(db_addr: SocketAddr) -> ApplicationConfig {
+    ApplicationConfig {
+        database_service_host: db_addr,
+        max_database_size_bytes: MAX_DATABASE_SIZE,
+        max_grpc_decode_size_bytes: MAX_GRPC_DECODE_SIZE,
+        default_error_propagation_in_response: false,
+    }
 }
 
 /// Starts the Private Memory server in host mode with optional TLS context.
@@ -140,6 +166,7 @@ pub async fn start_server_with_tls(
         database_service_host: db_addr,
         max_database_size_bytes: MAX_DATABASE_SIZE,
         max_grpc_decode_size_bytes: MAX_GRPC_DECODE_SIZE,
+        default_error_propagation_in_response: false,
     };
 
     let metrics = private_memory_server_lib::metrics::get_global_metrics();
@@ -185,6 +212,7 @@ pub async fn start_container_server() -> Result<(
         database_service_host: SocketAddr::new(IpAddr::V4(host_ip), db_port),
         max_database_size_bytes: MAX_DATABASE_SIZE,
         max_grpc_decode_size_bytes: MAX_GRPC_DECODE_SIZE,
+        default_error_propagation_in_response: false,
     };
     let application_config_bytes = serde_json::to_vec(&application_config)?;
 
