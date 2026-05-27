@@ -116,7 +116,11 @@ impl DataBlobHandler for ExternalDbClient {
         let blob_size = blob.len() as u64;
         let data_blob = DataBlob { id: id.clone(), blob };
         let start_time = tokio::time::Instant::now();
-        self.write_data_blob(WriteDataBlobRequest { data_blob: Some(data_blob) }).await?;
+        self.write_data_blob(WriteDataBlobRequest {
+            data_blob: Some(data_blob),
+            coarsened_expiration_timestamp: None,
+        })
+        .await?;
         let mut elapsed_time = start_time.elapsed().as_millis() as u64;
         if elapsed_time == 0 {
             elapsed_time = 1;
@@ -142,6 +146,7 @@ impl DataBlobHandler for ExternalDbClient {
                     data_blob: Some(data_blob),
                     version: metadata_blob.version,
                 }),
+                coarsened_expiration_timestamp: None,
             })
             .await;
 
@@ -179,11 +184,13 @@ impl DataBlobHandler for ExternalDbClient {
                     version: metadata_blob.version,
                 },
             )),
+            coarsened_expiration_timestamp: None,
         }];
 
         for chunk in chunks {
             messages.push(WriteMetadataBlobStreamRequest {
                 request: Some(write_metadata_blob_stream_request::Request::Chunk(chunk.to_vec())),
+                coarsened_expiration_timestamp: None,
             });
         }
 
@@ -267,7 +274,13 @@ impl DataBlobHandler for ExternalDbClient {
         id: &BlobId,
     ) -> anyhow::Result<Option<EncryptedMetadataBlob>> {
         let start_time = tokio::time::Instant::now();
-        match self.read_metadata_blob(ReadMetadataBlobRequest { id: id.clone() }).await {
+        match self
+            .read_metadata_blob(ReadMetadataBlobRequest {
+                id: id.clone(),
+                coarsened_expiration_timestamp: None,
+            })
+            .await
+        {
             Ok(response) => {
                 let db_response = response.into_inner();
                 if let ReadMetadataBlobResponse {
@@ -308,7 +321,12 @@ impl DataBlobHandler for ExternalDbClient {
         id: &BlobId,
     ) -> anyhow::Result<Option<EncryptedMetadataBlob>> {
         let start_time = tokio::time::Instant::now();
-        match self.read_metadata_blob_stream(ReadMetadataBlobStreamRequest { id: id.clone() }).await
+        match self
+            .read_metadata_blob_stream(ReadMetadataBlobStreamRequest {
+                id: id.clone(),
+                coarsened_expiration_timestamp: None,
+            })
+            .await
         {
             Ok(response) => {
                 let mut response_stream = response.into_inner();

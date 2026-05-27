@@ -114,11 +114,9 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
         // matching the expected semantics (returning a failure if the provided version
         // does not match the existing stored one)
         let request = request.into_inner();
+        let metadata = request.metadata_blob.unwrap();
         let added = self
-            .add_metadata_blob_inner(
-                request.metadata_blob.as_ref().unwrap().data_blob.as_ref().unwrap().id.clone(),
-                request.metadata_blob.unwrap(),
-            )
+            .add_metadata_blob_inner(metadata.data_blob.as_ref().unwrap().id.clone(), metadata)
             .await;
         if !added {
             // "failed precondition" is a signal to the caller to re-fetch and try again.

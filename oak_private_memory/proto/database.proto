@@ -21,6 +21,8 @@ syntax = "proto3";
 
 package oak.private_memory;
 
+import "google/protobuf/timestamp.proto";
+
 // A simple key value pair.
 message DataBlob {
   string id = 1;
@@ -33,6 +35,7 @@ message WriteUnencryptedDataBlobRequest {
 
 message WriteDataBlobRequest {
   DataBlob data_blob = 1;
+  google.protobuf.Timestamp coarsened_expiration_timestamp = 2;
 }
 
 message WriteDataBlobResponse {}
@@ -72,6 +75,7 @@ message MetadataBlob {
 
 message ReadMetadataBlobRequest {
   string id = 1;
+  google.protobuf.Timestamp coarsened_expiration_timestamp = 2;
 }
 
 message ReadMetadataBlobResponse {
@@ -80,12 +84,14 @@ message ReadMetadataBlobResponse {
 
 message WriteMetadataBlobRequest {
   MetadataBlob metadata_blob = 1;
+  google.protobuf.Timestamp coarsened_expiration_timestamp = 2;
 }
 
 message WriteMetadataBlobResponse {}
 
 message ReadMetadataBlobStreamRequest {
   string id = 1;
+  google.protobuf.Timestamp coarsened_expiration_timestamp = 2;
 }
 
 message ReadMetadataBlobStreamResponse {
@@ -115,6 +121,7 @@ message WriteMetadataBlobStreamRequest {
     // of the file by sending a half-close.
     bytes chunk = 2;
   }
+  google.protobuf.Timestamp coarsened_expiration_timestamp = 3;
 }
 
 message WriteMetadataBlobStreamResponse {}
