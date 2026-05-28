@@ -198,14 +198,20 @@ trait Validatable4KiB {
 
 impl Validatable4KiB for PhysFrameRange<Size4KiB> {
     fn pvalidate(&self, pt: &mut MappedPage<PT>) -> Result<(), InstructionError> {
-        pvalidate_range(self, pt, PageTableFlags::empty(), &counters::VALIDATED_4K, |_addr, err| {
+        pvalidate_range(self, pt, PageTableFlags::empty(), &counters::VALIDATED_4K, |addr, err| {
             match err {
                 InstructionError::ValidationStatusNotUpdated => {
-                    // We don't treat this as an error. It only happens if SEV-SNP is not enabled,
-                    // or it is already validated. See the PVALIDATE instruction in
-                    // <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
-                    counters::ERROR_VALIDATION_STATUS_NOT_UPDATED.fetch_add(1, Ordering::SeqCst);
-                    Ok(())
+                    // SECURITY: CF=1 during first-touch acceptance means the RMP entry for
+                    // this GPA was already Validated=1. Under SNP this indicates a
+                    // double-validation / page-aliasing attack by the hypervisor (the
+                    // hypervisor can RMPUPDATE a second SPA to the same GPA and have us
+                    // PVALIDATE it). AMD 56421 and the Linux/OVMF reference
+                    // implementations require this to be fatal.
+                    panic!(
+                        "PVALIDATE CF=1 (double-validation) at GPA {:#x}; possible \
+                         hypervisor page-aliasing attack",
+                        addr.as_u64()
+                    );
                 }
                 other => Err(other),
             }
@@ -251,11 +257,14 @@ impl Validatable2MiB for PhysFrameRange<Size2MiB> {
                     range.pvalidate(pt)
                 }
                 InstructionError::ValidationStatusNotUpdated => {
-                    // We don't treat this as an error. It only happens if SEV-SNP is not enabled,
-                    // or it is already validated. See the PVALIDATE instruction in
-                    // <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
-                    counters::ERROR_VALIDATION_STATUS_NOT_UPDATED.fetch_add(1, Ordering::SeqCst);
-                    Ok(())
+                    // SECURITY: CF=1 during first-touch acceptance indicates a
+                    // double-validation / page-aliasing attack by the hypervisor. See the
+                    // 4 KiB path above for details. This must be fatal.
+                    panic!(
+                        "PVALIDATE CF=1 (double-validation) at GPA {:#x}; possible \
+                         hypervisor page-aliasing attack",
+                        addr.as_u64()
+                    );
                 }
                 other => Err(other),
             },
@@ -316,9 +325,30 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
     // the RMP for the fw_cfg DMA buffer.
     let min_addr = 0xA0000;
 
+    // SECURITY: The stage0 firmware ROM is mapped just below 4 GiB and was
+    // launched as PAGE_TYPE_NORMAL (RMP.Validated=1) by SNP_LAUNCH_UPDATE. A
+    // malicious hypervisor must not be able to make us issue PSC+PVALIDATE over
+    // those GPAs, or it can create validated page aliases for our own .text/.rodata
+    // (SNP double-validation attack). The PCI hole means no legitimate RAM lives
+    // here on a PC platform; we conservatively forbid the top 16 MiB below 4 GiB.
+    const ROM_GUARD_START: usize = 0xFF00_0000; // 4 GiB - 16 MiB
+    const ROM_GUARD_END: usize = 0x1_0000_0000; // 4 GiB
+
     for entry in e820_table {
         if entry.entry_type() != Some(E820EntryType::RAM) || entry.addr() < min_addr {
             continue;
+        }
+
+        // Defense-in-depth: refuse to accept memory that overlaps the firmware ROM
+        // window. The CF=1 panic above is the primary mitigation; this check makes
+        // the attack fail before any PSC is even issued.
+        if entry.addr() < ROM_GUARD_END && entry.end() > ROM_GUARD_START {
+            panic!(
+                "hypervisor-supplied E820 RAM entry [{:#x}, {:#x}) overlaps firmware ROM \
+                 window; refusing to PVALIDATE",
+                entry.addr(),
+                entry.end()
+            );
         }
 
         let start_address = PhysAddr::new(entry.addr() as u64).align_up(Size4KiB::SIZE);
