@@ -46,6 +46,14 @@ pub struct ApplicationConfig {
     /// The `x-error-propagation` header can still override per-request.
     #[serde(default)]
     pub default_error_propagation_in_response: bool,
+
+    /// The blanket TTL for metadata in seconds. Default: 2 years + 1 day.
+    #[serde(default = "default_blanket_ttl_seconds")]
+    pub blanket_ttl_seconds: i64,
+
+    /// The maximum allowed per-item TTL in seconds. Default: 2 years.
+    #[serde(default = "default_max_memory_ttl_seconds")]
+    pub max_memory_ttl_seconds: i64,
 }
 
 fn default_max_database_size_bytes() -> usize {
@@ -54,6 +62,18 @@ fn default_max_database_size_bytes() -> usize {
 
 fn default_max_grpc_decode_size_bytes() -> usize {
     100 * 1024 * 1024
+}
+
+pub use oak_private_memory_database::clock::{
+    MAX_MEMORY_TTL_SECONDS, METADATA_BLANKET_TTL_SECONDS, SECONDS_PER_DAY, SECONDS_PER_YEAR,
+};
+
+fn default_blanket_ttl_seconds() -> i64 {
+    METADATA_BLANKET_TTL_SECONDS
+}
+
+fn default_max_memory_ttl_seconds() -> i64 {
+    MAX_MEMORY_TTL_SECONDS
 }
 
 /// A convenience trait to convert various error types into tonic::Status.

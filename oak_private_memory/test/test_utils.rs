@@ -30,6 +30,7 @@ use oak_containers_launcher::{Args, Launcher, QemuParams, QemuVmType, TrustedApp
 pub use oak_private_memory_database::clock::{Clock, SystemClock, system_time_to_timestamp};
 use oak_private_memory_database::database::{MAX_DATABASE_SIZE, MAX_GRPC_DECODE_SIZE};
 use oak_session_tls::OakSessionTlsServerContext;
+pub use private_memory_server_lib::app::{MAX_MEMORY_TTL_SECONDS, METADATA_BLANKET_TTL_SECONDS};
 use private_memory_server_lib::{
     app,
     app::{ApplicationConfig, run_persistence_service},
@@ -139,6 +140,8 @@ pub fn default_test_application_config(db_addr: SocketAddr) -> ApplicationConfig
         max_database_size_bytes: MAX_DATABASE_SIZE,
         max_grpc_decode_size_bytes: MAX_GRPC_DECODE_SIZE,
         default_error_propagation_in_response: false,
+        blanket_ttl_seconds: METADATA_BLANKET_TTL_SECONDS,
+        max_memory_ttl_seconds: MAX_MEMORY_TTL_SECONDS,
     }
 }
 
@@ -167,6 +170,8 @@ pub async fn start_server_with_tls(
         max_database_size_bytes: MAX_DATABASE_SIZE,
         max_grpc_decode_size_bytes: MAX_GRPC_DECODE_SIZE,
         default_error_propagation_in_response: false,
+        blanket_ttl_seconds: METADATA_BLANKET_TTL_SECONDS,
+        max_memory_ttl_seconds: MAX_MEMORY_TTL_SECONDS,
     };
 
     let metrics = private_memory_server_lib::metrics::get_global_metrics();
@@ -213,6 +218,8 @@ pub async fn start_container_server() -> Result<(
         max_database_size_bytes: MAX_DATABASE_SIZE,
         max_grpc_decode_size_bytes: MAX_GRPC_DECODE_SIZE,
         default_error_propagation_in_response: false,
+        blanket_ttl_seconds: METADATA_BLANKET_TTL_SECONDS,
+        max_memory_ttl_seconds: MAX_MEMORY_TTL_SECONDS,
     };
     let application_config_bytes = serde_json::to_vec(&application_config)?;
 

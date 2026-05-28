@@ -14,7 +14,10 @@
 // limitations under the License.
 //
 
-use std::collections::HashSet;
+use std::{
+    collections::HashSet,
+    time::{Duration, SystemTime},
+};
 
 use attestation_testing::{
     DUMMY_ATTESTATION_ID, DummySessionBindingVerifierProvider, RejectingVerifier,
@@ -53,6 +56,9 @@ async fn test_client() {
         id: memory_id.to_string(),
         tags: vec!["test_tag".to_string()],
         views: Some(llm_view),
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
         ..Default::default()
     };
 
@@ -87,6 +93,9 @@ async fn test_client_with_dummy_attestation() {
     let memory_to_add = Memory {
         id: memory_id.to_string(),
         tags: vec!["test_tag".to_string()],
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
         ..Default::default()
     };
 
@@ -155,6 +164,9 @@ async fn test_client_pagination() {
                     ..Default::default()
                 }],
             }),
+            expiration_timestamp: Some(system_time_to_timestamp(
+                SystemTime::now() + Duration::from_secs(3600),
+            )),
             ..Default::default()
         };
         client.add_memory(memory_to_add).await.unwrap();
@@ -207,45 +219,31 @@ async fn test_get_by_id_with_expired_memories() {
     let non_expired_memory_id = "non_expired_memory_id";
     let no_expiration_memory_id = "no_expiration_memory_id";
 
-    // Create a timestamp in the past for an expired memory
-    let past_time =
-        std::time::SystemTime::now().checked_sub(std::time::Duration::from_secs(3600)).unwrap(); // 1 hour ago
-    let expiration_timestamp_past = Some(system_time_to_timestamp(past_time));
-
-    // Create a timestamp in the future for a non-expired memory
-    let future_time =
-        std::time::SystemTime::now().checked_add(std::time::Duration::from_secs(3600)).unwrap(); // in 1 hour
-    let expiration_timestamp_future = Some(system_time_to_timestamp(future_time));
-
-    // Add an expired memory
+    // Add memory that will expire in 2 seconds
     let expired_memory_to_add = Memory {
         id: expired_memory_id.to_string(),
         tags: vec!["expired".to_string()],
-        expiration_timestamp: expiration_timestamp_past,
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(2),
+        )),
         ..Default::default()
     };
-    let response_expired = client.add_memory(expired_memory_to_add).await.unwrap();
-    assert_eq!(response_expired.id, expired_memory_id);
 
-    // Add a non-expired memory (expires in the future)
+    // Add memory that will expire in 60 seconds
     let non_expired_memory_to_add = Memory {
         id: non_expired_memory_id.to_string(),
         tags: vec!["non_expired".to_string()],
-        expiration_timestamp: expiration_timestamp_future,
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(60),
+        )),
         ..Default::default()
     };
-    let response_non_expired = client.add_memory(non_expired_memory_to_add).await.unwrap();
-    assert_eq!(response_non_expired.id, non_expired_memory_id);
 
-    // Add a memory with no expiration
-    let no_expiration_memory_to_add = Memory {
-        id: no_expiration_memory_id.to_string(),
-        tags: vec!["no_expiration".to_string()],
-        expiration_timestamp: None,
-        ..Default::default()
-    };
-    let response_no_expiration = client.add_memory(no_expiration_memory_to_add).await.unwrap();
-    assert_eq!(response_no_expiration.id, no_expiration_memory_id);
+    client.add_memory(expired_memory_to_add).await.unwrap();
+    client.add_memory(non_expired_memory_to_add).await.unwrap();
+
+    // Sleep 3 seconds in real time to let `expired_memory` actually expire
+    tokio::time::sleep(Duration::from_secs(3)).await;
 
     // Try to retrieve the expired memory: should not be found
     let get_response_expired = client.get_memory_by_id(expired_memory_id, None).await.unwrap();
@@ -258,11 +256,15 @@ async fn test_get_by_id_with_expired_memories() {
     assert!(get_response_non_expired.success);
     assert_eq!(get_response_non_expired.memory.unwrap().id, non_expired_memory_id);
 
-    // Try to retrieve the no-expiration memory: should be found
-    let get_response_no_expiration =
-        client.get_memory_by_id(no_expiration_memory_id, None).await.unwrap();
-    assert!(get_response_no_expiration.success);
-    assert_eq!(get_response_no_expiration.memory.unwrap().id, no_expiration_memory_id);
+    // Add a memory with no expiration - should fail and close the stream
+    let no_expiration_memory_to_add = Memory {
+        id: no_expiration_memory_id.to_string(),
+        tags: vec!["no_expiration".to_string()],
+        expiration_timestamp: None,
+        ..Default::default()
+    };
+    let response_no_expiration = client.add_memory(no_expiration_memory_to_add).await;
+    assert!(response_no_expiration.is_err());
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -280,62 +282,59 @@ async fn test_get_by_tag_with_expired_memories() {
     let non_expired_memory_id = "non_expired_memory_id";
     let no_expiration_memory_id = "no_expiration_memory_id";
 
-    // Create a timestamp in the past for an expired memory
-    let past_time =
-        std::time::SystemTime::now().checked_sub(std::time::Duration::from_secs(3600)).unwrap(); // 1 hour ago
-    let expiration_timestamp_past = Some(system_time_to_timestamp(past_time));
-
-    // Create a timestamp in the future for a non-expired memory
-    let future_time =
-        std::time::SystemTime::now().checked_add(std::time::Duration::from_secs(3600)).unwrap(); // in 1 hour
-    let expiration_timestamp_future = Some(system_time_to_timestamp(future_time));
-
-    // Add an expired memory
+    // Add memory that will expire in 2 seconds
     let expired_memory_to_add = Memory {
         id: expired_memory_id.to_string(),
         tags: vec![tag.to_string()],
-        expiration_timestamp: expiration_timestamp_past,
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(2),
+        )),
         ..Default::default()
     };
-    client.add_memory(expired_memory_to_add).await.unwrap();
 
-    // Add a non-expired memory (expires in the future)
+    // Add memory that will expire in 60 seconds
     let non_expired_memory_to_add = Memory {
         id: non_expired_memory_id.to_string(),
         tags: vec![tag.to_string()],
-        expiration_timestamp: expiration_timestamp_future,
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(60),
+        )),
         ..Default::default()
     };
+
+    client.add_memory(expired_memory_to_add).await.unwrap();
     client.add_memory(non_expired_memory_to_add).await.unwrap();
 
-    // Add a memory with no expiration
-    let no_expiration_memory_to_add = Memory {
-        id: no_expiration_memory_id.to_string(),
-        tags: vec![tag.to_string()],
-        expiration_timestamp: None,
-        ..Default::default()
-    };
-    client.add_memory(no_expiration_memory_to_add).await.unwrap();
+    // Sleep 3 seconds in real time to let `expired_memory` actually expire
+    tokio::time::sleep(Duration::from_secs(3)).await;
 
     // Retrieve memories by tag
     let response = client.get_memories(tag, 10, None, "").await.unwrap();
 
     // Check that only non-expired memories are returned
-    assert_eq!(response.memories.len(), 2);
+    assert_eq!(response.memories.len(), 1);
     let returned_ids: HashSet<String> = response.memories.into_iter().map(|m| m.id).collect();
     assert!(returned_ids.contains(non_expired_memory_id));
-    assert!(returned_ids.contains(no_expiration_memory_id));
     assert!(!returned_ids.contains(expired_memory_id));
 
     // Retrieve memories with the empty tag
     let response = client.get_memories("", 10, None, "").await.unwrap();
 
     // Check that only non-expired memories are returned
-    assert_eq!(response.memories.len(), 2);
+    assert_eq!(response.memories.len(), 1);
     let returned_ids: HashSet<String> = response.memories.into_iter().map(|m| m.id).collect();
     assert!(returned_ids.contains(non_expired_memory_id));
-    assert!(returned_ids.contains(no_expiration_memory_id));
     assert!(!returned_ids.contains(expired_memory_id));
+
+    // Add a memory with no expiration - should fail and close the stream
+    let no_expiration_memory_to_add = Memory {
+        id: no_expiration_memory_id.to_string(),
+        tags: vec![tag.to_string()],
+        expiration_timestamp: None,
+        ..Default::default()
+    };
+    let add_no_exp_res = client.add_memory(no_expiration_memory_to_add).await;
+    assert!(add_no_exp_res.is_err());
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -349,12 +348,30 @@ async fn test_get_memories_by_id() {
         PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK).await.unwrap();
 
     // Add three memories
-    let memory1 =
-        Memory { id: "memory1".to_string(), tags: vec!["tag1".to_string()], ..Default::default() };
-    let memory2 =
-        Memory { id: "memory2".to_string(), tags: vec!["tag2".to_string()], ..Default::default() };
-    let memory3 =
-        Memory { id: "memory3".to_string(), tags: vec!["tag3".to_string()], ..Default::default() };
+    let memory1 = Memory {
+        id: "memory1".to_string(),
+        tags: vec!["tag1".to_string()],
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    };
+    let memory2 = Memory {
+        id: "memory2".to_string(),
+        tags: vec!["tag2".to_string()],
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    };
+    let memory3 = Memory {
+        id: "memory3".to_string(),
+        tags: vec!["tag3".to_string()],
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    };
 
     client.add_memory(memory1).await.unwrap();
     client.add_memory(memory2).await.unwrap();

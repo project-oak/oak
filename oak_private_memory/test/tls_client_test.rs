@@ -21,14 +21,18 @@
 //! handshake, then performs encrypted operations (register, key_sync,
 //! add_memory, search, etc.).
 
-use std::{io::BufReader, sync::Arc};
+use std::{
+    io::BufReader,
+    sync::Arc,
+    time::{Duration, SystemTime},
+};
 
 use client::{PrivateMemoryAppClient, PrivateMemoryTlsClient};
 use oak_session_tls::{
     ClientContextConfig, OakSessionTlsClientContext, OakSessionTlsServerContext,
     ServerContextConfig, utils,
 };
-use private_memory_test_utils::start_server_with_tls;
+use private_memory_test_utils::{start_server_with_tls, system_time_to_timestamp};
 use runfiles::Runfiles;
 use sealed_memory_rust_proto::{
     oak::private_memory::{LlmView, LlmViews},
@@ -117,6 +121,9 @@ async fn test_tls_session_basic() {
                 ..Default::default()
             }],
         }),
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
         ..Default::default()
     };
 
@@ -144,6 +151,9 @@ async fn test_tls_session_delete() {
     let memory = Memory {
         id: memory_id.to_string(),
         tags: vec!["tls_delete_tag".to_string()],
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
         ..Default::default()
     };
 
@@ -175,6 +185,9 @@ async fn test_tls_session_reset() {
     let memory = Memory {
         id: "tls_reset_memory".to_string(),
         tags: vec!["tls_reset_tag".to_string()],
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
         ..Default::default()
     };
     client.add_memory(memory).await.unwrap();
@@ -206,6 +219,9 @@ async fn test_noise_still_works_with_tls_enabled() {
     let memory = Memory {
         id: memory_id.to_string(),
         tags: vec!["noise_tag".to_string()],
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
         ..Default::default()
     };
 

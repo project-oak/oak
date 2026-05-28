@@ -62,6 +62,8 @@ pub struct SealedMemorySessionHandler {
     clock: Arc<dyn Clock>,
     error_propagation_behavior: ErrorPropagationBehavior,
     max_database_size_bytes: usize,
+    blanket_ttl_seconds: i64,
+    max_memory_ttl_seconds: i64,
 }
 
 impl Drop for SealedMemorySessionHandler {
@@ -77,6 +79,7 @@ impl Drop for SealedMemorySessionHandler {
 }
 
 impl SealedMemorySessionHandler {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         metrics: Arc<metrics::Metrics>,
         persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
@@ -84,6 +87,8 @@ impl SealedMemorySessionHandler {
         clock: Arc<dyn Clock>,
         error_propagation_behavior: ErrorPropagationBehavior,
         max_database_size_bytes: usize,
+        blanket_ttl_seconds: i64,
+        max_memory_ttl_seconds: i64,
     ) -> Self {
         Self {
             session_context: Default::default(),
@@ -93,6 +98,8 @@ impl SealedMemorySessionHandler {
             clock,
             error_propagation_behavior,
             max_database_size_bytes,
+            blanket_ttl_seconds,
+            max_memory_ttl_seconds,
         }
     }
 
@@ -106,6 +113,47 @@ impl SealedMemorySessionHandler {
 
     pub fn serialize_response(&self, response: &SealedMemoryResponse) -> anyhow::Result<Vec<u8>> {
         Ok(response.encode_to_vec())
+    }
+
+    fn validate_expiration_timestamp(
+        &self,
+        expiration_timestamp: Option<&prost_types::Timestamp>,
+    ) -> tonic::Result<()> {
+        let expiration =
+            expiration_timestamp.into_invalid_argument("expiration_timestamp must be set")?;
+
+        let now_ts = oak_private_memory_database::clock::system_time_to_timestamp(self.clock.now());
+
+        // Validate that the expiration timestamp is strictly in the future.
+        if expiration.seconds < now_ts.seconds
+            || (expiration.seconds == now_ts.seconds && expiration.nanos < now_ts.nanos)
+        {
+            return Err(tonic::Status::invalid_argument(
+                "expiration_timestamp must be in the future",
+            ));
+        }
+
+        // Add a consolidated buffer to accommodate potential clock drift.
+        let clock_drift_buffer_seconds =
+            oak_private_memory_database::clock::CLOCK_DRIFT_BUFFER_SECONDS;
+        let max_expiration_seconds =
+            now_ts.seconds + self.max_memory_ttl_seconds + clock_drift_buffer_seconds;
+
+        if expiration.seconds > max_expiration_seconds
+            || (expiration.seconds == max_expiration_seconds && expiration.nanos > now_ts.nanos)
+        {
+            let error_msg = if self.max_memory_ttl_seconds == crate::MAX_MEMORY_TTL_SECONDS {
+                "expiration_timestamp cannot be more than 2 years in the future".to_string()
+            } else {
+                format!(
+                    "expiration_timestamp cannot be more than {} seconds in the future",
+                    self.max_memory_ttl_seconds
+                )
+            };
+            return Err(tonic::Status::invalid_argument(error_msg));
+        }
+
+        Ok(())
     }
 
     fn is_valid_key(key: &[u8]) -> bool {
@@ -123,6 +171,8 @@ impl SealedMemorySessionHandler {
         let database =
             &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
         let memory = request.memory.into_invalid_argument("memory not set in AddMemoryRequest")?;
+
+        self.validate_expiration_timestamp(memory.expiration_timestamp.as_ref())?;
 
         if !memory.name.is_empty() {
             // Verify that there is no conflicting memory with this name.
@@ -227,8 +277,14 @@ impl SealedMemorySessionHandler {
 
         mut db_client: SealedMemoryDatabaseServiceClient<Channel>,
     ) -> tonic::Result<()> {
-        let (database, database_version, initial_size) =
-            get_or_create_db(&mut db_client, &uid, &dek, self.clock.clone()).await?;
+        let (database, database_version, initial_size) = get_or_create_db(
+            &mut db_client,
+            &uid,
+            &dek,
+            self.clock.clone(),
+            self.blanket_ttl_seconds,
+        )
+        .await?;
 
         let mut mutex_guard = self.session_context().await;
         let database = Database::new(
@@ -237,6 +293,7 @@ impl SealedMemorySessionHandler {
             db_client.clone(),
             key_derivation_info,
             initial_size,
+            self.blanket_ttl_seconds,
         )
         .with_max_size(self.max_database_size_bytes)
         .with_clock(self.clock.clone());
@@ -594,10 +651,16 @@ async fn get_or_create_db(
     uid: &BlobId,
     dek: &[u8],
     clock: Arc<dyn Clock>,
+    blanket_ttl_seconds: i64,
 ) -> tonic::Result<(IcingMetaDatabase, String, usize)> {
     let fetch_start = clock.now();
+    let coarsened_expiration_timestamp =
+        oak_private_memory_database::clock::calculate_coarsened_blanket_ttl(
+            clock.as_ref(),
+            blanket_ttl_seconds,
+        );
     let metadata_blob = db_client
-        .get_metadata_blob_stream(uid)
+        .get_metadata_blob_stream(uid, coarsened_expiration_timestamp)
         .await
         .into_internal_error("Failed to get metadata blob")?;
     get_global_metrics().record_key_sync_db_fetch_latency(

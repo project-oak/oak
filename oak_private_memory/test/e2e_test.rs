@@ -63,6 +63,9 @@ async fn test_add_get_reset_memory_all_modes() {
         id: "".to_string(),
         content: Some(MemoryContent { contents: contents_map }),
         tags: vec!["tag".to_string()],
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
         ..Default::default()
     };
 
@@ -170,6 +173,9 @@ fn create_test_memory(id: &str) -> Memory {
         id: id.to_string(),
         content: Some(MemoryContent { contents: contents_map }),
         tags: vec!["tag".to_string()],
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
         ..Default::default()
     }
 }
@@ -183,17 +189,19 @@ async fn test_memory_expiration() {
     let mut client =
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
+    // Add memory that will expire in 2 seconds
     let memory_expired = Memory {
         id: "memory_expired".to_string(),
         expiration_timestamp: Some(system_time_to_timestamp(
-            std::time::SystemTime::now() - Duration::from_secs(30 * 60),
+            SystemTime::now() + Duration::from_secs(2),
         )),
         ..Default::default()
     };
+    // Add memory that will expire in 60 seconds (effectively valid during the test)
     let memory_valid = Memory {
         id: "memory_valid".to_string(),
         expiration_timestamp: Some(system_time_to_timestamp(
-            std::time::SystemTime::now() + Duration::from_secs(30 * 60),
+            SystemTime::now() + Duration::from_secs(60),
         )),
         ..Default::default()
     };
@@ -202,11 +210,15 @@ async fn test_memory_expiration() {
 
     client.add_memory(memory_expired.clone()).await.unwrap();
     client.add_memory(memory_valid.clone()).await.unwrap();
-    client.add_memory(memory_no_expiration.clone()).await.unwrap();
+    // Adding a memory without expiration should fail.
+    let add_no_exp_result = client.add_memory(memory_no_expiration.clone()).await;
+    assert!(add_no_exp_result.is_err());
 
     // Close session and wait for changes to propagate.
     drop(client);
-    sleep(Duration::from_secs(10)).await;
+
+    // Sleep 3 seconds in real time to let `memory_expired` actually expire
+    sleep(Duration::from_secs(3)).await;
 
     // Creating a new client will trigger a key sync which will run expired memories
     // deletion.
@@ -215,14 +227,68 @@ async fn test_memory_expiration() {
 
     assert!(!client2.get_memory_by_id("memory_expired", None).await.unwrap().success);
     assert!(client2.get_memory_by_id("memory_valid", None).await.unwrap().success);
-    assert!(client2.get_memory_by_id("memory_no_expiration", None).await.unwrap().success);
+
+    ctx.teardown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_add_memory_expired_throws_error() {
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
+    let pm_uid = "test_expired_error_user";
+
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+
+    // Expiration in the past (10 seconds ago)
+    let memory_expired = Memory {
+        id: "expired_err".to_string(),
+        expiration_timestamp: Some(system_time_to_timestamp(
+            std::time::SystemTime::now() - Duration::from_secs(10),
+        )),
+        ..Default::default()
+    };
+
+    let result = client.add_memory(memory_expired).await;
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(format!("{:?}", err).contains("expiration_timestamp must be in the future"));
+
+    ctx.teardown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_add_memory_too_long_ttl_throws_error() {
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
+    let pm_uid = "test_too_long_ttl_error_user";
+
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+
+    // Expiration more than 2 years in the future (2 years + 1 day)
+    let too_long_ttl = Memory {
+        id: "too_long_ttl".to_string(),
+        expiration_timestamp: Some(system_time_to_timestamp(
+            std::time::SystemTime::now() + Duration::from_secs(2 * 365 * 86400 + 86400),
+        )),
+        ..Default::default()
+    };
+
+    let result = client.add_memory(too_long_ttl).await;
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(
+        format!("{:?}", err)
+            .contains("expiration_timestamp cannot be more than 2 years in the future")
+    );
 
     ctx.teardown().await;
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_add_memory_sets_correct_created_timestamp_with_mock_clock() {
-    let mock_time = SystemTime::UNIX_EPOCH + Duration::from_secs(987654321);
+    let mock_time = SystemTime::now();
     let mock_clock = Arc::new(MockClock::new(mock_time));
 
     let ctx = TestContext::setup_with_clock(mock_clock.clone()).await.unwrap();
@@ -232,7 +298,11 @@ async fn test_add_memory_sets_correct_created_timestamp_with_mock_clock() {
     let mut client =
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
-    let memory = Memory { id: "memory_without_timestamp".to_string(), ..Default::default() };
+    let memory = Memory {
+        id: "memory_without_timestamp".to_string(),
+        expiration_timestamp: Some(system_time_to_timestamp(mock_time + Duration::from_secs(3600))),
+        ..Default::default()
+    };
     let add_memory_response = client.add_memory(memory).await.unwrap();
     let memory_id = add_memory_response.id;
 
@@ -251,7 +321,7 @@ async fn test_add_memory_sets_correct_created_timestamp_with_mock_clock() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_add_memory_overwrites_user_created_timestamp() {
-    let mock_time = SystemTime::UNIX_EPOCH + Duration::from_secs(111222333);
+    let mock_time = SystemTime::now();
     let mock_clock = Arc::new(MockClock::new(mock_time));
 
     let ctx = TestContext::setup_with_clock(mock_clock.clone()).await.unwrap();
@@ -265,6 +335,7 @@ async fn test_add_memory_overwrites_user_created_timestamp() {
     let memory = Memory {
         id: "memory_with_timestamp".to_string(),
         created_timestamp: Some(user_timestamp),
+        expiration_timestamp: Some(system_time_to_timestamp(mock_time + Duration::from_secs(3600))),
         ..Default::default()
     };
     let add_memory_response = client.add_memory(memory).await.unwrap();
@@ -293,11 +364,23 @@ async fn test_add_memory_duplicate_name_throws_error() {
     let mut client =
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
-    let memory1 =
-        Memory { id: "id1".to_string(), name: "shared_name".to_string(), ..Default::default() };
+    let memory1 = Memory {
+        id: "id1".to_string(),
+        name: "shared_name".to_string(),
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    };
 
-    let memory2 =
-        Memory { id: "id2".to_string(), name: "shared_name".to_string(), ..Default::default() };
+    let memory2 = Memory {
+        id: "id2".to_string(),
+        name: "shared_name".to_string(),
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    };
 
     // Adding first memory should succeed
     let response1 = client.add_memory(memory1.clone()).await;
@@ -319,10 +402,22 @@ async fn test_add_memory_duplicate_name_no_id_throws_error() {
     let mut client =
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
-    let memory1 =
-        Memory { id: "id1".to_string(), name: "shared_name".to_string(), ..Default::default() };
+    let memory1 = Memory {
+        id: "id1".to_string(),
+        name: "shared_name".to_string(),
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    };
 
-    let memory2 = Memory { name: "shared_name".to_string(), ..Default::default() };
+    let memory2 = Memory {
+        name: "shared_name".to_string(),
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    };
 
     // Adding first memory should succeed
     let response1 = client.add_memory(memory1.clone()).await;
@@ -344,8 +439,14 @@ async fn test_add_memory_duplicate_name_same_id_okay() {
     let mut client =
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
-    let memory1 =
-        Memory { id: "id1".to_string(), name: "shared_name".to_string(), ..Default::default() };
+    let memory1 = Memory {
+        id: "id1".to_string(),
+        name: "shared_name".to_string(),
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    };
 
     // Adding first memory should succeed
     let response1 = client.add_memory(memory1.clone()).await;
@@ -381,7 +482,13 @@ async fn test_get_database_metrics() {
 
     // ── Add a memory without views ──────────────────────────────────────
     client
-        .add_memory(Memory { tags: vec!["tag1".to_string()], ..Default::default() })
+        .add_memory(Memory {
+            tags: vec!["tag1".to_string()],
+            expiration_timestamp: Some(system_time_to_timestamp(
+                SystemTime::now() + Duration::from_secs(3600),
+            )),
+            ..Default::default()
+        })
         .await
         .unwrap();
 
@@ -422,6 +529,9 @@ async fn test_get_database_metrics() {
                     },
                 ],
             }),
+            expiration_timestamp: Some(system_time_to_timestamp(
+                SystemTime::now() + Duration::from_secs(3600),
+            )),
             ..Default::default()
         })
         .await
@@ -477,7 +587,13 @@ async fn test_delete_memory_concurrent_delete_fails() {
     let mut client1 =
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
-    let memory = Memory { id: "memory_to_delete".to_string(), ..Default::default() };
+    let memory = Memory {
+        id: "memory_to_delete".to_string(),
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    };
     client1.add_memory(memory).await.unwrap();
 
     let mut client2 =

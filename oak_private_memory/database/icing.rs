@@ -28,7 +28,7 @@ use sealed_memory_rust_proto::{
 use crate::{MemoryId, ViewId, clock::system_time_to_timestamp};
 
 fn timestamp_to_i64(timestamp: &prost_types::Timestamp) -> i64 {
-    timestamp.seconds * 1_000_000_000 + (timestamp.nanos as i64)
+    timestamp.seconds.saturating_mul(1_000_000_000).saturating_add(timestamp.nanos as i64)
 }
 
 // A simple struct to manage the temporary location of the icing database.
@@ -153,9 +153,11 @@ impl PendingMetadata {
         }
 
         if let Some(ref created_timestamp) = memory.created_timestamp {
-            let timestamp_ms = (created_timestamp.seconds * 1000
-                + i64::from(created_timestamp.nanos) / 1_000_000)
-                as u64;
+            let timestamp_ms = created_timestamp
+                .seconds
+                .saturating_mul(1000)
+                .saturating_add(i64::from(created_timestamp.nanos) / 1_000_000);
+            let timestamp_ms = std::cmp::max(0, timestamp_ms) as u64;
             // Set the document's creation timestamp for Icing's CreationTimestamp ranking
             document_builder.set_creation_timestamp_ms(timestamp_ms);
             document_builder.add_int64_property(

@@ -19,6 +19,7 @@ use external_db_client::{BlobId, ExternalDbClient};
 use icing::OptimizeResultProto;
 use log::info;
 use prost::Message;
+use prost_types::Timestamp;
 use rand::Rng;
 use sealed_memory_rust_proto::prelude::v1::*;
 
@@ -45,6 +46,7 @@ pub struct Database {
     current_size: usize,
     max_size: usize,
     clock: Arc<dyn Clock>,
+    blanket_ttl_seconds: i64,
 }
 
 impl Database {
@@ -54,6 +56,7 @@ impl Database {
         db_client: ExternalDbClient,
         key_derivation_info: KeyDerivationInfo,
         initial_size: usize,
+        blanket_ttl_seconds: i64,
     ) -> Self {
         Self {
             database,
@@ -62,6 +65,7 @@ impl Database {
             current_size: initial_size,
             max_size: MAX_DATABASE_SIZE,
             clock: Arc::new(SystemClock),
+            blanket_ttl_seconds,
         }
     }
 
@@ -137,6 +141,10 @@ impl Database {
 
     fn add_created_timestamp(&mut self, memory: &mut Memory) {
         memory.created_timestamp = Some(system_time_to_timestamp(self.clock.now()));
+    }
+
+    pub fn calculate_coarsened_blanket_ttl(&self) -> Timestamp {
+        crate::clock::calculate_coarsened_blanket_ttl(self.clock.as_ref(), self.blanket_ttl_seconds)
     }
 
     pub async fn add_memory(&mut self, mut memory: Memory) -> anyhow::Result<MemoryId> {

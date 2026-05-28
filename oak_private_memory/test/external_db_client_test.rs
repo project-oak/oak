@@ -49,11 +49,21 @@ async fn test_streaming_metadata_blob() {
     };
 
     // Test add_metadata_blob_stream
-    let result = client.add_metadata_blob_stream(&id, metadata_blob.clone()).await.unwrap();
+    let result = client
+        .add_metadata_blob_stream(
+            &id,
+            metadata_blob.clone(),
+            prost_types::Timestamp { seconds: 1893456000, nanos: 0 },
+        )
+        .await
+        .unwrap();
     assert_eq!(result, external_db_client::MetadataPersistResult::Succeeded);
 
     // Test get_metadata_blob_stream
-    let retrieved = client.get_metadata_blob_stream(&id).await.unwrap();
+    let retrieved = client
+        .get_metadata_blob_stream(&id, prost_types::Timestamp { seconds: 1893456000, nanos: 0 })
+        .await
+        .unwrap();
     assert!(retrieved.is_some());
     let retrieved = retrieved.unwrap();
     assert_eq!(retrieved.version, "v11"); // Test server appends "1"
@@ -75,6 +85,12 @@ async fn test_streaming_metadata_blob_not_found() {
         Channel::from_shared(format!("http://{}", addr)).unwrap().connect().await.unwrap();
     let mut client = ExternalDbClient::new(channel);
 
-    let retrieved = client.get_metadata_blob_stream(&"non_existent".to_string()).await.unwrap();
+    let retrieved = client
+        .get_metadata_blob_stream(
+            &"non_existent".to_string(),
+            prost_types::Timestamp { seconds: 1893456000, nanos: 0 },
+        )
+        .await
+        .unwrap();
     assert!(retrieved.is_none());
 }

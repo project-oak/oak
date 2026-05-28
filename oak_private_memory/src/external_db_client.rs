@@ -18,6 +18,7 @@ use async_trait::async_trait;
 use futures::StreamExt;
 use log::info;
 use prost::Message;
+use prost_types::Timestamp;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
     DataBlob, DeleteBlobsRequest, EncryptedDataBlob, EncryptedMetadataBlob, MetadataBlob,
@@ -54,12 +55,9 @@ pub trait DataBlobHandler {
         &mut self,
         data_blob: EncryptedDataBlob,
         id: Option<BlobId>,
+        coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<BlobId>;
-    async fn add_blobs(
-        &mut self,
-        data_blobs: Vec<EncryptedDataBlob>,
-        ids: Option<Vec<BlobId>>,
-    ) -> anyhow::Result<Vec<BlobId>>;
+
     async fn get_blob(
         &mut self,
         id: &BlobId,
@@ -70,20 +68,24 @@ pub trait DataBlobHandler {
         &mut self,
         id: &BlobId,
         metadata_blob: EncryptedMetadataBlob,
+        coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<MetadataPersistResult>;
     #[deprecated(note = "Use get_metadata_blob_stream instead")]
     async fn get_metadata_blob(
         &mut self,
         id: &BlobId,
+        coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<Option<EncryptedMetadataBlob>>;
     async fn add_metadata_blob_stream(
         &mut self,
         id: &BlobId,
         metadata_blob: EncryptedMetadataBlob,
+        coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<MetadataPersistResult>;
     async fn get_metadata_blob_stream(
         &mut self,
         id: &BlobId,
+        coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<Option<EncryptedMetadataBlob>>;
     async fn get_blobs(
         &mut self,
@@ -110,6 +112,7 @@ impl DataBlobHandler for ExternalDbClient {
         &mut self,
         data_blob: EncryptedDataBlob,
         id: Option<BlobId>,
+        coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<BlobId> {
         let id = id.unwrap_or_else(|| rand::random::<u128>().to_string());
         let blob = data_blob.encode_to_vec();
@@ -118,7 +121,7 @@ impl DataBlobHandler for ExternalDbClient {
         let start_time = tokio::time::Instant::now();
         self.write_data_blob(WriteDataBlobRequest {
             data_blob: Some(data_blob),
-            coarsened_expiration_timestamp: None,
+            coarsened_expiration_timestamp: Some(coarsened_expiration_timestamp),
         })
         .await?;
         let mut elapsed_time = start_time.elapsed().as_millis() as u64;
@@ -134,6 +137,7 @@ impl DataBlobHandler for ExternalDbClient {
         &mut self,
         id: &BlobId,
         metadata_blob: EncryptedMetadataBlob,
+        coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<MetadataPersistResult> {
         let blob =
             metadata_blob.encrypted_data_blob.as_ref().context("no blob contents")?.encode_to_vec();
@@ -146,7 +150,7 @@ impl DataBlobHandler for ExternalDbClient {
                     data_blob: Some(data_blob),
                     version: metadata_blob.version,
                 }),
-                coarsened_expiration_timestamp: None,
+                coarsened_expiration_timestamp: Some(coarsened_expiration_timestamp),
             })
             .await;
 
@@ -170,6 +174,7 @@ impl DataBlobHandler for ExternalDbClient {
         &mut self,
         id: &BlobId,
         metadata_blob: EncryptedMetadataBlob,
+        coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<MetadataPersistResult> {
         let blob =
             metadata_blob.encrypted_data_blob.as_ref().context("no blob contents")?.encode_to_vec();
@@ -184,7 +189,7 @@ impl DataBlobHandler for ExternalDbClient {
                     version: metadata_blob.version,
                 },
             )),
-            coarsened_expiration_timestamp: None,
+            coarsened_expiration_timestamp: Some(coarsened_expiration_timestamp),
         }];
 
         for chunk in chunks {
@@ -211,28 +216,6 @@ impl DataBlobHandler for ExternalDbClient {
         let speed = blob_size / 1024 / elapsed_time;
         metrics::get_global_metrics().record_db_save_speed(speed);
         Ok(MetadataPersistResult::Succeeded)
-    }
-
-    async fn add_blobs(
-        &mut self,
-        data_blobs: Vec<EncryptedDataBlob>,
-        ids: Option<Vec<BlobId>>,
-    ) -> anyhow::Result<Vec<BlobId>> {
-        let mut result = Vec::with_capacity(data_blobs.len());
-        let ids: Vec<Option<BlobId>> = if let Some(ids) = ids {
-            ids.iter().map(|id| Some(id.clone())).collect()
-        } else {
-            vec![None; data_blobs.len()]
-        };
-        anyhow::ensure!(
-            data_blobs.len() == ids.len(),
-            "data_blobs and ids must have the same length"
-        );
-        // TOOD: b/412698203 - Ideally we should have a rpc call that does batch add.
-        for (data_blob, id) in data_blobs.into_iter().zip(ids) {
-            result.push(self.add_blob(data_blob, id).await?);
-        }
-        Ok(result)
     }
 
     async fn get_blob(
@@ -272,12 +255,13 @@ impl DataBlobHandler for ExternalDbClient {
     async fn get_metadata_blob(
         &mut self,
         id: &BlobId,
+        coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<Option<EncryptedMetadataBlob>> {
         let start_time = tokio::time::Instant::now();
         match self
             .read_metadata_blob(ReadMetadataBlobRequest {
                 id: id.clone(),
-                coarsened_expiration_timestamp: None,
+                coarsened_expiration_timestamp: Some(coarsened_expiration_timestamp),
             })
             .await
         {
@@ -319,12 +303,13 @@ impl DataBlobHandler for ExternalDbClient {
     async fn get_metadata_blob_stream(
         &mut self,
         id: &BlobId,
+        coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<Option<EncryptedMetadataBlob>> {
         let start_time = tokio::time::Instant::now();
         match self
             .read_metadata_blob_stream(ReadMetadataBlobStreamRequest {
                 id: id.clone(),
-                coarsened_expiration_timestamp: None,
+                coarsened_expiration_timestamp: Some(coarsened_expiration_timestamp),
             })
             .await
         {

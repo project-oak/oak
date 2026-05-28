@@ -90,6 +90,8 @@ impl SealedMemoryServiceImplementation {
             self.clock.clone(),
             error_propagation_behavior,
             self.application_config.max_database_size_bytes,
+            self.application_config.blanket_ttl_seconds,
+            self.application_config.max_memory_ttl_seconds,
         )
     }
 
@@ -132,6 +134,7 @@ struct OakSessionHandler {
 }
 
 impl OakSessionHandler {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         metrics: &Arc<metrics::Metrics>,
         persistence_tx: &mpsc::UnboundedSender<UserSessionContext>,
@@ -140,6 +143,8 @@ impl OakSessionHandler {
         clock: Arc<dyn Clock>,
         error_propagation_behavior: ErrorPropagationBehavior,
         max_database_size_bytes: usize,
+        blanket_ttl_seconds: i64,
+        max_memory_ttl_seconds: i64,
     ) -> tonic::Result<Self> {
         let server_session = ServerSession::create(session_config)
             .into_failed_precondition("failed to initialize oak session")?;
@@ -153,6 +158,8 @@ impl OakSessionHandler {
                 clock,
                 error_propagation_behavior,
                 max_database_size_bytes,
+                blanket_ttl_seconds,
+                max_memory_ttl_seconds,
             ),
         })
     }
@@ -252,6 +259,7 @@ struct TlsSessionHandler {
 }
 
 impl TlsSessionHandler {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         metrics: &Arc<metrics::Metrics>,
         persistence_tx: &mpsc::UnboundedSender<UserSessionContext>,
@@ -260,6 +268,8 @@ impl TlsSessionHandler {
         clock: Arc<dyn Clock>,
         error_propagation_behavior: ErrorPropagationBehavior,
         max_database_size_bytes: usize,
+        blanket_ttl_seconds: i64,
+        max_memory_ttl_seconds: i64,
     ) -> Self {
         Self {
             metrics: metrics.clone(),
@@ -271,6 +281,8 @@ impl TlsSessionHandler {
                 clock,
                 error_propagation_behavior,
                 max_database_size_bytes,
+                blanket_ttl_seconds,
+                max_memory_ttl_seconds,
             ),
         }
     }
@@ -370,6 +382,8 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         let db_client = self.db_client.clone();
         let clock = self.clock.clone();
         let max_database_size_bytes = self.application_config.max_database_size_bytes;
+        let blanket_ttl_seconds = self.application_config.blanket_ttl_seconds;
+        let max_memory_ttl_seconds = self.application_config.max_memory_ttl_seconds;
 
         let request_stream = Arc::new(tokio::sync::Mutex::new(request.into_inner()));
         let (tx, rx) = tokio::sync::mpsc::channel(32);
@@ -425,6 +439,8 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
                 clock,
                 behavior,
                 max_database_size_bytes,
+                blanket_ttl_seconds,
+                max_memory_ttl_seconds,
             );
             debug!("TLS handshake completed");
 

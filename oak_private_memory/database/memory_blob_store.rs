@@ -78,8 +78,16 @@ impl MemoryBlobStore {
         let (encrypted_data, nonce) = self.encode_encrypt_memory(memory)?;
         let encrypted_blob = EncryptedDataBlob { nonce, data: encrypted_data };
 
+        let expiration_timestamp = memory
+            .expiration_timestamp
+            .ok_or_else(|| anyhow::anyhow!("missing expiration_timestamp in memory"))?;
+        let coarsened_expiration_timestamp =
+            crate::clock::round_up_to_daily_boundary(expiration_timestamp);
+
         // Store in external DB, explicitly providing the generated ID
-        self.db_client.add_blob(encrypted_blob, Some(blob_id.clone())).await?;
+        self.db_client
+            .add_blob(encrypted_blob, Some(blob_id.clone()), coarsened_expiration_timestamp)
+            .await?;
 
         Ok(blob_id)
     }

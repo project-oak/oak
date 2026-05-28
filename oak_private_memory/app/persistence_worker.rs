@@ -61,6 +61,7 @@ async fn try_persist_database(
     get_global_metrics().record_db_size(db_size as u64);
 
     let now = Instant::now();
+    let coarsened_expiration_timestamp = user_context.database.calculate_coarsened_blanket_ttl();
     let result = user_context
         .database_service_client
         .add_metadata_blob_stream(
@@ -69,6 +70,7 @@ async fn try_persist_database(
                 encrypted_data_blob: Some(database),
                 version: user_context.database_version.clone(),
             },
+            coarsened_expiration_timestamp,
         )
         .await?;
 
@@ -89,8 +91,11 @@ async fn pull_and_rebase(
     user_context: &mut UserSessionContext,
     require_blob: bool,
 ) -> anyhow::Result<()> {
-    let refreshed_blob =
-        user_context.database_service_client.get_metadata_blob_stream(&user_context.uid).await?;
+    let coarsened_expiration_timestamp = user_context.database.calculate_coarsened_blanket_ttl();
+    let refreshed_blob = user_context
+        .database_service_client
+        .get_metadata_blob_stream(&user_context.uid, coarsened_expiration_timestamp)
+        .await?;
 
     let refreshed_blob = match refreshed_blob {
         Some(blob) => blob,
