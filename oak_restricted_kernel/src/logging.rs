@@ -14,10 +14,10 @@
 // limitations under the License.
 //
 
-use core::fmt::Write;
+use core::{fmt::Write, ops::DerefMut};
 
 use log::info;
-use oak_sev_guest::io::{PortFactoryWrapper, PortWrapper};
+use oak_hal::{Port, PortFactory};
 use spinning_top::Spinlock;
 
 extern crate log;
@@ -26,7 +26,7 @@ extern crate log;
 // COM1)
 const COM1_BASE: u16 = 0x3f8;
 
-type SerialPort = sev_serial::SerialPort<PortFactoryWrapper, PortWrapper<u8>, PortWrapper<u8>>;
+type SerialPort = sev_serial::SerialPort<PortFactory, Port<u8>, Port<u8>>;
 pub static SERIAL1: Spinlock<Option<SerialPort>> = Spinlock::new(None);
 
 struct Logger {}
@@ -37,8 +37,11 @@ impl log::Log for Logger {
     }
 
     fn log(&self, record: &log::Record) {
-        writeln!(SERIAL1.lock().as_mut().unwrap(), "kernel {}: {}", record.level(), record.args())
-            .unwrap();
+        let mut lock = SERIAL1.lock();
+        // Don't log anything if the port is not initialized yet.
+        if let Some(port) = lock.deref_mut() {
+            writeln!(port, "kernel {}: {}", record.level(), record.args()).unwrap();
+        }
     }
 
     fn flush(&self) {
@@ -48,21 +51,15 @@ impl log::Log for Logger {
 
 static LOGGER: Logger = Logger {};
 
-pub fn init_logging(sev_es_enabled: bool) {
-    let port_factory = if sev_es_enabled {
-        crate::ghcb::get_ghcb_port_factory()
-    } else {
-        PortFactoryWrapper::new_raw()
-    };
+pub fn init_logging<P: crate::Platform>() {
     // Our contract with the launcher requires the first serial port to be
     // available, so assuming the loader adheres to it, this is safe.
-    let mut port = unsafe { SerialPort::new(COM1_BASE, port_factory) };
+    let mut port = unsafe { SerialPort::new(COM1_BASE, P::port_factory()) };
     port.init().expect("couldn't initialize logging serial port");
-
-    if SERIAL1.lock().replace(port).is_some() {
-        panic!("serial port 1 is already initialized");
+    {
+        let mut lock = SERIAL1.lock();
+        *lock.deref_mut() = Some(port);
     }
-
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Debug);
     // Log a message to ensure the serial logging channel is intialized.

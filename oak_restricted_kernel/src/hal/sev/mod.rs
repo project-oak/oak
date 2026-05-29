@@ -20,7 +20,10 @@ pub mod mmio;
 pub use mmio::SevMmio;
 use oak_hal::{PageAssignment, PageEncryption, PortFactory};
 use oak_linux_boot_params::BootE820Entry;
-use x86_64::structures::paging::{Page, Size4KiB};
+use x86_64::structures::{
+    paging::{Page, Size4KiB},
+    port::{PortRead, PortWrite},
+};
 
 use crate::{PAGE_TABLES, mm::Translator};
 
@@ -48,7 +51,42 @@ impl crate::Platform for Sev {
     }
 
     fn port_factory() -> PortFactory {
-        todo!();
+        if crate::ghcb::GHCB_PROTOCOL.get().is_some() {
+            PortFactory {
+                read_u8: |port| crate::ghcb::GHCB_PROTOCOL.get().unwrap().lock().io_read_u8(port),
+                read_u16: |port| crate::ghcb::GHCB_PROTOCOL.get().unwrap().lock().io_read_u16(port),
+                read_u32: |port| crate::ghcb::GHCB_PROTOCOL.get().unwrap().lock().io_read_u32(port),
+                write_u8: |port, value| {
+                    crate::ghcb::GHCB_PROTOCOL.get().unwrap().lock().io_write_u8(port, value)
+                },
+                write_u16: |port, value| {
+                    crate::ghcb::GHCB_PROTOCOL.get().unwrap().lock().io_write_u16(port, value)
+                },
+                write_u32: |port, value| {
+                    crate::ghcb::GHCB_PROTOCOL.get().unwrap().lock().io_write_u32(port, value)
+                },
+            }
+        } else {
+            // Fall back to direct port-based I/O when not running under
+            // SEV-ES or SEV-SNP.
+            PortFactory {
+                read_u8: |port| unsafe { Ok(u8::read_from_port(port)) },
+                read_u16: |port| unsafe { Ok(u16::read_from_port(port)) },
+                read_u32: |port| unsafe { Ok(u32::read_from_port(port)) },
+                write_u8: |port, value| {
+                    unsafe { u8::write_to_port(port, value) };
+                    Ok(())
+                },
+                write_u16: |port, value| {
+                    unsafe { u16::write_to_port(port, value) };
+                    Ok(())
+                },
+                write_u32: |port, value| {
+                    unsafe { u32::write_to_port(port, value) };
+                    Ok(())
+                },
+            }
+        }
     }
 
     fn early_initialize_platform() {

@@ -135,7 +135,7 @@ pub fn start_kernel<P: Platform + 'static>(info: &BootParams) -> ! {
     if sev_es_enabled {
         ghcb::init(sev_snp_enabled);
     }
-    logging::init_logging(sev_es_enabled);
+    logging::init_logging::<P>();
 
     // Safety: we shouldn't have anything else but the PICs on the I/O ports.
     // If we get an error, we will still try to continue.
