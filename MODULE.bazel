@@ -263,7 +263,9 @@ maven.install(
         "com.google.flogger:google-extensions:0.9",
         "com.google.protobuf:protobuf-kotlin:4.26.0",
         "javax.inject:javax.inject:1",
-        "org.bouncycastle:bcprov-jdk18on:1.77",
+        "org.bouncycastle:bcpkix-jdk18on:1.78.1",
+        "org.bouncycastle:bcprov-jdk18on:1.78.1",
+        "org.conscrypt:conscrypt-openjdk-uber:2.5.2",
         "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2",
     ],
     repositories = [
