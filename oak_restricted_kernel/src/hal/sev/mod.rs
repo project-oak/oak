@@ -18,14 +18,22 @@ use core::arch::x86_64::CpuidResult;
 
 pub mod mmio;
 pub use mmio::SevMmio;
+use oak_core::sync::OnceCell;
 use oak_hal::{PageAssignment, PageEncryption, PortFactory};
 use oak_linux_boot_params::BootE820Entry;
+use oak_sev_guest::msr::SevStatus;
 use x86_64::structures::{
     paging::{Page, Size4KiB},
     port::{PortRead, PortWrite},
 };
 
 use crate::{PAGE_TABLES, mm::Translator};
+
+static SEV_STATUS: OnceCell<SevStatus> = OnceCell::new();
+
+fn sev_status() -> SevStatus {
+    *SEV_STATUS.get().expect("SEV status not set")
+}
 
 pub struct Sev {}
 
@@ -90,7 +98,15 @@ impl crate::Platform for Sev {
     }
 
     fn early_initialize_platform() {
-        todo!();
+        SEV_STATUS
+            .set(
+                oak_sev_guest::msr::get_sev_status()
+                    .unwrap_or(oak_sev_guest::msr::SevStatus::empty()),
+            )
+            .expect("SEV status already set");
+        if sev_status().contains(oak_sev_guest::msr::SevStatus::SEV_ES_ENABLED) {
+            crate::ghcb::init(sev_status().contains(oak_sev_guest::msr::SevStatus::SNP_ACTIVE));
+        }
     }
 
     fn initialize_platform(_e820_table: &[BootE820Entry]) {

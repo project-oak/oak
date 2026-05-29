@@ -129,12 +129,10 @@ pub fn start_kernel<P: Platform + 'static>(info: &BootParams) -> ! {
     avx::enable_avx();
     descriptors::init_gdt_early();
     interrupts::init_idt_early();
+    P::early_initialize_platform();
     let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
     let sev_es_enabled = sev_status.contains(SevStatus::SEV_ES_ENABLED);
     let sev_snp_enabled = sev_status.contains(SevStatus::SNP_ACTIVE);
-    if sev_es_enabled {
-        ghcb::init(sev_snp_enabled);
-    }
     logging::init_logging::<P>();
 
     // Safety: we shouldn't have anything else but the PICs on the I/O ports.
