@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use googletest::prelude::*;
-use oak_private_memory_database::icing::{IcingMetaDatabase, IcingTempDir};
+use oak_private_memory_database::icing::{IcingDatabaseConfig, IcingMetaDatabase, IcingTempDir};
 use prost_types::Timestamp;
 use sealed_memory_rust_proto::{
     oak::private_memory::{
@@ -157,7 +157,10 @@ fn search_blob_ids(
 
 #[gtest]
 fn test_search_memories_v2_tag_filter() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-tag-filter-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-tag-filter-test"),
+        enable_int8_embedding: false,
+    })?;
     db.add_memory(&mem_tagged("m1", &["alpha", "beta"]), "blob1".into())?;
     db.add_memory(&mem_tagged("m2", &["beta", "gamma"]), "blob2".into())?;
     db.add_memory(&mem_tagged("m3", &["gamma"]), "blob3".into())?;
@@ -170,7 +173,10 @@ fn test_search_memories_v2_tag_filter() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_search_memories_v2_id_filter() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-id-filter-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-id-filter-test"),
+        enable_int8_embedding: false,
+    })?;
     db.add_memory(&Memory { id: "m1".into(), ..Default::default() }, "blob1".into())?;
     db.add_memory(&Memory { id: "m2".into(), ..Default::default() }, "blob2".into())?;
 
@@ -181,7 +187,10 @@ fn test_search_memories_v2_id_filter() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_search_memories_v2_name_filter() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-name-filter-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-name-filter-test"),
+        enable_int8_embedding: false,
+    })?;
     db.add_memory(
         &Memory { id: "m1".into(), name: "grocery_list".into(), ..Default::default() },
         "blob1".into(),
@@ -198,7 +207,10 @@ fn test_search_memories_v2_name_filter() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_search_memories_v2_tag_filter_with_missing_tags() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-tag-missing-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-tag-missing-test"),
+        enable_int8_embedding: false,
+    })?;
     db.add_memory(&mem_tagged("m1", &["alpha", "beta"]), "blob1".into())?;
     db.add_memory(&mem_tagged("m2", &["beta"]), "blob2".into())?;
     db.add_memory(&Memory { id: "m3".into(), ..Default::default() }, "blob3".into())?; // no tags
@@ -221,7 +233,10 @@ fn test_search_memories_v2_tag_filter_with_missing_tags() -> anyhow::Result<()> 
 
 #[gtest]
 fn test_search_memories_v2_name_filter_with_missing_name() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-name-missing-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-name-missing-test"),
+        enable_int8_embedding: false,
+    })?;
     db.add_memory(
         &Memory { id: "m1".into(), name: "grocery_list".into(), ..Default::default() },
         "blob1".into(),
@@ -235,7 +250,10 @@ fn test_search_memories_v2_name_filter_with_missing_name() -> anyhow::Result<()>
 
 #[gtest]
 fn test_search_memories_v2_limit_field() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-limit-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-limit-test"),
+        enable_int8_embedding: false,
+    })?;
 
     for i in 0..10 {
         db.add_memory(&mem_tagged(&format!("m{i}"), &["limit_tag"]), format!("blob{i}"))?;
@@ -253,7 +271,10 @@ fn test_search_memories_v2_limit_field() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_search_memories_v2_limit_across_pages() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-limit-pages-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-limit-pages-test"),
+        enable_int8_embedding: false,
+    })?;
 
     for i in 0..10 {
         db.add_memory(&mem_tagged(&format!("m{i}"), &["limit_page_tag"]), format!("blob{i}"))?;
@@ -278,7 +299,10 @@ fn test_search_memories_v2_limit_across_pages() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_search_memories_v2_timestamp_gte() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-ts-gte-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-ts-gte-test"),
+        enable_int8_embedding: false,
+    })?;
     for (id, blob, secs) in [("m1", "blob1", 100), ("m2", "blob2", 200), ("m3", "blob3", 300)] {
         let m = Memory { id: id.into(), created_timestamp: ts(secs), ..Default::default() };
         db.add_memory(&m, blob.into())?;
@@ -292,7 +316,10 @@ fn test_search_memories_v2_timestamp_gte() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_search_memories_v2_timestamp_lt() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-ts-lt-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-ts-lt-test"),
+        enable_int8_embedding: false,
+    })?;
     for (id, blob, secs) in [("m1", "blob1", 100), ("m2", "blob2", 200)] {
         let m = Memory { id: id.into(), created_timestamp: ts(secs), ..Default::default() };
         db.add_memory(&m, blob.into())?;
@@ -306,7 +333,10 @@ fn test_search_memories_v2_timestamp_lt() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_search_memories_v2_timestamp_eq() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-ts-eq-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-ts-eq-test"),
+        enable_int8_embedding: false,
+    })?;
     for (id, blob, secs) in [("m1", "blob1", 100), ("m2", "blob2", 200)] {
         let m = Memory { id: id.into(), created_timestamp: ts(secs), ..Default::default() };
         db.add_memory(&m, blob.into())?;
@@ -320,7 +350,10 @@ fn test_search_memories_v2_timestamp_eq() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_search_memories_v2_event_timestamp_gte_with_missing() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-evt-gte-missing-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-evt-gte-missing-test"),
+        enable_int8_embedding: false,
+    })?;
 
     let mut m1 = mem_tagged("m1", &["common"]);
     m1.event_timestamp = ts(100);
@@ -345,7 +378,10 @@ fn test_search_memories_v2_event_timestamp_gte_with_missing() -> anyhow::Result<
 
 #[gtest]
 fn test_search_memories_v2_event_timestamp_lt_with_missing() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-evt-lt-missing-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-evt-lt-missing-test"),
+        enable_int8_embedding: false,
+    })?;
 
     let mut m1 = mem_tagged("m1", &["common"]);
     m1.event_timestamp = ts(100);
@@ -365,7 +401,10 @@ fn test_search_memories_v2_event_timestamp_lt_with_missing() -> anyhow::Result<(
 
 #[gtest]
 fn test_search_memories_v2_event_timestamp_eq_with_missing() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-evt-eq-missing-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-evt-eq-missing-test"),
+        enable_int8_embedding: false,
+    })?;
 
     let mut m1 = mem_tagged("m1", &["common"]);
     m1.event_timestamp = ts(100);
@@ -385,7 +424,10 @@ fn test_search_memories_v2_event_timestamp_eq_with_missing() -> anyhow::Result<(
 
 #[gtest]
 fn test_search_memories_v2_and_filter() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-and-filter-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-and-filter-test"),
+        enable_int8_embedding: false,
+    })?;
 
     let mut m1 = mem_tagged("m1", &["alpha"]);
     m1.created_timestamp = ts(100);
@@ -410,7 +452,10 @@ fn test_search_memories_v2_and_filter() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_search_memories_v2_or_filter() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-or-filter-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-or-filter-test"),
+        enable_int8_embedding: false,
+    })?;
     db.add_memory(&mem_tagged("m1", &["alpha"]), "blob1".into())?;
     db.add_memory(&mem_tagged("m2", &["beta"]), "blob2".into())?;
     db.add_memory(&mem_tagged("m3", &["gamma"]), "blob3".into())?;
@@ -423,7 +468,10 @@ fn test_search_memories_v2_or_filter() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_search_memories_v2_not_filter() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-not-filter-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-not-filter-test"),
+        enable_int8_embedding: false,
+    })?;
     db.add_memory(&mem_tagged("m1", &["alpha"]), "blob1".into())?;
     db.add_memory(&mem_tagged("m2", &["beta"]), "blob2".into())?;
 
@@ -435,7 +483,10 @@ fn test_search_memories_v2_not_filter() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_search_memories_v2_nested_composite_filter() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-nested-composite"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-nested-composite"),
+        enable_int8_embedding: false,
+    })?;
 
     let mut m1 = mem_tagged("m1", &["alpha"]);
     m1.created_timestamp = ts(100);
@@ -479,7 +530,10 @@ fn test_search_memories_v2_nested_composite_filter() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_search_memories_v2_sort_created_timestamp_descending() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-ts-desc-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-sort-ts-desc-test"),
+        enable_int8_embedding: false,
+    })?;
 
     for i in 0..5 {
         let mut m = mem_tagged(&format!("m{i}"), &["common"]);
@@ -501,7 +555,10 @@ fn test_search_memories_v2_sort_created_timestamp_descending() -> anyhow::Result
 
 #[gtest]
 fn test_search_memories_v2_sort_created_timestamp_ascending() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-ts-asc-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-sort-ts-asc-test"),
+        enable_int8_embedding: false,
+    })?;
 
     for i in 0..5 {
         let mut m = mem_tagged(&format!("m{i}"), &["common"]);
@@ -523,7 +580,10 @@ fn test_search_memories_v2_sort_created_timestamp_ascending() -> anyhow::Result<
 
 #[gtest]
 fn test_search_memories_v2_sort_event_timestamp_descending() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-event-desc-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-sort-event-desc-test"),
+        enable_int8_embedding: false,
+    })?;
 
     let mut m0 = mem_tagged("m0", &["common"]);
     m0.event_timestamp = ts(500);
@@ -546,7 +606,10 @@ fn test_search_memories_v2_sort_event_timestamp_descending() -> anyhow::Result<(
 
 #[gtest]
 fn test_search_memories_v2_sort_event_timestamp_ascending() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-event-asc-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-sort-event-asc-test"),
+        enable_int8_embedding: false,
+    })?;
 
     let mut m0 = mem_tagged("m0", &["common"]);
     m0.event_timestamp = ts(500);
@@ -570,7 +633,10 @@ fn test_search_memories_v2_sort_event_timestamp_ascending() -> anyhow::Result<()
 
 #[gtest]
 fn test_search_memories_v2_sort_expiration_timestamp_descending() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-exp-desc-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-sort-exp-desc-test"),
+        enable_int8_embedding: false,
+    })?;
 
     let mut m0 = mem_tagged("m0", &["common"]);
     m0.expiration_timestamp = ts(1000);
@@ -595,7 +661,10 @@ fn test_search_memories_v2_sort_expiration_timestamp_descending() -> anyhow::Res
 /// deterministic order (by creation timestamp, i.e. insertion order).
 #[gtest]
 fn test_search_memories_v2_sort_event_timestamp_tiebreaker() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-tiebreak-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-sort-tiebreak-test"),
+        enable_int8_embedding: false,
+    })?;
 
     // Insert 5 memories all with the same event_timestamp.
     for i in 0..5 {
@@ -635,8 +704,10 @@ fn test_search_memories_v2_sort_event_timestamp_tiebreaker() -> anyhow::Result<(
 #[gtest]
 fn test_search_memories_v2_embedding_filter_with_type() -> anyhow::Result<()> {
     use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
-    let mut icing_database =
-        IcingMetaDatabase::new(IcingTempDir::new("v2-embedding-filter-type-test"))?;
+    let mut icing_database = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-embedding-filter-type-test"),
+        enable_int8_embedding: false,
+    })?;
 
     let model_signature = "test_model".to_string();
 
@@ -677,7 +748,10 @@ fn test_search_memories_v2_embedding_filter() -> anyhow::Result<()> {
     let _ = env_logger::builder().filter(None, log::LevelFilter::Trace).try_init();
 
     use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-embedding-filter-test"))?;
+    let mut icing_database = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-embedding-filter-test"),
+        enable_int8_embedding: false,
+    })?;
 
     let model_signature = "test_model".to_string();
 
@@ -712,8 +786,10 @@ fn test_search_memories_v2_embedding_filter() -> anyhow::Result<()> {
 #[gtest]
 fn test_search_memories_v2_embedding_filter_multiple_view_types() -> anyhow::Result<()> {
     use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
-    let mut icing_database =
-        IcingMetaDatabase::new(IcingTempDir::new("v2-embedding-filter-type-test"))?;
+    let mut icing_database = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-embedding-filter-type-test"),
+        enable_int8_embedding: false,
+    })?;
 
     let model_signature = "test_model".to_string();
 
@@ -779,7 +855,10 @@ fn test_search_memories_v2_embedding_filter_multiple_view_types() -> anyhow::Res
 #[gtest]
 fn test_search_memories_v2_and_filter_embedding_and_tag() -> anyhow::Result<()> {
     use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-and-filter-emb-tag-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-and-filter-emb-tag-test"),
+        enable_int8_embedding: false,
+    })?;
 
     // m1: Passes both (has tag, matching embedding)
     let mut m1 = mem_embedded("m1", &[1.0, 0.0, 0.0]);
@@ -820,7 +899,10 @@ fn test_search_memories_v2_and_filter_embedding_and_tag() -> anyhow::Result<()> 
 
 #[gtest]
 fn test_search_memories_v2_multiple_embedding_filters_throws_error() -> anyhow::Result<()> {
-    let db = IcingMetaDatabase::new(IcingTempDir::new("v2-multiple-emb-err-test"))?;
+    let db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-multiple-emb-err-test"),
+        enable_int8_embedding: false,
+    })?;
 
     let filter1 = SearchMemoriesFilter {
         value: Some(FilterValue::EmbeddingFilter(EmbeddingFilter {
@@ -853,7 +935,10 @@ fn test_search_memories_v2_multiple_embedding_filters_throws_error() -> anyhow::
 
 #[gtest]
 fn test_search_memories_v2_no_filter() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-no-filter-no-embeddings-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-no-filter-no-embeddings-test"),
+        enable_int8_embedding: false,
+    })?;
 
     // Add two memories without embeddings
     db.add_memory(&mem_tagged("m1", &["tag1"]), "blob1".into())?;
@@ -869,7 +954,10 @@ fn test_search_memories_v2_no_filter() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_search_memories_v2_sort_embedding() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-emb-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-sort-emb-test"),
+        enable_int8_embedding: false,
+    })?;
 
     // Memory 1: Partial match -> medium score (0.5)
     db.add_memory(&mem_embedded("m1", &[0.5, 0.5, 0.0]), "blob1".into())?;
@@ -900,7 +988,10 @@ fn test_search_memories_v2_sort_embedding() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_search_memories_v2_sort_embedding_with_missing_embeddings() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-emb-missing-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-sort-emb-missing-test"),
+        enable_int8_embedding: false,
+    })?;
 
     // Memory 1: Partial match -> medium score (0.5)
     db.add_memory(&mem_embedded("m1", &[0.5, 0.5, 0.0]), "blob1".into())?;
@@ -936,7 +1027,10 @@ fn test_search_memories_v2_sort_embedding_with_missing_embeddings() -> anyhow::R
 
 #[gtest]
 fn test_search_memories_v2_sort_embedding_with_view_type() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-emb-type-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-sort-emb-type-test"),
+        enable_int8_embedding: false,
+    })?;
 
     // Memory 1: target_type view has lower score, other_type has higher.
     db.add_memory(
@@ -988,7 +1082,10 @@ fn test_search_memories_v2_sort_embedding_with_view_type() -> anyhow::Result<()>
 
 #[gtest]
 fn test_search_memories_v2_sort_embedding_uses_max_view_score() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-emb-max-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-sort-emb-max-test"),
+        enable_int8_embedding: false,
+    })?;
 
     // m1: max score = 0.9 (from first view)
     db.add_memory(
@@ -1032,7 +1129,10 @@ fn test_search_memories_v2_sort_embedding_uses_max_view_score() -> anyhow::Resul
 #[gtest]
 fn test_search_memories_v2_sort_embedding_tiebreaker_for_missing_embeddings() -> anyhow::Result<()>
 {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-emb-missing-tiebreak-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-sort-emb-missing-tiebreak-test"),
+        enable_int8_embedding: false,
+    })?;
 
     // 1. Has embedding, exact match (score 1.0). Timestamp doesn't matter (10).
     let mut m1 = mem_embedded("tiebreak1", &[1.0, 0.0, 0.0]);
@@ -1086,7 +1186,10 @@ fn test_search_memories_v2_sort_embedding_tiebreaker_for_missing_embeddings() ->
 
 #[gtest]
 fn test_search_memories_v2_sort_embedding_ignores_timestamp_for_score() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-emb-ts-ignore-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-sort-emb-ts-ignore-test"),
+        enable_int8_embedding: false,
+    })?;
 
     // m1: very old, but slightly higher embedding score (0.9 vs 1.0 = 0.9)
     let mut m1 = mem_embedded("m1", &[0.9, 0.1, 0.0]);
@@ -1135,7 +1238,10 @@ fn test_search_memories_v2_sort_embedding_ignores_timestamp_for_score() -> anyho
 
 #[gtest]
 fn test_search_memories_v2_sort_embedding_ascending_throws_error() -> anyhow::Result<()> {
-    let db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-emb-asc-test"))?;
+    let db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-sort-emb-asc-test"),
+        enable_int8_embedding: false,
+    })?;
 
     let req = SearchMemoriesRequest {
         sort: vec![SearchMemoriesSort {
@@ -1160,7 +1266,10 @@ fn test_search_memories_v2_sort_embedding_ascending_throws_error() -> anyhow::Re
 #[gtest]
 fn test_search_memories_v2_filter_embedding_and_sort_embedding_throws_error() -> anyhow::Result<()>
 {
-    let db = IcingMetaDatabase::new(IcingTempDir::new("v2-filter-emb-sort-emb-err-test"))?;
+    let db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-filter-emb-sort-emb-err-test"),
+        enable_int8_embedding: false,
+    })?;
 
     let embedding =
         Some(Embedding { model_signature: "test_model".to_string(), values: vec![1.0, 0.0, 0.0] });
@@ -1191,7 +1300,10 @@ fn test_search_memories_v2_filter_embedding_and_sort_embedding_throws_error() ->
 
 #[gtest]
 fn test_search_memories_v2_filter_tag_and_sort_embedding() -> anyhow::Result<()> {
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-filter-tag-sort-emb-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-filter-tag-sort-emb-test"),
+        enable_int8_embedding: false,
+    })?;
 
     // m1: Exact match embedding, has "target" tag -> should be first
     let mut m1 = mem_embedded("m1", &[1.0, 0.0, 0.0]);
@@ -1237,7 +1349,10 @@ fn test_search_memories_v2_filter_tag_and_sort_embedding() -> anyhow::Result<()>
 fn test_search_memories_v2_exact_name_matching() -> anyhow::Result<()> {
     let _ = env_logger::builder().filter(None, log::LevelFilter::Trace).try_init();
 
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-exact-name-match-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-exact-name-match-test"),
+        enable_int8_embedding: false,
+    })?;
 
     db.add_memory(
         &Memory {
@@ -1291,7 +1406,10 @@ fn test_search_memories_v2_exact_name_matching() -> anyhow::Result<()> {
 fn test_search_memories_v2_exact_tag_matching() -> anyhow::Result<()> {
     let _ = env_logger::builder().filter(None, log::LevelFilter::Trace).try_init();
 
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-exact-tag-match-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-exact-tag-match-test"),
+        enable_int8_embedding: false,
+    })?;
 
     db.add_memory(&mem_tagged("m1", &["test_memory.very_long_tag_name.object1"]), "blob1".into())?;
     db.add_memory(&mem_tagged("m2", &["test_memory.very_long_tag_name.object2"]), "blob2".into())?;
@@ -1317,7 +1435,10 @@ fn test_search_memories_v2_exact_tag_matching() -> anyhow::Result<()> {
 fn test_search_memories_v2_tag_with_double_quote() -> anyhow::Result<()> {
     let _ = env_logger::builder().filter(None, log::LevelFilter::Trace).try_init();
 
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-tag-with-quote-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-tag-with-quote-test"),
+        enable_int8_embedding: false,
+    })?;
 
     db.add_memory(&mem_tagged("m1", &["tag_with_\"_quote"]), "blob1".into())?;
     db.add_memory(&mem_tagged("m2", &["normal_tag"]), "blob2".into())?;

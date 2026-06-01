@@ -92,6 +92,7 @@ impl SealedMemoryServiceImplementation {
             self.application_config.max_database_size_bytes,
             self.application_config.blanket_ttl_seconds,
             self.application_config.max_memory_ttl_seconds,
+            self.application_config.enable_int8_embedding,
         )
     }
 
@@ -145,6 +146,7 @@ impl OakSessionHandler {
         max_database_size_bytes: usize,
         blanket_ttl_seconds: i64,
         max_memory_ttl_seconds: i64,
+        enable_int8_embedding: bool,
     ) -> tonic::Result<Self> {
         let server_session = ServerSession::create(session_config)
             .into_failed_precondition("failed to initialize oak session")?;
@@ -160,6 +162,7 @@ impl OakSessionHandler {
                 max_database_size_bytes,
                 blanket_ttl_seconds,
                 max_memory_ttl_seconds,
+                enable_int8_embedding,
             ),
         })
     }
@@ -270,6 +273,7 @@ impl TlsSessionHandler {
         max_database_size_bytes: usize,
         blanket_ttl_seconds: i64,
         max_memory_ttl_seconds: i64,
+        enable_int8_embedding: bool,
     ) -> Self {
         Self {
             metrics: metrics.clone(),
@@ -283,6 +287,7 @@ impl TlsSessionHandler {
                 max_database_size_bytes,
                 blanket_ttl_seconds,
                 max_memory_ttl_seconds,
+                enable_int8_embedding,
             ),
         }
     }
@@ -384,6 +389,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         let max_database_size_bytes = self.application_config.max_database_size_bytes;
         let blanket_ttl_seconds = self.application_config.blanket_ttl_seconds;
         let max_memory_ttl_seconds = self.application_config.max_memory_ttl_seconds;
+        let enable_int8_embedding = self.application_config.enable_int8_embedding;
 
         let request_stream = Arc::new(tokio::sync::Mutex::new(request.into_inner()));
         let (tx, rx) = tokio::sync::mpsc::channel(32);
@@ -441,6 +447,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
                 max_database_size_bytes,
                 blanket_ttl_seconds,
                 max_memory_ttl_seconds,
+                enable_int8_embedding,
             );
             debug!("TLS handshake completed");
 

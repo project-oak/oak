@@ -93,3 +93,17 @@ rust_binary(
         "@oak_crates_index//:log",
     ],
 )
+
+rust_binary(
+    name = "int8_benchmark",
+    srcs = ["int8_benchmark.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        "//database:oak_private_memory_database",
+        "//proto:sealed_memory_rust_proto",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:rand",
+    ],
+)

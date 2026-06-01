@@ -28,7 +28,7 @@ use std::time::Instant;
 use anyhow::Result;
 use clap::Parser;
 use icing::set_logging;
-use oak_private_memory_database::icing::{IcingMetaDatabase, IcingTempDir};
+use oak_private_memory_database::icing::{IcingDatabaseConfig, IcingMetaDatabase, IcingTempDir};
 use rand::random;
 use sealed_memory_rust_proto::oak::private_memory::{
     Embedding, EmbeddingFilter, EmbeddingSort, LlmView, LlmViews, Memory, SearchMemoriesFilter,
@@ -164,7 +164,10 @@ fn main() -> Result<()> {
 
     for &count in &counts {
         let temp_dir = IcingTempDir::new("icing-eigen-bench-");
-        let mut db = IcingMetaDatabase::new(temp_dir)?;
+        let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+            base_dir: temp_dir,
+            enable_int8_embedding: false,
+        })?;
 
         // Populate
         for i in 0..count {

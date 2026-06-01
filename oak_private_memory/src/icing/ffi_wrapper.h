@@ -275,6 +275,16 @@ class PropertyConfigBuilder {
     return *this;
   }
 
+  const PropertyConfigBuilder& set_data_type_vector_quantized(
+      int embedding_indexing_type, int quantization_type) const {
+    inner_->SetDataTypeVector(
+        (icing::lib::EmbeddingIndexingConfig::EmbeddingIndexingType::Code)
+            embedding_indexing_type,
+        (icing::lib::EmbeddingIndexingConfig::QuantizationType::Code)
+            quantization_type);
+    return *this;
+  }
+
   const PropertyConfigBuilder& set_data_type_string(int match_type,
                                                     int tokenizer) const {
     inner_->SetDataTypeString(

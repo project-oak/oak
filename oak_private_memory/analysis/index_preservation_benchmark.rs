@@ -29,7 +29,7 @@ use std::{fs, path::Path, time::Instant};
 use anyhow::Result;
 use clap::Parser;
 use icing::IcingGroundTruthFilesHelper;
-use oak_private_memory_database::icing::{IcingMetaDatabase, IcingTempDir};
+use oak_private_memory_database::icing::{IcingDatabaseConfig, IcingMetaDatabase, IcingTempDir};
 use prost::Message;
 use rand::random;
 use sealed_memory_rust_proto::oak::private_memory::{Embedding, LlmView, LlmViews, Memory};
@@ -328,7 +328,10 @@ fn main() -> Result<()> {
         let temp_dir = IcingTempDir::new("icing-idx-bench-");
         let dir_path = temp_dir.as_str().to_string();
 
-        let mut db = IcingMetaDatabase::new(temp_dir)?;
+        let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+            base_dir: temp_dir,
+            enable_int8_embedding: false,
+        })?;
 
         if args.verbose {
             eprintln!("populating {} embeddings...", count);

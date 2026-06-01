@@ -24,7 +24,7 @@ use oak_private_memory_database::{
     clock::Clock,
     database::Database,
     encryption::decrypt_database,
-    icing::{IcingMetaDatabase, PageToken},
+    icing::{IcingDatabaseConfig, IcingMetaDatabase, PageToken},
 };
 use prost::Message;
 use rand::Rng;
@@ -64,6 +64,7 @@ pub struct SealedMemorySessionHandler {
     max_database_size_bytes: usize,
     blanket_ttl_seconds: i64,
     max_memory_ttl_seconds: i64,
+    enable_int8_embedding: bool,
 }
 
 impl Drop for SealedMemorySessionHandler {
@@ -89,6 +90,7 @@ impl SealedMemorySessionHandler {
         max_database_size_bytes: usize,
         blanket_ttl_seconds: i64,
         max_memory_ttl_seconds: i64,
+        enable_int8_embedding: bool,
     ) -> Self {
         Self {
             session_context: Default::default(),
@@ -100,6 +102,7 @@ impl SealedMemorySessionHandler {
             max_database_size_bytes,
             blanket_ttl_seconds,
             max_memory_ttl_seconds,
+            enable_int8_embedding,
         }
     }
 
@@ -283,6 +286,7 @@ impl SealedMemorySessionHandler {
             &dek,
             self.clock.clone(),
             self.blanket_ttl_seconds,
+            self.enable_int8_embedding,
         )
         .await?;
 
@@ -652,6 +656,7 @@ async fn get_or_create_db(
     dek: &[u8],
     clock: Arc<dyn Clock>,
     blanket_ttl_seconds: i64,
+    enable_int8_embedding: bool,
 ) -> tonic::Result<(IcingMetaDatabase, String, usize)> {
     let fetch_start = clock.now();
     let coarsened_expiration_timestamp =
@@ -685,11 +690,12 @@ async fn get_or_create_db(
             info!("Loaded database successfully!!");
             let encoded_db = icing_db.encode_to_vec();
             let initial_size = encoded_db.len();
-            let db = IcingMetaDatabase::import(
-                IcingTempDir::new("sm-server-icing-"),
-                encoded_db.as_slice(),
-            )
-            .into_internal_error("failed to import database")?;
+            let config = IcingDatabaseConfig {
+                base_dir: IcingTempDir::new("sm-server-icing-"),
+                enable_int8_embedding,
+            };
+            let db = IcingMetaDatabase::import(encoded_db.as_slice(), config)
+                .into_internal_error("failed to import database")?;
             let elapsed = import_start.elapsed().unwrap_or_default();
             let db_size_bucket = metrics::bucket_db_size(initial_size);
             get_global_metrics().record_db_init_latency(elapsed.as_millis() as u64, db_size_bucket);
@@ -703,7 +709,10 @@ async fn get_or_create_db(
     // somehow did not exist.
     // The version is empty, indicating that we can unconditionally write the
     // database.
-    let db = IcingMetaDatabase::new(IcingTempDir::new("sm-server-icing-"))
-        .into_internal_error("failed to create database")?;
+    let config = IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("sm-server-icing-"),
+        enable_int8_embedding,
+    };
+    let db = IcingMetaDatabase::new(config).into_internal_error("failed to create database")?;
     Ok((db, String::new(), 0))
 }

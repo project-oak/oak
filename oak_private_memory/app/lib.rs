@@ -54,6 +54,11 @@ pub struct ApplicationConfig {
     /// The maximum allowed per-item TTL in seconds. Default: 2 years.
     #[serde(default = "default_max_memory_ttl_seconds")]
     pub max_memory_ttl_seconds: i64,
+
+    /// When true, the embedding index uses 8-bit quantization, reducing
+    /// index size with negligible recall loss. Default: false.
+    #[serde(default)]
+    pub enable_int8_embedding: bool,
 }
 
 fn default_max_database_size_bytes() -> usize {

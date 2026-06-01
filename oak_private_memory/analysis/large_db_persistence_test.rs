@@ -31,7 +31,7 @@ use std::time::Instant;
 use anyhow::Result;
 use clap::Parser;
 use icing::set_logging;
-use oak_private_memory_database::icing::{IcingMetaDatabase, IcingTempDir};
+use oak_private_memory_database::icing::{IcingDatabaseConfig, IcingMetaDatabase, IcingTempDir};
 use prost::Message;
 use rand::random;
 use sealed_memory_rust_proto::oak::private_memory::{
@@ -82,7 +82,10 @@ fn main() -> Result<()> {
     // Phase 1: Populate the database until it exceeds the target size.
     println!("Phase 1: Populating database...");
     let temp_dir = IcingTempDir::new("large-db-test-");
-    let mut db = IcingMetaDatabase::new(temp_dir)?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: temp_dir,
+        enable_int8_embedding: false,
+    })?;
 
     let mut count: u32 = 0;
     let batch_size: u32 = 1000;
@@ -153,7 +156,10 @@ fn main() -> Result<()> {
     println!("\nPhase 3: Importing database (keysync simulation)...");
     let new_temp_dir = IcingTempDir::new("large-db-test-import-");
     let start = Instant::now();
-    let imported_db = IcingMetaDatabase::import(new_temp_dir, &export_bytes[..])?;
+    let imported_db = IcingMetaDatabase::import(
+        &export_bytes[..],
+        IcingDatabaseConfig { base_dir: new_temp_dir, enable_int8_embedding: false },
+    )?;
     let import_duration = start.elapsed();
     println!("  Imported in {:.1}ms", import_duration.as_secs_f64() * 1000.0);
 

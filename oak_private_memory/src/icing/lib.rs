@@ -216,6 +216,51 @@ pub fn create_vector_proto(identifier: &str, values: &[f32]) -> VectorProto {
     VectorProto {
         model_signature: Some(identifier.to_string()),
         values: values.to_vec(), // Convert the slice to a Vec<f32>
-        quantized_values: None,
+        ..Default::default()
+    }
+}
+
+/// Create a `VectorProto` with pre-quantized int8 values.
+///
+/// Quantizes `values` using the same algorithm as icing's internal
+/// `Quantizer` class (see `icing/index/embed/quantizer.h`).
+///
+/// The serialized format stored in `quantized_values` is:
+///
+/// `[f32 float_min][f32 scale_factor][u8 × N]`
+///
+/// where `scale_factor = 255.0 / (max - min)` and
+/// `quantized[i] = round((value[i] - float_min) * scale_factor)` clamped to
+/// `[0, 255]`.
+///
+/// This is mutually exclusive with float `values`; when `quantized_values`
+/// is set, icing uses the pre-quantized data directly without re-quantizing.
+pub fn create_quantized_vector_proto(identifier: &str, values: &[f32]) -> VectorProto {
+    let float_min = values.iter().cloned().fold(f32::INFINITY, f32::min);
+    let float_max = values.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+
+    // Match icing's Quantizer::Create: scale_factor = 255 / (max - min).
+    // When all values are identical (max ≈ min), scale_factor = 0.
+    const K_EPSILON: f32 = 1e-6;
+    let scale_factor: f32 =
+        if (float_max - float_min) > K_EPSILON { 255.0 / (float_max - float_min) } else { 0.0 };
+
+    // Header: { float float_min_; float scale_factor_; } — matches
+    // icing's Quantizer struct layout (memcpy-serialized, LE on x86).
+    let mut quantized_bytes: Vec<u8> = Vec::with_capacity(8 + values.len());
+    quantized_bytes.extend_from_slice(&float_min.to_le_bytes());
+    quantized_bytes.extend_from_slice(&scale_factor.to_le_bytes());
+
+    // Quantize each value: round((value - float_min) * scale_factor).
+    for &v in values {
+        let normalized: f64 = (v as f64 - float_min as f64) * scale_factor as f64;
+        let quantized: f64 = normalized.round().clamp(0.0, 255.0);
+        quantized_bytes.push(quantized as u8);
+    }
+
+    VectorProto {
+        model_signature: Some(identifier.to_string()),
+        quantized_values: Some(quantized_bytes),
+        ..Default::default()
     }
 }

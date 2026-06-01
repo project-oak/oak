@@ -37,7 +37,7 @@ use std::time::Instant;
 use anyhow::Result;
 use clap::Parser;
 use icing::set_logging;
-use oak_private_memory_database::icing::{IcingMetaDatabase, IcingTempDir};
+use oak_private_memory_database::icing::{IcingDatabaseConfig, IcingMetaDatabase, IcingTempDir};
 use sealed_memory_rust_proto::oak::private_memory::{
     Embedding, EmbeddingFilter, LlmView, LlmViews, Memory, SearchMemoriesFilter,
     SearchMemoriesRequest,
@@ -109,7 +109,10 @@ fn main() -> Result<()> {
     // Phase 1: Create database and insert documents.
     println!("Phase 1: Populating database...");
     let temp_dir = IcingTempDir::new("scoring-limit-test-");
-    let mut db = IcingMetaDatabase::new(temp_dir)?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: temp_dir,
+        enable_int8_embedding: false,
+    })?;
 
     let start = Instant::now();
     let needle_index = args.num_docs - 1; // Last document is the needle.
@@ -205,7 +208,10 @@ fn main() -> Result<()> {
     // Control A: Needle inserted FIRST (lowest document_id → outside window).
     println!("  Control A: Needle inserted first (oldest doc)...");
     let temp_dir_a = IcingTempDir::new("scoring-limit-ctrl-a-");
-    let mut db_a = IcingMetaDatabase::new(temp_dir_a)?;
+    let mut db_a = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: temp_dir_a,
+        enable_int8_embedding: false,
+    })?;
 
     let needle_memory = create_memory(99999, args.embedding_size, 1.0);
     db_a.add_memory(&needle_memory, "blob_needle".to_string())?;
@@ -232,7 +238,10 @@ fn main() -> Result<()> {
     let middle = args.num_docs / 2;
     println!("  Control B: Needle inserted at position {} (middle)...", middle);
     let temp_dir_b = IcingTempDir::new("scoring-limit-ctrl-b-");
-    let mut db_b = IcingMetaDatabase::new(temp_dir_b)?;
+    let mut db_b = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: temp_dir_b,
+        enable_int8_embedding: false,
+    })?;
 
     for i in 0..args.num_docs {
         if i == middle {

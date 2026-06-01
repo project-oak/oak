@@ -27,6 +27,22 @@ use sealed_memory_rust_proto::{
 
 use crate::{MemoryId, ViewId, clock::system_time_to_timestamp};
 
+/// Configuration for the icing search engine database.
+///
+/// This struct bundles all icing-level tuning knobs so that adding future
+/// options does not require threading additional parameters through the
+/// entire call chain.
+#[derive(Debug)]
+pub struct IcingDatabaseConfig {
+    /// The temporary directory for the icing database files.
+    pub base_dir: IcingTempDir,
+    /// When true, the embedding index uses 8-bit quantization
+    /// (`QUANTIZE_8_BIT`), reducing index size with negligible recall loss.
+    /// Icing quantizes float embeddings internally; callers still send
+    /// float values.
+    pub enable_int8_embedding: bool,
+}
+
 fn timestamp_to_i64(timestamp: &prost_types::Timestamp) -> i64 {
     timestamp.seconds.saturating_mul(1_000_000_000).saturating_add(timestamp.nanos as i64)
 }
@@ -35,6 +51,7 @@ fn timestamp_to_i64(timestamp: &prost_types::Timestamp) -> i64 {
 //
 // The directory will be deleted when the struct is dropped, if possible. If
 // deletion fails, an info message will be logged.
+#[derive(Debug)]
 pub struct IcingTempDir {
     path: String,
 }
@@ -73,11 +90,11 @@ impl Drop for IcingTempDir {
 /// }
 /// Indexable fields are the ones that can be searched against.
 pub struct IcingMetaDatabase {
-    // Note: icing_search_engine must come before base_dir, so that it is
+    // Note: icing_search_engine must come before config.base_dir, so that it is
     // dropped before the temp dir is dropped and deleted.
     icing_search_engine: cxx::UniquePtr<icing::IcingSearchEngine>,
-    base_dir: IcingTempDir,
     applied_operations: Vec<MutationOperation>,
+    config: IcingDatabaseConfig,
 }
 
 // Safety: `IcingMetaDatabase` wraps `cxx::UniquePtr<IcingSearchEngine>` which
@@ -228,7 +245,12 @@ pub struct PendingLlmViewMetadata {
 }
 
 impl PendingLlmViewMetadata {
-    pub fn new(memory: &Memory, view: &LlmView, blob_id: &BlobId) -> anyhow::Result<Option<Self>> {
+    pub fn new(
+        memory: &Memory,
+        view: &LlmView,
+        blob_id: &BlobId,
+        enable_int8_embedding: bool,
+    ) -> anyhow::Result<Option<Self>> {
         let memory_id = &memory.id;
         let view_id = &view.id;
         let view_type: &String = &view.r#type;
@@ -241,8 +263,14 @@ impl PendingLlmViewMetadata {
         } else {
             return Ok(None);
         };
-        let embeddings =
-            vec![icing::create_vector_proto(embedding.model_signature.as_str(), &embedding.values)];
+        let embeddings = vec![if enable_int8_embedding {
+            icing::create_quantized_vector_proto(
+                embedding.model_signature.as_str(),
+                &embedding.values,
+            )
+        } else {
+            icing::create_vector_proto(embedding.model_signature.as_str(), &embedding.values)
+        }];
         let document_builder = icing::create_document_builder();
         let document_builder = document_builder
             .set_key(NAMESPACE_NAME.as_bytes(), view_id.as_bytes())
@@ -297,7 +325,7 @@ pub fn calculate_memory_icing_size(memory: &Memory) -> anyhow::Result<usize> {
     if let Some(views) = memory.views.as_ref() {
         for view in &views.llm_views {
             if let Some(pending_view_metadata) =
-                crate::icing::PendingLlmViewMetadata::new(memory, view, &dummy_blob_id)?
+                crate::icing::PendingLlmViewMetadata::new(memory, view, &dummy_blob_id, false)?
             {
                 total_size += pending_view_metadata.document().encoded_len();
             }
@@ -346,7 +374,7 @@ impl IcingMetaDatabase {
         }
     }
 
-    fn create_schema() -> anyhow::Result<icing::SchemaProto> {
+    fn create_schema(config: &IcingDatabaseConfig) -> anyhow::Result<icing::SchemaProto> {
         let schema_type_builder = icing::create_schema_type_config_builder();
         schema_type_builder
             .set_type(SCHEMA_NAME.as_bytes())
@@ -440,7 +468,7 @@ impl IcingMetaDatabase {
                     )
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
-                    )
+                    ),
             )
             .add_property(
                 icing::create_property_config_builder()
@@ -505,32 +533,51 @@ impl IcingMetaDatabase {
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
                     ),
+            );
+
+        // Build the embedding property separately so the UniquePtr lives long
+        // enough for the `add_property` borrow.
+        let embedding_property = icing::create_property_config_builder();
+        embedding_property.set_name(EMBEDDING_NAME.as_bytes());
+        let quantization_type = if config.enable_int8_embedding {
+            icing::embedding_indexing_config::quantization_type::Code::Quantize8Bit
+        } else {
+            icing::embedding_indexing_config::quantization_type::Code::None
+        };
+        embedding_property.set_data_type_vector_quantized(
+            icing::embedding_indexing_config::embedding_indexing_type::Code::LinearSearch.into(),
+            quantization_type.into(),
+        );
+        embedding_property
+            .set_cardinality(icing::property_config_proto::cardinality::Code::Optional.into());
+        memory_view_schema_type_builder
+            .add_property(&embedding_property)
+            .add_property(
+                icing::create_property_config_builder()
+                    .set_name(CREATED_TIMESTAMP_NAME.as_bytes())
+                    .set_data_type_int64(
+                        icing::integer_indexing_config::numeric_match_type::Code::Range.into(),
+                    )
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Optional.into(),
+                    ),
             )
             .add_property(
                 icing::create_property_config_builder()
-                    .set_name(EMBEDDING_NAME.as_bytes())
-                    .set_data_type_vector(
-                        icing::embedding_indexing_config::embedding_indexing_type::Code::LinearSearch.into(),
-                    )
-                    .set_cardinality(icing::property_config_proto::cardinality::Code::Optional.into())
-            ).add_property(
-                icing::create_property_config_builder()
-                    .set_name(CREATED_TIMESTAMP_NAME.as_bytes())
-                    .set_data_type_int64(icing::integer_indexing_config::numeric_match_type::Code::Range.into())
-                    .set_cardinality(
-                        icing::property_config_proto::cardinality::Code::Optional.into(),
-                    ),
-            ).add_property(
-                icing::create_property_config_builder()
                     .set_name(EVENT_TIMESTAMP_NAME.as_bytes())
-                    .set_data_type_int64(icing::integer_indexing_config::numeric_match_type::Code::Range.into())
+                    .set_data_type_int64(
+                        icing::integer_indexing_config::numeric_match_type::Code::Range.into(),
+                    )
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
                     ),
-            ).add_property(
+            )
+            .add_property(
                 icing::create_property_config_builder()
                     .set_name(EXPIRATION_TIMESTAMP_NAME.as_bytes())
-                    .set_data_type_int64(icing::integer_indexing_config::numeric_match_type::Code::Range.into())
+                    .set_data_type_int64(
+                        icing::integer_indexing_config::numeric_match_type::Code::Range.into(),
+                    )
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
                     ),
@@ -542,12 +589,12 @@ impl IcingMetaDatabase {
         schema_builder.build()
     }
 
-    /// Create a new icing database in `base_dir`. If there is already a icing
-    /// db in `base_dir`, the old one will be deleted.
-    pub fn new(base_dir: IcingTempDir) -> anyhow::Result<Self> {
-        debug!("Creating new icing database in {}", base_dir.as_str());
-        let icing_search_engine = Self::initialize_icing_database(base_dir.as_str())?;
-        let schema = Self::create_schema()?;
+    /// Create a new icing database. If there is already a icing
+    /// db in `config.base_dir`, the old one will be deleted.
+    pub fn new(config: IcingDatabaseConfig) -> anyhow::Result<Self> {
+        debug!("Creating new icing database in {}", config.base_dir.as_str());
+        let icing_search_engine = Self::initialize_icing_database(config.base_dir.as_str())?;
+        let schema = Self::create_schema(&config)?;
         let result_proto = icing_search_engine.set_schema(&schema)?;
         ensure!(
             result_proto.status.context("set_schema returned no status in new")?.code
@@ -555,27 +602,26 @@ impl IcingMetaDatabase {
         );
         Ok(Self {
             icing_search_engine,
-            base_dir,
             applied_operations: vec![MutationOperation::Create],
+            config,
         })
     }
 
-    /// Create a new icing database in `base_dir`. Using the provided import
-    /// data.
-    pub fn import(base_dir: IcingTempDir, data: impl bytes::Buf) -> anyhow::Result<Self> {
-        debug!("Importing icing database into {}", base_dir.as_str());
+    /// Create a new icing database using the provided import data.
+    pub fn import(data: impl bytes::Buf, config: IcingDatabaseConfig) -> anyhow::Result<Self> {
+        debug!("Importing icing database into {}", config.base_dir.as_str());
         let ground_truth = icing::IcingGroundTruthFiles::decode(data)?;
-        ground_truth.migrate(base_dir.as_str())?;
+        ground_truth.migrate(config.base_dir.as_str())?;
 
-        let icing_search_engine = Self::initialize_icing_database(base_dir.as_str())?;
+        let icing_search_engine = Self::initialize_icing_database(config.base_dir.as_str())?;
         // Ensure schema is up-to-date after import (handles schema migrations).
-        let schema = Self::create_schema()?;
+        let schema = Self::create_schema(&config)?;
         let result_proto = icing_search_engine.set_schema(&schema)?;
         ensure!(
             result_proto.status.context("set_schema in import failed")?.code
                 == Some(icing::status_proto::Code::Ok.into())
         );
-        Ok(Self { icing_search_engine, base_dir, applied_operations: vec![] })
+        Ok(Self { icing_search_engine, applied_operations: vec![], config })
     }
 
     fn initialize_icing_database(
@@ -605,9 +651,12 @@ impl IcingMetaDatabase {
         if let Some(views) = memory.views.as_ref() {
             for view in &views.llm_views {
                 // TODO: yongheng - Generate view id if not provided.
-                if let Some(pending_view_metadata) =
-                    PendingLlmViewMetadata::new(memory, view, &blob_id)?
-                {
+                if let Some(pending_view_metadata) = PendingLlmViewMetadata::new(
+                    memory,
+                    view,
+                    &blob_id,
+                    self.config.enable_int8_embedding,
+                )? {
                     pending_views.push(pending_view_metadata);
                 }
             }
@@ -1006,7 +1055,7 @@ impl IcingMetaDatabase {
             result.status
         );
 
-        let schema = Self::create_schema()?;
+        let schema = Self::create_schema(&self.config)?;
         let set_schema_result = self.icing_search_engine.set_schema(&schema)?;
         ensure!(
             set_schema_result.status.clone().context("set_schema returned no status")?.code
@@ -1546,7 +1595,11 @@ impl IcingMetaDatabase {
         new_base_blob: &[u8],
         apply_changes_from: &IcingMetaDatabase,
     ) -> anyhow::Result<(Self, usize)> {
-        let mut new_db = Self::import(new_base_dir, new_base_blob)?;
+        let config = IcingDatabaseConfig {
+            base_dir: new_base_dir,
+            enable_int8_embedding: apply_changes_from.config.enable_int8_embedding,
+        };
+        let mut new_db = Self::import(new_base_blob, config)?;
         let mut failed_operations: usize = 0;
 
         // Apply each operation to the new database.
@@ -1662,7 +1715,7 @@ impl IcingMetaDatabase {
             result_proto.status.context("persist_to_disk returned no status in export")?.code
                 == Some(icing::status_proto::Code::Ok.into())
         );
-        icing::IcingGroundTruthFiles::new(self.base_dir.as_str())
+        icing::IcingGroundTruthFiles::new(self.config.base_dir.as_str())
     }
 }
 
@@ -1736,6 +1789,10 @@ mod tests {
         IcingTempDir::new("icing-test-")
     }
 
+    fn test_config() -> IcingDatabaseConfig {
+        IcingDatabaseConfig { base_dir: tempdir(), enable_int8_embedding: false }
+    }
+
     /// Creates a single `LlmView` with a "test_model" embedding.
     fn llm_view(id: &str, values: &[f32]) -> LlmView {
         LlmView {
@@ -1789,7 +1846,7 @@ mod tests {
 
     #[gtest]
     fn basic_icing_search_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
 
         let blob_id = 12345.to_string();
         db.add_memory(
@@ -1813,9 +1870,9 @@ mod tests {
 
     #[gtest]
     fn icing_import_export_test() -> anyhow::Result<()> {
-        let base_dir = tempdir();
-        let base_dir_string = base_dir.as_str().to_string();
-        let mut db = IcingMetaDatabase::new(base_dir)?;
+        let config = test_config();
+        let base_dir_string = config.base_dir.as_str().to_string();
+        let mut db = IcingMetaDatabase::new(config)?;
 
         let memory_id1 = "memory_id_export_1".to_string();
         let blob_id1 = 654321.to_string();
@@ -1832,7 +1889,7 @@ mod tests {
         drop(db);
         expect_false!(std::path::Path::new(base_dir_string.as_str()).exists());
 
-        let imported_db = IcingMetaDatabase::import(tempdir(), exported_data.as_slice())
+        let imported_db = IcingMetaDatabase::import(exported_data.as_slice(), test_config())
             .expect("failed to import");
 
         expect_that!(
@@ -1863,7 +1920,7 @@ mod tests {
         let golden_bytes =
             std::fs::read(&golden_path).expect("failed to read golden export snapshot");
 
-        let mut imported_db = IcingMetaDatabase::import(tempdir(), golden_bytes.as_slice())?;
+        let mut imported_db = IcingMetaDatabase::import(golden_bytes.as_slice(), test_config())?;
 
         // 1. Plain memory metadata is intact.
         assert_eq!(
@@ -1900,7 +1957,7 @@ mod tests {
 
     #[gtest]
     fn icing_get_blob_id_by_memory_id_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
 
         let (mid1, bid1) = ("memory_id_1".to_string(), 54321.to_string());
         db.add_memory(
@@ -1922,7 +1979,7 @@ mod tests {
 
     #[gtest]
     fn get_all_memory_ids_finds_memory_without_timestamp() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
 
         let bid = 98765.to_string();
         // Create memory without created_timestamp
@@ -1940,7 +1997,7 @@ mod tests {
     #[gtest]
     fn icing_import_with_changes_test_add_memory() -> anyhow::Result<()> {
         // Original base db.
-        let mut db1 = IcingMetaDatabase::new(tempdir())?;
+        let mut db1 = IcingMetaDatabase::new(test_config())?;
         let (_mid_a, bid_a) = add_test_memory(&mut db1, "A");
         let (_mid_b, bid_b) = add_test_memory(&mut db1, "B");
 
@@ -1948,12 +2005,12 @@ mod tests {
         let db1_exported = db1.export().expect("Failed to export db 1").encode_to_vec();
 
         // First concurrent changer import and first changer adds E and F
-        let mut db2 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
+        let mut db2 = IcingMetaDatabase::import(db1_exported.as_slice(), test_config())?;
         let (_mid_c, bid_c) = add_test_memory(&mut db2, "C");
         let (_mid_d, bid_d) = add_test_memory(&mut db2, "D");
 
         // First concurrent changer import and first changer adds G and H
-        let mut db3 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
+        let mut db3 = IcingMetaDatabase::import(db1_exported.as_slice(), test_config())?;
         let (_mid_e, bid_e) = add_test_memory(&mut db3, "E");
         let (_mid_f, bid_f) = add_test_memory(&mut db3, "F");
 
@@ -1987,7 +2044,7 @@ mod tests {
     #[gtest]
     fn icing_import_with_changes_test_add_and_delete_memory() -> anyhow::Result<()> {
         // Original base db.
-        let mut db1 = IcingMetaDatabase::new(tempdir())?;
+        let mut db1 = IcingMetaDatabase::new(test_config())?;
         let (_mid_a, bid_a) = add_test_memory(&mut db1, "A");
         let (mid_b, _mid_b) = add_test_memory(&mut db1, "B");
         let (mid_c, _bid_c) = add_test_memory(&mut db1, "C");
@@ -1997,13 +2054,13 @@ mod tests {
         let db1_exported = db1.export().expect("Failed to export db 1").encode_to_vec();
 
         // First concurrent changer import and first changer removes B, adds E
-        let mut db2 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
+        let mut db2 = IcingMetaDatabase::import(db1_exported.as_slice(), test_config())?;
         db2.delete_memories(std::slice::from_ref(&mid_b))?;
         let (_mid_e, bid_e) = add_test_memory(&mut db2, "E");
 
         // Second concurrent changer import and first changer removes B and C, add F
         // The remove will be redundant, but should not cause error or failures.
-        let mut db3 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
+        let mut db3 = IcingMetaDatabase::import(db1_exported.as_slice(), test_config())?;
         db3.delete_memories(&[mid_b.clone(), mid_c.clone()])?;
         let (_mid_f, bid_f) = add_test_memory(&mut db3, "F");
 
@@ -2035,19 +2092,19 @@ mod tests {
     #[gtest]
     fn icing_import_with_changes_test_add_memory_with_views() -> anyhow::Result<()> {
         // Original base db.
-        let mut db1 = IcingMetaDatabase::new(tempdir())?;
+        let mut db1 = IcingMetaDatabase::new(test_config())?;
         let (_mid_a, bid_a) = add_test_memory(&mut db1, "A");
 
         // Now "write it back"
         let db1_exported = db1.export().expect("Failed to export db 1").encode_to_vec();
 
         // First concurrent changer adds B
-        let mut db2 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
+        let mut db2 = IcingMetaDatabase::import(db1_exported.as_slice(), test_config())?;
         let (_mid_b, bid_b) = add_test_memory(&mut db2, "B");
         let db2_exported = db2.export().expect("Failed to export db 2").encode_to_vec();
 
         // Second concurrent changer adds C with a view
-        let mut db3 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
+        let mut db3 = IcingMetaDatabase::import(db1_exported.as_slice(), test_config())?;
         let bid_c = 99999.to_string();
         db3.add_memory(&mem_with_view("C", &["tag"], "view_c", &[1.0, 0.0, 0.0]), bid_c.clone())?;
 
@@ -2070,13 +2127,13 @@ mod tests {
     #[gtest]
     fn icing_import_with_changes_test_name_uniqueness() -> anyhow::Result<()> {
         // Original base db.
-        let db1 = IcingMetaDatabase::new(tempdir())?;
+        let db1 = IcingMetaDatabase::new(test_config())?;
 
         // Now "write it back"
         let db1_exported = db1.export().expect("Failed to export db 1").encode_to_vec();
 
         // First concurrent changer adds memory with name "shared_name"
-        let mut db2 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
+        let mut db2 = IcingMetaDatabase::import(db1_exported.as_slice(), test_config())?;
         let mem_a = Memory {
             id: "A".to_string(),
             tags: vec!["tag".to_string()],
@@ -2089,7 +2146,7 @@ mod tests {
 
         // Second concurrent changer also adds memory with name "shared_name" but
         // different ID
-        let mut db3 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
+        let mut db3 = IcingMetaDatabase::import(db1_exported.as_slice(), test_config())?;
         let mem_b = Memory {
             id: "B".to_string(),
             tags: vec!["tag".to_string()],
@@ -2116,7 +2173,7 @@ mod tests {
     #[gtest]
     fn icing_import_with_changes_test_reset() -> anyhow::Result<()> {
         // Original base db.
-        let mut db1 = IcingMetaDatabase::new(tempdir())?;
+        let mut db1 = IcingMetaDatabase::new(test_config())?;
         let (_mid_a, _bid_a) = add_test_memory(&mut db1, "A");
         let (mid_b, _bid_b) = add_test_memory(&mut db1, "B");
         let (_mid_c, _bid_c) = add_test_memory(&mut db1, "C");
@@ -2125,7 +2182,7 @@ mod tests {
         let db1_exported = db1.export().expect("Failed to export db 1").encode_to_vec();
 
         // First concurrent changer import and first changer removes B, adds E
-        let mut db2 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
+        let mut db2 = IcingMetaDatabase::import(db1_exported.as_slice(), test_config())?;
         db2.delete_memories(std::slice::from_ref(&mid_b))?;
         let (_mid_e, _bid_e) = add_test_memory(&mut db2, "E");
 
@@ -2133,7 +2190,7 @@ mod tests {
         let db2_exported = db2.export().expect("Failed to export db 2").encode_to_vec();
 
         // Second concurrent changer import and reset.
-        let mut db3 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
+        let mut db3 = IcingMetaDatabase::import(db1_exported.as_slice(), test_config())?;
         let _ = db3.reset();
 
         // When db3 writeback detects that it needs a fresher copy, it will import with
@@ -2150,7 +2207,7 @@ mod tests {
 
     #[gtest]
     fn icing_delete_memory_also_deletes_views_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
         let mid = "memory_id".to_string();
         let views = vec![llm_view("view1", &[1.0, 0.0, 0.0]), llm_view("view2", &[0.0, 1.0, 0.0])];
         db.add_memory(&mem_with_views(&mid, &["tag"], views), 12345.to_string())?;
@@ -2166,7 +2223,7 @@ mod tests {
 
     #[gtest]
     fn icing_update_memory_replaces_views_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
         let mid = "memory_id_to_update".to_string();
 
         // Add memory with two views.
@@ -2199,7 +2256,7 @@ mod tests {
 
     #[gtest]
     fn icing_get_memory_by_id_with_expiration_timestamp_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
 
         let memory_id = "expired_memory_id".to_string();
         let blob_id = "expired_blob_id".to_string();
@@ -2248,7 +2305,7 @@ mod tests {
 
     #[gtest]
     fn icing_get_memory_by_name_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
         db.add_memory(
             &Memory { id: "memory_id".into(), name: "memory_name".into(), ..Default::default() },
             "blob_id".into(),
@@ -2261,7 +2318,7 @@ mod tests {
 
     #[gtest]
     fn icing_get_memory_by_name_duplicate_error_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
         db.add_memory(
             &Memory { id: "memory_id1".into(), name: "memory_name".into(), ..Default::default() },
             "blob_id".into(),
@@ -2277,7 +2334,7 @@ mod tests {
 
     #[gtest]
     fn icing_get_memories_by_tag_with_expiration_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
         let past = SystemTime::now() - std::time::Duration::from_secs(3600);
         let future = SystemTime::now() + std::time::Duration::from_secs(3600);
 
@@ -2317,7 +2374,7 @@ mod tests {
     /// Verifies delete_memories uses MemoryId (not BlobId) for deletion.
     #[gtest]
     fn delete_memories_uses_correct_id_types_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
         let mid = "test_memory_id".to_string();
         let bid = "test_blob_id_12345".to_string();
         db.add_memory(
@@ -2340,7 +2397,7 @@ mod tests {
 
     #[gtest]
     fn get_memories_by_tag_sorts_by_created_timestamp_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
 
         for (id, blob, secs) in [
             ("memory_old", "blob_old", 1000),
@@ -2363,7 +2420,7 @@ mod tests {
 
     #[gtest]
     fn get_memories_by_empty_tag_returns_all_memories_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
         db.add_memory(
             &Memory { id: "memory1".into(), tags: vec!["tag_a".into()], ..Default::default() },
             "blob1".into(),
@@ -2384,7 +2441,7 @@ mod tests {
 
     #[gtest]
     fn get_document_counts_empty_db_test() -> anyhow::Result<()> {
-        let db = IcingMetaDatabase::new(tempdir())?;
+        let db = IcingMetaDatabase::new(test_config())?;
         let (memory_count, llm_view_count) = db.get_document_counts()?;
         expect_that!(memory_count, eq(0));
         expect_that!(llm_view_count, eq(0));
@@ -2393,7 +2450,7 @@ mod tests {
 
     #[gtest]
     fn get_document_counts_memories_only_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
         add_test_memory(&mut db, "1");
         add_test_memory(&mut db, "2");
         add_test_memory(&mut db, "3");
@@ -2406,7 +2463,7 @@ mod tests {
 
     #[gtest]
     fn get_document_counts_with_views_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
 
         // Memory with 2 views.
         let views = vec![llm_view("view1", &[1.0, 0.0, 0.0]), llm_view("view2", &[0.0, 1.0, 0.0])];
@@ -2426,7 +2483,7 @@ mod tests {
 
     #[gtest]
     fn get_document_counts_after_delete_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
 
         db.add_memory(&mem_with_view("mem1", &["tag"], "view1", &[1.0, 0.0, 0.0]), "blob1".into())?;
         db.add_memory(&mem_with_view("mem2", &["tag"], "view2", &[0.0, 1.0, 0.0]), "blob2".into())?;
@@ -2446,7 +2503,7 @@ mod tests {
 
     #[gtest]
     fn get_document_counts_after_reset_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
         add_test_memory(&mut db, "1");
         add_test_memory(&mut db, "2");
 
@@ -2467,7 +2524,7 @@ mod tests {
 
     #[gtest]
     fn export_size_grows_with_data_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
         let empty_size = db.export()?.encoded_len();
         assert_that!(empty_size, gt(0));
 
@@ -2486,7 +2543,7 @@ mod tests {
 
     #[gtest]
     fn export_size_shrinks_after_reset_test() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
         let empty_size = db.export()?.encoded_len();
 
         add_test_memory(&mut db, "1");
@@ -2507,7 +2564,7 @@ mod tests {
     /// from multiple threads against a shared instance.
     #[gtest]
     fn concurrent_reads_are_safe() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
 
         // Populate with test data.
         for i in 0..20 {
@@ -2561,7 +2618,7 @@ mod tests {
     /// Icing's internal shared_mutex serializes writes against reads.
     #[gtest]
     fn concurrent_reads_and_writes_are_safe() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
 
         // Seed with initial data.
         for i in 0..10 {
@@ -2631,7 +2688,8 @@ mod tests {
     /// database. Each writer adds non-overlapping memories through a RwLock.
     #[gtest]
     fn concurrent_writes_are_safe() -> anyhow::Result<()> {
-        let db = std::sync::Arc::new(std::sync::RwLock::new(IcingMetaDatabase::new(tempdir())?));
+        let db =
+            std::sync::Arc::new(std::sync::RwLock::new(IcingMetaDatabase::new(test_config())?));
 
         let mut handles = Vec::new();
 
@@ -2681,7 +2739,7 @@ mod tests {
     /// Stress test: many threads doing interleaved reads, writes, and deletes.
     #[gtest]
     fn stress_test_mixed_concurrent_operations() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
 
         // Seed with data that won't be deleted.
         for i in 0..50 {
@@ -2773,7 +2831,7 @@ mod tests {
     /// concurrent `put` and `search` calls without Rust-side locking.
     #[gtest]
     fn concurrent_raw_icing_operations() -> anyhow::Result<()> {
-        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(test_config())?;
 
         // Seed some data.
         for i in 0..30 {

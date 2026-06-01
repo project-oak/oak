@@ -26,13 +26,16 @@
 //! checked in. Regenerate whenever the schema changes intentionally **and**
 //! backward-compatibility has been verified.
 
-use oak_private_memory_database::{IcingMetaDatabase, IcingTempDir};
+use oak_private_memory_database::{IcingMetaDatabase, IcingTempDir, icing::IcingDatabaseConfig};
 use prost::Message;
 use sealed_memory_rust_proto::oak::private_memory::{Embedding, LlmView, LlmViews, Memory};
 
 fn main() -> anyhow::Result<()> {
     let dir = IcingTempDir::new("golden-export-");
-    let mut db = IcingMetaDatabase::new(dir)?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: dir,
+        enable_int8_embedding: false,
+    })?;
 
     // 1. Plain memory with a tag.
     db.add_memory(

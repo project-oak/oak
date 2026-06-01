@@ -16,7 +16,10 @@
 
 use anyhow::Result;
 use clap::Parser;
-use oak_private_memory_database::{IcingTempDir, icing::IcingMetaDatabase};
+use oak_private_memory_database::{
+    IcingTempDir,
+    icing::{IcingDatabaseConfig, IcingMetaDatabase},
+};
 use prost::Message;
 use rand::{random, seq::SliceRandom};
 use sealed_memory_rust_proto::oak::private_memory::{Embedding, LlmView, LlmViews, Memory};
@@ -175,7 +178,10 @@ fn print_optimization_details(before_size: usize, after_size: usize) {
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    let mut db = IcingMetaDatabase::new(IcingTempDir::new("analysis-"))?;
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("analysis-"),
+        enable_int8_embedding: false,
+    })?;
 
     let pool: Vec<String> = if args.pool_size > 0 {
         (0..args.pool_size)
