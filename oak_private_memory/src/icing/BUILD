@@ -77,6 +77,7 @@ genrule(
 cc_library(
     name = "bridge",
     srcs = ["ffi_bridge.rs.cc"],
+    copts = ["-std=c++23"],
     linkstatic = True,
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
@@ -94,6 +95,7 @@ cc_library(
 cc_library(
     name = "ffi_wrapper-sys",
     srcs = ["ffi_wrapper.cc"],
+    copts = ["-std=c++23"],
     linkstatic = True,
     target_compatible_with = ["@platforms//os:linux"],
     deps = [

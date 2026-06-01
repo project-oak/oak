@@ -222,6 +222,7 @@ rust_binary(
 cc_test(
     name = "icing_porting_test",
     srcs = ["test/icing_porting_test.cc"],
+    copts = ["-std=c++23"],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_google_googletest//:gtest_main",

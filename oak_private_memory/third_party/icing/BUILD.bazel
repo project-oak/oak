@@ -76,6 +76,7 @@ cc_library(
     includes = [
         ".",  # For includes relative to the library's root (like CMAKE_CURRENT_SOURCE_DIR)
     ],
+    copts = ["-std=c++23"],
     deps = [
         ":icing_cc_proto",
         "@bazel_tools//tools/jdk:jni",

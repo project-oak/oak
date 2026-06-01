@@ -119,7 +119,7 @@ http_archive(
 git_repository(
     name = "icing",
     build_file = "@//third_party/icing:BUILD.bazel",
-    commit = "c8263cfd12eacefde39cf16b2326fc3ca3fe934f",  # 2025-11-17
+    commit = "7dc0bb1d795db8427ce3c5f9185972d6e91138ac",
     remote = "https://android.googlesource.com/platform/external/icing",
 )
 
