@@ -54,5 +54,8 @@ rust_test(
     ],
     crate = ":c2sp",
     crate_features = ["ml_dsa"],
-    target_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
 )
