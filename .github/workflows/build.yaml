@@ -102,10 +102,15 @@ jobs:
           set -o nounset
           set -o pipefail
           source ${{ matrix.buildconfig }}
-          echo "package-name=${PACKAGE_NAME}" >> "${GITHUB_OUTPUT}"
           paths="${SUBJECT_PATHS[@]}"
-          echo "subject-paths=${paths}" >> "${GITHUB_OUTPUT}"
-          echo "subject-paths-commas=${paths// /,}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "package-name=${PACKAGE_NAME}"
+            echo "subject-paths=${paths}"
+            echo "subject-paths-commas=${paths// /,}"
+            echo "subject-paths-newlines<<EOF"
+            echo "${paths// /$'\n'}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Show values
         run: |
@@ -116,6 +121,7 @@ jobs:
           echo "package_name: ${{ steps.parse.outputs.package-name }}"
           echo "subject_paths: ${{ steps.parse.outputs.subject-paths }}"
           echo "subject_paths_commas: ${{ steps.parse.outputs.subject-paths-commas }}"
+          echo "subject_paths_newlines: ${{ steps.parse.outputs.subject-paths-newlines }}"
           echo "GITHUB_SHA: ${GITHUB_SHA}"
 
       - name: Build
@@ -161,7 +167,7 @@ jobs:
         with:
           name: ${{ steps.parse.outputs.package-name }}
           path: |
-            ${{ steps.parse.outputs.subject-paths }}
+            ${{ steps.parse.outputs.subject-paths-newlines }}
             ${{ steps.attest.outputs.bundle-path }}
           retention-days: 7
 
