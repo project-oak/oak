@@ -137,7 +137,7 @@ pub fn start_kernel<P: Platform + 'static>(info: &BootParams) -> ! {
 
     // Safety: we shouldn't have anything else but the PICs on the I/O ports.
     // If we get an error, we will still try to continue.
-    if let Err(err) = unsafe { interrupts::init_pic8259(sev_status) } {
+    if let Err(err) = unsafe { interrupts::init_pic8259::<P>() } {
         log::warn!("error disabling 8259 PIC: {}", err);
     }
 

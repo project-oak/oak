@@ -17,11 +17,10 @@
 use core::{arch::naked_asm, ops::Deref};
 
 use log::error;
-use oak_hal::{IoPortFactory, PortWriter};
+use oak_hal::{IoPortFactory, Platform, PortReader, PortWriter};
 use oak_sev_guest::{
     interrupts::{MutableInterruptStackFrame, mutable_interrupt_handler_with_error_code},
-    io::{PortFactoryWrapper, PortWrapper},
-    msr::{SevStatus, get_cpuid_for_vc_exception},
+    msr::get_cpuid_for_vc_exception,
 };
 use spinning_top::Spinlock;
 use x86_64::{
@@ -321,13 +320,19 @@ pub unsafe fn init_idt(double_fault_stack_index: u16) {
     }
 }
 
-struct Pic {
-    command: PortWrapper<u8>,
-    data: PortWrapper<u8>,
+struct Pic<W: PortWriter<u8>> {
+    command: W,
+    data: W,
 }
 
-impl Pic {
-    pub fn new(factory: &PortFactoryWrapper, base: u16) -> Self {
+impl<W: PortWriter<u8>> Pic<W> {
+    pub fn new<'a, R: PortReader<u8> + 'a>(
+        factory: &'a impl IoPortFactory<'a, u8, R, W>,
+        base: u16,
+    ) -> Self
+    where
+        W: 'a,
+    {
         Self { command: factory.new_writer(base), data: factory.new_writer(base + 1) }
     }
 
@@ -347,12 +352,8 @@ impl Pic {
 /// This uses raw I/O port access to talk to the PIC; the caller has to
 /// guarantee there will not be any adverse effect if there's no PIC at those
 /// ports.
-pub unsafe fn init_pic8259(sev_status: SevStatus) -> Result<(), &'static str> {
-    let io_port_factory = if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
-        crate::ghcb::get_ghcb_port_factory()
-    } else {
-        PortFactoryWrapper::new_raw()
-    };
+pub unsafe fn init_pic8259<P: Platform>() -> Result<(), &'static str> {
+    let io_port_factory = P::port_factory();
 
     let mut pic0 = Pic::new(&io_port_factory, 0x20);
     let mut pic1 = Pic::new(&io_port_factory, 0xA0);
