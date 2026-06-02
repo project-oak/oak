@@ -20,7 +20,6 @@ extern crate alloc;
 
 mod amd;
 mod compare;
-mod endorsement;
 mod expect;
 mod extract;
 mod intel;

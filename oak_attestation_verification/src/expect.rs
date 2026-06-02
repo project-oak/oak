@@ -54,8 +54,6 @@ use oak_proto_rust::oak::{
 use prost::Message;
 use verify_endorsement::{is_firmware_type, is_kernel_type, is_mpm_type, verify_endorsement};
 
-use crate::endorsement::verify_binary_endorsement;
-
 // Create the set of [ExpectedValues] for the provided [endorsements] and
 // [reference_values]. These can be cached by the client for as long as the
 // validity time provided.
@@ -1086,14 +1084,7 @@ fn to_expected_digests(source: &[RawDigest], claim_validity: Option<&Validity>) 
     }
 }
 
-// Adapts the old-style endorsement verification to the new one: the
-// reference values are used to determine the style.
-//
-// Old-style means that deprecated fields `endorser_public_key` and
-// `rekor_public_key` are populated in EndorsementReferenceValue.
-// New-style means that the other fields (`endorser`, `required_claims`
-// and `rekor`) are populated. In that case, the deprecated fields
-// related to the old style are ignored.
+// Verifies a signed endorsement against a reference value.
 fn verify_endorsement_wrapper(
     now_utc_millis: i64,
     endorsement: &[u8],
@@ -1101,34 +1092,14 @@ fn verify_endorsement_wrapper(
     log_entry: &[u8],
     ref_value: &EndorsementReferenceValue,
 ) -> anyhow::Result<DefaultStatement> {
-    // Use the new-style `endorser` field to determine if the reference value
-    // has the new fields populated. If not, fall back to the deprecated code
-    // branch.
-    //
-    // TODO: b/379253152 - Remove this early out block, along with entire
-    //     verify_binary_endorsement function once all clients verify via the
-    //     new-style fields in EndorsementReferenceValue.
-    if ref_value.endorser.is_none() {
-        #[allow(deprecated)]
-        verify_binary_endorsement(
-            now_utc_millis,
-            endorsement,
-            signature,
-            log_entry,
-            &ref_value.endorser_public_key,
-            &ref_value.rekor_public_key,
-        )?;
-        return parse_statement(endorsement);
-    }
+    let endorser = ref_value.endorser.as_ref().context("missing endorser key set")?;
 
-    // Suboptimal but OK to make the new-style reference values work with the
+    // Suboptimal but OK to make the reference values work with the
     // non-policy-based attestation verification: The `endorser` key set may
-    // contain several verification keys. Under the deprecated notation, we
-    // don't have any key ID for the signature, so we have to try all the keys.
-    // In practice, reference values will almost always contain a single
-    // public key, so the for loop consists of exactly one iteration.
+    // contain several verification keys. We don't have any key ID for the
+    // signature, so we have to try all the keys.
     let mut err = Error::msg("no endorser keys");
-    for key in &ref_value.endorser.as_ref().unwrap().keys {
+    for key in &endorser.keys {
         // Eventually the signed endorsement will come directly from the host,
         // assembling it here from the deprecated TransparentReleaseEndorsement
         // is temporary.

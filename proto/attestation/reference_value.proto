@@ -167,21 +167,8 @@ message ClaimReferenceValue {
 // Verifies the transparency log entry, including signatures and the digest.
 // NEXT_ID: 7
 message EndorsementReferenceValue {
-  // The endorser's public verifying key for signature verification. The
-  // attestation verification requires that all endorsements need to be
-  // signed, therefore this cannot be empty.
-  //
-  // Deprecated - use field `endorser` instead.
-  // TODO: b/379253152 - Cut support of deprecated field and remove it.
-  bytes endorser_public_key = 1 [deprecated = true];
-
-  // Rekor's public verifying key for log entry verification. Needs to be
-  // set when a log entry is present that should be verified. If it is not set,
-  // then log entry verification is skipped.
-  //
-  // Deprecated - use field `rekor` instead.
-  // TODO: b/379253152 - Cut support of deprecated field and remove it.
-  bytes rekor_public_key = 2 [deprecated = true];
+  reserved 1, 2;
+  reserved "endorser_public_key", "rekor_public_key";
 
   // Verifies the endorsement. Since the signed endorsement is required to
   // be present, this cannot be skipped as part of this message. (It may

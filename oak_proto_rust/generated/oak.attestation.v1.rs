@@ -1103,24 +1103,6 @@ pub struct ClaimReferenceValue {
 /// NEXT_ID: 7
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EndorsementReferenceValue {
-    /// The endorser's public verifying key for signature verification. The
-    /// attestation verification requires that all endorsements need to be
-    /// signed, therefore this cannot be empty.
-    ///
-    /// Deprecated - use field `endorser` instead.
-    /// TODO: b/379253152 - Cut support of deprecated field and remove it.
-    #[deprecated]
-    #[prost(bytes = "vec", tag = "1")]
-    pub endorser_public_key: ::prost::alloc::vec::Vec<u8>,
-    /// Rekor's public verifying key for log entry verification. Needs to be
-    /// set when a log entry is present that should be verified. If it is not set,
-    /// then log entry verification is skipped.
-    ///
-    /// Deprecated - use field `rekor` instead.
-    /// TODO: b/379253152 - Cut support of deprecated field and remove it.
-    #[deprecated]
-    #[prost(bytes = "vec", tag = "2")]
-    pub rekor_public_key: ::prost::alloc::vec::Vec<u8>,
     /// Verifies the endorsement. Since the signed endorsement is required to
     /// be present, this cannot be skipped as part of this message. (It may
     /// still be possible to skip the endorsement verification entirely, but

@@ -559,17 +559,8 @@ pub fn serialize_endorsement_reference_value(
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
     #[allow(deprecated)]
-    let EndorsementReferenceValue {
-        endorser_public_key,
-        rekor_public_key,
-        endorser,
-        required_claims,
-        rekor,
-        tlog,
-    } = instance;
+    let EndorsementReferenceValue { endorser, required_claims, rekor, tlog } = instance;
     json!({
-        "endorser_public_key": hex::encode(endorser_public_key),
-        "rekor_public_key": hex::encode(rekor_public_key),
         "endorser": endorser.as_ref().map(serialize_verifying_key_set),
         "required_claims": required_claims.as_ref().map(serialize_claim_reference_value),
         "rekor": rekor.as_ref().map(serialize_verifying_key_reference_value),
