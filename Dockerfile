@@ -2,7 +2,7 @@
 # Open a shell to this image with scripts/docker_sh.
 # Use a fixed snapshot of the base image to create a deterministic environment.
 # Snapshot tags can be found at https://hub.docker.com/_/debian/tags
-ARG image_digest=sha256:8f0c555de6a2f9c2bda1b170b67479d11f7f5e3b66bb4a7a1d8843361c9dd3ff
+ARG image_digest=sha256:5012d0517aa0075a7150a45aae67586641e898913b7af3b08228108565b5f90c
 FROM debian:stable-slim@${image_digest}
 
 # We need unzip for rules_android, which doesn't seem to find unzip in the nix path

@@ -9,9 +9,9 @@
 					"version": "1.4.3-1"
 				},
 				{
-					"key": "libc6_2.41-12-p-deb13u2_amd64",
+					"key": "libc6_2.41-12-p-deb13u3_amd64",
 					"name": "libc6",
-					"version": "2.41-12+deb13u2"
+					"version": "2.41-12+deb13u3"
 				},
 				{
 					"key": "libgcc-s1_14.2.0-19_amd64",
@@ -34,24 +34,24 @@
 					"version": "1:4.4.38-1"
 				},
 				{
-					"key": "linux-libc-dev_6.12.74-2_amd64",
+					"key": "linux-libc-dev_6.12.88-1_amd64",
 					"name": "linux-libc-dev",
-					"version": "6.12.74-2"
+					"version": "6.12.88-1"
 				},
 				{
-					"key": "libc-dev-bin_2.41-12-p-deb13u2_amd64",
+					"key": "libc-dev-bin_2.41-12-p-deb13u3_amd64",
 					"name": "libc-dev-bin",
-					"version": "2.41-12+deb13u2"
+					"version": "2.41-12+deb13u3"
 				}
 			],
-			"key": "libc6-dev_2.41-12-p-deb13u2_amd64",
+			"key": "libc6-dev_2.41-12-p-deb13u3_amd64",
 			"name": "libc6-dev",
-			"sha256": "eb4699442ec3ee4cac5cfc59e74792d02de819c9285459b48965e7dab3b793de",
+			"sha256": "53a9b789bb02415d758f652ef5ac913d89fed29782610e9fe0fd2488e4f2e465",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/g/glibc/libc6-dev_2.41-12+deb13u2_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/g/glibc/libc6-dev_2.41-12+deb13u2_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/g/glibc/libc6-dev_2.41-12+deb13u3_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/g/glibc/libc6-dev_2.41-12+deb13u3_amd64.deb"
 			],
-			"version": "2.41-12+deb13u2"
+			"version": "2.41-12+deb13u3"
 		},
 		{
 			"arch": "amd64",
@@ -60,22 +60,22 @@
 			"name": "rpcsvc-proto",
 			"sha256": "32ac0692694f8a34cc90c895f4fc739680fb2ef0e2d4870a68833682bf1c81a3",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/r/rpcsvc-proto/rpcsvc-proto_1.4.3-1_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/r/rpcsvc-proto/rpcsvc-proto_1.4.3-1_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/r/rpcsvc-proto/rpcsvc-proto_1.4.3-1_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/r/rpcsvc-proto/rpcsvc-proto_1.4.3-1_amd64.deb"
 			],
 			"version": "1.4.3-1"
 		},
 		{
 			"arch": "amd64",
 			"dependencies": [],
-			"key": "libc6_2.41-12-p-deb13u2_amd64",
+			"key": "libc6_2.41-12-p-deb13u3_amd64",
 			"name": "libc6",
-			"sha256": "8f9ddeb958cec3a05c4c303d4c85fddf30cb994747b16b1eb715ac49049f6d4a",
+			"sha256": "8ffd13165b9ee3f067e2ee670df718e48c1bdaa18676ac93d1de761dbbb3913c",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/g/glibc/libc6_2.41-12+deb13u2_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/g/glibc/libc6_2.41-12+deb13u2_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/g/glibc/libc6_2.41-12+deb13u3_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/g/glibc/libc6_2.41-12+deb13u3_amd64.deb"
 			],
-			"version": "2.41-12+deb13u2"
+			"version": "2.41-12+deb13u3"
 		},
 		{
 			"arch": "amd64",
@@ -84,8 +84,8 @@
 			"name": "libgcc-s1",
 			"sha256": "3c71917b490d1a17aed43196a2787a256ecf060526cdb20216a74bedc061b150",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/libgcc-s1_14.2.0-19_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/libgcc-s1_14.2.0-19_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/libgcc-s1_14.2.0-19_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/libgcc-s1_14.2.0-19_amd64.deb"
 			],
 			"version": "14.2.0-19"
 		},
@@ -96,8 +96,8 @@
 			"name": "gcc-14-base",
 			"sha256": "5b6825de4263824b78c4c51f6476414f3b4e89c2ab63e81dc8b9b5501e867cf6",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/gcc-14-base_14.2.0-19_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/gcc-14-base_14.2.0-19_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/gcc-14-base_14.2.0-19_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/gcc-14-base_14.2.0-19_amd64.deb"
 			],
 			"version": "14.2.0-19"
 		},
@@ -108,8 +108,8 @@
 			"name": "libcrypt-dev",
 			"sha256": "98e2333aea8d64ca68f9b75c16256d3a05492fd8f9e6dba96adbc6f19e4f5a09",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/libx/libxcrypt/libcrypt-dev_4.4.38-1_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/libx/libxcrypt/libcrypt-dev_4.4.38-1_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/libx/libxcrypt/libcrypt-dev_4.4.38-1_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/libx/libxcrypt/libcrypt-dev_4.4.38-1_amd64.deb"
 			],
 			"version": "1:4.4.38-1"
 		},
@@ -120,42 +120,42 @@
 			"name": "libcrypt1",
 			"sha256": "0ebc144d662e3197982d1bf3a7b8b35ca845e54c68811de0328b1f0d7c67585c",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/libx/libxcrypt/libcrypt1_4.4.38-1_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/libx/libxcrypt/libcrypt1_4.4.38-1_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/libx/libxcrypt/libcrypt1_4.4.38-1_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/libx/libxcrypt/libcrypt1_4.4.38-1_amd64.deb"
 			],
 			"version": "1:4.4.38-1"
 		},
 		{
 			"arch": "amd64",
 			"dependencies": [],
-			"key": "linux-libc-dev_6.12.74-2_amd64",
+			"key": "linux-libc-dev_6.12.88-1_amd64",
 			"name": "linux-libc-dev",
-			"sha256": "079dcfdd1325428673b4d84f7ca2b4e4047b03c63f88f01826eee0de0adf8852",
+			"sha256": "6c6e1dde061b55e5fd6251777ba7e8aa0c16e85d9ab8351c12e53554b7ac4e29",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian-security/20260421T000000Z/pool/updates/main/l/linux/linux-libc-dev_6.12.74-2_all.deb",
-				"https://snapshot.debian.org/archive/debian-security/20260421T000000Z/pool/updates/main/l/linux/linux-libc-dev_6.12.74-2_all.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian-security/20260518T000000Z/pool/updates/main/l/linux/linux-libc-dev_6.12.88-1_all.deb",
+				"https://snapshot.debian.org/archive/debian-security/20260518T000000Z/pool/updates/main/l/linux/linux-libc-dev_6.12.88-1_all.deb"
 			],
-			"version": "6.12.74-2"
+			"version": "6.12.88-1"
 		},
 		{
 			"arch": "amd64",
 			"dependencies": [],
-			"key": "libc-dev-bin_2.41-12-p-deb13u2_amd64",
+			"key": "libc-dev-bin_2.41-12-p-deb13u3_amd64",
 			"name": "libc-dev-bin",
-			"sha256": "6eaf8b62c86ff0fa53cdf37e638dca635098b81e81a33890dfc30f2bcdb5aeab",
+			"sha256": "2eb5db4cb16a42850ed9d3ca8b2b1aeda91dd00d248f6068f49d641321748308",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/g/glibc/libc-dev-bin_2.41-12+deb13u2_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/g/glibc/libc-dev-bin_2.41-12+deb13u2_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/g/glibc/libc-dev-bin_2.41-12+deb13u3_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/g/glibc/libc-dev-bin_2.41-12+deb13u3_amd64.deb"
 			],
-			"version": "2.41-12+deb13u2"
+			"version": "2.41-12+deb13u3"
 		},
 		{
 			"arch": "amd64",
 			"dependencies": [
 				{
-					"key": "libc6-dev_2.41-12-p-deb13u2_amd64",
+					"key": "libc6-dev_2.41-12-p-deb13u3_amd64",
 					"name": "libc6-dev",
-					"version": "2.41-12+deb13u2"
+					"version": "2.41-12+deb13u3"
 				},
 				{
 					"key": "rpcsvc-proto_1.4.3-1_amd64",
@@ -163,9 +163,9 @@
 					"version": "1.4.3-1"
 				},
 				{
-					"key": "libc6_2.41-12-p-deb13u2_amd64",
+					"key": "libc6_2.41-12-p-deb13u3_amd64",
 					"name": "libc6",
-					"version": "2.41-12+deb13u2"
+					"version": "2.41-12+deb13u3"
 				},
 				{
 					"key": "libgcc-s1_14.2.0-19_amd64",
@@ -188,14 +188,14 @@
 					"version": "1:4.4.38-1"
 				},
 				{
-					"key": "linux-libc-dev_6.12.74-2_amd64",
+					"key": "linux-libc-dev_6.12.88-1_amd64",
 					"name": "linux-libc-dev",
-					"version": "6.12.74-2"
+					"version": "6.12.88-1"
 				},
 				{
-					"key": "libc-dev-bin_2.41-12-p-deb13u2_amd64",
+					"key": "libc-dev-bin_2.41-12-p-deb13u3_amd64",
 					"name": "libc-dev-bin",
-					"version": "2.41-12+deb13u2"
+					"version": "2.41-12+deb13u3"
 				},
 				{
 					"key": "libstdc-p--p-6_14.2.0-19_amd64",
@@ -257,8 +257,8 @@
 			"name": "libstdc++-12-dev",
 			"sha256": "138164a7edf9076ea298a05af1891e89b231bd34e4bd172b9063d45307f2ce06",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-12/libstdc++-12-dev_12.4.0-5_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-12/libstdc++-12-dev_12.4.0-5_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-12/libstdc++-12-dev_12.4.0-5_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-12/libstdc++-12-dev_12.4.0-5_amd64.deb"
 			],
 			"version": "12.4.0-5"
 		},
@@ -269,8 +269,8 @@
 			"name": "libstdc++6",
 			"sha256": "ab1fa05837aa7a92aae748fd07a18a35f7d18bb4a71c4724fe2bbf0e32089de0",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/libstdc++6_14.2.0-19_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/libstdc++6_14.2.0-19_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/libstdc++6_14.2.0-19_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/libstdc++6_14.2.0-19_amd64.deb"
 			],
 			"version": "14.2.0-19"
 		},
@@ -281,8 +281,8 @@
 			"name": "libgcc-12-dev",
 			"sha256": "16f3e64f632155eb8187d9ffbd90a66a97830e22fb9d90bef7b89ac76adf77f1",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-12/libgcc-12-dev_12.4.0-5_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-12/libgcc-12-dev_12.4.0-5_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-12/libgcc-12-dev_12.4.0-5_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-12/libgcc-12-dev_12.4.0-5_amd64.deb"
 			],
 			"version": "12.4.0-5"
 		},
@@ -293,8 +293,8 @@
 			"name": "libquadmath0",
 			"sha256": "f5b51cf0ece3ec3bb7494d0cdbff3ce715ae00cfb2b6ed787f7db91319d64a7b",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/libquadmath0_14.2.0-19_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/libquadmath0_14.2.0-19_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/libquadmath0_14.2.0-19_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/libquadmath0_14.2.0-19_amd64.deb"
 			],
 			"version": "14.2.0-19"
 		},
@@ -305,8 +305,8 @@
 			"name": "libubsan1",
 			"sha256": "9205a1bef7d6a52ffc06548e0cde169ff303e688c12d9be3a98f734449077e22",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/libubsan1_14.2.0-19_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/libubsan1_14.2.0-19_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/libubsan1_14.2.0-19_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/libubsan1_14.2.0-19_amd64.deb"
 			],
 			"version": "14.2.0-19"
 		},
@@ -317,8 +317,8 @@
 			"name": "libtsan2",
 			"sha256": "529d7f68227d16975076c5f842e8b687faea1b5df8e0dcf62e436d5402844ca5",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/libtsan2_14.2.0-19_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/libtsan2_14.2.0-19_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/libtsan2_14.2.0-19_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/libtsan2_14.2.0-19_amd64.deb"
 			],
 			"version": "14.2.0-19"
 		},
@@ -329,8 +329,8 @@
 			"name": "liblsan0",
 			"sha256": "a0df07da76287a45e665d584363dc2a6a1c4e240aee41b8bbc0f67cdff97cd68",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/liblsan0_14.2.0-19_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/liblsan0_14.2.0-19_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/liblsan0_14.2.0-19_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/liblsan0_14.2.0-19_amd64.deb"
 			],
 			"version": "14.2.0-19"
 		},
@@ -341,8 +341,8 @@
 			"name": "libasan8",
 			"sha256": "771899ade7310fe31aa538a509354c33d62bbe4e408b4e5fc1e513988dc42645",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/libasan8_14.2.0-19_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/libasan8_14.2.0-19_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/libasan8_14.2.0-19_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/libasan8_14.2.0-19_amd64.deb"
 			],
 			"version": "14.2.0-19"
 		},
@@ -353,8 +353,8 @@
 			"name": "libatomic1",
 			"sha256": "212b399aae2f7299203d261a57e49372e09565a9a5ea971905f94a3960366c05",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/libatomic1_14.2.0-19_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/libatomic1_14.2.0-19_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/libatomic1_14.2.0-19_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/libatomic1_14.2.0-19_amd64.deb"
 			],
 			"version": "14.2.0-19"
 		},
@@ -365,8 +365,8 @@
 			"name": "libitm1",
 			"sha256": "febdb3c528cde1a3abe952e17a1d3cfa7ccaca5b6f506d983d34385dad199490",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/libitm1_14.2.0-19_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/libitm1_14.2.0-19_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/libitm1_14.2.0-19_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/libitm1_14.2.0-19_amd64.deb"
 			],
 			"version": "14.2.0-19"
 		},
@@ -377,8 +377,8 @@
 			"name": "libgomp1",
 			"sha256": "72b7a1a33c48f3195efeb044111b34ae684b1e640bb6495c832443b798601cd5",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/libgomp1_14.2.0-19_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-14/libgomp1_14.2.0-19_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/libgomp1_14.2.0-19_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-14/libgomp1_14.2.0-19_amd64.deb"
 			],
 			"version": "14.2.0-19"
 		},
@@ -389,8 +389,8 @@
 			"name": "gcc-12-base",
 			"sha256": "df84249e59643841cd2ccc7faec7c836da4c567520d76d5b5e380d2a8f7aa30b",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-12/gcc-12-base_12.4.0-5_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/g/gcc-12/gcc-12-base_12.4.0-5_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-12/gcc-12-base_12.4.0-5_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/g/gcc-12/gcc-12-base_12.4.0-5_amd64.deb"
 			],
 			"version": "12.4.0-5"
 		},
@@ -398,19 +398,19 @@
 			"arch": "amd64",
 			"dependencies": [
 				{
-					"key": "libsystemd0_257.9-1_deb13u1_amd64",
+					"key": "libsystemd0_257.13-1_deb13u1_amd64",
 					"name": "libsystemd0",
-					"version": "257.9-1~deb13u1"
+					"version": "257.13-1~deb13u1"
 				},
 				{
-					"key": "libcap2_1-2.75-10-p-b8_amd64",
+					"key": "libcap2_1-2.75-10-p-deb13u1-p-b1_amd64",
 					"name": "libcap2",
-					"version": "1:2.75-10+b8"
+					"version": "1:2.75-10+deb13u1+b1"
 				},
 				{
-					"key": "libc6_2.41-12-p-deb13u2_amd64",
+					"key": "libc6_2.41-12-p-deb13u3_amd64",
 					"name": "libc6",
-					"version": "2.41-12+deb13u2"
+					"version": "2.41-12+deb13u3"
 				},
 				{
 					"key": "libgcc-s1_14.2.0-19_amd64",
@@ -423,55 +423,55 @@
 					"version": "14.2.0-19"
 				},
 				{
-					"key": "libcap-dev_1-2.75-10-p-b8_amd64",
+					"key": "libcap-dev_1-2.75-10-p-deb13u1-p-b1_amd64",
 					"name": "libcap-dev",
-					"version": "1:2.75-10+b8"
+					"version": "1:2.75-10+deb13u1+b1"
 				}
 			],
-			"key": "libsystemd-dev_257.9-1_deb13u1_amd64",
+			"key": "libsystemd-dev_257.13-1_deb13u1_amd64",
 			"name": "libsystemd-dev",
-			"sha256": "ee9a0299b934afd5d315986a88ebde179f3853b3835f7f999d5f72bba86a84f2",
+			"sha256": "4db2d02ce32dfd9f2994a565a51c640b8e7a96a2e2b277484f9a2de7c0cd63e4",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/s/systemd/libsystemd-dev_257.9-1~deb13u1_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/s/systemd/libsystemd-dev_257.9-1~deb13u1_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/s/systemd/libsystemd-dev_257.13-1~deb13u1_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/s/systemd/libsystemd-dev_257.13-1~deb13u1_amd64.deb"
 			],
-			"version": "257.9-1~deb13u1"
+			"version": "257.13-1~deb13u1"
 		},
 		{
 			"arch": "amd64",
 			"dependencies": [],
-			"key": "libsystemd0_257.9-1_deb13u1_amd64",
+			"key": "libsystemd0_257.13-1_deb13u1_amd64",
 			"name": "libsystemd0",
-			"sha256": "7f01e4f48904e33768dafd9ae8afe3a5c453c479d310c2a732e979b2287f2932",
+			"sha256": "ab0d4127b5e46e6f8c015a1db15a62ba9ae274cdefa150083adf90ada0600ea1",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/s/systemd/libsystemd0_257.9-1~deb13u1_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/s/systemd/libsystemd0_257.9-1~deb13u1_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/s/systemd/libsystemd0_257.13-1~deb13u1_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/s/systemd/libsystemd0_257.13-1~deb13u1_amd64.deb"
 			],
-			"version": "257.9-1~deb13u1"
+			"version": "257.13-1~deb13u1"
 		},
 		{
 			"arch": "amd64",
 			"dependencies": [],
-			"key": "libcap2_1-2.75-10-p-b8_amd64",
+			"key": "libcap2_1-2.75-10-p-deb13u1-p-b1_amd64",
 			"name": "libcap2",
-			"sha256": "8c23d266fbaa4631af62ae5afe36182321f08727efaaa668771671e0e77ef598",
+			"sha256": "860db6f80d400239744eee2b454f1d8e66b064e18dd0527535824887691e9cb7",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/libc/libcap2/libcap2_2.75-10+b8_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/libc/libcap2/libcap2_2.75-10+b8_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/libc/libcap2/libcap2_2.75-10+deb13u1+b1_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/libc/libcap2/libcap2_2.75-10+deb13u1+b1_amd64.deb"
 			],
-			"version": "1:2.75-10+b8"
+			"version": "1:2.75-10+deb13u1+b1"
 		},
 		{
 			"arch": "amd64",
 			"dependencies": [],
-			"key": "libcap-dev_1-2.75-10-p-b8_amd64",
+			"key": "libcap-dev_1-2.75-10-p-deb13u1-p-b1_amd64",
 			"name": "libcap-dev",
-			"sha256": "3a3abba022e987a0e080e2ef52c191d1430083ece6245ad679c3347f89f3e7b0",
+			"sha256": "cabb54ec097f89dd130902689a6bf38a67782fbf2aeca5f226ea656468843ec7",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260421T000000Z/pool/main/libc/libcap2/libcap-dev_2.75-10+b8_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260421T000000Z/pool/main/libc/libcap2/libcap-dev_2.75-10+b8_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20260518T000000Z/pool/main/libc/libcap2/libcap-dev_2.75-10+deb13u1+b1_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20260518T000000Z/pool/main/libc/libcap2/libcap-dev_2.75-10+deb13u1+b1_amd64.deb"
 			],
-			"version": "1:2.75-10+b8"
+			"version": "1:2.75-10+deb13u1+b1"
 		}
 	],
 	"version": 1
