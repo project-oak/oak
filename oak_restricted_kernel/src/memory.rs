@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use alloc::vec::Vec;
 use core::{
     alloc::{GlobalAlloc, Layout},
     ops::Deref,
@@ -24,16 +25,18 @@ use linked_list_allocator::{Heap, LockedHeap};
 use log::info;
 use spinning_top::Spinlock;
 use x86_64::{
-    VirtAddr,
+    PhysAddr, VirtAddr,
     structures::paging::{
         FrameAllocator, Page, PageSize, PhysFrame, Size2MiB, mapper::FlagUpdateError,
         page::PageRange,
     },
 };
+use zerocopy::FromBytes;
+use zeroize::Zeroize;
 
 use crate::{
     FRAME_ALLOCATOR, PAGE_TABLES,
-    mm::{Mapper, PageTableFlags},
+    mm::{Mapper, PageTableFlags, Translator},
 };
 
 #[cfg(not(test))]
@@ -222,4 +225,160 @@ pub unsafe fn init_guest_host_heap<S: PageSize, M: Mapper<S>>(
     Ok(unsafe {
         LockedHeap::new(pages.start.start_address().as_mut_ptr(), pages.count() * S::SIZE as usize)
     })
+}
+
+pub struct SensitiveDiceDataMemory {
+    start_ptr: *mut u8,
+    eventlog_ptr: *mut u8,
+    sensitive_memory_length: usize,
+    #[allow(dead_code)]
+    dice_attestation_ptr: Option<*mut u8>,
+}
+
+impl SensitiveDiceDataMemory {
+    /// Safety: Caller must ensure that there is only instance of this
+    /// struct.
+    pub unsafe fn new(
+        kernel_args: &crate::args::Args,
+        info: &oak_linux_boot_params::BootParams,
+    ) -> Self {
+        let sensitive_memory_length = kernel_args
+            .get(&alloc::format!("--{}", oak_dice::evidence::DICE_DATA_LENGTH_CMDLINE_PARAM))
+            .map(|arg| {
+                arg.parse::<usize>()
+                    .expect("dice data length kernel arg could not be converted to usize")
+            })
+            .inspect(|&length| {
+                assert!(
+                    length >= core::mem::size_of::<oak_dice::evidence::Stage0DiceData>(),
+                    "the cmdline argument for dice data length must be no less than the size of the Stage0DiceData struct"
+                );
+            })
+            // Older versions of stage0 do not supply this argument. In this case we assume the
+            // length of the dice data is the length of the associated struct.
+            .unwrap_or_else(::core::mem::size_of::<oak_dice::evidence::Stage0DiceData>);
+
+        let dice_data_phys_addr =
+            fetch_address_from_cmdline(kernel_args, oak_dice::evidence::DICE_DATA_CMDLINE_PARAM);
+
+        let eventlog_phys_addr =
+            fetch_address_from_cmdline(kernel_args, oak_dice::evidence::EVENTLOG_CMDLINE_PARAM);
+        let dice_data_attestation_addr = fetch_address_from_cmdline(
+            kernel_args,
+            oak_dice::evidence::DICE_DATA_ATTESTATION_PARAM,
+        );
+
+        let dice_data_phys_addr = dice_data_phys_addr
+            .expect("stage 0 command line lacks required argument: dice data C-struct address");
+        let eventlog_phys_addr = eventlog_phys_addr
+            .expect("stage 0 command line lacks required argument: eventlog address");
+
+        // Ensure that the dice data is stored within reserved memory.
+        let end = dice_data_phys_addr + (sensitive_memory_length as u64 - 1);
+        assert!(info.e820_table().iter().any(|entry| {
+            let dice_data_fully_contained_in_segment = {
+                let range = PhysAddr::new(entry.addr().try_into().unwrap())
+                    ..=PhysAddr::new((entry.addr() + entry.size()).try_into().unwrap());
+                range.contains(&dice_data_phys_addr)
+                    && range.contains(&end)
+                    && range.contains(&eventlog_phys_addr)
+            };
+
+            entry.entry_type().expect("failed to get type")
+                == oak_linux_boot_params::E820EntryType::RESERVED
+                && dice_data_fully_contained_in_segment
+        }));
+
+        let dice_data_virt_addr = fetch_virtual_address(&dice_data_phys_addr);
+        let eventlog_virt_addr = fetch_virtual_address(&eventlog_phys_addr);
+
+        // If the dice attester is passed to this layer, read it and pass it along to
+        // the struct.
+        // TODO: b/463325402 - Have the Oak Restricted Kernel depend on the dice
+        // attester in the future instead of the event log and dice data C-struct.
+        let dice_data_attestation_virt_addr =
+            if let Some(dice_data_attestation_addr) = dice_data_attestation_addr {
+                assert!(info.e820_table().iter().any(|entry| {
+                    let range = PhysAddr::new(entry.addr().try_into().unwrap())
+                        ..=PhysAddr::new((entry.addr() + entry.size()).try_into().unwrap());
+                    range.contains(&dice_data_attestation_addr) && range.contains(&end)
+                }));
+                let dice_data_attestation_virt_address =
+                    fetch_virtual_address(&dice_data_attestation_addr);
+
+                Some(dice_data_attestation_virt_address.as_mut_ptr())
+            } else {
+                None
+            };
+        Self {
+            start_ptr: dice_data_virt_addr.as_mut_ptr(),
+            eventlog_ptr: eventlog_virt_addr.as_mut_ptr(),
+            dice_attestation_ptr: dice_data_attestation_virt_addr,
+            sensitive_memory_length,
+        }
+    }
+
+    pub fn read_stage0_dice_data(&self) -> oak_dice::evidence::Stage0DiceData {
+        let dice_memory_slice = unsafe {
+            core::slice::from_raw_parts(
+                self.start_ptr,
+                core::mem::size_of::<oak_dice::evidence::Stage0DiceData>(),
+            )
+        };
+
+        let dice_data = oak_dice::evidence::Stage0DiceData::read_from_bytes(dice_memory_slice)
+            .expect("failed to read dice data");
+
+        if dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {
+            panic!("dice data loaded from stage0 failed validation");
+        }
+        dice_data
+    }
+
+    pub fn read_encoded_eventlog(&self) -> Vec<u8> {
+        // Read the event log size (first 8 bytes)
+        let event_log_size = unsafe {
+            let size_bytes = core::slice::from_raw_parts(self.eventlog_ptr, 8);
+            u64::from_le_bytes(size_bytes.try_into().unwrap()) as usize
+        };
+
+        // Read the event log bytes
+        let event_log_bytes =
+            unsafe { core::slice::from_raw_parts(self.eventlog_ptr.add(8), event_log_size) };
+
+        event_log_bytes.to_vec()
+    }
+}
+
+impl Drop for SensitiveDiceDataMemory {
+    fn drop(&mut self) {
+        // Zero out the sensitive_dice_data_memory.
+        // Safety: This struct is only used once. We have checked the length,
+        // know it is backed by physical memory and is reserved.
+        (unsafe { core::slice::from_raw_parts_mut(self.start_ptr, self.sensitive_memory_length) })
+            .zeroize();
+    }
+}
+
+// Fetches a physical address from a stage 0 kernel command line argument. If
+// the argument is not present, None is returned. This function will panic in
+// the event the argument is found and cannot be parsed.
+fn fetch_address_from_cmdline(
+    kernel_args: &crate::args::Args,
+    stage0_arg: &str,
+) -> Option<PhysAddr> {
+    let arg = kernel_args.get(&alloc::format!("--{}", stage0_arg))?;
+    let parsed_arg =
+        u64::from_str_radix(arg.strip_prefix("0x").expect("failed stripping the hex prefix"), 16)
+            .expect("couldn't parse address as a hex number");
+    Some(PhysAddr::new(parsed_arg))
+}
+
+// Fetches the virtual address from the Page Tables using the provided physical
+// address. The function panics if the Page Table cannot be fetched or if the
+// virtual address cannot be fetched.
+fn fetch_virtual_address(phys_address: &PhysAddr) -> VirtAddr {
+    let pt_guard = PAGE_TABLES.lock();
+    let pt = pt_guard.get().expect("failed to get page tables");
+    pt.translate_physical(*phys_address).expect("failed to translate physical eventlog address")
 }

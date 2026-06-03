@@ -63,9 +63,10 @@ extern crate std;
 
 extern crate alloc;
 
-use alloc::{alloc::Allocator, boxed::Box, vec::Vec};
+use alloc::{alloc::Allocator, boxed::Box};
 use core::{panic::PanicInfo, pin::Pin, str::FromStr};
 
+use goblin::elf64::program_header::ProgramHeader;
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use mm::{
@@ -83,8 +84,6 @@ use x86_64::{
     PhysAddr, VirtAddr,
     structures::paging::{Page, PageTable, Size2MiB},
 };
-use zerocopy::FromBytes;
-use zeroize::Zeroize;
 
 use crate::{
     acpi::Acpi,
@@ -171,43 +170,7 @@ pub fn start_kernel<P: Platform + 'static>(info: &BootParams) -> ! {
     mm::init(info.e820_table(), program_headers, &ramdisk);
 
     // Note: `info` will not be valid after calling this!
-    {
-        let pml4_frame = mm::initial_pml4(program_headers).unwrap();
-        // Prevent execution code in data only memory pages.
-        // Safety: executeable memory is assumed to be appropiately marked in the page
-        // table.
-        unsafe {
-            x86_64::registers::model_specific::Efer::update(|flags| {
-                flags.insert(x86_64::registers::model_specific::EferFlags::NO_EXECUTE_ENABLE)
-            });
-        };
-        // Safety: the new page tables keep the identity mapping at -2GB intact, so it's
-        // safe to load the new page tables.
-        let prev_page_table = unsafe { PAGE_TABLES.lock().replace(pml4_frame) };
-        assert!(
-            prev_page_table.is_none(),
-            "there should be no previous page table during initialization"
-        );
-
-        // Safety: We just created a page table at this location on the heap.
-        let pml4: PageTable = unsafe {
-            *Box::from_raw(
-                (PAGE_TABLES
-                    .lock()
-                    .get()
-                    .unwrap()
-                    .translate_physical(PhysAddr::new(pml4_frame.start_address().as_u64()))
-                    .expect("page table must map to virtual address"))
-                // Safety: We get a mut pointer here to satisfy the type system. However, the pml4
-                // will not be mutated. This is since while using this pml4 the kernel will not
-                // allocate memory in application space, and since all the kernel space entries of
-                // this pml4 are already populated with existing pointers to pml3 page tables. Only
-                // those pml3 tables will be modified when allocating kernel space memory.
-                .as_mut_ptr(),
-            )
-        };
-        BASE_L4_PAGE_TABLE.set(Box::pin(pml4)).expect("base pml4 not unset");
-    };
+    set_initial_page_tables(program_headers);
 
     // Re-map boot params to the new virtual address.
     // Safety: we know we're addressing valid memory that contains the correct data
@@ -287,144 +250,10 @@ pub fn start_kernel<P: Platform + 'static>(info: &BootParams) -> ! {
     let heap_page_range = VMA_ALLOCATOR.lock().allocate(1 << 19).unwrap();
     memory::init_kernel_heap(heap_page_range).unwrap();
 
-    struct SensitiveDiceDataMemory {
-        start_ptr: *mut u8,
-        eventlog_ptr: *mut u8,
-        sensitive_memory_length: usize,
-        #[allow(dead_code)]
-        dice_attestation_ptr: Option<*mut u8>,
-    }
-
-    impl SensitiveDiceDataMemory {
-        /// Safety: Caller must ensure that there is only instance of this
-        /// struct.
-        unsafe fn new(kernel_args: &args::Args, info: &oak_linux_boot_params::BootParams) -> Self {
-            let sensitive_memory_length = kernel_args
-                .get(&alloc::format!("--{}", oak_dice::evidence::DICE_DATA_LENGTH_CMDLINE_PARAM))
-                .map(|arg| {
-                    arg.parse::<usize>()
-                        .expect("dice data length kernel arg could not be converted to usize")
-                })
-                .inspect(|&length| {
-                    assert!(
-                        length >= core::mem::size_of::<oak_dice::evidence::Stage0DiceData>(),
-                        "the cmdline argument for dice data length must be no less than the size of the Stage0DiceData struct"
-                    );
-                })
-                // Older versions of stage0 do not supply this argument. In this case we assume the
-                // lenght of the dice data is the length of the associated struct.
-                .unwrap_or_else(::core::mem::size_of::<oak_dice::evidence::Stage0DiceData>);
-
-            let dice_data_phys_addr = fetch_address_from_cmdline(
-                kernel_args,
-                oak_dice::evidence::DICE_DATA_CMDLINE_PARAM,
-            );
-
-            let eventlog_phys_addr =
-                fetch_address_from_cmdline(kernel_args, oak_dice::evidence::EVENTLOG_CMDLINE_PARAM);
-            let dice_data_attestation_addr = fetch_address_from_cmdline(
-                kernel_args,
-                oak_dice::evidence::DICE_DATA_ATTESTATION_PARAM,
-            );
-
-            let dice_data_phys_addr = dice_data_phys_addr
-                .expect("stage 0 command line lacks required argument: dice data C-struct address");
-            let eventlog_phys_addr = eventlog_phys_addr
-                .expect("stage 0 command line lacks required argument: eventlog address");
-
-            // Ensure that the dice data is stored within reserved memory.
-            let end = dice_data_phys_addr + (sensitive_memory_length as u64 - 1);
-            assert!(info.e820_table().iter().any(|entry| {
-                let dice_data_fully_contained_in_segment = {
-                    let range = PhysAddr::new(entry.addr().try_into().unwrap())
-                        ..=PhysAddr::new((entry.addr() + entry.size()).try_into().unwrap());
-                    range.contains(&dice_data_phys_addr)
-                        && range.contains(&end)
-                        && range.contains(&eventlog_phys_addr)
-                };
-
-                entry.entry_type().expect("failed to get type")
-                    == oak_linux_boot_params::E820EntryType::RESERVED
-                    && dice_data_fully_contained_in_segment
-            }));
-
-            let dice_data_virt_addr = fetch_virtual_address(&dice_data_phys_addr);
-            let eventlog_virt_addr = fetch_virtual_address(&eventlog_phys_addr);
-
-            // If the dice attester is passed to this layer, read it and pass it along to
-            // the struct.
-            // TODO: b/463325402 - Have the Oak Restricted Kernel depend on the dice
-            // attester in the future instead of the event log and dice data C-struct.
-            let dice_data_attestation_virt_addr =
-                if let Some(dice_data_attestation_addr) = dice_data_attestation_addr {
-                    assert!(info.e820_table().iter().any(|entry| {
-                        let range = PhysAddr::new(entry.addr().try_into().unwrap())
-                            ..=PhysAddr::new((entry.addr() + entry.size()).try_into().unwrap());
-                        range.contains(&dice_data_attestation_addr) && range.contains(&end)
-                    }));
-                    let dice_data_attestation_virt_address =
-                        fetch_virtual_address(&dice_data_attestation_addr);
-
-                    Some(dice_data_attestation_virt_address.as_mut_ptr())
-                } else {
-                    None
-                };
-            Self {
-                start_ptr: dice_data_virt_addr.as_mut_ptr(),
-                eventlog_ptr: eventlog_virt_addr.as_mut_ptr(),
-                dice_attestation_ptr: dice_data_attestation_virt_addr,
-                sensitive_memory_length,
-            }
-        }
-
-        fn read_stage0_dice_data(&self) -> oak_dice::evidence::Stage0DiceData {
-            let dice_memory_slice = unsafe {
-                core::slice::from_raw_parts(
-                    self.start_ptr,
-                    core::mem::size_of::<oak_dice::evidence::Stage0DiceData>(),
-                )
-            };
-
-            let dice_data = oak_dice::evidence::Stage0DiceData::read_from_bytes(dice_memory_slice)
-                .expect("failed to read dice data");
-
-            if dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {
-                panic!("dice data loaded from stage0 failed validation");
-            }
-            dice_data
-        }
-
-        fn read_encoded_eventlog(&self) -> Vec<u8> {
-            // Read the event log size (first 8 bytes)
-            let event_log_size = unsafe {
-                let size_bytes = core::slice::from_raw_parts(self.eventlog_ptr, 8);
-                u64::from_le_bytes(size_bytes.try_into().unwrap()) as usize
-            };
-
-            // Read the event log bytes
-            let event_log_bytes =
-                unsafe { core::slice::from_raw_parts(self.eventlog_ptr.add(8), event_log_size) };
-
-            event_log_bytes.to_vec()
-        }
-    }
-
-    impl Drop for SensitiveDiceDataMemory {
-        fn drop(&mut self) {
-            // Zero out the sensitive_dice_data_memory.
-            // Safety: This struct is only used once. We have checked the length,
-            // know it is backed by physical memory and is reserved.
-            (unsafe {
-                core::slice::from_raw_parts_mut(self.start_ptr, self.sensitive_memory_length)
-            })
-            .zeroize();
-        }
-    }
-
     let (stage0_dice_data, encoded_event_log) = {
         let sensitive_dice_data =
         // Safety: This will be the only instance of this struct.
-        unsafe {SensitiveDiceDataMemory::new(&kernel_args, info)};
+        unsafe {memory::SensitiveDiceDataMemory::new(&kernel_args, info)};
         (sensitive_dice_data.read_stage0_dice_data(), sensitive_dice_data.read_encoded_eventlog())
     };
 
@@ -573,22 +402,40 @@ pub fn panic(info: &PanicInfo) -> ! {
     shutdown::shutdown();
 }
 
-// Fetches a physical address from a stage 0 kernel command line argument. If
-// the argument is not present, None is returned. This function will panic in
-// the event the argument is found and cannot be parsed.
-fn fetch_address_from_cmdline(kernel_args: &args::Args, stage0_arg: &str) -> Option<PhysAddr> {
-    let arg = kernel_args.get(&alloc::format!("--{}", stage0_arg))?;
-    let parsed_arg =
-        u64::from_str_radix(arg.strip_prefix("0x").expect("failed stripping the hex prefix"), 16)
-            .expect("couldn't parse address as a hex number");
-    Some(PhysAddr::new(parsed_arg))
-}
+fn set_initial_page_tables(program_headers: &[ProgramHeader]) {
+    let pml4_frame = mm::initial_pml4(program_headers).unwrap();
+    // Prevent execution code in data only memory pages.
+    // Safety: executeable memory is assumed to be appropiately marked in the page
+    // table.
+    unsafe {
+        x86_64::registers::model_specific::Efer::update(|flags| {
+            flags.insert(x86_64::registers::model_specific::EferFlags::NO_EXECUTE_ENABLE)
+        });
+    };
+    // Safety: the new page tables keep the identity mapping at -2GB intact, so it's
+    // safe to load the new page tables.
+    let prev_page_table = unsafe { PAGE_TABLES.lock().replace(pml4_frame) };
+    assert!(
+        prev_page_table.is_none(),
+        "there should be no previous page table during initialization"
+    );
 
-// Fetches the virtual address from the Page Tables using the provided physical
-// address. The function panics if the Page Table cannot be fetched or if the
-// virtual address cannot be fetched.
-fn fetch_virtual_address(phys_address: &PhysAddr) -> VirtAddr {
-    let pt_guard = PAGE_TABLES.lock();
-    let pt = pt_guard.get().expect("failed to get page tables");
-    pt.translate_physical(*phys_address).expect("failed to translate physical eventlog address")
+    // Safety: We just created a page table at this location on the heap.
+    let pml4: PageTable = unsafe {
+        *Box::from_raw(
+            (PAGE_TABLES
+                .lock()
+                .get()
+                .unwrap()
+                .translate_physical(PhysAddr::new(pml4_frame.start_address().as_u64()))
+                .expect("page table must map to virtual address"))
+            // Safety: We get a mut pointer here to satisfy the type system. However, the pml4
+            // will not be mutated. This is since while using this pml4 the kernel will not
+            // allocate memory in application space, and since all the kernel space entries of
+            // this pml4 are already populated with existing pointers to pml3 page tables. Only
+            // those pml3 tables will be modified when allocating kernel space memory.
+            .as_mut_ptr(),
+        )
+    };
+    BASE_L4_PAGE_TABLE.set(Box::pin(pml4)).expect("base pml4 not unset");
 }
