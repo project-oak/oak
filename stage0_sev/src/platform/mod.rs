@@ -209,6 +209,44 @@ impl Platform for Sev {
         }
     }
 
+    fn page_table_mask(encryption_state: PageEncryption) -> u64 {
+        if sev_status().contains(SevStatus::SEV_ENABLED) {
+            match encryption_state {
+                PageEncryption::Unset => 0,
+                PageEncryption::Encrypted => encrypted(),
+                PageEncryption::Unencrypted => 0,
+            }
+        } else {
+            0
+        }
+    }
+
+    fn change_page_state(
+        page: x86_64::structures::paging::Page<x86_64::structures::paging::Size4KiB>,
+        state: PageAssignment,
+    ) {
+        accept_memory::change_page_state(page, state.into_msr())
+            .expect("failed to change page state");
+    }
+
+    fn revalidate_page(
+        page: x86_64::structures::paging::Page<x86_64::structures::paging::Size4KiB>,
+    ) {
+        accept_memory::revalidate_page(page).expect("failed to revalidate memory");
+    }
+
+    fn encrypted() -> u64 {
+        encrypted()
+    }
+
+    fn wbvind() {
+        Base::wbvind()
+    }
+}
+
+impl FirmwarePlatform for Sev {
+    type Attester = DiceAttester;
+
     fn initialize_platform(e820_table: &[BootE820Entry]) {
         log::info!("Enabled SEV features: {:?}", sev_status());
 
@@ -248,44 +286,6 @@ impl Platform for Sev {
             }
         }
     }
-
-    fn page_table_mask(encryption_state: PageEncryption) -> u64 {
-        if sev_status().contains(SevStatus::SEV_ENABLED) {
-            match encryption_state {
-                PageEncryption::Unset => 0,
-                PageEncryption::Encrypted => encrypted(),
-                PageEncryption::Unencrypted => 0,
-            }
-        } else {
-            0
-        }
-    }
-
-    fn change_page_state(
-        page: x86_64::structures::paging::Page<x86_64::structures::paging::Size4KiB>,
-        state: PageAssignment,
-    ) {
-        accept_memory::change_page_state(page, state.into_msr())
-            .expect("failed to change page state");
-    }
-
-    fn revalidate_page(
-        page: x86_64::structures::paging::Page<x86_64::structures::paging::Size4KiB>,
-    ) {
-        accept_memory::revalidate_page(page).expect("failed to revalidate memory");
-    }
-
-    fn encrypted() -> u64 {
-        encrypted()
-    }
-
-    fn wbvind() {
-        Base::wbvind()
-    }
-}
-
-impl FirmwarePlatform for Sev {
-    type Attester = DiceAttester;
 
     fn prefill_e820_table<T: IntoBytes + FromBytes>(_: &mut T) -> Result<usize, &'static str> {
         Err("SEV does not support E820 prefill")

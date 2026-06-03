@@ -34,7 +34,6 @@ pub mod test_mocks {
     use core::arch::x86_64::CpuidResult;
 
     use oak_hal::{MsrAccess, PageAssignment, PortFactory};
-    use oak_linux_boot_params::BootE820Entry;
     use x86_64::{
         PhysAddr,
         structures::paging::{Page, Size4KiB},
@@ -51,7 +50,6 @@ pub mod test_mocks {
             unsafe fn mmio(base_address: PhysAddr, size: usize) -> <Self as oak_hal::Platform>::Mmio;
             fn port_factory() -> PortFactory;
             fn early_initialize_platform();
-            fn initialize_platform(e820_table: &[BootE820Entry]);
             fn change_page_state(page: Page<Size4KiB>, state: PageAssignment);
             fn revalidate_page(page: Page<Size4KiB>);
             fn page_table_mask(encryption_state: PageEncryption) -> u64;
@@ -76,6 +74,17 @@ pub use test_mocks::MockPlatform;
 ))]
 pub trait FirmwarePlatform {
     type Attester: Attester + TransparentAttester + Serializable;
+
+    /// Platform-specific initialization.
+    ///
+    /// This gets executed after `early_initialize_platform()` and some other
+    /// auxiliary services, such as logging, have been set up; the main purpose
+    /// is to accept all guest memory so that we can set up a heap
+    /// allocator.
+    ///
+    /// This does mean you do not have access to the heap allocator
+    /// (BOOT_ALLOCATOR will still work).
+    fn initialize_platform(e820_table: &[oak_linux_boot_params::BootE820Entry]);
 
     /// Prefill E820 Table using platform specific features.
     ///

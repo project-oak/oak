@@ -322,18 +322,6 @@ impl Platform for Tdx {
         serial::debug!("early_initialize_platform completed");
     }
 
-    fn initialize_platform(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
-        // logger is initialized starting from here
-        info!("initialize platform");
-        info!("{:?}", e820_table);
-
-        setup_mailbox();
-        accept_tdx_memory(e820_table);
-        handle_legacy_smbios(e820_table);
-
-        info!("initialize platform completed");
-    }
-
     fn change_page_state(page: x86_64::structures::paging::Page, attr: PageAssignment) {
         let shared: bool = match attr {
             PageAssignment::Shared => true,
@@ -371,6 +359,18 @@ impl Platform for Tdx {
 
 impl FirmwarePlatform for Tdx {
     type Attester = crate::attestation::RtmrAttester;
+
+    fn initialize_platform(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
+        // logger is initialized starting from here
+        info!("initialize platform");
+        info!("{:?}", e820_table);
+
+        setup_mailbox();
+        accept_tdx_memory(e820_table);
+        handle_legacy_smbios(e820_table);
+
+        info!("initialize platform completed");
+    }
 
     #[allow(clippy::if_same_then_else)]
     fn prefill_e820_table<T: IntoBytes + FromBytes>(dest: &mut T) -> Result<usize, &'static str> {

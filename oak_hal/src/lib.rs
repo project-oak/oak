@@ -18,7 +18,6 @@
 
 use core::arch::x86_64::CpuidResult;
 
-use oak_linux_boot_params::BootE820Entry;
 use x86_64::{
     PhysAddr,
     instructions::port::Port as X86Port,
@@ -153,17 +152,6 @@ pub trait Platform: MsrAccess {
     ///   - You do not have access to logging.
     ///   - You do not have access to the heap allocator.
     fn early_initialize_platform();
-
-    /// Platform-specific intialization.
-    ///
-    /// This gets executed after `early_initalize_platform()` and some other
-    /// auxiliary services, such as logging, have been set up; the main purpose
-    /// is to accept all guest memory so that we can set up a heap
-    /// allocator.
-    ///
-    /// This does mean you do not have access to the heap allocator
-    /// (BOOT_ALLOCATOR will still work).
-    fn initialize_platform(e820_table: &[BootE820Entry]);
 
     /// Ask for the page state to be changed by the hypervisor.
     fn change_page_state(page: Page<Size4KiB>, state: PageAssignment);

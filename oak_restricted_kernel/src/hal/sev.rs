@@ -20,7 +20,6 @@ pub mod mmio;
 pub use mmio::SevMmio;
 use oak_core::sync::OnceCell;
 use oak_hal::{PageAssignment, PageEncryption, PortFactory};
-use oak_linux_boot_params::BootE820Entry;
 use oak_sev_guest::msr::SevStatus;
 use x86_64::structures::{
     paging::{Page, Size4KiB},
@@ -107,10 +106,6 @@ impl crate::Platform for Sev {
         if sev_status().contains(oak_sev_guest::msr::SevStatus::SEV_ES_ENABLED) {
             crate::ghcb::init(sev_status().contains(oak_sev_guest::msr::SevStatus::SNP_ACTIVE));
         }
-    }
-
-    fn initialize_platform(_e820_table: &[BootE820Entry]) {
-        todo!();
     }
 
     fn change_page_state(_page: Page<Size4KiB>, _state: PageAssignment) {

@@ -70,10 +70,7 @@ impl crate::Platform for Base {
             },
         }
     }
-
     fn early_initialize_platform() {}
-
-    fn initialize_platform(_e820_table: &[BootE820Entry]) {}
 
     fn change_page_state(_page: Page<Size4KiB>, _state: PageAssignment) {}
 
@@ -100,6 +97,7 @@ impl crate::Platform for Base {
 }
 
 impl super::FirmwarePlatform for Base {
+    fn initialize_platform(_e820_table: &[BootE820Entry]) {}
     type Attester = DiceAttester;
 
     fn prefill_e820_table<T: IntoBytes + FromBytes>(_: &mut T) -> Result<usize, &'static str> {
