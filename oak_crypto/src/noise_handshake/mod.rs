@@ -356,8 +356,13 @@ pub fn respond_kk(
     let initiator_static_pub_bytes: [u8; P256_X962_LEN] =
         initiator_static_pub.try_into().map_err(|_| Error::InvalidPublicKey)?;
 
-    let ss_ecdh_bytes =
-        sha256_two_part(&initiator_static_pub_bytes, &identity_priv.get_public_key().unwrap());
+    // ss: DH(s_initiator, s_responder) — requires the responder's private key.
+    // Previously this incorrectly used sha256(pub_a || pub_b) which is computable
+    // from public information alone and defeats the mutual-authentication guarantee
+    // of the KK pattern.
+    let ss_ecdh_bytes = identity_priv
+        .derive_dh_secret(initiator_static_pub_bytes.as_slice())
+        .map_err(|_| Error::InvalidHandshake)?;
     noise.mix_key(&ss_ecdh_bytes);
 
     let se_ecdh_bytes = identity_priv
