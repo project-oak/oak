@@ -71,7 +71,10 @@ fn test_server_context() -> OakSessionTlsServerContext {
     let server_key = load_test_key("oak_session/tls/testing/test_server.key");
 
     OakSessionTlsServerContext::create(ServerContextConfig {
-        tls_identity_provider: utils::create_static_cert_identity_provider(server_key, server_cert),
+        tls_identity_provider: utils::create_static_cert_identity_provider(
+            server_key,
+            vec![server_cert],
+        ),
         client_trust_anchor_provider: Some(utils::create_static_trust_anchor_provider(ca_cert)),
         custom_cert_verifier: None,
     })
@@ -87,7 +90,7 @@ fn test_client_context() -> OakSessionTlsClientContext {
         server_trust_anchor_provider: Some(utils::create_static_trust_anchor_provider(ca_cert)),
         tls_identity_provider: Some(utils::create_static_cert_identity_provider(
             client_key,
-            client_cert,
+            vec![client_cert],
         )),
         custom_cert_verifier: None,
         expected_server_name: None,

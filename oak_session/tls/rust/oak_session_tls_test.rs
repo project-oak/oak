@@ -76,8 +76,10 @@ async fn test_mtls_handshake() -> Result<(), Box<dyn std::error::Error>> {
     let client_cert = load_test_cert("oak_session/tls/testing/test_client.pem");
     let client_key = load_test_key("oak_session/tls/testing/test_client.key");
 
-    let pair =
-        TestSessionPair::create(Some(TlsIdentity { key_der: client_key, cert_der: client_cert }));
+    let pair = TestSessionPair::create(Some(TlsIdentity {
+        key_der: client_key,
+        certs: vec![client_cert],
+    }));
     let mut server = AsyncServer::spawn(pair.server_ctx);
 
     let mut client_session = do_handshake(&mut server, &pair.client_ctx).await;
@@ -139,15 +141,17 @@ async fn test_certificate_rotation_works() -> Result<(), Box<dyn std::error::Err
     let untrusted_cert = load_test_cert("oak_session/tls/testing/test_untrusted.pem");
     let untrusted_key = load_test_key("oak_session/tls/testing/test_untrusted.key");
 
-    let current_identity =
-        Arc::new(std::sync::Mutex::new(TlsIdentity { key_der: server_key, cert_der: server_cert }));
+    let current_identity = Arc::new(std::sync::Mutex::new(TlsIdentity {
+        key_der: server_key,
+        certs: vec![server_cert],
+    }));
 
     let server_ctx = OakSessionTlsServerContext::create(ServerContextConfig {
         tls_identity_provider: Box::new({
             let current = current_identity.clone();
             move || {
                 let id = current.lock().unwrap();
-                Ok(TlsIdentity { key_der: id.key_der.clone_key(), cert_der: id.cert_der.clone() })
+                Ok(TlsIdentity { key_der: id.key_der.clone_key(), certs: id.certs.clone() })
             }
         }),
         client_trust_anchor_provider: None,
@@ -182,7 +186,7 @@ async fn test_certificate_rotation_works() -> Result<(), Box<dyn std::error::Err
     {
         let mut id = current_identity.lock().unwrap();
         id.key_der = untrusted_key;
-        id.cert_der = untrusted_cert;
+        id.certs = vec![untrusted_cert];
     }
 
     let client_ctx2 = OakSessionTlsClientContext::create(ClientContextConfig {
@@ -291,7 +295,7 @@ async fn test_custom_verifier_invalid_cert() -> Result<(), Box<dyn std::error::E
     let server_ctx = OakSessionTlsServerContext::create(ServerContextConfig {
         tls_identity_provider: utils::create_static_cert_identity_provider(
             server_key.clone_key(),
-            server_cert.clone(),
+            vec![server_cert.clone()],
         ),
         client_trust_anchor_provider: None,
         custom_cert_verifier: None,
@@ -336,7 +340,7 @@ async fn test_custom_verifier_invalid_self_signed_succeeds_with_custom_ok()
     let server_ctx = OakSessionTlsServerContext::create(ServerContextConfig {
         tls_identity_provider: utils::create_static_cert_identity_provider(
             untrusted_key.clone_key(),
-            untrusted_cert.clone(),
+            vec![untrusted_cert.clone()],
         ),
         client_trust_anchor_provider: None,
         custom_cert_verifier: None,
@@ -376,7 +380,7 @@ async fn test_custom_verifier_invalid_self_signed_fails_with_custom_error()
     let server_ctx = OakSessionTlsServerContext::create(ServerContextConfig {
         tls_identity_provider: utils::create_static_cert_identity_provider(
             untrusted_key.clone_key(),
-            untrusted_cert.clone(),
+            vec![untrusted_cert.clone()],
         ),
         client_trust_anchor_provider: None,
         custom_cert_verifier: None,
@@ -420,7 +424,7 @@ async fn test_custom_server_name_match() -> Result<(), Box<dyn std::error::Error
     let server_ctx = OakSessionTlsServerContext::create(ServerContextConfig {
         tls_identity_provider: utils::create_static_cert_identity_provider(
             server_identity.key_der.clone_key(),
-            server_identity.cert_der.clone(),
+            server_identity.certs.clone(),
         ),
         client_trust_anchor_provider: None,
         custom_cert_verifier: None,
@@ -455,7 +459,7 @@ async fn test_custom_server_name_mismatch_fails() -> Result<(), Box<dyn std::err
     let server_ctx = OakSessionTlsServerContext::create(ServerContextConfig {
         tls_identity_provider: utils::create_static_cert_identity_provider(
             server_identity.key_der.clone_key(),
-            server_identity.cert_der.clone(),
+            server_identity.certs.clone(),
         ),
         client_trust_anchor_provider: None,
         custom_cert_verifier: None,
@@ -491,10 +495,10 @@ fn test_create_self_signed_for_custom_name() {
     let provider =
         utils::create_self_signed_for(custom_name).expect("create_self_signed_for failed");
     let identity = provider.get_identity().expect("get_identity failed");
-    assert!(!identity.cert_der.is_empty());
+    assert!(!identity.certs[0].is_empty());
 
     // The custom name should appear in the DER-encoded certificate.
-    let cert_bytes = identity.cert_der.as_ref();
+    let cert_bytes = identity.certs[0].as_ref();
     let name_bytes = custom_name.as_bytes();
     assert!(
         cert_bytes.windows(name_bytes.len()).any(|w| w == name_bytes),
@@ -523,7 +527,7 @@ impl TestSessionPair {
         let server_ctx = OakSessionTlsServerContext::create(ServerContextConfig {
             tls_identity_provider: utils::create_static_cert_identity_provider(
                 server_key.clone_key(),
-                server_cert.clone(),
+                vec![server_cert.clone()],
             ),
             client_trust_anchor_provider: client_identity
                 .as_ref()
@@ -535,7 +539,7 @@ impl TestSessionPair {
         let client_ctx = OakSessionTlsClientContext::create(ClientContextConfig {
             server_trust_anchor_provider: Some(utils::create_static_trust_anchor_provider(ca_cert)),
             tls_identity_provider: client_identity
-                .map(|id| utils::create_static_cert_identity_provider(id.key_der, id.cert_der)),
+                .map(|id| utils::create_static_cert_identity_provider(id.key_der, id.certs)),
             custom_cert_verifier,
             expected_server_name: None,
         })
@@ -682,7 +686,7 @@ async fn do_handshake(
 fn test_create_self_signed_no_extensions() {
     let provider = utils::create_self_signed().expect("create_self_signed failed");
     let identity = provider.get_identity().expect("get_identity failed");
-    assert!(!identity.cert_der.is_empty());
+    assert!(!identity.certs[0].is_empty());
 }
 
 #[test]
@@ -694,12 +698,12 @@ fn test_create_self_signed_with_extensions() {
     let provider = utils::create_self_signed_with_extensions(vec![ext])
         .expect("create_self_signed_with_extensions failed");
     let identity = provider.get_identity().expect("get_identity failed");
-    assert!(!identity.cert_der.is_empty());
+    assert!(!identity.certs[0].is_empty());
 
-    // The extension OID 1.2.3.4.5.6.7.8.9 should appear in the DER-encoded
-    // cert as its BER encoding: 2a.03.04.05.06.07.08.09
+    // The extension OID 1.2.3.4.5.6.7.8.9 should appear in the BER encoding:
+    // 2a.03.04.05.06.07.08.09
     // (first two arcs 1.2 merge into 0x2a, rest are single-byte).
-    let cert_bytes = identity.cert_der.as_ref();
+    let cert_bytes = identity.certs[0].as_ref();
     let oid_bytes: &[u8] = &[0x2a, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09];
     assert!(
         cert_bytes.windows(oid_bytes.len()).any(|w| w == oid_bytes),
@@ -715,5 +719,40 @@ fn test_create_self_signed_with_multiple_extensions() {
     let provider = utils::create_self_signed_with_extensions(vec![ext1, ext2])
         .expect("create_self_signed_with_extensions failed");
     let identity = provider.get_identity().expect("get_identity failed");
-    assert!(!identity.cert_der.is_empty());
+    assert!(!identity.certs[0].is_empty());
+}
+
+#[tokio::test]
+async fn test_handshake_with_cert_chain() -> Result<(), Box<dyn std::error::Error>> {
+    let ca_cert = load_test_cert("oak_session/tls/testing/test_ca.pem");
+    let server_cert = load_test_cert("oak_session/tls/testing/test_server.pem");
+    let server_key = load_test_key("oak_session/tls/testing/test_server.key");
+
+    let server_ctx = OakSessionTlsServerContext::create(ServerContextConfig {
+        tls_identity_provider: utils::create_static_cert_identity_provider(
+            server_key.clone_key(),
+            vec![server_cert.clone(), ca_cert.clone()],
+        ),
+        client_trust_anchor_provider: None,
+        custom_cert_verifier: None,
+    })
+    .expect("failed to create server context");
+
+    let client_ctx = OakSessionTlsClientContext::create(ClientContextConfig {
+        server_trust_anchor_provider: Some(utils::create_static_trust_anchor_provider(ca_cert)),
+        tls_identity_provider: None,
+        custom_cert_verifier: None,
+        expected_server_name: None,
+    })
+    .expect("failed to create client context");
+
+    let mut server = AsyncServer::spawn(server_ctx);
+    let mut client = do_handshake(&mut server, &client_ctx).await;
+
+    let msg = b"handshake with cert chain test";
+    let encrypted = client.encrypt(msg)?;
+    let decrypted = server.decrypt(encrypted).await.unwrap();
+    assert_eq!(decrypted, msg);
+
+    Ok(())
 }

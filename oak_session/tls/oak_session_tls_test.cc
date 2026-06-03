@@ -419,7 +419,7 @@ TEST(OakSessionTlsTest, CertificateRotationWorks) {
   auto* provider_ptr = provider.get();
   provider_ptr->current_identity = TlsIdentity{
       .key_asn1 = *server_key,
-      .cert_asn1 = *server_cert,
+      .cert_chain = {*server_cert},
   };
 
   ServerContextConfig server_config{
@@ -448,7 +448,7 @@ TEST(OakSessionTlsTest, CertificateRotationWorks) {
   // Second client session (server rotates cert to untrusted).
   provider_ptr->current_identity = TlsIdentity{
       .key_asn1 = *untrusted_key,
-      .cert_asn1 = *untrusted_cert,
+      .cert_chain = {*untrusted_cert},
   };
 
   ClientContextConfig client_config2{
@@ -714,7 +714,8 @@ TEST(CreateSelfSignedTest, NoExtensions) {
   auto identity = (*provider)->GetIdentity();
   ASSERT_THAT(identity, IsOk());
   EXPECT_FALSE(identity->key_asn1.empty());
-  EXPECT_FALSE(identity->cert_asn1.empty());
+  EXPECT_FALSE(identity->cert_chain.empty());
+  EXPECT_FALSE(identity->cert_chain[0].empty());
 }
 
 TEST(CreateSelfSignedTest, SingleExtension) {
@@ -730,8 +731,9 @@ TEST(CreateSelfSignedTest, SingleExtension) {
 
   // Parse the certificate and verify the extension is present.
   const unsigned char* p =
-      reinterpret_cast<const unsigned char*>(identity->cert_asn1.data());
-  bssl::UniquePtr<X509> cert(d2i_X509(nullptr, &p, identity->cert_asn1.size()));
+      reinterpret_cast<const unsigned char*>(identity->cert_chain[0].data());
+  bssl::UniquePtr<X509> cert(
+      d2i_X509(nullptr, &p, identity->cert_chain[0].size()));
   ASSERT_NE(cert, nullptr);
 
   bssl::UniquePtr<ASN1_OBJECT> obj(
@@ -765,8 +767,9 @@ TEST(CreateSelfSignedTest, MultipleExtensions) {
   ASSERT_THAT(identity, IsOk());
 
   const unsigned char* p =
-      reinterpret_cast<const unsigned char*>(identity->cert_asn1.data());
-  bssl::UniquePtr<X509> cert(d2i_X509(nullptr, &p, identity->cert_asn1.size()));
+      reinterpret_cast<const unsigned char*>(identity->cert_chain[0].data());
+  bssl::UniquePtr<X509> cert(
+      d2i_X509(nullptr, &p, identity->cert_chain[0].size()));
   ASSERT_NE(cert, nullptr);
 
   // Verify the first extension.
@@ -796,6 +799,50 @@ TEST(CreateSelfSignedTest, InvalidOidReturnsError) {
 
   auto provider = util::CreateSelfSigned(extensions);
   EXPECT_THAT(provider, StatusIs(absl::StatusCode::kInvalidArgument));
+}
+
+TEST(OakSessionTlsTest, HandshakeWithCertChain) {
+  auto server_key = util::LoadPrivateKeyFromFile(kTestServerKeyPath);
+  ASSERT_THAT(server_key, IsOk());
+
+  auto server_cert = util::LoadCertificateFromFile(kTestServerCertPath);
+  ASSERT_THAT(server_cert, IsOk());
+  auto ca_cert = util::LoadCertificateFromFile(kTestCaCertPath);
+  ASSERT_THAT(ca_cert, IsOk());
+
+  class StaticChainIdentityProvider : public TlsIdentityProvider {
+   public:
+    StaticChainIdentityProvider(std::string key, std::vector<std::string> chain)
+        : current_identity_{.key_asn1 = std::move(key),
+                            .cert_chain = std::move(chain)} {}
+    absl::StatusOr<TlsIdentity> GetIdentity() override {
+      return current_identity_;
+    }
+
+   private:
+    TlsIdentity current_identity_;
+  };
+
+  ServerContextConfig server_config{
+      .tls_identity_provider = std::make_unique<StaticChainIdentityProvider>(
+          *server_key, std::vector<std::string>{*server_cert, *ca_cert}),
+  };
+  auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
+  ASSERT_THAT(server_ctx, IsOk());
+
+  ClientContextConfig client_config{
+      .server_trust_anchor_provider =
+          std::move(*util::CreateTrustAnchorFromFile(kTestCaCertPath)),
+  };
+  auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
+  ASSERT_THAT(client_ctx, IsOk());
+
+  auto result = RunHandshake(**client_ctx, **server_ctx);
+  ASSERT_THAT(result.client, IsOk());
+  ASSERT_THAT(result.server, IsOk());
+
+  SendReceiveAndVerifyMessage(*result.client->session, *result.server->session,
+                              "hello server with chain");
 }
 
 }  // namespace

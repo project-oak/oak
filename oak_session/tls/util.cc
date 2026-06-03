@@ -88,6 +88,41 @@ absl::StatusOr<std::string> LoadCertificateFromFile(const char* cert_path) {
   return cert_der;
 }
 
+absl::StatusOr<std::vector<std::string>> LoadCertificateChainFromFile(
+    const char* cert_path) {
+  FILE* file = fopen(cert_path, "r");
+  if (file == nullptr) {
+    return absl::InternalError("Failed to open certificate file");
+  }
+  std::vector<std::string> cert_chain;
+  while (true) {
+    bssl::UniquePtr<X509> cert(PEM_read_X509(file, nullptr, nullptr, nullptr));
+    if (cert == nullptr) {
+      ERR_clear_error();
+      break;
+    }
+    int der_len = i2d_X509(cert.get(), nullptr);
+    if (der_len < 0) {
+      fclose(file);
+      return absl::InternalError("Failed to get DER length from certificate");
+    }
+    std::string cert_der;
+    cert_der.resize(der_len);
+    unsigned char* p = reinterpret_cast<unsigned char*>(cert_der.data());
+    der_len = i2d_X509(cert.get(), &p);
+    if (der_len < 0) {
+      fclose(file);
+      return absl::InternalError("Failed to convert certificate to DER");
+    }
+    cert_chain.push_back(std::move(cert_der));
+  }
+  fclose(file);
+  if (cert_chain.empty()) {
+    return absl::InternalError("Failed to read any certificates from file");
+  }
+  return cert_chain;
+}
+
 class StaticCertIdentityProvider : public TlsIdentityProvider {
  public:
   StaticCertIdentityProvider(TlsIdentity identity)
@@ -106,13 +141,13 @@ absl::StatusOr<std::unique_ptr<TlsIdentityProvider>> CreateFromFiles(
     return key_der.status();
   }
 
-  auto cert_der = LoadCertificateFromFile(cert_path.c_str());
-  if (!cert_der.ok()) {
-    return cert_der.status();
+  auto cert_chain = LoadCertificateChainFromFile(cert_path.c_str());
+  if (!cert_chain.ok()) {
+    return cert_chain.status();
   }
 
   return std::make_unique<StaticCertIdentityProvider>(TlsIdentity{
-      .key_asn1 = std::move(*key_der), .cert_asn1 = std::move(*cert_der)});
+      .key_asn1 = std::move(*key_der), .cert_chain = std::move(*cert_chain)});
 }
 
 absl::StatusOr<std::unique_ptr<TlsIdentityProvider>> CreateSelfSigned(
@@ -224,7 +259,7 @@ absl::StatusOr<std::unique_ptr<TlsIdentityProvider>> CreateSelfSigned(
   }
 
   return std::make_unique<StaticCertIdentityProvider>(TlsIdentity{
-      .key_asn1 = std::move(key_der), .cert_asn1 = std::move(cert_der)});
+      .key_asn1 = std::move(key_der), .cert_chain = {std::move(cert_der)}});
 }
 
 class StaticTrustAnchorProvider : public TrustAnchorProvider {

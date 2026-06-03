@@ -19,6 +19,7 @@
 
 #include <functional>
 #include <optional>
+#include <vector>
 
 #include "absl/functional/any_invocable.h"
 #include "absl/status/status.h"
@@ -68,9 +69,11 @@ struct TlsIdentity {
   // private key will be set for this node to send as verification.
   std::string key_asn1;
 
-  // The cerificate containing the public key corresponding to the private key
-  // in self_key_asn1.
-  std::string cert_asn1;
+  // The certificate chain to be presented. The first certificate in the
+  // vector must be the leaf certificate, containing the public key
+  // corresponding to `key_asn1`. Subsequent certificates are intermediate CA
+  // certificates, in order, up to the root.
+  std::vector<std::string> cert_chain;
 };
 
 // A custom certificate verifier callback.

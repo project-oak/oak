@@ -18,6 +18,7 @@
 #define OAK_EXPERIMENTS_TLS_OVER_GRPC_SERVICE_IMPL_H_
 
 #include <memory>
+#include <vector>
 
 #include "absl/log/log.h"
 #include "absl/status/status.h"
@@ -34,7 +35,8 @@ namespace oak::session::tls::example {
 class TlsOverGrpcServiceImpl final : public TlsOverGrpc::Service {
  public:
   static absl::StatusOr<std::unique_ptr<TlsOverGrpcServiceImpl>> Create(
-      const std::string& server_key_asn1, const std::string& server_cert_asn1,
+      const std::string& server_key_asn1,
+      const std::vector<std::string>& server_cert_chain,
       const std::string& client_cert_path);
   grpc::Status TlsSession(
       grpc::ServerContext* context,

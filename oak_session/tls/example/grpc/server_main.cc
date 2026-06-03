@@ -17,6 +17,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
@@ -43,14 +44,15 @@ void RunServer() {
   if (!server_key.ok()) {
     LOG(FATAL) << "Failed to load server key: " << server_key.status();
   }
-  auto server_cert =
-      util::LoadCertificateFromFile(absl::GetFlag(FLAGS_server_cert).c_str());
-  if (!server_cert.ok()) {
-    LOG(FATAL) << "Failed to load server certificate: " << server_cert.status();
+  auto server_cert_chain = util::LoadCertificateChainFromFile(
+      absl::GetFlag(FLAGS_server_cert).c_str());
+  if (!server_cert_chain.ok()) {
+    LOG(FATAL) << "Failed to load server certificate chain: "
+               << server_cert_chain.status();
   }
 
   absl::StatusOr<std::unique_ptr<TlsOverGrpcServiceImpl>> service =
-      TlsOverGrpcServiceImpl::Create(*server_key, *server_cert,
+      TlsOverGrpcServiceImpl::Create(*server_key, *server_cert_chain,
                                      absl::GetFlag(FLAGS_client_cert));
   if (!service.ok()) {
     LOG(FATAL) << "Failed to create service: " << service.status();

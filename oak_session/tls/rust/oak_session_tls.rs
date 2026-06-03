@@ -107,9 +107,12 @@ pub enum SessionError {
 pub struct TlsIdentity {
     /// The private key that this node will use during handshake.
     pub key_der: PrivateKeyDer<'static>,
-    /// The certificate containing the public key corresponding to the private
-    /// key.
-    pub cert_der: CertificateDer<'static>,
+
+    // The certificate chain to be presented. The first certificate in the
+    // vector must be the leaf certificate, containing the public key
+    // corresponding to `key_asn1`. Subsequent certificates are intermediate CA
+    // certificates, in order, up to the root.
+    pub certs: Vec<CertificateDer<'static>>,
 }
 
 /// Provider trait that returns a TlsIdentity.
@@ -546,7 +549,7 @@ impl OakSessionTlsClientContext {
             let identity = provider
                 .get_identity()
                 .map_err(|e| InitializationError::Tls(rustls::Error::General(e.to_string())))?;
-            let certs = vec![identity.cert_der];
+            let certs = identity.certs;
             let key = identity.key_der;
             builder.with_client_auth_cert(certs, key).map_err(InitializationError::Tls)?
         } else {
@@ -631,7 +634,7 @@ impl OakSessionTlsServerContext {
             .tls_identity_provider
             .get_identity()
             .map_err(|e| InitializationError::Tls(rustls::Error::General(e.to_string())))?;
-        let certs = vec![identity.cert_der];
+        let certs = identity.certs;
         let key = identity.key_der;
 
         let mut server_config =
@@ -902,19 +905,20 @@ pub mod utils {
     }
 
     /// Creates a TlsIdentityProvider that always returns the provided static
-    /// key and certificate.
+    /// key and certificate chain.
     pub fn create_static_cert_identity_provider(
         key_der: PrivateKeyDer<'static>,
-        cert_der: CertificateDer<'static>,
+        certs: Vec<CertificateDer<'static>>,
     ) -> Box<dyn TlsIdentityProvider> {
         // Clone the content to allow the closure to return them multiple times
         let key_der_bytes = key_der.secret_der().to_vec();
-        let cert_der_bytes = cert_der.as_ref().to_vec();
+        let certs_bytes: Vec<Vec<u8>> = certs.iter().map(|c| c.as_ref().to_vec()).collect();
 
         Box::new(move || {
+            let certs = certs_bytes.iter().map(|b| CertificateDer::from(b.clone())).collect();
             Ok(TlsIdentity {
                 key_der: PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(key_der_bytes.clone())),
-                cert_der: CertificateDer::from(cert_der_bytes.clone()),
+                certs,
             })
         })
     }
@@ -1002,7 +1006,7 @@ pub mod utils {
         Ok(Box::new(move || {
             Ok(TlsIdentity {
                 key_der: PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(key_der_bytes.clone())),
-                cert_der: CertificateDer::from(cert_der_bytes.clone()),
+                certs: vec![CertificateDer::from(cert_der_bytes.clone())],
             })
         }))
     }

@@ -28,6 +28,7 @@ namespace oak::session::tls::util {
 
 absl::StatusOr<std::string> LoadPrivateKeyFromFile(const char* key_path);
 absl::StatusOr<std::string> LoadCertificateFromFile(const char* cert_path);
+absl::StatusOr<std::vector<std::string>> LoadCertificateChainFromFile(const char* cert_path);
 
 /// An X.509v3 extension to embed in a self-signed certificate.
 ///

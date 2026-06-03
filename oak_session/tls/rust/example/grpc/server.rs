@@ -172,7 +172,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = ServerContextConfig {
         tls_identity_provider: oak_session_tls::utils::create_static_cert_identity_provider(
             server_key,
-            server_cert,
+            vec![server_cert],
         ),
         client_trust_anchor_provider: None,
         custom_cert_verifier: None,
@@ -213,7 +213,7 @@ mod tests {
         let server_config = ServerContextConfig {
             tls_identity_provider: oak_session_tls::utils::create_static_cert_identity_provider(
                 server_key,
-                server_cert,
+                vec![server_cert],
             ),
             client_trust_anchor_provider: None,
             custom_cert_verifier: None,
@@ -233,7 +233,7 @@ mod tests {
             tls_identity_provider: Some(
                 oak_session_tls::utils::create_static_cert_identity_provider(
                     client_key,
-                    client_cert,
+                    vec![client_cert],
                 ),
             ),
             server_trust_anchor_provider: Some(

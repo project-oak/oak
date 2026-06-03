@@ -559,10 +559,29 @@ absl::Status SetTlsIdentity(SSL* ssl, const TlsIdentity& tls_identity) {
     return absl::InternalError("Failed to load private key");
   }
 
+  if (tls_identity.cert_chain.empty()) {
+    return absl::InvalidArgumentError("certificate chain is empty");
+  }
+
+  // Load the leaf certificate (first certificate in the chain)
+  const std::string& leaf_cert = tls_identity.cert_chain[0];
   if (SSL_use_certificate_ASN1(
-          ssl, reinterpret_cast<const uint8_t*>(tls_identity.cert_asn1.data()),
-          tls_identity.cert_asn1.size()) != 1) {
-    return absl::InternalError("Failed to load certificate");
+          ssl, reinterpret_cast<const uint8_t*>(leaf_cert.data()),
+          leaf_cert.size()) != 1) {
+    return absl::InternalError("Failed to load leaf certificate");
+  }
+
+  // Load the rest of the certificate chain
+  for (size_t i = 1; i < tls_identity.cert_chain.size(); ++i) {
+    const std::string& cert_der = tls_identity.cert_chain[i];
+    const uint8_t* ptr = reinterpret_cast<const uint8_t*>(cert_der.data());
+    bssl::UniquePtr<X509> cert(d2i_X509(nullptr, &ptr, cert_der.size()));
+    if (!cert) {
+      return absl::InternalError("Failed to parse chain certificate");
+    }
+    if (SSL_add1_chain_cert(ssl, cert.get()) != 1) {
+      return absl::InternalError("Failed to add certificate to chain");
+    }
   }
 
   return absl::OkStatus();

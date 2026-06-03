@@ -61,7 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = ClientContextConfig {
         tls_identity_provider: Some(oak_session_tls::utils::create_static_cert_identity_provider(
             client_key,
-            client_cert,
+            vec![client_cert],
         )),
         server_trust_anchor_provider: Some(
             oak_session_tls::utils::create_static_trust_anchor_provider(ca_cert),
