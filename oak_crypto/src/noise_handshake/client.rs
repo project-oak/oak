@@ -17,7 +17,7 @@ use alloc::{boxed::Box, vec::Vec};
 pub use crate::noise_handshake::crypto_wrapper::{
     EcdsaKeyPair, NONCE_LEN, P256_SCALAR_LEN, P256_X962_LEN, P256Scalar, SHA256_OUTPUT_LEN,
     SYMMETRIC_KEY_LEN, aes_256_gcm_open_in_place, aes_256_gcm_seal_in_place, ecdsa_verify,
-    hkdf_sha256, p256_scalar_mult, rand_bytes, sha256, sha256_two_part,
+    hkdf_sha256, p256_scalar_mult, rand_bytes, sha256,
 };
 use crate::noise_handshake::{
     IdentityKeyHandle, NoiseMessage, OrderedCrypter,
@@ -78,10 +78,13 @@ impl HandshakeInitiator {
             self.noise.mix_key(&es_ecdh_bytes);
         }
         if let Some(self_priv_key) = self.self_identity_priv_key.as_ref() {
-            let self_static_pub_key =
-                self_priv_key.get_public_key().map_err(|_| Error::InvalidPublicKey)?;
             if let Some(peer_identity_pub_key) = self.peer_identity_pub_key {
-                let ss_ecdh_bytes = sha256_two_part(&self_static_pub_key, &peer_identity_pub_key);
+                // Noise KK: mix_key(ECDH(s, rs)) — static-static DH.
+                // Must use the actual private key material, not a hash of two
+                // public keys (which would contribute no private-key entropy).
+                let ss_ecdh_bytes = self_priv_key
+                    .derive_dh_secret(peer_identity_pub_key.as_slice())
+                    .map_err(|_| Error::InvalidHandshake)?;
                 self.noise.mix_key(&ss_ecdh_bytes);
             } else {
                 return Err(Error::MissingPeerPublicKey);

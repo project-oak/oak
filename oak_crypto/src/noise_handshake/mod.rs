@@ -356,8 +356,13 @@ pub fn respond_kk(
     let initiator_static_pub_bytes: [u8; P256_X962_LEN] =
         initiator_static_pub.try_into().map_err(|_| Error::InvalidPublicKey)?;
 
-    let ss_ecdh_bytes =
-        sha256_two_part(&initiator_static_pub_bytes, &identity_priv.get_public_key().unwrap());
+    // Noise KK: mix_key(ECDH(rs, s)) — static-static DH (responder side).
+    // The responder's private key is mixed against the initiator's static
+    // public key.  Using sha256_two_part of the two public keys was wrong:
+    // it contributes no private-key entropy and breaks mutual authentication.
+    let ss_ecdh_bytes = identity_priv
+        .derive_dh_secret(initiator_static_pub_bytes.as_slice())
+        .map_err(|_| Error::InvalidHandshake)?;
     noise.mix_key(&ss_ecdh_bytes);
 
     let se_ecdh_bytes = identity_priv
