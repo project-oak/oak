@@ -78,10 +78,14 @@ impl HandshakeInitiator {
             self.noise.mix_key(&es_ecdh_bytes);
         }
         if let Some(self_priv_key) = self.self_identity_priv_key.as_ref() {
-            let self_static_pub_key =
-                self_priv_key.get_public_key().map_err(|_| Error::InvalidPublicKey)?;
             if let Some(peer_identity_pub_key) = self.peer_identity_pub_key {
-                let ss_ecdh_bytes = sha256_two_part(&self_static_pub_key, &peer_identity_pub_key);
+                // ss: DH(s_initiator, s_responder) — requires the initiator's private key.
+                // Previously this incorrectly used sha256(pub_a || pub_b) which is computable
+                // from public information alone and defeats the mutual-authentication guarantee
+                // of the KK pattern.
+                let ss_ecdh_bytes = self_priv_key
+                    .derive_dh_secret(peer_identity_pub_key.as_slice())
+                    .map_err(|_| Error::InvalidHandshake)?;
                 self.noise.mix_key(&ss_ecdh_bytes);
             } else {
                 return Err(Error::MissingPeerPublicKey);
