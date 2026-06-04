@@ -20,7 +20,7 @@ pub mod mmio;
 pub use mmio::SevMmio;
 use oak_core::sync::OnceCell;
 use oak_hal::{PageAssignment, PageEncryption, PortFactory};
-use oak_sev_guest::msr::SevStatus;
+use oak_sev_guest::msr::{SevStatus, get_sev_status};
 use x86_64::structures::{
     paging::{Page, Size4KiB},
     port::{PortRead, PortWrite},
@@ -98,13 +98,10 @@ impl crate::Platform for Sev {
 
     fn early_initialize_platform() {
         SEV_STATUS
-            .set(
-                oak_sev_guest::msr::get_sev_status()
-                    .unwrap_or(oak_sev_guest::msr::SevStatus::empty()),
-            )
+            .set(get_sev_status().unwrap_or(SevStatus::empty()))
             .expect("SEV status already set");
-        if sev_status().contains(oak_sev_guest::msr::SevStatus::SEV_ES_ENABLED) {
-            crate::ghcb::init(sev_status().contains(oak_sev_guest::msr::SevStatus::SNP_ACTIVE));
+        if sev_status().contains(SevStatus::SEV_ES_ENABLED) {
+            crate::ghcb::init(sev_status().contains(SevStatus::SNP_ACTIVE));
         }
     }
 
