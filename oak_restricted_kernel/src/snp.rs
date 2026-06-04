@@ -51,23 +51,20 @@ pub struct SnpPageAddresses {
 /// Tries to extract the guest-physical addresses of the SEV-SNP secrets page
 /// and CPUID page.
 ///
-/// This function must only be used while the identity mapping is still in
-/// place, since the pointers in the boot parameter page was constructed by the
-/// Stage 0 firmware with an identity mapping.
-///
 /// This function will panic if the boot parameter page is not valid.
-pub fn get_snp_page_addresses(info: &BootParams) -> SnpPageAddresses {
+pub fn get_snp_page_addresses<T: Translator>(info: &BootParams, mapper: &T) -> SnpPageAddresses {
     // Check that the address of the boot parameter page looks OK.
     let base_address = VirtAddr::from_ptr(info as *const BootParams);
-    // We assume an identity mapping from virtual to physical address.
-    let phys = PhysAddr::new(base_address.as_u64());
+    let phys = mapper.translate_virtual(base_address).expect("invalid boot params address");
     // Check that the physical address is page-aligned and in the expected range.
     assert_page_in_valid_range(phys);
     // The setup data is stored in a null-terminated linked list, so we step through
-    // the list until we find an entry with the right type or reach the end.
-    let mut setup_data_ptr = info.hdr.setup_data();
+    // the list until we find an entry with the right type or reach the end. The
+    // SetupData pointers were created using an identity mapping, so we have to fix
+    // them up using the current page table mappings.
+    let mut setup_data_ptr = fix_identity_mapped_pointer(info.hdr.setup_data(), mapper);
     while !setup_data_ptr.is_null() {
-        assert_pointer_in_valid_range(setup_data_ptr);
+        assert_pointer_in_valid_range(setup_data_ptr, mapper);
         // Safety: we have checked that the pointer is not null and at least points to
         // memory within the expected valid range.
         let setup_data = unsafe { &*setup_data_ptr };
@@ -75,7 +72,7 @@ pub fn get_snp_page_addresses(info: &BootParams) -> SnpPageAddresses {
         if type_ == SetupDataType::CCBlob {
             break;
         }
-        setup_data_ptr = setup_data.next;
+        setup_data_ptr = fix_identity_mapped_pointer(setup_data.next, mapper);
     }
 
     if setup_data_ptr.is_null() {
@@ -84,10 +81,12 @@ pub fn get_snp_page_addresses(info: &BootParams) -> SnpPageAddresses {
 
     // Safety: we have checked that the pointer is not null and at least points to
     // memory within the expected valid range.
-    let cc_blob_address =
-        unsafe { &*(setup_data_ptr as *const CCSetupData) }.cc_blob_address as *const CCBlobSevInfo;
+    let cc_blob_address = fix_identity_mapped_pointer(
+        unsafe { &*(setup_data_ptr as *const CCSetupData) }.cc_blob_address as *const CCBlobSevInfo,
+        mapper,
+    );
 
-    assert_pointer_in_valid_range(cc_blob_address);
+    assert_pointer_in_valid_range(cc_blob_address, mapper);
     // Safety: we have checked that the pointer is not null and at least points to
     // memory within the expected valid range. We also validate the magic number
     // as an additional check.
@@ -164,13 +163,23 @@ fn assert_page_in_valid_range(page: PhysAddr) {
 
 /// Panics if the pointer is null or points to an address that falls outside the
 /// expected range.
-fn assert_pointer_in_valid_range<T>(pointer: *const T) {
+fn assert_pointer_in_valid_range<T, M: Translator>(pointer: *const T, mapper: &M) {
     assert!(!pointer.is_null(), "pointer is null");
-    let address = VirtAddr::from_ptr(pointer);
+    let address =
+        mapper.translate_virtual(VirtAddr::from_ptr(pointer)).expect("invalid virtual address");
     assert!(
-        address.as_u64() < MAX_ADDRESS.as_u64(),
+        address < MAX_ADDRESS,
         "pointer {:#018x} is not below the expected maximum address {:#018x}",
         address,
         MAX_ADDRESS
     );
+}
+
+fn fix_identity_mapped_pointer<T, M: Translator>(pointer: *const T, mapper: &M) -> *const T {
+    // The original pointer was created when an identity mapping was in place,
+    // so we can directly convert it to a physical address.
+    let physical_pointer = PhysAddr::new(pointer as u64);
+    let address =
+        mapper.translate_physical(physical_pointer).expect("invalid identity mapped pointer");
+    address.as_ptr()
 }

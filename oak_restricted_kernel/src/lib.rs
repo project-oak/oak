@@ -151,14 +151,6 @@ pub fn start_kernel<P: Platform + 'static>(info: &BootParams) -> ! {
 
     let protocol = info.protocol();
     info!("Boot protocol:  {}", protocol);
-    let snp_pages = if sev_snp_enabled {
-        // We have to get the physical addresses of the CPUID pages now while the
-        // identity mapping is still in place, but we can only initialize the
-        // instances after the new page mappings have been set up.
-        Some(get_snp_page_addresses(info))
-    } else {
-        None
-    };
 
     // Safety: in the linker script we specify that the ELF header should be placed
     // at 0x200000.
@@ -200,7 +192,7 @@ pub fn start_kernel<P: Platform + 'static>(info: &BootParams) -> ! {
             // encryptor when SEV-SNP is active. Panicking is OK at this point,
             // because these pages are required to support the full features and
             // we don't want to run without them.
-            init_snp_pages(snp_pages.expect("missing SNP CPUID and secrets pages"), mapper);
+            init_snp_pages(get_snp_page_addresses(info, mapper), mapper);
         }
     }
 
