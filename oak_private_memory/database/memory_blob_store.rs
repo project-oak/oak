@@ -43,15 +43,15 @@ impl MemoryBlobStore {
         Ok(Memory::decode(&*decrypted_data)?)
     }
 
-    pub async fn get_memory_by_blob_id(&mut self, blob_id: &BlobId) -> anyhow::Result<Memory> {
+    pub async fn get_memory_by_blob_id(&self, blob_id: &BlobId) -> anyhow::Result<Memory> {
         self.fetch_decrypt_decode_memory(blob_id).await
     }
 
     pub async fn get_memories_by_blob_ids(
-        &mut self,
+        &self,
         blob_ids: &[BlobId],
     ) -> anyhow::Result<Vec<Memory>> {
-        let encrypted_blobs = self.db_client.get_blobs(blob_ids, false).await?;
+        let encrypted_blobs = self.db_client.clone().get_blobs(blob_ids, false).await?;
         blob_ids
             .iter()
             .zip(encrypted_blobs)

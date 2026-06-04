@@ -170,14 +170,14 @@ impl Database {
     }
 
     pub async fn get_memories_by_tag(
-        &mut self,
+        &self,
         tag: &str,
         result_mask: &Option<ResultMask>,
         page_size: i32,
         page_token: PageToken,
     ) -> anyhow::Result<(Vec<Memory>, PageToken)> {
         let (all_blob_ids, next_page_token) =
-            self.meta_db().get_memories_by_tag(tag, page_size, page_token)?;
+            self.database.get_memories_by_tag(tag, page_size, page_token)?;
 
         if all_blob_ids.is_empty() {
             return Ok((Vec::new(), PageToken::Start));
@@ -190,11 +190,11 @@ impl Database {
     }
 
     pub async fn get_memory_by_id(
-        &mut self,
+        &self,
         id: MemoryId,
         result_mask: &Option<ResultMask>,
     ) -> anyhow::Result<Option<Memory>> {
-        if let Some(blob_id) = self.meta_db().get_blob_id_by_memory_id(id.clone())? {
+        if let Some(blob_id) = self.database.get_blob_id_by_memory_id(id.clone())? {
             self.blob_store.get_memory_by_blob_id(&blob_id).await.map(|mut m| {
                 Self::apply_mask_to_memory(&mut m, result_mask);
                 Some(m)
@@ -209,7 +209,7 @@ impl Database {
     /// If any memory is not found, it will be skipped and its ID collected in
     /// the second return value.
     pub async fn get_memories_by_id(
-        &mut self,
+        &self,
         ids: Vec<MemoryId>,
         result_mask: &Option<ResultMask>,
     ) -> anyhow::Result<(Vec<Memory>, Vec<MemoryId>)> {
@@ -217,7 +217,7 @@ impl Database {
         let mut not_found_ids: Vec<MemoryId> = Vec::new();
 
         for id in ids {
-            match self.meta_db().get_blob_id_by_memory_id(id.clone())? {
+            match self.database.get_blob_id_by_memory_id(id.clone())? {
                 Some(blob_id) => found_blob_ids.push(blob_id),
                 None => not_found_ids.push(id),
             }
@@ -230,11 +230,11 @@ impl Database {
     }
 
     pub async fn get_memory_by_name(
-        &mut self,
+        &self,
         name: &str,
         result_mask: &Option<ResultMask>,
     ) -> anyhow::Result<Option<Memory>> {
-        if let Some(blob_id) = self.meta_db().get_memory_by_name(name)? {
+        if let Some(blob_id) = self.database.get_memory_by_name(name)? {
             self.blob_store.get_memory_by_blob_id(&blob_id).await.map(|mut m| {
                 Self::apply_mask_to_memory(&mut m, result_mask);
                 Some(m)
@@ -259,10 +259,10 @@ impl Database {
     /// Search API v2 entry point: delegates to
     /// `IcingMetaDatabase::search_memories`.
     pub async fn search_memories(
-        &mut self,
+        &self,
         request: SearchMemoriesRequest,
     ) -> anyhow::Result<(Vec<Memory>, PageToken)> {
-        let (search_results, next_page_token) = self.meta_db().search_memories(&request)?;
+        let (search_results, next_page_token) = self.database.search_memories(&request)?;
 
         if search_results.items.is_empty() {
             return Ok((Vec::new(), next_page_token));

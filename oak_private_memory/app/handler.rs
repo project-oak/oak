@@ -31,7 +31,7 @@ use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::{
-    sync::{Mutex, MutexGuard, mpsc},
+    sync::{RwLock, RwLockReadGuard, RwLockWriteGuard, mpsc},
     time::Instant,
 };
 use tonic::transport::Channel;
@@ -55,7 +55,7 @@ pub enum ErrorPropagationBehavior {
 // The implementation for one active Oak Private Memory session.
 // A new instances of this struct is created per-request.
 pub struct SealedMemorySessionHandler {
-    session_context: Mutex<Option<UserSessionContext>>,
+    session_context: RwLock<Option<UserSessionContext>>,
     db_client: Arc<SharedDbClient>,
     metrics: Arc<metrics::Metrics>,
     persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
@@ -106,8 +106,12 @@ impl SealedMemorySessionHandler {
         }
     }
 
-    pub async fn session_context(&self) -> MutexGuard<'_, Option<UserSessionContext>> {
-        self.session_context.lock().await
+    pub async fn session_context(&self) -> RwLockWriteGuard<'_, Option<UserSessionContext>> {
+        self.session_context.write().await
+    }
+
+    async fn session_context_read(&self) -> RwLockReadGuard<'_, Option<UserSessionContext>> {
+        self.session_context.read().await
     }
 
     pub fn deserialize_request(&self, request_bytes: &[u8]) -> anyhow::Result<SealedMemoryRequest> {
@@ -202,9 +206,8 @@ impl SealedMemorySessionHandler {
         &self,
         request: GetMemoriesRequest,
     ) -> tonic::Result<GetMemoriesResponse> {
-        let mut mutex_guard = self.session_context().await;
-        let database =
-            &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
+        let guard = self.session_context_read().await;
+        let database = &guard.as_ref().into_failed_precondition("call key sync first")?.database;
 
         let page_token =
             PageToken::try_from(request.page_token).into_invalid_argument("invalid page token")?;
@@ -219,9 +222,8 @@ impl SealedMemorySessionHandler {
         &self,
         request: GetMemoryByIdRequest,
     ) -> tonic::Result<GetMemoryByIdResponse> {
-        let mut mutex_guard = self.session_context().await;
-        let database =
-            &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
+        let guard = self.session_context_read().await;
+        let database = &guard.as_ref().into_failed_precondition("call key sync first")?.database;
 
         let memory = database
             .get_memory_by_id(request.id, &request.result_mask)
@@ -235,9 +237,8 @@ impl SealedMemorySessionHandler {
         &self,
         request: GetMemoriesByIdRequest,
     ) -> tonic::Result<GetMemoriesByIdResponse> {
-        let mut mutex_guard = self.session_context().await;
-        let database =
-            &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
+        let guard = self.session_context_read().await;
+        let database = &guard.as_ref().into_failed_precondition("call key sync first")?.database;
         let (memories, not_found_ids) = database
             .get_memories_by_id(request.ids, &request.result_mask)
             .await
@@ -249,9 +250,8 @@ impl SealedMemorySessionHandler {
         &self,
         request: GetMemoryByNameRequest,
     ) -> tonic::Result<GetMemoryByNameResponse> {
-        let mut mutex_guard = self.session_context().await;
-        let database =
-            &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
+        let guard = self.session_context_read().await;
+        let database = &guard.as_ref().into_failed_precondition("call key sync first")?.database;
         let memory = database
             .get_memory_by_name(&request.name, &request.result_mask)
             .await
@@ -488,9 +488,8 @@ impl SealedMemorySessionHandler {
         &self,
         request: SearchMemoriesRequest,
     ) -> tonic::Result<SearchMemoriesResponse> {
-        let mut mutex_guard = self.session_context().await;
-        let database =
-            &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
+        let guard = self.session_context_read().await;
+        let database = &guard.as_ref().into_failed_precondition("call key sync first")?.database;
 
         let (memories, next_page_token) =
             database.search_memories(request).await.into_internal_error("searching memories")?;
@@ -519,9 +518,8 @@ impl SealedMemorySessionHandler {
         &self,
         _request: GetDatabaseMetricsRequest,
     ) -> tonic::Result<GetDatabaseMetricsResponse> {
-        let mutex_guard = self.session_context().await;
-        let database =
-            &mutex_guard.as_ref().into_failed_precondition("call key sync first")?.database;
+        let guard = self.session_context_read().await;
+        let database = &guard.as_ref().into_failed_precondition("call key sync first")?.database;
 
         database.get_database_metrics().into_internal_error("failed to get database metrics")
     }
