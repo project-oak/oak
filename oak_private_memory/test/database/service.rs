@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use anyhow::anyhow;
 use log::debug;
@@ -83,6 +83,7 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
         &self,
         request: tonic::Request<WriteDataBlobRequest>,
     ) -> Result<tonic::Response<WriteDataBlobResponse>, tonic::Status> {
+        tokio::time::sleep(Duration::from_millis(150)).await;
         let request = request.into_inner();
         self.add_blob_inner(
             request.data_blob.as_ref().unwrap().id.clone(),
@@ -96,6 +97,7 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
         &self,
         request: tonic::Request<ReadDataBlobRequest>,
     ) -> Result<tonic::Response<ReadDataBlobResponse>, tonic::Status> {
+        tokio::time::sleep(Duration::from_millis(150)).await;
         let request = request.into_inner();
         let blob = self.get_blob_inner(&request.id).await;
         debug!("Read {:?}, blob {:?}", request, blob);
@@ -111,6 +113,7 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
         &self,
         request: tonic::Request<WriteMetadataBlobRequest>,
     ) -> Result<tonic::Response<WriteMetadataBlobResponse>, tonic::Status> {
+        tokio::time::sleep(Duration::from_millis(150)).await;
         // TODO: b/443329966 - implement a fake opportunistic concurrency check here,
         // matching the expected semantics (returning a failure if the provided version
         // does not match the existing stored one)

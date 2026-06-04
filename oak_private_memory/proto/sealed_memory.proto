@@ -610,6 +610,12 @@ service SealedMemoryService {
   rpc Invoke(stream oak.session.v1.SessionRequest)
       returns (stream oak.session.v1.SessionResponse) {}
 
+  // Like Invoke, but the server dispatches application requests concurrently
+  // using FuturesOrdered, which can significantly reduce latency when
+  // individual requests are IO-bound (e.g. database calls).
+  rpc InvokeAsync(stream oak.session.v1.SessionRequest)
+      returns (stream oak.session.v1.SessionResponse) {}
+
   rpc StartSession(stream SealedMemorySessionRequest)
       returns (stream SealedMemorySessionResponse) {}
 

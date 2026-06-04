@@ -16,6 +16,7 @@
 use std::{pin::Pin, sync::Arc};
 
 use anyhow::anyhow;
+use futures::stream::FuturesOrdered;
 use log::debug;
 use metrics::RequestMetricName;
 use oak_private_memory_database::clock::Clock;
@@ -296,40 +297,13 @@ impl TlsSessionHandler {
             ),
         }
     }
-
-    /// Handles a TLS application request (raw encrypted bytes in, raw encrypted
-    /// bytes out).
-    pub async fn handle_app_request(&mut self, encrypted_request: &[u8]) -> tonic::Result<Vec<u8>> {
-        self.metrics.inc_requests(RequestMetricName::total());
-
-        let decrypted_request = self.session.decrypt(encrypted_request).map_err(|e| {
-            self.metrics.inc_requests(RequestMetricName::decryption_failure());
-            tonic::Status::invalid_argument(format!("failed to decrypt TLS request: {e}"))
-        })?;
-
-        if decrypted_request.is_empty() {
-            // This can happen if the TLS frame only contained handshake data
-            // (e.g., tickets, key updates) but no application data. We should
-            // gracefully return empty bytes instead of failing to deserialize.
-            self.metrics.inc_requests(RequestMetricName::empty_tls_frame());
-            return Ok(Vec::new());
-        }
-
-        match self.application_handler.handle(&decrypted_request).await {
-            Err(e) => {
-                self.metrics.inc_failures(RequestMetricName::total());
-                Err(e)
-            }
-            Ok(plaintext_response) => self.session.encrypt(&plaintext_response).map_err(|e| {
-                tonic::Status::internal(format!("failed to encrypt TLS response: {e}"))
-            }),
-        }
-    }
 }
 
 #[tonic::async_trait]
 impl SealedMemoryService for SealedMemoryServiceImplementation {
     type InvokeStream =
+        Pin<Box<dyn Stream<Item = Result<SessionResponse, tonic::Status>> + Send + 'static>>;
+    type InvokeAsyncStream =
         Pin<Box<dyn Stream<Item = Result<SessionResponse, tonic::Status>> + Send + 'static>>;
     type StartSessionStream = Pin<
         Box<dyn Stream<Item = Result<SealedMemorySessionResponse, tonic::Status>> + Send + 'static>,
@@ -354,6 +328,58 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         };
 
         Ok(tonic::Response::new(Box::pin(response_stream) as Self::InvokeStream))
+    }
+
+    async fn invoke_async(
+        &self,
+        request: tonic::Request<tonic::Streaming<SessionRequest>>,
+    ) -> Result<tonic::Response<Self::InvokeAsyncStream>, tonic::Status> {
+        let behavior = self.get_error_propagation_behavior(request.metadata());
+        let mut oak_session_handler = self.new_oak_session_handler(behavior)?;
+
+        let mut request_stream = request.into_inner();
+        let (tx, rx) = tokio::sync::mpsc::channel(32);
+
+        tokio::spawn(async move {
+            // Phase 1: Handshake — process init messages sequentially until the
+            // session is open.
+            while !oak_session_handler.server_session.is_open() {
+                match request_stream.next().await {
+                    Some(request) => {
+                        match oak_session_handler.handle_invoke_request(request).await {
+                            Ok(Some(response)) => {
+                                if tx.send(Ok(response)).await.is_err() {
+                                    return;
+                                }
+                            }
+                            Ok(None) => {}
+                            Err(e) => {
+                                let _ = tx.send(Err(e)).await;
+                                return;
+                            }
+                        }
+                    }
+                    None => return,
+                }
+            }
+
+            // Phase 2: Concurrent dispatch of application requests.
+            let OakSessionHandler { metrics, server_session, application_handler } =
+                oak_session_handler;
+            let mut crypto = NoiseSessionCrypto { server_session, metrics: metrics.clone() };
+            run_concurrent_dispatch(
+                &mut request_stream,
+                &tx,
+                &metrics,
+                Arc::new(application_handler),
+                &mut crypto,
+            )
+            .await;
+            debug!("Enclave Async Stream finished");
+        });
+
+        let response_stream = tokio_stream::wrappers::ReceiverStream::new(rx);
+        Ok(tonic::Response::new(Box::pin(response_stream) as Self::InvokeAsyncStream))
     }
 
     async fn start_session(
@@ -443,7 +469,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
                 }
             };
 
-            let mut tls_handler = TlsSessionHandler::new(
+            let tls_handler = TlsSessionHandler::new(
                 &metrics,
                 &persistence_tx,
                 db_client,
@@ -461,39 +487,202 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
             let mut stream =
                 Arc::into_inner(request_stream).expect("exclusive ownership").into_inner();
 
-            // Phase 2: Application data exchange.
-            while let Some(request_res) = stream.next().await {
-                let request = match request_res {
-                    Ok(req) => req,
-                    Err(e) => {
-                        log::error!("Error receiving TLS data: {}", e);
-                        metrics.inc_tls_receive_failures();
-                        break;
-                    }
-                };
-
-                match tls_handler.handle_app_request(&request.tls_frame).await {
-                    Ok(response_bytes) => {
-                        if !response_bytes.is_empty()
-                            && tx
-                                .send(Ok(TlsSessionFrame { tls_frame: response_bytes }))
-                                .await
-                                .is_err()
-                        {
-                            break;
-                        }
-                    }
-                    Err(e) => {
-                        let _ = tx.send(Err(e)).await;
-                        break;
-                    }
-                }
-            }
+            // Phase 2: Concurrent dispatch of application requests.
+            let TlsSessionHandler { metrics: handler_metrics, session, application_handler } =
+                tls_handler;
+            let mut crypto = TlsSessionCrypto {
+                session,
+                metrics: handler_metrics.clone(),
+                outer_metrics: metrics.clone(),
+            };
+            run_concurrent_dispatch(
+                &mut stream,
+                &tx,
+                &handler_metrics,
+                Arc::new(application_handler),
+                &mut crypto,
+            )
+            .await;
             debug!("TLS Stream finished");
         });
 
         let response_stream = tokio_stream::wrappers::ReceiverStream::new(rx);
         Ok(tonic::Response::new(Box::pin(response_stream) as Self::StartTlsSessionStream))
+    }
+}
+/// Abstracts over the crypto operations for a session (Noise or TLS).
+///
+/// This allows the [`run_concurrent_dispatch`] function to work with both
+/// session types without code duplication.
+trait SessionCrypto {
+    /// The wire-format request type read from the gRPC stream.
+    type Request;
+    /// The wire-format response type sent back on the gRPC stream.
+    type Response: Send + 'static;
+
+    /// Decrypts an incoming request into plaintext bytes.
+    ///
+    /// Returns `Ok(None)` to silently skip the request (e.g. empty TLS frames),
+    /// `Ok(Some(bytes))` to dispatch to the application handler, or `Err` to
+    /// abort the stream.
+    fn decrypt(&mut self, request: Self::Request) -> tonic::Result<Option<Vec<u8>>>;
+
+    /// Encrypts a plaintext response into the wire-format response type.
+    fn encrypt(&mut self, plaintext: Vec<u8>) -> tonic::Result<Self::Response>;
+
+    /// Called when the stream yields an error instead of a request.
+    fn on_receive_error(&self, error: tonic::Status);
+}
+
+/// [`SessionCrypto`] implementation for Noise-based sessions (Invoke RPC).
+struct NoiseSessionCrypto {
+    server_session: ServerSession,
+    metrics: Arc<metrics::Metrics>,
+}
+
+impl SessionCrypto for NoiseSessionCrypto {
+    type Request = SessionRequest;
+    type Response = SessionResponse;
+
+    fn decrypt(&mut self, request: SessionRequest) -> tonic::Result<Option<Vec<u8>>> {
+        match self.server_session.decrypt(request) {
+            Ok(decrypted) => Ok(Some(decrypted)),
+            Err(e) => {
+                self.metrics.inc_requests(RequestMetricName::decryption_failure());
+                Err(tonic::Status::invalid_argument(format!("failed to decrypt request: {e}")))
+            }
+        }
+    }
+
+    fn encrypt(&mut self, plaintext: Vec<u8>) -> tonic::Result<SessionResponse> {
+        self.server_session.encrypt(plaintext).into_internal_error("failed to encrypt response")
+    }
+
+    fn on_receive_error(&self, e: tonic::Status) {
+        log::error!("error receiving request: {e}");
+    }
+}
+
+/// [`SessionCrypto`] implementation for TLS-based sessions (StartTlsSession
+/// RPC).
+struct TlsSessionCrypto {
+    session: oak_session_tls::OakSessionTls,
+    metrics: Arc<metrics::Metrics>,
+    outer_metrics: Arc<metrics::Metrics>,
+}
+
+impl SessionCrypto for TlsSessionCrypto {
+    type Request = TlsSessionFrame;
+    type Response = TlsSessionFrame;
+
+    fn decrypt(&mut self, request: TlsSessionFrame) -> tonic::Result<Option<Vec<u8>>> {
+        match self.session.decrypt(&request.tls_frame).map_err(|e| {
+            self.metrics.inc_requests(RequestMetricName::decryption_failure());
+            tonic::Status::invalid_argument(format!("failed to decrypt TLS request: {e}"))
+        }) {
+            Ok(decrypted) if decrypted.is_empty() => {
+                self.metrics.inc_requests(RequestMetricName::empty_tls_frame());
+                Ok(None)
+            }
+            Ok(decrypted) => Ok(Some(decrypted)),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn encrypt(&mut self, plaintext: Vec<u8>) -> tonic::Result<TlsSessionFrame> {
+        let response_bytes = self
+            .session
+            .encrypt(&plaintext)
+            .map_err(|e| tonic::Status::internal(format!("failed to encrypt TLS response: {e}")))?;
+        Ok(TlsSessionFrame { tls_frame: response_bytes })
+    }
+
+    fn on_receive_error(&self, e: tonic::Status) {
+        log::error!("error receiving TLS data: {e}");
+        self.outer_metrics.inc_tls_receive_failures();
+    }
+}
+
+/// Runs the concurrent dispatch loop shared by both Noise and TLS handlers.
+///
+/// Reads requests from `stream`, decrypts them via `crypto`, dispatches the
+/// application handler concurrently via `tokio::spawn`, then encrypts
+/// responses and sends them through `tx` — all while preserving the original
+/// request order via `FuturesOrdered`.
+async fn run_concurrent_dispatch<S, C>(
+    stream: &mut S,
+    tx: &tokio::sync::mpsc::Sender<Result<C::Response, tonic::Status>>,
+    metrics: &Arc<metrics::Metrics>,
+    application_handler: Arc<SealedMemorySessionHandler>,
+    crypto: &mut C,
+) where
+    S: StreamExt<Item = Result<C::Request, tonic::Status>> + Unpin,
+    C: SessionCrypto,
+{
+    let mut in_flight: FuturesOrdered<tokio::task::JoinHandle<tonic::Result<Vec<u8>>>> =
+        FuturesOrdered::new();
+    let mut stream_done = false;
+
+    // Sends an error to the client. Used before breaking out of the loop.
+    macro_rules! send_err_and_break {
+        ($status:expr) => {{
+            let _ = tx.send(Err($status)).await;
+            break;
+        }};
+    }
+
+    loop {
+        tokio::select! {
+            // A spawned handler task completed — encrypt and forward the response.
+            Some(join_result) = in_flight.next(), if !in_flight.is_empty() => {
+                let plaintext = match join_result {
+                    Ok(Ok(bytes)) => bytes,
+                    Ok(Err(e)) => {
+                        metrics.inc_failures(RequestMetricName::total());
+                        send_err_and_break!(e);
+                    }
+                    Err(join_error) => {
+                        send_err_and_break!(tonic::Status::internal(
+                            format!("handler task panicked: {join_error}")
+                        ));
+                    }
+                };
+                match crypto.encrypt(plaintext) {
+                    Ok(response) => {
+                        if tx.send(Ok(response)).await.is_err() {
+                            break;
+                        }
+                    }
+                    Err(e) => send_err_and_break!(e),
+                }
+            }
+
+            // A new request arrived — decrypt and spawn a handler task.
+            request_res = stream.next(), if !stream_done => {
+                match request_res {
+                    Some(Ok(request)) => {
+                        metrics.inc_requests(RequestMetricName::total());
+                        match crypto.decrypt(request) {
+                            Ok(Some(decrypted)) => {
+                                let handler = application_handler.clone();
+                                in_flight.push_back(tokio::spawn(
+                                    async move { handler.handle(&decrypted).await },
+                                ));
+                            }
+                            Ok(None) => {} // empty frame, skip
+                            Err(e) => send_err_and_break!(e),
+                        }
+                    }
+                    Some(Err(e)) => {
+                        crypto.on_receive_error(e);
+                        stream_done = true;
+                    }
+                    None => stream_done = true,
+                }
+            }
+
+            else => break,
+        }
     }
 }
 

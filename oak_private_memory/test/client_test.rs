@@ -711,3 +711,128 @@ async fn test_memory_source_no_allowlist_accepts_any() {
     };
     client.add_memory(memory_without).await.expect("no source accepted without allowlist");
 }
+
+/// Verifies the Invoke RPC path: handshake, key sync, add multiple
+/// memories, retrieve them all.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_invoke_basic() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_invoke_concurrent_user";
+
+    let mut client = PrivateMemoryClient::create_with_invoke(&url, pm_uid, TEST_EK).await.unwrap();
+
+    // Add multiple memories through the concurrent dispatch loop.
+    let num_memories = 10;
+    let mut memory_ids = Vec::new();
+    for i in 0..num_memories {
+        let memory_id = format!("invoke_mem_{i}");
+        let memory = Memory {
+            id: memory_id.clone(),
+            tags: vec!["invoke_test".to_string()],
+            expiration_timestamp: Some(system_time_to_timestamp(
+                SystemTime::now() + Duration::from_secs(3600),
+            )),
+            ..Default::default()
+        };
+        let response = client.add_memory(memory).await.unwrap();
+        assert_eq!(response.id, memory_id);
+        memory_ids.push(memory_id);
+    }
+
+    // Read them all back to verify correctness.
+    for memory_id in &memory_ids {
+        let response = client.get_memory_by_id(memory_id, None).await.unwrap();
+        assert!(response.success, "memory {memory_id} should exist");
+        assert_eq!(response.memory.unwrap().id, *memory_id);
+    }
+
+    // Batch fetch all by id.
+    let response = client.get_memories_by_id(memory_ids.clone(), None).await.unwrap();
+    assert_eq!(response.memories.len(), num_memories);
+    assert!(response.not_found_ids.is_empty());
+}
+
+/// Load test: compares wall-clock time for sequential Invoke dispatch vs
+/// pipelined InvokeAsync dispatch on a single stream. With 150ms simulated DB
+/// latency per blob read, pipelined dispatch should be significantly faster
+/// because the server processes requests concurrently via FuturesOrdered.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_invoke_async_pipelining_speedup() {
+    use client::AsyncPrivateMemoryClient;
+
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let num_requests: usize = 10;
+    let pm_uid = "load_test_user";
+
+    // --- Sequential baseline: Invoke RPC, send-then-receive one at a time ---
+    let mut seq_client =
+        PrivateMemoryClient::create_with_invoke(&url, pm_uid, TEST_EK).await.unwrap();
+
+    // Seed memories via the sequential Invoke client.
+    for i in 0..num_requests {
+        let memory = Memory {
+            id: format!("load_mem_{i}"),
+            expiration_timestamp: Some(system_time_to_timestamp(
+                SystemTime::now() + Duration::from_secs(3600),
+            )),
+            ..Default::default()
+        };
+        seq_client.add_memory(memory).await.unwrap();
+    }
+
+    let seq_start = std::time::Instant::now();
+    for i in 0..num_requests {
+        seq_client.get_memory_by_id(&format!("load_mem_{i}"), None).await.unwrap();
+    }
+    let seq_elapsed = seq_start.elapsed();
+
+    // --- Pipelined: InvokeAsync RPC on a single stream ---
+    // Seed memories via the async client (so they exist in this session's DB).
+    let mut async_client = AsyncPrivateMemoryClient::create(&url, pm_uid, TEST_EK).await.unwrap();
+    for i in 0..num_requests {
+        let memory = Memory {
+            id: format!("load_mem_{i}"),
+            expiration_timestamp: Some(system_time_to_timestamp(
+                SystemTime::now() + Duration::from_secs(3600),
+            )),
+            ..Default::default()
+        };
+        async_client.add_memory(memory).await.unwrap();
+    }
+
+    let pipe_start = std::time::Instant::now();
+    // Send all requests without waiting for responses.
+    for i in 0..num_requests {
+        let request = sealed_memory_request::Request::GetMemoryByIdRequest(GetMemoryByIdRequest {
+            id: format!("load_mem_{i}"),
+            result_mask: None,
+        });
+        async_client.send_request(request).await.unwrap();
+    }
+    // Collect all responses.
+    for _i in 0..num_requests {
+        let response = async_client.receive_response().await.unwrap();
+        match response {
+            sealed_memory_response::Response::GetMemoryByIdResponse(resp) => {
+                assert!(resp.success, "memory should exist: {:?}", resp);
+            }
+            other => panic!("unexpected response type: {other:?}"),
+        }
+    }
+    let pipe_elapsed = pipe_start.elapsed();
+
+    let speedup = seq_elapsed.as_millis() as f64 / pipe_elapsed.as_millis() as f64;
+    eprintln!("=== InvokeAsync Pipelining Load Test ===");
+    eprintln!("  Requests:    {num_requests}");
+    eprintln!("  Sequential (Invoke):      {:?}", seq_elapsed);
+    eprintln!("  Pipelined  (InvokeAsync): {:?}", pipe_elapsed);
+    eprintln!("  Speedup:     {speedup:.2}x");
+
+    // With 150ms DB latency and 10 requests, pipelining should show
+    // significant speedup (requests overlap on the server).
+    assert!(speedup > 1.5, "Expected pipelining speedup > 1.5x, got {speedup:.2}x");
+}

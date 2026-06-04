@@ -60,6 +60,10 @@ you must rebase them afterward so the entire stack stays clean.
 
 Never create a new "fixup" commit for changes that belong to an existing commit.
 
+**Always push after amending.** After amending a commit to address review
+comments, push the updated commit to Gerrit immediately using
+`git push origin HEAD:refs/for/main`. Do not leave this step to the user.
+
 **Critical: Preserve Gerrit Change-Id.** Every commit pushed to Gerrit contains
 a `Change-Id:` trailer in its commit message. Gerrit uses this to match pushes
 to existing CLs. When amending a commit:

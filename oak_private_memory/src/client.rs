@@ -160,6 +160,53 @@ impl PrivateMemoryClient {
         .await
     }
 
+    /// Creates a client connected via the `Invoke` RPC.
+    pub async fn create_with_invoke(server_addr: &str, pm_uid: &str, kek: &[u8]) -> Result<Self> {
+        let channel = Channel::from_shared(server_addr.to_string())
+            .context("failed to create shared channel")?
+            .connect()
+            .await
+            .context("failed to connect to server")?;
+        let mut client = SealedMemoryServiceClient::new(channel);
+        let (tx, rx_stream) = mpsc::channel(10);
+
+        let rx = client
+            .invoke(tonic::Request::new(rx_stream))
+            .await
+            .context("failed to invoke")?
+            .into_inner();
+
+        let transport = Box::new(TonicInvokeTransport { tx, rx });
+
+        Self::new(transport, pm_uid, kek, Self::default_session_config()).await
+    }
+
+    /// Creates a client connected via the `InvokeAsync` RPC, which enables
+    /// concurrent server-side request dispatch.
+    pub async fn create_with_invoke_async(
+        server_addr: &str,
+        pm_uid: &str,
+        kek: &[u8],
+    ) -> Result<Self> {
+        let channel = Channel::from_shared(server_addr.to_string())
+            .context("failed to create shared channel")?
+            .connect()
+            .await
+            .context("failed to connect to server")?;
+        let mut client = SealedMemoryServiceClient::new(channel);
+        let (tx, rx_stream) = mpsc::channel(10);
+
+        let rx = client
+            .invoke_async(tonic::Request::new(rx_stream))
+            .await
+            .context("failed to invoke_async")?
+            .into_inner();
+
+        let transport = Box::new(TonicInvokeTransport { tx, rx });
+
+        Self::new(transport, pm_uid, kek, Self::default_session_config()).await
+    }
+
     pub async fn create_with_start_session_config(
         server_addr: &str,
         pm_uid: &str,
@@ -340,6 +387,152 @@ impl PrivateMemoryAppClient for PrivateMemoryClient {
         request: sealed_memory_request::Request,
     ) -> Result<sealed_memory_response::Response> {
         self.invoke(request).await
+    }
+}
+
+/// An async-pipelining client that decouples send and receive to allow
+/// multiple in-flight requests on a single gRPC stream.
+///
+/// Unlike [`PrivateMemoryClient`], which awaits each response before sending
+/// the next request, this client exposes `send_request` and `receive_response`
+/// separately so callers can fire off N requests and then collect N responses.
+/// This enables server-side concurrent dispatch via the `InvokeAsync` RPC.
+pub struct AsyncPrivateMemoryClient {
+    client_session: oak_session::ClientSession,
+    transport: Box<dyn Transport + Send>,
+}
+
+impl AsyncPrivateMemoryClient {
+    pub async fn create(server_addr: &str, pm_uid: &str, kek: &[u8]) -> Result<Self> {
+        let channel = Channel::from_shared(server_addr.to_string())
+            .context("failed to create shared channel")?
+            .connect()
+            .await
+            .context("failed to connect to server")?;
+        let mut client = SealedMemoryServiceClient::new(channel);
+        let (tx, rx_stream) = mpsc::channel(10);
+
+        let rx = client
+            .invoke_async(tonic::Request::new(rx_stream))
+            .await
+            .context("failed to invoke_async")?
+            .into_inner();
+
+        let transport: Box<dyn Transport + Send> = Box::new(TonicInvokeTransport { tx, rx });
+
+        let session_config = PrivateMemoryClient::default_session_config();
+        let mut client_session = oak_session::ClientSession::create(session_config)
+            .context("failed to create client session")?;
+
+        // Handshake (must be sequential).
+        let mut transport = transport;
+        while !client_session.is_open() {
+            let request =
+                client_session.next_init_message().context("failed to get next init message")?;
+            transport.send(request).await.context("failed to send init message")?;
+            if !client_session.is_open() {
+                let response =
+                    transport.receive().await.context("failed to receive init message")?;
+                client_session
+                    .handle_init_message(response)
+                    .context("failed to handle init message")?;
+            }
+        }
+
+        let mut async_client = Self { client_session, transport };
+
+        // Register and key-sync (sequential, one-time setup).
+        let reg_status = async_client.register_user(pm_uid, kek).await?;
+        anyhow::ensure!(
+            reg_status == user_registration_response::Status::Success
+                || reg_status == user_registration_response::Status::UserAlreadyExists,
+            "registration failed: {reg_status:?}"
+        );
+        let ks_status = async_client.key_sync(pm_uid, kek).await?;
+        anyhow::ensure!(
+            ks_status == key_sync_response::Status::Success,
+            "key sync failed: {ks_status:?}"
+        );
+
+        Ok(async_client)
+    }
+
+    /// Encrypts and sends a request without waiting for the response.
+    pub async fn send_request(&mut self, request: sealed_memory_request::Request) -> Result<()> {
+        let sealed_memory_request =
+            SealedMemoryRequest { request: Some(request), ..Default::default() };
+        let payload = sealed_memory_request.encode_to_vec();
+        let encrypted_request =
+            self.client_session.encrypt(payload).context("failed to encrypt request")?;
+        self.transport.send(encrypted_request).await.context("failed to send request")
+    }
+
+    /// Reads the next response from the stream and decrypts it.
+    pub async fn receive_response(&mut self) -> Result<sealed_memory_response::Response> {
+        let response = self.transport.receive().await.context("failed to receive response")?;
+        let decrypted_response =
+            self.client_session.decrypt(response).context("failed to decrypt response")?;
+        let sealed_memory_response = SealedMemoryResponse::decode(decrypted_response.as_ref())
+            .context("failed to decode response")?;
+        sealed_memory_response.response.ok_or_else(|| anyhow!("empty response"))
+    }
+
+    /// Convenience: send + receive in sequence (like the sync client).
+    async fn invoke(
+        &mut self,
+        request: sealed_memory_request::Request,
+    ) -> Result<sealed_memory_response::Response> {
+        self.send_request(request).await?;
+        self.receive_response().await
+    }
+
+    async fn register_user(
+        &mut self,
+        pm_uid: &str,
+        kek: &[u8],
+    ) -> Result<user_registration_response::Status> {
+        let request = UserRegistrationRequest {
+            pm_uid: pm_uid.to_string(),
+            key_encryption_key: kek.to_vec(),
+            boot_strap_info: Some(KeyDerivationInfo::default()),
+        };
+        let response =
+            self.invoke(sealed_memory_request::Request::UserRegistrationRequest(request)).await?;
+        match response {
+            sealed_memory_response::Response::UserRegistrationResponse(resp) => Ok(resp.status()),
+            _ => Err(anyhow!("unexpected response type for user registration")),
+        }
+    }
+
+    async fn key_sync(&mut self, pm_uid: &str, kek: &[u8]) -> Result<key_sync_response::Status> {
+        let request = KeySyncRequest {
+            pm_uid: pm_uid.to_string(),
+            key_encryption_key: kek.to_vec(),
+            session_config: None,
+        };
+        let response = self.invoke(sealed_memory_request::Request::KeySyncRequest(request)).await?;
+        match response {
+            sealed_memory_response::Response::KeySyncResponse(resp) => Ok(resp.status()),
+            _ => Err(anyhow!("unexpected response type for key sync")),
+        }
+    }
+
+    pub async fn add_memory(&mut self, memory: Memory) -> Result<AddMemoryResponse> {
+        let request = AddMemoryRequest { memory: Some(memory) };
+        let response =
+            self.invoke(sealed_memory_request::Request::AddMemoryRequest(request)).await?;
+        expect_response_type!(response, sealed_memory_response::Response::AddMemoryResponse)
+    }
+
+    pub async fn get_memory_by_id(
+        &mut self,
+        id: &str,
+        result_mask: Option<ResultMask>,
+    ) -> Result<GetMemoryByIdResponse> {
+        let request = GetMemoryByIdRequest { id: id.to_string(), result_mask };
+        let response =
+            self.invoke(sealed_memory_request::Request::GetMemoryByIdRequest(request)).await?;
+        expect_response_type!(response, sealed_memory_response::Response::GetMemoryByIdResponse)
     }
 }
 // ---------------------------------------------------------------------------
