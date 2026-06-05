@@ -87,6 +87,55 @@ fn process_nk_handshake() {
     }
 }
 
+/// Regression test: the Noise KK `ss` step must use real ECDH, not a
+/// SHA-256 hash of the two static public keys.
+///
+/// Before the fix, `ss` was computed as `SHA256(s_pub || rs_pub)` — a
+/// value that is fully public and contributes zero private-key entropy to
+/// the handshake.  As a result, any party that knows the two static public
+/// keys can reproduce the `ss` mix and impersonate either endpoint without
+/// possessing the corresponding private key.
+///
+/// This test demonstrates the correct property: completing a KK handshake
+/// with a *wrong* initiator static key (one whose public key matches but
+/// whose private key is different) must fail, not succeed.  Under the
+/// buggy implementation both sides computed the same public-key hash so
+/// the handshake still completed, making mutual authentication illusory.
+#[test]
+fn kk_handshake_rejects_wrong_initiator_static_key() {
+    // Real responder key pair.
+    let responder_priv = IdentityKey::generate();
+    let responder_pub_bytes: [u8; 65] =
+        responder_priv.get_public_key().unwrap().try_into().expect("unexpected public key length");
+
+    // Legitimate initiator key pair.
+    let legit_init_priv: Box<dyn IdentityKeyHandle> = Box::new(IdentityKey::generate());
+    let legit_init_pub = legit_init_priv.get_public_key().unwrap();
+
+    // Attacker key pair: different private key, but the attacker knows
+    // legit_init_pub (it is public) and can construct an initiator message
+    // that advertises legit_init_pub as its static key while actually using
+    // a different private key for the DH operations.
+    let attacker_priv: Box<dyn IdentityKeyHandle> = Box::new(IdentityKey::generate());
+
+    // Build an initiator message using the *attacker*'s private key but
+    // claiming legit_init_pub as the static identity.
+    // With the buggy implementation (ss = SHA256(s_pub || rs_pub)) the
+    // responder would accept this because ss does not bind to any private key.
+    let mut attacker_initiator = HandshakeInitiator::new_kk(responder_pub_bytes, attacker_priv);
+    let attacker_message = attacker_initiator.build_initial_message().unwrap();
+
+    // The responder expects the initiator to hold legit_init_priv.
+    // With the fix, the ss = ECDH(rs, s_i) step produces different key
+    // material on each side, so decrypt_and_hash fails and respond_kk
+    // returns Err.
+    let result = respond_kk(&responder_priv, &legit_init_pub, &attacker_message);
+    assert!(
+        result.is_err(),
+        "respond_kk must reject an initiator that does not hold the expected static private key"
+    );
+}
+
 #[test]
 fn process_nn_handshake() {
     let test_messages = vec![vec![1u8, 2u8, 3u8, 4u8], vec![4u8, 3u8, 2u8, 1u8], vec![]];
