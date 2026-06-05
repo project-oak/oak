@@ -23,11 +23,12 @@ use core::{
 
 use linked_list_allocator::{Heap, LockedHeap};
 use log::info;
+use oak_hal::{PageAssignment, Platform};
 use spinning_top::Spinlock;
 use x86_64::{
     PhysAddr, VirtAddr,
     structures::paging::{
-        FrameAllocator, Page, PageSize, PhysFrame, Size2MiB, mapper::FlagUpdateError,
+        FrameAllocator, Page, PageSize, PhysFrame, Size2MiB, Size4KiB, mapper::FlagUpdateError,
         page::PageRange,
     },
 };
@@ -192,13 +193,58 @@ pub fn init_kernel_heap(range: PageRange<Size2MiB>) -> Result<(), &'static str> 
     Ok(())
 }
 
+/// Sets up a heap of shared memory used for communication between the guest and
+/// host.
+pub fn init_guest_host_heap<P: Platform>() {
+    // Allocate a section for guest-host communication (without the `ENCRYPTED` bit
+    // set) We'll allocate 2*2MiB, as virtio needs more than 2 MiB for its data
+    // structures.
+    let guest_host_frames = FRAME_ALLOCATOR.lock().allocate_contiguous(2).unwrap();
+
+    let guest_host_pages = {
+        let pt_guard = PAGE_TABLES.lock();
+        let pt = pt_guard.get().unwrap();
+        Page::range(
+            pt.translate_physical_frame(guest_host_frames.start).unwrap(),
+            pt.translate_physical_frame(guest_host_frames.end).unwrap(),
+        )
+    };
+
+    // Mark the guest-host pages as shared.
+    let guest_host_frames_start =
+        PhysFrame::<Size4KiB>::from_start_address(guest_host_frames.start.start_address())
+            .expect("unaligned frame address");
+    let guest_host_frames_end =
+        PhysFrame::<Size4KiB>::from_start_address(guest_host_frames.end.start_address())
+            .expect("unaligned frame address");
+    for frame in PhysFrame::<Size4KiB>::range(guest_host_frames_start, guest_host_frames_end) {
+        P::change_frame_state(frame, PageAssignment::Shared);
+    }
+
+    // Safety: initializing the new heap is safe as the frame allocator guarantees
+    // we're not overwriting any other memory; writing to the static mut is safe
+    // as we're in the initialization code and thus there can be no concurrent
+    // access.
+    if crate::GUEST_HOST_HEAP
+        .set(
+            unsafe {
+                init_guest_host_allocator(guest_host_pages, PAGE_TABLES.lock().get().unwrap())
+            }
+            .unwrap(),
+        )
+        .is_err()
+    {
+        panic!("couldn't initialize the guest-host heap");
+    }
+}
+
 /// Initializes an allocator for guest-host communication on unencrypted memory.
 ///
 /// # Safety
 ///
 /// The caller has to guarantee that the page range is valid and not in use, as
 /// we will change page table flags for pages in that range.
-pub unsafe fn init_guest_host_heap<S: PageSize, M: Mapper<S>>(
+unsafe fn init_guest_host_allocator<S: PageSize, M: Mapper<S>>(
     pages: PageRange<S>,
     mapper: &M,
 ) -> Result<LockedHeap, FlagUpdateError> {

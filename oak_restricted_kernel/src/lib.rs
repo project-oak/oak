@@ -75,14 +75,14 @@ use mm::{
 };
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
-use oak_hal::{PageAssignment, Platform};
+use oak_hal::Platform;
 use oak_linux_boot_params::BootParams;
 use oak_sev_guest::msr::{SevStatus, get_sev_status};
 use spinning_top::Spinlock;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
     PhysAddr, VirtAddr,
-    structures::paging::{Page, PageTable, PhysFrame, Size2MiB, Size4KiB},
+    structures::paging::{Page, PageTable, Size2MiB},
 };
 
 use crate::{acpi::Acpi, mm::Translator, processes::Process};
@@ -176,46 +176,7 @@ pub fn start_kernel<P: Platform + crate::hal::KernelPlatform + 'static>(info: &B
 
     P::initialize_platform(info);
 
-    // Allocate a section for guest-host communication (without the `ENCRYPTED` bit
-    // set) We'll allocate 2*2MiB, as virtio needs more than 2 MiB for its data
-    // structures.
-    let guest_host_frames = FRAME_ALLOCATOR.lock().allocate_contiguous(2).unwrap();
-
-    let guest_host_pages = {
-        let pt_guard = PAGE_TABLES.lock();
-        let pt = pt_guard.get().unwrap();
-        Page::range(
-            pt.translate_physical_frame(guest_host_frames.start).unwrap(),
-            pt.translate_physical_frame(guest_host_frames.end).unwrap(),
-        )
-    };
-
-    // Mark the guest-host pages as shared.
-    let guest_host_frames_start =
-        PhysFrame::<Size4KiB>::from_start_address(guest_host_frames.start.start_address())
-            .expect("unaligned frame address");
-    let guest_host_frames_end =
-        PhysFrame::<Size4KiB>::from_start_address(guest_host_frames.end.start_address())
-            .expect("unaligned frame address");
-    for frame in PhysFrame::<Size4KiB>::range(guest_host_frames_start, guest_host_frames_end) {
-        P::change_frame_state(frame, PageAssignment::Shared);
-    }
-
-    // Safety: initializing the new heap is safe as the frame allocator guarantees
-    // we're not overwriting any other memory; writing to the static mut is safe
-    // as we're in the initialization code and thus there can be no concurrent
-    // access.
-    if GUEST_HOST_HEAP
-        .set(
-            unsafe {
-                memory::init_guest_host_heap(guest_host_pages, PAGE_TABLES.lock().get().unwrap())
-            }
-            .unwrap(),
-        )
-        .is_err()
-    {
-        panic!("couldn't initialize the guest-host heap");
-    }
+    memory::init_guest_host_heap::<P>();
 
     // If we don't find memory for heap, it's ok to panic.
     // We'll let the heap to grow to 1 TB (1 << 19 * 2 MiB pages), max.
