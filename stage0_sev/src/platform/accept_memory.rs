@@ -462,10 +462,14 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
     );
 }
 
-pub fn change_page_state(page: Page<Size4KiB>, state: PageAssignment) -> Result<(), &'static str> {
+pub fn change_frame_state(
+    frame: PhysFrame<Size4KiB>,
+    state: PageAssignment,
+) -> Result<(), &'static str> {
     if sev_status().contains(SevStatus::SNP_ACTIVE) {
-        let request = SnpPageStateChangeRequest::new(page.start_address().as_u64() as usize, state)
-            .expect("invalid address for page location");
+        let request =
+            SnpPageStateChangeRequest::new(frame.start_address().as_u64() as usize, state)
+                .expect("invalid address for page location");
         change_snp_page_state(request)?;
     }
     Ok(())

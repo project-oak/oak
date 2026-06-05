@@ -22,7 +22,7 @@ use x86_64::{
     PhysAddr,
     instructions::port::Port as X86Port,
     structures::{
-        paging::{Page, Size4KiB},
+        paging::{Page, PhysFrame, Size4KiB},
         port::{PortRead, PortWrite},
     },
 };
@@ -154,7 +154,7 @@ pub trait Platform: MsrAccess {
     fn early_initialize_platform();
 
     /// Ask for the page state to be changed by the hypervisor.
-    fn change_page_state(page: Page<Size4KiB>, state: PageAssignment);
+    fn change_frame_state(frame: PhysFrame<Size4KiB>, state: PageAssignment);
 
     /// Validate one page of memory.
     ///

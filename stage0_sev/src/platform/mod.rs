@@ -221,11 +221,11 @@ impl Platform for Sev {
         }
     }
 
-    fn change_page_state(
-        page: x86_64::structures::paging::Page<x86_64::structures::paging::Size4KiB>,
+    fn change_frame_state(
+        frame: x86_64::structures::paging::PhysFrame<x86_64::structures::paging::Size4KiB>,
         state: PageAssignment,
     ) {
-        accept_memory::change_page_state(page, state.into_msr())
+        accept_memory::change_frame_state(frame, state.into_msr())
             .expect("failed to change page state");
     }
 

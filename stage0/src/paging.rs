@@ -28,7 +28,7 @@ use x86_64::{
     PhysAddr,
     instructions::tlb::flush_all,
     structures::paging::{
-        Page, PageSize, PageTable as BasePageTable, PageTableIndex, Size2MiB, Size4KiB,
+        Page, PageSize, PageTable as BasePageTable, PageTableIndex, PhysFrame, Size2MiB, Size4KiB,
         page_table::{PageTableEntry as BasePageTableEntry, PageTableFlags},
     },
 };
@@ -384,7 +384,10 @@ pub fn share_page<P: Platform>(page: Page<Size4KiB>) {
     }
     flush_all();
 
-    P::change_page_state(page, PageAssignment::Shared);
+    // In stage0 we use identity mapping, so the page's virtual start address
+    // corresponds directly to a physical frame at the same address.
+    let frame = PhysFrame::<Size4KiB>::from_start_address(PhysAddr::new(page_start)).unwrap();
+    P::change_frame_state(frame, PageAssignment::Shared);
 }
 
 /// Stops sharing a single 4KiB page with the hypervisor when running with AMD
@@ -394,7 +397,10 @@ pub fn unshare_page<P: Platform>(page: Page<Size4KiB>) {
     // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that
     // range.
     assert!(page_start < Size2MiB::SIZE);
-    P::change_page_state(page, PageAssignment::Private);
+    // In stage0 we use identity mapping, so the page's virtual start address
+    // corresponds directly to a physical frame at the same address.
+    let frame = PhysFrame::<Size4KiB>::from_start_address(PhysAddr::new(page_start)).unwrap();
+    P::change_frame_state(frame, PageAssignment::Private);
     // Mark the page as encrypted.
     {
         let mut page_tables = crate::paging::PAGE_TABLE_REFS.get().unwrap().lock();

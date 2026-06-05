@@ -26,7 +26,7 @@ use oak_stage0_dice::DerivedKey;
 use x86_64::{
     registers::model_specific::Msr,
     structures::{
-        paging::{Page, Size4KiB},
+        paging::{Page, PhysFrame, Size4KiB},
         port::{PortRead, PortWrite},
     },
 };
@@ -72,7 +72,7 @@ impl crate::Platform for Base {
     }
     fn early_initialize_platform() {}
 
-    fn change_page_state(_page: Page<Size4KiB>, _state: PageAssignment) {}
+    fn change_frame_state(_frame: PhysFrame<Size4KiB>, _state: PageAssignment) {}
 
     fn revalidate_page(_page: Page<Size4KiB>) {}
 

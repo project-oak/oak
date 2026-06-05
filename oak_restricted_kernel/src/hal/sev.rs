@@ -22,7 +22,7 @@ use oak_core::sync::OnceCell;
 use oak_hal::{PageAssignment, PageEncryption, PortFactory};
 use oak_sev_guest::msr::{SevStatus, get_sev_status};
 use x86_64::structures::{
-    paging::{Page, Size4KiB},
+    paging::{Page, PhysFrame, Size4KiB},
     port::{PortRead, PortWrite},
 };
 
@@ -109,8 +109,21 @@ impl crate::Platform for Sev {
         }
     }
 
-    fn change_page_state(_page: Page<Size4KiB>, _state: PageAssignment) {
-        todo!();
+    fn change_frame_state(frame: PhysFrame<Size4KiB>, state: PageAssignment) {
+        if sev_status().contains(SevStatus::SNP_ACTIVE) {
+            let page_gpa = frame.start_address().as_u64() as usize;
+
+            let assignment = match state {
+                PageAssignment::Shared => oak_sev_guest::msr::PageAssignment::Shared,
+                PageAssignment::Private => oak_sev_guest::msr::PageAssignment::Private,
+            };
+
+            let request = oak_sev_guest::msr::SnpPageStateChangeRequest::new(page_gpa, assignment)
+                .expect("failed to create SNP page state change request");
+
+            oak_sev_guest::msr::change_snp_page_state(request)
+                .expect("failed to change SNP page state");
+        }
     }
 
     fn revalidate_page(_page: Page<Size4KiB>) {

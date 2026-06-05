@@ -36,7 +36,7 @@ pub mod test_mocks {
     use oak_hal::{MsrAccess, PageAssignment, PortFactory};
     use x86_64::{
         PhysAddr,
-        structures::paging::{Page, Size4KiB},
+        structures::paging::{Page, PhysFrame, Size4KiB},
     };
 
     use super::*;
@@ -50,7 +50,7 @@ pub mod test_mocks {
             unsafe fn mmio(base_address: PhysAddr, size: usize) -> <Self as oak_hal::Platform>::Mmio;
             fn port_factory() -> PortFactory;
             fn early_initialize_platform();
-            fn change_page_state(page: Page<Size4KiB>, state: PageAssignment);
+            fn change_frame_state(frame: PhysFrame<Size4KiB>, state: PageAssignment);
             fn revalidate_page(page: Page<Size4KiB>);
             fn page_table_mask(encryption_state: PageEncryption) -> u64;
             fn encrypted() -> u64;

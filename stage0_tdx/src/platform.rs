@@ -322,12 +322,15 @@ impl Platform for Tdx {
         serial::debug!("early_initialize_platform completed");
     }
 
-    fn change_page_state(page: x86_64::structures::paging::Page, attr: PageAssignment) {
+    fn change_frame_state(frame: x86_64::structures::paging::PhysFrame, attr: PageAssignment) {
         let shared: bool = match attr {
             PageAssignment::Shared => true,
             PageAssignment::Private => false,
         };
         let mut pt = offset_pt();
+        // In stage0 we use identity mapping, so we can construct a virtual
+        // Page from the frame's physical address.
+        let page = Page::from_start_address(VirtAddr::new(frame.start_address().as_u64())).unwrap();
         pt_set_shared_bit(&mut pt, &page, shared);
     }
 

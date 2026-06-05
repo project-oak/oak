@@ -75,14 +75,14 @@ use mm::{
 };
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
-use oak_hal::Platform;
+use oak_hal::{PageAssignment, Platform};
 use oak_linux_boot_params::BootParams;
-use oak_sev_guest::msr::{PageAssignment, SevStatus, change_snp_state_for_frame, get_sev_status};
+use oak_sev_guest::msr::{SevStatus, get_sev_status};
 use spinning_top::Spinlock;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
     PhysAddr, VirtAddr,
-    structures::paging::{Page, PageTable, Size2MiB},
+    structures::paging::{Page, PageTable, PhysFrame, Size2MiB, Size4KiB},
 };
 
 use crate::{acpi::Acpi, mm::Translator, processes::Process};
@@ -125,8 +125,6 @@ pub fn start_kernel<P: Platform + crate::hal::KernelPlatform + 'static>(info: &B
     interrupts::init_idt_early();
     P::early_initialize_platform();
     let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
-
-    let sev_snp_enabled = sev_status.contains(SevStatus::SNP_ACTIVE);
     logging::init_logging::<P>();
 
     // Safety: we shouldn't have anything else but the PICs on the I/O ports.
@@ -192,15 +190,15 @@ pub fn start_kernel<P: Platform + crate::hal::KernelPlatform + 'static>(info: &B
         )
     };
 
-    // If we are running on SNP we have to mark the guest-host frames as shared in
-    // the RMP. It is OK to crash if we cannot mark the pages as shared in the
-    // RMP.
-    if sev_snp_enabled {
-        // TODO(#3414): Use the GHCB protocol when it is available.
-        for frame in guest_host_frames {
-            change_snp_state_for_frame(&frame, PageAssignment::Shared)
-                .expect("couldn't change SNP state for frame");
-        }
+    // Mark the guest-host pages as shared.
+    let guest_host_frames_start =
+        PhysFrame::<Size4KiB>::from_start_address(guest_host_frames.start.start_address())
+            .expect("unaligned frame address");
+    let guest_host_frames_end =
+        PhysFrame::<Size4KiB>::from_start_address(guest_host_frames.end.start_address())
+            .expect("unaligned frame address");
+    for frame in PhysFrame::<Size4KiB>::range(guest_host_frames_start, guest_host_frames_end) {
+        P::change_frame_state(frame, PageAssignment::Shared);
     }
 
     // Safety: initializing the new heap is safe as the frame allocator guarantees
