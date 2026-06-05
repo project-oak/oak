@@ -14,10 +14,10 @@
 // limitations under the License.
 //
 
-use oak_sev_guest::io::{PortFactoryWrapper, PortWrapper};
+use oak_hal::{Platform, Port, PortFactory};
 use spinning_top::Spinlock;
 
-type SerialPort = sev_serial::SerialPort<PortFactoryWrapper, PortWrapper<u8>, PortWrapper<u8>>;
+type SerialPort = sev_serial::SerialPort<PortFactory, Port<u8>, Port<u8>>;
 
 pub struct Serial {
     port: Spinlock<SerialPort>,
@@ -25,15 +25,11 @@ pub struct Serial {
 
 // Base I/O port for the second serial port in the system (colloquially known as
 // COM2)
-static COM2_BASE: u16 = 0x2f8;
+const COM2_BASE: u16 = 0x2f8;
 
 impl Serial {
-    pub fn new(sev_es_enabled: bool) -> Serial {
-        let port_factory = if sev_es_enabled {
-            crate::ghcb::get_ghcb_port_factory()
-        } else {
-            PortFactoryWrapper::new_raw()
-        };
+    pub fn new<P: Platform>() -> Self {
+        let port_factory = P::port_factory();
         // Our contract with the launcher requires the second serial port to be
         // available when using a serial channel for communication, so assuming the
         // loader adheres to it, this is safe.
