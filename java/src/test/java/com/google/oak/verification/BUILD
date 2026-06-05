@@ -27,6 +27,7 @@ kt_jvm_test(
     target_compatible_with = ["@platforms//os:linux"],
     test_class = "com.google.oak.verification.LogEntryVerifierTest",
     deps = [
+        "//java/src/main/java/com/google/oak/util:file_util",
         "//java/src/main/java/com/google/oak/verification",
         "@maven//:junit_junit",
         "@rules_kotlin//kotlin/compiler:kotlin-test",
@@ -40,6 +41,7 @@ kt_jvm_test(
     target_compatible_with = ["@platforms//os:linux"],
     test_class = "com.google.oak.verification.RekorLogEntryTest",
     deps = [
+        "//java/src/main/java/com/google/oak/util:file_util",
         "//java/src/main/java/com/google/oak/verification",
         "@maven//:junit_junit",
         "@rules_kotlin//kotlin/compiler:kotlin-test",
@@ -53,6 +55,7 @@ kt_jvm_test(
     target_compatible_with = ["@platforms//os:linux"],
     test_class = "com.google.oak.verification.SignatureVerifierTest",
     deps = [
+        "//java/src/main/java/com/google/oak/util:file_util",
         "//java/src/main/java/com/google/oak/verification",
         "@maven//:junit_junit",
         "@rules_kotlin//kotlin/compiler:kotlin-test",

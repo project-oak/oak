@@ -15,6 +15,7 @@
 #
 
 load("@rules_java//java:defs.bzl", "java_test")
+load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_test")
 
 package(
     licenses = ["notice"],
@@ -22,11 +23,24 @@ package(
 
 java_test(
     name = "util_test",
-    srcs = glob(["*.java"]),
+    srcs = ["ResultTest.java"],
     target_compatible_with = ["@platforms//os:linux"],
     test_class = "com.google.oak.util.ResultTest",
     deps = [
         "//java/src/main/java/com/google/oak/util",
         "@maven//:junit_junit",
+    ],
+)
+
+kt_jvm_test(
+    name = "file_util_test",
+    srcs = ["FileUtilTest.kt"],
+    data = ["//oak_session/tls/testing:test_keys"],
+    target_compatible_with = ["@platforms//os:linux"],
+    test_class = "com.google.oak.util.FileUtilTest",
+    deps = [
+        "//java/src/main/java/com/google/oak/util:file_util",
+        "@maven//:junit_junit",
+        "@rules_kotlin//kotlin/compiler:kotlin-test",
     ],
 )

@@ -15,15 +15,18 @@
 //
 package com.google.oak.verification
 
-import java.io.File
+import com.google.oak.util.FileUtil
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.junit.Test
 
 class SignatureVerifierTest {
-  private val signatureBytes = File(SIGNATURE_PATH).readBytes()
-  private val publicKeyBytes = SignatureVerifier.convertPemToRaw(File(PUBLIC_KEY_PATH).readText())
-  private val contentBytes = File(CONTENT_PATH).readBytes()
+  private val signatureBytes = FileUtil.getRunfileBytes(SIGNATURE_PATH)
+  private val publicKeyBytes =
+    SignatureVerifier.convertPemToRaw(
+      FileUtil.getRunfileBytes(PUBLIC_KEY_PATH).toString(Charsets.UTF_8)
+    )
+  private val contentBytes = FileUtil.getRunfileBytes(CONTENT_PATH)
 
   @Test
   fun testVerifySucceeds() {

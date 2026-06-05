@@ -14,21 +14,34 @@
 # limitations under the License.
 #
 
-load("@rules_android//android:rules.bzl", "android_library")
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_kotlin//kotlin:android.bzl", "kt_android_library")
+load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
 
 package(
     default_visibility = ["//:default_visibility"],
     licenses = ["notice"],
 )
 
-java_library(
+kt_jvm_library(
+    name = "file_util",
+    srcs = ["FileUtil.kt"],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = ["@bazel_tools//tools/java/runfiles"],
+)
+
+kt_jvm_library(
     name = "util",
-    srcs = glob(["*.java"]),
+    srcs = [
+        "Result.java",
+        "UnwrapException.java",
+    ],
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-android_library(
+kt_android_library(
     name = "util_android",
-    srcs = glob(["*.java"]),
+    srcs = [
+        "Result.java",
+        "UnwrapException.java",
+    ],
 )

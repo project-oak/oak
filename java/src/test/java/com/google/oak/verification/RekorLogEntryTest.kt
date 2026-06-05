@@ -15,7 +15,7 @@
 //
 package com.google.oak.verification
 
-import java.io.File
+import com.google.oak.util.FileUtil
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.Test
@@ -24,7 +24,7 @@ class RekorLogEntryTest {
   @Test
   @kotlin.Throws(Exception::class)
   fun testCreate() {
-    val json: String = File(LOG_ENTRY_PATH).readText()
+    val json: String = FileUtil.getRunfileBytes(LOG_ENTRY_PATH).toString(Charsets.UTF_8)
     val r = RekorLogEntry.createFromJson(json)
     assertTrue(r.hasVerification())
     assertTrue(r.logEntry.body.isNotEmpty() == true)
