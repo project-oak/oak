@@ -85,12 +85,7 @@ use x86_64::{
     structures::paging::{Page, PageTable, Size2MiB},
 };
 
-use crate::{
-    acpi::Acpi,
-    mm::Translator,
-    processes::Process,
-    snp::{get_snp_page_addresses, init_snp_pages},
-};
+use crate::{acpi::Acpi, mm::Translator, processes::Process};
 
 /// Allocator for physical memory frames in the system.
 /// We reserve enough room to handle up to 512 GiB of memory, for now.
@@ -124,13 +119,13 @@ pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =
     )));
 
 /// Main entry point for the kernel, to be called from bootloader.
-pub fn start_kernel<P: Platform + 'static>(info: &BootParams) -> ! {
+pub fn start_kernel<P: Platform + crate::hal::KernelPlatform + 'static>(info: &BootParams) -> ! {
     avx::enable_avx();
     descriptors::init_gdt_early();
     interrupts::init_idt_early();
     P::early_initialize_platform();
     let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
-    let sev_es_enabled = sev_status.contains(SevStatus::SEV_ES_ENABLED);
+
     let sev_snp_enabled = sev_status.contains(SevStatus::SNP_ACTIVE);
     logging::init_logging::<P>();
 
@@ -181,20 +176,7 @@ pub fn start_kernel<P: Platform + 'static>(info: &BootParams) -> ! {
             .unwrap()
     };
 
-    if sev_es_enabled {
-        let pt_guard = PAGE_TABLES.lock();
-        let mapper = pt_guard.get().unwrap();
-        // Now that the page tables have been updated, we have to re-share the GHCB with
-        // the hypervisor.
-        ghcb::reshare_ghcb(mapper);
-        if sev_snp_enabled {
-            // We must also initialise the CPUID and secrets pages and the guest message
-            // encryptor when SEV-SNP is active. Panicking is OK at this point,
-            // because these pages are required to support the full features and
-            // we don't want to run without them.
-            init_snp_pages(get_snp_page_addresses(info, mapper), mapper);
-        }
-    }
+    P::initialize_platform(info);
 
     // Allocate a section for guest-host communication (without the `ENCRYPTED` bit
     // set) We'll allocate 2*2MiB, as virtio needs more than 2 MiB for its data

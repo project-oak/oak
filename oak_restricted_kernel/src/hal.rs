@@ -15,3 +15,12 @@
 //
 
 pub mod sev;
+
+use oak_linux_boot_params::BootParams;
+
+/// Kernel-specific trait for the Hardware Abstraction Layer (HAL).
+pub trait KernelPlatform {
+    /// Platform-specific initialization logic that must run after logging is
+    /// configured and the initial page tables are set up.
+    fn initialize_platform(info: &BootParams);
+}

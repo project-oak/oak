@@ -26,7 +26,11 @@ use x86_64::structures::{
     port::{PortRead, PortWrite},
 };
 
-use crate::{PAGE_TABLES, mm::Translator};
+use crate::{
+    PAGE_TABLES,
+    mm::Translator,
+    snp::{get_snp_page_addresses, init_snp_pages},
+};
 
 static SEV_STATUS: OnceCell<SevStatus> = OnceCell::new();
 
@@ -133,5 +137,25 @@ impl oak_hal::MsrAccess for Sev {
 
     unsafe fn write_msr(_msr: u32, _value: u64) {
         todo!();
+    }
+}
+
+impl crate::hal::KernelPlatform for Sev {
+    fn initialize_platform(info: &oak_linux_boot_params::BootParams) {
+        let sev_status = sev_status();
+        if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
+            let pt_guard = PAGE_TABLES.lock();
+            let mapper = pt_guard.get().unwrap();
+            // Now that the page tables have been updated, we have to re-share the GHCB with
+            // the hypervisor.
+            crate::ghcb::reshare_ghcb(mapper);
+            if sev_status.contains(SevStatus::SNP_ACTIVE) {
+                // We must also initialise the CPUID and secrets pages and the guest message
+                // encryptor when SEV-SNP is active. Panicking is OK at this point,
+                // because these pages are required to support the full features and
+                // we don't want to run without them.
+                init_snp_pages(get_snp_page_addresses(info, mapper), mapper);
+            }
+        }
     }
 }
