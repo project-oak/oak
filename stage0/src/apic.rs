@@ -400,7 +400,7 @@ impl<M: crate::hal::Mmio> Lapic<M> {
             return Err("startup vector is not page-aligned");
         }
         let vector = vector.as_u64();
-        if vector > 0x100000 {
+        if vector >= 0x100000 {
             return Err("startup vector needs to be in the first megabyte of memory");
         }
         self.error_status::<P>().clear();
