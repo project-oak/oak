@@ -26,7 +26,6 @@ rust_library(
     srcs = glob(["src/**"]),
     deps = [
         "//oak_hal",
-        "//oak_sev_guest",
         "@oak_crates_index//:x86_64",
     ],
 )

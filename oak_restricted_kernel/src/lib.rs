@@ -77,7 +77,6 @@ use oak_channel::Channel;
 use oak_core::sync::OnceCell;
 use oak_hal::Platform;
 use oak_linux_boot_params::{BootParams, Ramdisk};
-use oak_sev_guest::msr::{SevStatus, get_sev_status};
 use spinning_top::Spinlock;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
@@ -124,7 +123,6 @@ pub fn start_kernel<P: Platform + crate::hal::KernelPlatform + 'static>(info: &B
     descriptors::init_gdt_early();
     interrupts::init_idt_early();
     P::early_initialize_platform();
-    let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
     logging::init_logging::<P>();
 
     // Safety: we shouldn't have anything else but the PICs on the I/O ports.
@@ -214,12 +212,7 @@ pub fn start_kernel<P: Platform + crate::hal::KernelPlatform + 'static>(info: &B
         }
     };
 
-    let channel = get_channel::<_, P>(
-        &kernel_args,
-        GUEST_HOST_HEAP.get().unwrap(),
-        acpi.as_mut(),
-        sev_status,
-    );
+    let channel = get_channel::<_, P>(&kernel_args, GUEST_HOST_HEAP.get().unwrap(), acpi.as_mut());
 
     let application_bytes = load_application(&ramdisk, info);
 
@@ -305,7 +298,6 @@ fn get_channel<'a, A: Allocator + Sync, P: Platform + 'a>(
     kernel_args: &args::Args,
     alloc: &'a A,
     acpi: Option<&mut Acpi>,
-    sev_status: SevStatus,
 ) -> Box<dyn Channel + 'a> {
     // If we weren't told which channel to use, arbitrarily pick the first one in
     // the `ChannelType` enum. Depending on features that are enabled, this
@@ -324,7 +316,7 @@ fn get_channel<'a, A: Allocator + Sync, P: Platform + 'a>(
         #[cfg(feature = "serial_channel")]
         ChannelType::Serial => Box::new(serial::Serial::new::<P>()),
         #[cfg(feature = "simple_io_channel")]
-        ChannelType::SimpleIo => Box::new(simpleio::SimpleIoChannel::new(alloc, sev_status)),
+        ChannelType::SimpleIo => Box::new(simpleio::SimpleIoChannel::new::<P>(alloc)),
     }
 }
 

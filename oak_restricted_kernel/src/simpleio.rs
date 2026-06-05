@@ -17,7 +17,7 @@
 use alloc::collections::VecDeque;
 use core::alloc::Allocator;
 
-use oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
+use oak_hal::Platform;
 use oak_simple_io::SimpleIo;
 use x86_64::VirtAddr;
 
@@ -34,12 +34,8 @@ pub struct SimpleIoChannel<'a, A: Allocator> {
 }
 
 impl<'a, A: Allocator> SimpleIoChannel<'a, A> {
-    pub fn new(alloc: &'a A, sev_status: SevStatus) -> Self {
-        let io_port_factory = if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
-            crate::ghcb::get_ghcb_port_factory()
-        } else {
-            PortFactoryWrapper::new_raw()
-        };
+    pub fn new<P: Platform>(alloc: &'a A) -> Self {
+        let io_port_factory = P::port_factory();
         let device = {
             let pt_guard = PAGE_TABLES.lock();
             SimpleIo::new_with_defaults(

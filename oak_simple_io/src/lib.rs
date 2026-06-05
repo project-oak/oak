@@ -24,8 +24,7 @@ extern crate alloc;
 use alloc::{collections::VecDeque, vec::Vec};
 use core::alloc::Allocator;
 
-use oak_hal::{IoPortFactory, PortReader, PortWriter};
-use oak_sev_guest::io::{PortFactoryWrapper, PortWrapper};
+use oak_hal::{IoPortFactory, Port, PortFactory, PortReader, PortWriter};
 use x86_64::{PhysAddr, VirtAddr};
 
 /// I/O port descriptor for a buffer.
@@ -62,13 +61,13 @@ impl<X: Fn(VirtAddr) -> Option<PhysAddr>> Translator for X {}
 pub struct SimpleIo<'a, A: Allocator> {
     output_buffer: Vec<u8, &'a A>,
     input_buffer: Vec<u8, &'a A>,
-    output_length_port: PortWrapper<u32>,
-    input_length_port: PortWrapper<u32>,
+    output_length_port: Port<u32>,
+    input_length_port: Port<u32>,
 }
 
 impl<'a, A: Allocator> SimpleIo<'a, A> {
     pub fn new<VP: Translator>(
-        io_port_factory: PortFactoryWrapper,
+        io_port_factory: PortFactory,
         translate: VP,
         output: BufferDescriptor,
         input: BufferDescriptor,
@@ -100,7 +99,7 @@ impl<'a, A: Allocator> SimpleIo<'a, A> {
     }
 
     pub fn new_with_defaults<VP: Translator>(
-        io_port_factory: PortFactoryWrapper,
+        io_port_factory: PortFactory,
         translate: VP,
         alloc: &'a A,
     ) -> Result<Self, &'static str> {
@@ -171,7 +170,7 @@ impl<'a, A: Allocator> SimpleIo<'a, A> {
 }
 
 fn write_address(
-    io_port_factory: &PortFactoryWrapper,
+    io_port_factory: &PortFactory,
     buffer_pointer: PhysAddr,
     msb_port: u16,
     lsb_port: u16,
@@ -183,7 +182,9 @@ fn write_address(
     // Safety: this usage is safe, as we as only write uninterpreted u32 values to
     // the ports.
     unsafe {
-        io_port_factory.new_writer(msb_port).try_write(address_msb)?;
-        io_port_factory.new_writer(lsb_port).try_write(address_lsb)
+        let mut msb_writer: Port<u32> = io_port_factory.new_writer(msb_port);
+        let mut lsb_writer: Port<u32> = io_port_factory.new_writer(lsb_port);
+        msb_writer.try_write(address_msb)?;
+        lsb_writer.try_write(address_lsb)
     }
 }
