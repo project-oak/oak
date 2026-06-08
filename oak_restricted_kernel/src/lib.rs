@@ -122,6 +122,7 @@ pub fn start_kernel<P: Platform + crate::hal::KernelPlatform + 'static>(info: &B
     avx::enable_avx();
     descriptors::init_gdt_early();
     interrupts::init_idt_early::<P>();
+    shutdown::init::<P>();
     P::early_initialize_platform();
     logging::init_logging::<P>();
 

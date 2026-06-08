@@ -28,4 +28,12 @@ pub trait KernelPlatform {
     fn add_additional_interrupt_handlers(
         idt: &mut x86_64::structures::idt::InterruptDescriptorTable,
     );
+
+    /// Attempts to shut down the machine using platform-specific mechanisms.
+    ///
+    /// Implementations should first try any platform-specific shutdown
+    /// protocol (e.g., the SEV-ES VMGEXIT-based termination), then fall
+    /// back to [`crate::shutdown::shutdown_with_port_factory`] which
+    /// attempts the i8042 reset and ultimately forces a triple fault.
+    fn shutdown() -> !;
 }

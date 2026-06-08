@@ -16,35 +16,52 @@
 
 use core::arch::asm;
 
-use oak_hal::{IoPortFactory, PortWriter};
-use oak_sev_guest::{
-    io::{PortFactoryWrapper, PortWrapper},
-    msr::{SevStatus, TerminationReason, TerminationRequest, get_sev_status, request_termination},
-};
+use oak_core::sync::OnceCell;
+use oak_hal::{IoPortFactory, PortFactory, PortWriter};
 use x86_64::{VirtAddr, instructions::tables::lidt, structures::DescriptorTablePointer};
+
+/// Stored platform-specific shutdown function, registered during
+/// initialization via [`init`].
+static SHUTDOWN_FN: OnceCell<fn() -> !> = OnceCell::new();
+
+/// Registers the platform-specific shutdown function.
+///
+/// Must be called during kernel initialization. This bridges the gap between
+/// the generic `start_kernel<P>` and the non-generic [`shutdown`] / panic
+/// handler.
+pub fn init<P: crate::Platform + crate::hal::KernelPlatform>() {
+    SHUTDOWN_FN.set(P::shutdown).expect("shutdown function already initialized");
+}
 
 /// Tries various ways to shut down the machine.
 pub fn shutdown() -> ! {
-    // 1. Attempt the SEV-ES shutdown protocol, if we're under SEV-ES.
-    let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
-    if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
-        request_termination(TerminationRequest { reason: TerminationReason::General });
+    if let Some(platform_shutdown) = SHUTDOWN_FN.get() {
+        platform_shutdown()
     }
 
-    // 2. If we're still here, attempt shutdown via i8042.
-    let port_factory = if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
-        crate::ghcb::get_ghcb_port_factory()
-    } else {
-        PortFactoryWrapper::new_raw()
-    };
-    let mut port: PortWrapper<u8> = port_factory.new_writer(0x64);
-    // This is safe as both qemu and crosvm expose the i8042 device by default.
+    // If init hasn't been called yet (very early panic), fall back to the
+    // last resort.
+    halt()
+}
+
+/// Attempts shutdown via the i8042 controller, then falls back to [`halt`].
+///
+/// This is intended to be called by `KernelPlatform::shutdown()`
+/// implementations after they have exhausted platform-specific shutdown
+/// mechanisms.
+pub fn shutdown_with_port_factory(port_factory: &PortFactory) -> ! {
+    let mut port: oak_hal::Port<u8> = port_factory.new_writer(0x64);
+    // Safety: This is safe as both qemu and crosvm expose the i8042 device by
+    // default.
     unsafe {
         let _ = port.try_write(0xFE_u8);
     }
 
-    // 3. If we're still here, the gloves come off. Load a garbage IDT and cause
-    //    #UD.
+    halt()
+}
+
+/// Last resort: load a garbage IDT and cause #UD, forcing a triple fault.
+fn halt() -> ! {
     let idt = DescriptorTablePointer { limit: 0, base: VirtAddr::new(0x0) };
     // Safety: this is technically safe, as it will cause the machine to crash, and
     // that's the intent.

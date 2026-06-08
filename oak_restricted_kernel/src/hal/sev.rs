@@ -20,10 +20,13 @@ pub mod mmio;
 use log::error;
 pub use mmio::SevMmio;
 use oak_core::sync::OnceCell;
-use oak_hal::{PageAssignment, PageEncryption, PortFactory};
+use oak_hal::{PageAssignment, PageEncryption, Platform, PortFactory};
 use oak_sev_guest::{
     interrupts::{MutableInterruptStackFrame, mutable_interrupt_handler_with_error_code},
-    msr::{SevStatus, get_cpuid_for_vc_exception, get_sev_status},
+    msr::{
+        SevStatus, TerminationReason, TerminationRequest, get_cpuid_for_vc_exception,
+        get_sev_status, request_termination,
+    },
 };
 use x86_64::structures::{
     paging::{Page, PhysFrame, Size4KiB},
@@ -252,5 +255,13 @@ impl crate::hal::KernelPlatform for Sev {
         unsafe {
             idt.vmm_communication_exception.set_handler_addr(vc_handler_address); // vector 29
         }
+    }
+
+    fn shutdown() -> ! {
+        let sev_status = sev_status();
+        if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
+            request_termination(TerminationRequest { reason: TerminationReason::General });
+        }
+        shutdown::shutdown_with_port_factory(&Self::port_factory())
     }
 }

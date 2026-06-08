@@ -19,7 +19,6 @@ use core::ptr::addr_of;
 use oak_core::sync::OnceCell;
 use oak_sev_guest::{
     ghcb::{Ghcb, GhcbProtocol},
-    io::{GhcbIoFactory, PortFactoryWrapper},
     msr::{
         PageAssignment, RegisterGhcbGpaRequest, change_snp_state_for_frame, register_ghcb_location,
     },
@@ -53,10 +52,6 @@ struct GhcbAlignmentWrapper {
 static_assertions::assert_eq_size!(GhcbAlignmentWrapper, [u8; Size2MiB::SIZE as usize]);
 
 static mut GHCB_WRAPPER: GhcbAlignmentWrapper = GhcbAlignmentWrapper { ghcb: Ghcb::new() };
-
-pub fn get_ghcb_port_factory() -> PortFactoryWrapper {
-    PortFactoryWrapper::Ghcb(GhcbIoFactory::new(GHCB_PROTOCOL.get().expect("GHCB not initialized")))
-}
 
 pub static GHCB_PROTOCOL: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
 
