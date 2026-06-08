@@ -121,7 +121,7 @@ pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =
 pub fn start_kernel<P: Platform + crate::hal::KernelPlatform + 'static>(info: &BootParams) -> ! {
     avx::enable_avx();
     descriptors::init_gdt_early();
-    interrupts::init_idt_early();
+    interrupts::init_idt_early::<P>();
     P::early_initialize_platform();
     logging::init_logging::<P>();
 

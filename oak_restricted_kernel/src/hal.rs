@@ -23,4 +23,9 @@ pub trait KernelPlatform {
     /// Platform-specific initialization logic that must run after logging is
     /// configured and the initial page tables are set up.
     fn initialize_platform(info: &BootParams);
+
+    /// Platform-specific method to register any additional interrupt handlers.
+    fn add_additional_interrupt_handlers(
+        idt: &mut x86_64::structures::idt::InterruptDescriptorTable,
+    );
 }

@@ -18,18 +18,13 @@ use core::{arch::naked_asm, ops::Deref};
 
 use log::error;
 use oak_hal::{IoPortFactory, Platform, PortReader, PortWriter};
-use oak_sev_guest::{
-    interrupts::{MutableInterruptStackFrame, mutable_interrupt_handler_with_error_code},
-    msr::get_cpuid_for_vc_exception,
-};
 use spinning_top::Spinlock;
 use x86_64::{
-    VirtAddr,
     registers::{control::Cr2, mxcsr::read},
     structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode},
 };
 
-use crate::{shutdown, snp::CPUID_PAGE};
+use crate::shutdown;
 
 static IDT: Spinlock<InterruptDescriptorTable> = Spinlock::new(InterruptDescriptorTable::new());
 
@@ -98,71 +93,6 @@ extern "x86-interrupt" fn double_fault_handler(
     error!("CPU flags: {:#x}", stack_frame.deref().cpu_flags);
     shutdown::shutdown();
 }
-
-mutable_interrupt_handler_with_error_code!(
-    unsafe fn vmm_communication_exception_handler(
-        stack_frame: &mut MutableInterruptStackFrame,
-        error_code: u64,
-    ) {
-        match error_code {
-            0x72 => {
-                // Make sure it was triggered from a CPUID instruction.
-                const CPUID_INSTRUCTION: u16 = 0xa20f;
-                // Safety: we are copying two bytes and interpreting it as a
-                // 16-bit number without making any other assumptions about
-                // the layout.
-                let instruction: u16 =
-                    unsafe { core::ptr::read_unaligned(stack_frame.rip.as_ptr()) };
-                if instruction != CPUID_INSTRUCTION {
-                    panic!("INSTRUCTION WAS NOT CPUID");
-                }
-
-                if let Some(cpuid_page) = CPUID_PAGE.get() {
-                    let target = stack_frame.into();
-                    let count = cpuid_page.count as usize;
-                    if let Some(found) =
-                        cpuid_page.cpuid_data[0..count].iter().find(|item| item.input == target)
-                    {
-                        stack_frame.rax = found.output.eax as u64;
-                        stack_frame.rbx = found.output.ebx as u64;
-                        stack_frame.rcx = found.output.ecx as u64;
-                        stack_frame.rdx = found.output.edx as u64;
-                    } else {
-                        // For now we just log the error so that we can see when this happens.
-                        // TODO(#3470): Improve handling of incorrect/missing CPUID requests.
-                        error!("KERNEL PANIC: REQUESTED CPUID NOT PRESENT IN CPUID PAGE");
-                        error!("Instruction pointer: {:#016x}", stack_frame.rip.as_u64());
-                        error!("RAX: {:#016x}", stack_frame.rax);
-                        error!("RCX: {:#016x}", stack_frame.rcx);
-                        shutdown::shutdown();
-                    }
-                } else {
-                    let leaf = stack_frame.rax as u32;
-                    // The MSR protocol does not support sub-leaf requests or leaf 0x0000_000D.
-                    // See section 2.3.1 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>
-                    // TODO(#3470): Improve handling of incorrect/missing CPUID requests.
-                    if stack_frame.rcx != 0 || leaf == 0x0000_000D {
-                        error!("KERNEL PANIC: CPUID SUB-LEAF OR INVALID LEAD REQUESTED");
-                        error!("Instruction pointer: {:#016x}", stack_frame.rip.as_u64());
-                        error!("RAX: {:#016x}", stack_frame.rax);
-                        error!("RCX: {:#016x}", stack_frame.rcx);
-                        shutdown::shutdown();
-                    }
-                    get_cpuid_for_vc_exception(leaf, stack_frame).expect("error reading CPUID");
-                }
-                // CPUID instruction is 2 bytes long, so we advance the instruction pointer by
-                // 2.
-                stack_frame.rip += 2u64;
-            }
-            _ => {
-                error!("KERNEL PANIC: UNHANDLED #VC EXCEPTION");
-                error!("Instruction pointer: {:#016x}", stack_frame.rip.as_u64());
-                error!("Error code: {:#x}", error_code);
-                shutdown::shutdown();
-            }
-        }
-    }
-);
 
 extern "x86-interrupt" fn divide_error_handler(stack_frame: InterruptStackFrame) {
     error!("KERNEL PANIC: DIVIDE BY ZERO!");
@@ -258,7 +188,7 @@ extern "x86-interrupt" fn simd_fp_handler(stack_frame: InterruptStackFrame) {
     shutdown::shutdown();
 }
 
-pub fn init_idt_early() {
+pub fn init_idt_early<P: crate::hal::KernelPlatform>() {
     // The full list if interrupts is processor-specific.
     // For AMD, see Section 8.2 of the AMD64 Architecture Programmer's Manual,
     // Volume 2 for more details.
@@ -292,13 +222,7 @@ pub fn init_idt_early() {
 
     // there is no vector 20
 
-    let vc_handler_address =
-        VirtAddr::new(vmm_communication_exception_handler as *const () as usize as u64);
-    // Safety: we are passing a valid address of a function with the correct
-    // signature.
-    unsafe {
-        idt.vmm_communication_exception.set_handler_addr(vc_handler_address); // vector 29
-    }
+    P::add_additional_interrupt_handlers(&mut idt);
 
     // Safety: unfortunately we have to escape from the borrow checker here, as we
     // know the IDT is 'static but the `idt` variable (the mutex lock) is not
