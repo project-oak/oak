@@ -24,7 +24,10 @@ use anyhow::Context;
 use clap::Parser;
 use log::trace;
 use page::PageInfo;
-use x86_64::structures::paging::{PageSize, Size4KiB};
+use x86_64::{
+    PhysAddr,
+    structures::paging::{PageSize, Size4KiB},
+};
 
 use crate::{
     page::PageType,
@@ -117,7 +120,7 @@ fn main() -> anyhow::Result<()> {
     // The boot vCPU has the default VMSA configured.
     base_page_info.update_from_vmsa(
         &get_boot_vmsa(cli.cpu_family, cli.cpu_model, cli.cpu_stepping, cli.qemu),
-        VMSA_ADDRESS,
+        PhysAddr::new(VMSA_ADDRESS),
     );
 
     // Subsequent vCPUs use the IP and CS segment specified in the SEV-ES reset
@@ -130,7 +133,7 @@ fn main() -> anyhow::Result<()> {
         let mut page_info = base_page_info.clone();
         // Iterate through all vCPUs up to the specified count.
         for _ in 1..vcpu_count {
-            page_info.update_from_vmsa(&ap_vmsa, VMSA_ADDRESS);
+            page_info.update_from_vmsa(&ap_vmsa, PhysAddr::new(VMSA_ADDRESS));
         }
 
         trace!("raw measurement for {} vCPU: {:?}", vcpu_count, page_info.digest_cur);

@@ -250,7 +250,7 @@ impl<L: PageTableLevel> PageTableEntry<L> {
     }
 
     /// Returns the flags of this entry.
-    pub const fn flags(&self) -> PageTableFlags {
+    pub fn flags(&self) -> PageTableFlags {
         self.inner.flags()
     }
 }

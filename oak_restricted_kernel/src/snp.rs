@@ -33,7 +33,7 @@ use crate::mm::Translator;
 /// We expect the boot parameters and the CPUID and secrets pages to all be
 /// placed in the first 640KiB of physical memory by the Stage 0 Firmware, so we
 /// can use this range to help with validation.
-const MAX_ADDRESS: PhysAddr = PhysAddr::new_truncate(640 * 1024);
+const MAX_ADDRESS: u64 = 640 * 1024;
 
 /// The SEV-SNP secrets page.
 pub static SECRETS_PAGE: OnceCell<SecretsPage> = OnceCell::new();
@@ -154,7 +154,7 @@ fn assert_page_in_valid_range(page: PhysAddr) {
         page
     );
     assert!(
-        page < MAX_ADDRESS,
+        page.as_u64() < MAX_ADDRESS,
         "address {:#018x} is not below the expected maximum address {:#018x}",
         page,
         MAX_ADDRESS
@@ -168,7 +168,7 @@ fn assert_pointer_in_valid_range<T, M: Translator>(pointer: *const T, mapper: &M
     let address =
         mapper.translate_virtual(VirtAddr::from_ptr(pointer)).expect("invalid virtual address");
     assert!(
-        address < MAX_ADDRESS,
+        address.as_u64() < MAX_ADDRESS,
         "pointer {:#018x} is not below the expected maximum address {:#018x}",
         address,
         MAX_ADDRESS

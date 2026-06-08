@@ -49,13 +49,13 @@ impl<const N: usize> PhysicalMemoryAllocator<N> {
     /// Size2MiB::SIZE].
     pub const fn new() -> Self {
         // Safety: we have to resort to `unsafe` as we need to call the const fn-s, but
-        // both addresses are definitely Size2MiB::SIZE-aligned, so these
-        // operations are safe.
+        // both addresses are definitely Size2MiB::SIZE-aligned and don't have bits
+        // 52-63 set, so these operations are safe.
         Self::new_range(PhysFrame::range(
             unsafe { PhysFrame::from_start_address_unchecked(PhysAddr::zero()) },
             // N u64-s * 64 frames per u64 * 2 MiB per frame
             unsafe {
-                PhysFrame::from_start_address_unchecked(PhysAddr::new(
+                PhysFrame::from_start_address_unchecked(PhysAddr::new_unsafe(
                     N as u64 * 64 * Size2MiB::SIZE,
                 ))
             },

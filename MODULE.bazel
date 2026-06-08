@@ -1240,35 +1240,35 @@ crate.spec(
     features = ["derive"],
     package = "prost",
     repositories = ALL_STD,
-    version = "0.14.3",
+    version = "=0.14.3",
 )
 crate.spec(
     default_features = False,
     features = [],
     package = "prost",
     repositories = ALL_NO_STD,
-    version = "0.14.3",
+    version = "=0.14.3",
 )
 crate.spec(
     default_features = True,
     features = [],
     package = "prost-build",
     repositories = ALL_STD,
-    version = "0.14.3",
+    version = "=0.14.3",
 )
 crate.spec(
     default_features = True,
     features = [],
     package = "prost-derive",
     repositories = ALL_STD,
-    version = "0.14.3",
+    version = "=0.14.3",
 )
 crate.spec(
     default_features = True,
     features = [],
     package = "prost-types",
     repositories = ALL_STD,
-    version = "0.14.3",
+    version = "=0.14.3",
 )
 crate.spec(
     default_features = True,
@@ -1849,10 +1849,10 @@ crate.spec(
 )
 crate.spec(
     default_features = True,
-    features = [],
+    features = ["memory_encryption"],
     package = "x86_64",
     repositories = ALL_REPOSITORIES,
-    version = "0.15.2",
+    version = "0.15.4",
 )
 crate.spec(
     default_features = True,

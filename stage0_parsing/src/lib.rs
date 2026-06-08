@@ -44,14 +44,14 @@ impl GuidTableEntryHeader {
 /// The address of the first byte after the end of the firmware image.
 ///
 /// The firmware image gets loaded just below the 4GiB boundary.
-const FIRMWARE_TOP: PhysAddr = PhysAddr::new(0x1_0000_0000);
+const FIRMWARE_TOP: u64 = 0x1_0000_0000;
 
 /// The address of the first byte after the end of the legacy boot shadow
 /// firmware image.
 ///
 /// To support legacy booting the last 128KiB of the firmware gets shadowed just
 /// below the end of 20-bit memory.
-const LEGACY_TOP: PhysAddr = PhysAddr::new(0x10_0000);
+const LEGACY_TOP: u64 = 0x10_0000;
 
 /// The maximum size of the shadow firmware for legacy boot.
 const LEGACY_MAX_SIZE: usize = 128 * 1024;
@@ -151,9 +151,9 @@ impl Stage0Info {
 
     pub fn new(bytes: Vec<u8>) -> Self {
         let size = bytes.len();
-        let start_address = FIRMWARE_TOP - (size as u64);
+        let start_address = PhysAddr::new(FIRMWARE_TOP) - (size as u64);
         let legacy_size = size.min(LEGACY_MAX_SIZE);
-        let legacy_start_address = LEGACY_TOP - (legacy_size as u64);
+        let legacy_start_address = PhysAddr::new(LEGACY_TOP) - (legacy_size as u64);
         let legacy_offset = size - legacy_size;
         Self { bytes, start_address, legacy_start_address, legacy_offset }
     }
