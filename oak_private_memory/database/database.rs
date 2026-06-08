@@ -400,6 +400,7 @@ mod tests {
             event_timestamp: Some(prost_types::Timestamp::default()),
             expiration_timestamp: Some(prost_types::Timestamp::default()),
             views: Some(LlmViews { llm_views: vec![LlmView::default()] }),
+            source: None,
         }
     }
 

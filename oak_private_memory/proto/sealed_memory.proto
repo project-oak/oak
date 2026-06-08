@@ -108,6 +108,11 @@ message LLMViews {
   repeated LLMView llm_views = 1;
 }
 
+message MemorySource {
+  // Required. The identifier of the source for DMA compliance.
+  string source_id = 1;
+}
+
 message Memory {
   // Unique identifier, assigned by Sealed Memory Service.
   string id = 1;
@@ -128,7 +133,11 @@ message Memory {
 
   LLMViews views = 8;
 
+  // Information about how/where the memory was created.
+  MemorySource source = 11;
+
   reserved 2, 4;
+  // next_id: 12
 }
 
 enum MemoryField {
