@@ -29,7 +29,6 @@ pub mod ghcb;
 pub mod guest;
 pub mod instructions;
 pub mod interrupts;
-pub mod io;
 pub mod msr;
 pub mod secrets;
 pub mod vmsa;
