@@ -93,6 +93,7 @@ impl SealedMemoryServiceImplementation {
             self.application_config.blanket_ttl_seconds,
             self.application_config.max_memory_ttl_seconds,
             self.application_config.enable_int8_embedding,
+            self.application_config.allowed_memory_sources.clone(),
         )
     }
 
@@ -147,6 +148,7 @@ impl OakSessionHandler {
         blanket_ttl_seconds: i64,
         max_memory_ttl_seconds: i64,
         enable_int8_embedding: bool,
+        allowed_memory_sources: Vec<String>,
     ) -> tonic::Result<Self> {
         let server_session = ServerSession::create(session_config)
             .into_failed_precondition("failed to initialize oak session")?;
@@ -163,6 +165,7 @@ impl OakSessionHandler {
                 blanket_ttl_seconds,
                 max_memory_ttl_seconds,
                 enable_int8_embedding,
+                allowed_memory_sources,
             ),
         })
     }
@@ -274,6 +277,7 @@ impl TlsSessionHandler {
         blanket_ttl_seconds: i64,
         max_memory_ttl_seconds: i64,
         enable_int8_embedding: bool,
+        allowed_memory_sources: Vec<String>,
     ) -> Self {
         Self {
             metrics: metrics.clone(),
@@ -288,6 +292,7 @@ impl TlsSessionHandler {
                 blanket_ttl_seconds,
                 max_memory_ttl_seconds,
                 enable_int8_embedding,
+                allowed_memory_sources,
             ),
         }
     }
@@ -390,6 +395,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         let blanket_ttl_seconds = self.application_config.blanket_ttl_seconds;
         let max_memory_ttl_seconds = self.application_config.max_memory_ttl_seconds;
         let enable_int8_embedding = self.application_config.enable_int8_embedding;
+        let allowed_memory_sources = self.application_config.allowed_memory_sources.clone();
 
         let request_stream = Arc::new(tokio::sync::Mutex::new(request.into_inner()));
         let (tx, rx) = tokio::sync::mpsc::channel(32);
@@ -448,6 +454,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
                 blanket_ttl_seconds,
                 max_memory_ttl_seconds,
                 enable_int8_embedding,
+                allowed_memory_sources,
             );
             debug!("TLS handshake completed");
 

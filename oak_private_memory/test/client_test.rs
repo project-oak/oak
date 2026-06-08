@@ -27,7 +27,7 @@ use client::{PrivateMemoryAppClient, PrivateMemoryClient};
 use oak_session::{attestation::AttestationType, config::SessionConfig, handshake::HandshakeType};
 use private_memory_test_utils::{start_server, start_server_with_config, system_time_to_timestamp};
 use sealed_memory_rust_proto::{
-    oak::private_memory::{LlmView, LlmViews},
+    oak::private_memory::{LlmView, LlmViews, MemorySource},
     prelude::v1::*,
 };
 
@@ -582,4 +582,132 @@ async fn test_error_propagation_header_overrides_config() {
         }
         _ => panic!("expected error response, got {:?}", response),
     }
+}
+
+// ── Memory source allowlist tests ──────────────────────────────────────────
+
+fn config_with_memory_source_allowlist(
+    db_addr: std::net::SocketAddr,
+) -> private_memory_server_lib::app::ApplicationConfig {
+    let mut config = private_memory_test_utils::default_test_application_config(db_addr);
+    config.allowed_memory_sources = vec!["source_a".to_string(), "source_b".to_string()];
+    config
+}
+
+fn create_memory_with_source(id: &str, source_id: &str) -> Memory {
+    Memory {
+        id: id.to_string(),
+        source: Some(MemorySource { source_id: source_id.to_string() }),
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_memory_source_allowlist_accepted() {
+    let (addr, _server, _db, _persist) =
+        start_server_with_config(config_with_memory_source_allowlist, None).await.unwrap();
+    let url = format!("http://{}", addr);
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(&url, "source_ok_user", TEST_EK)
+            .await
+            .unwrap();
+
+    let memory = create_memory_with_source("mem_allowed", "source_a");
+    client.add_memory(memory).await.expect("allowed source should succeed");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_memory_source_allowlist_rejected() {
+    let (addr, _server, _db, _persist) =
+        start_server_with_config(config_with_memory_source_allowlist, None).await.unwrap();
+    let url = format!("http://{}", addr);
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(&url, "source_reject_user", TEST_EK)
+            .await
+            .unwrap();
+
+    let memory = create_memory_with_source("mem_bad", "unknown_source");
+    let result = client.add_memory(memory).await;
+    assert!(result.is_err(), "unlisted source should be rejected");
+    let err = result.unwrap_err();
+    assert!(
+        format!("{:?}", err).contains("not in the allowed sources list"),
+        "error should mention allowlist, got: {err:?}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_memory_source_allowlist_missing_source() {
+    let (addr, _server, _db, _persist) =
+        start_server_with_config(config_with_memory_source_allowlist, None).await.unwrap();
+    let url = format!("http://{}", addr);
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(&url, "source_missing_user", TEST_EK)
+            .await
+            .unwrap();
+
+    let memory = Memory {
+        id: "mem_no_source".to_string(),
+        source: None,
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    };
+    let result = client.add_memory(memory).await;
+    assert!(result.is_err(), "missing source should be rejected");
+    let err = result.unwrap_err();
+    assert!(
+        format!("{:?}", err).contains("source is required"),
+        "error should mention required source, got: {err:?}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_memory_source_allowlist_empty_source_id() {
+    let (addr, _server, _db, _persist) =
+        start_server_with_config(config_with_memory_source_allowlist, None).await.unwrap();
+    let url = format!("http://{}", addr);
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(&url, "source_empty_user", TEST_EK)
+            .await
+            .unwrap();
+
+    let memory = create_memory_with_source("mem_empty_src", "");
+    let result = client.add_memory(memory).await;
+    assert!(result.is_err(), "empty source_id should be rejected");
+    let err = result.unwrap_err();
+    assert!(
+        format!("{:?}", err).contains("source_id must not be empty"),
+        "error should mention empty source_id, got: {err:?}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_memory_source_no_allowlist_accepts_any() {
+    // Default config has empty allowlist, so any source should be accepted.
+    let (addr, _server, _db, _persist) = start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(&url, "source_any_user", TEST_EK)
+            .await
+            .unwrap();
+
+    // Memory with a source should be fine.
+    let memory_with = create_memory_with_source("mem_with_src", "anything");
+    client.add_memory(memory_with).await.expect("any source accepted without allowlist");
+
+    // Memory without a source should also be fine.
+    let memory_without = Memory {
+        id: "mem_no_src".to_string(),
+        source: None,
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    };
+    client.add_memory(memory_without).await.expect("no source accepted without allowlist");
 }

@@ -143,6 +143,7 @@ pub fn default_test_application_config(db_addr: SocketAddr) -> ApplicationConfig
         blanket_ttl_seconds: METADATA_BLANKET_TTL_SECONDS,
         max_memory_ttl_seconds: MAX_MEMORY_TTL_SECONDS,
         enable_int8_embedding: false,
+        allowed_memory_sources: vec![],
     }
 }
 
@@ -174,6 +175,7 @@ pub async fn start_server_with_tls(
         blanket_ttl_seconds: METADATA_BLANKET_TTL_SECONDS,
         max_memory_ttl_seconds: MAX_MEMORY_TTL_SECONDS,
         enable_int8_embedding: false,
+        allowed_memory_sources: vec![],
     };
 
     let metrics = private_memory_server_lib::metrics::get_global_metrics();
@@ -223,6 +225,7 @@ pub async fn start_container_server() -> Result<(
         blanket_ttl_seconds: METADATA_BLANKET_TTL_SECONDS,
         max_memory_ttl_seconds: MAX_MEMORY_TTL_SECONDS,
         enable_int8_embedding: false,
+        allowed_memory_sources: vec![],
     };
     let application_config_bytes = serde_json::to_vec(&application_config)?;
 

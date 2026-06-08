@@ -59,6 +59,12 @@ pub struct ApplicationConfig {
     /// index size with negligible recall loss. Default: false.
     #[serde(default)]
     pub enable_int8_embedding: bool,
+
+    /// When non-empty, only memories whose `source.source_id` is in this
+    /// list are accepted. Memories without a source or with an unlisted
+    /// source_id are rejected with `InvalidArgument`.
+    #[serde(default)]
+    pub allowed_memory_sources: Vec<String>,
 }
 
 fn default_max_database_size_bytes() -> usize {

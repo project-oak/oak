@@ -65,6 +65,7 @@ pub struct SealedMemorySessionHandler {
     blanket_ttl_seconds: i64,
     max_memory_ttl_seconds: i64,
     enable_int8_embedding: bool,
+    allowed_memory_sources: Vec<String>,
 }
 
 impl Drop for SealedMemorySessionHandler {
@@ -91,6 +92,7 @@ impl SealedMemorySessionHandler {
         blanket_ttl_seconds: i64,
         max_memory_ttl_seconds: i64,
         enable_int8_embedding: bool,
+        allowed_memory_sources: Vec<String>,
     ) -> Self {
         Self {
             session_context: Default::default(),
@@ -103,6 +105,7 @@ impl SealedMemorySessionHandler {
             blanket_ttl_seconds,
             max_memory_ttl_seconds,
             enable_int8_embedding,
+            allowed_memory_sources,
         }
     }
 
@@ -163,6 +166,36 @@ impl SealedMemorySessionHandler {
         Ok(())
     }
 
+    /// Validates the memory's source against the configured allowlist.
+    ///
+    /// When `allowed_memory_sources` is non-empty, every memory must have a
+    /// `source` with a `source_id` that appears in the allowlist. Returns
+    /// `InvalidArgument` if the source is missing or not in the list.
+    fn validate_memory_source(&self, memory: &Memory) -> tonic::Result<()> {
+        if self.allowed_memory_sources.is_empty() {
+            return Ok(());
+        }
+
+        let source = memory.source.as_ref().ok_or_else(|| {
+            tonic::Status::invalid_argument(
+                "memory source is required when source allowlist is configured",
+            )
+        })?;
+
+        if source.source_id.is_empty() {
+            return Err(tonic::Status::invalid_argument("memory source_id must not be empty"));
+        }
+
+        if !self.allowed_memory_sources.contains(&source.source_id) {
+            return Err(tonic::Status::invalid_argument(format!(
+                "memory source_id '{}' is not in the allowed sources list",
+                source.source_id
+            )));
+        }
+
+        Ok(())
+    }
+
     fn is_valid_key(key: &[u8]) -> bool {
         // Only support 256-bit key for now.
         key.len() == 32
@@ -179,6 +212,7 @@ impl SealedMemorySessionHandler {
             &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
         let memory = request.memory.into_invalid_argument("memory not set in AddMemoryRequest")?;
 
+        self.validate_memory_source(&memory)?;
         self.validate_expiration_timestamp(memory.expiration_timestamp.as_ref())?;
 
         if !memory.name.is_empty() {
