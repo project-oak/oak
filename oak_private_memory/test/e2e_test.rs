@@ -24,7 +24,7 @@ use std::{
 use client::{PrivateMemoryAppClient, PrivateMemoryClient};
 use private_memory_test_utils::{MockClock, TestContext, system_time_to_timestamp};
 use sealed_memory_rust_proto::{
-    oak::private_memory::{Embedding, LlmView, LlmViews, memory_value},
+    oak::private_memory::{Embedding, LlmView, LlmViews, SessionConfig, memory_value},
     prelude::v1::*,
 };
 use tokio::time::sleep;
@@ -831,6 +831,82 @@ async fn test_sync_database_concurrent_sessions() {
     // A syncs again — now pulls MemB.
     client_a.sync_database().await.unwrap();
     expect_memory_by_id(&mut client_a, "mem_b").await;
+
+    ctx.teardown().await;
+}
+
+/// When disable_persistence_on_close is set, dropping the client should NOT
+/// persist the database, so a new session should not see the memory.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_disable_persistence_on_close() {
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
+    let pm_uid = "test_disable_persist_user";
+
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+
+    // Re-keysync with disable_persistence_on_close = true.
+    let key_sync_request = KeySyncRequest {
+        pm_uid: pm_uid.to_string(),
+        key_encryption_key: TEST_EK.to_vec(),
+        session_config: Some(SessionConfig { disable_persistence_on_close: true }),
+    };
+    let response = client
+        .invoke(sealed_memory_request::Request::KeySyncRequest(key_sync_request))
+        .await
+        .unwrap();
+    match response {
+        sealed_memory_response::Response::KeySyncResponse(resp) => {
+            assert_eq!(resp.status(), key_sync_response::Status::Success);
+        }
+        _ => panic!("expected KeySyncResponse"),
+    }
+
+    // Add a memory during this non-persisting session.
+    client.add_memory(create_test_memory("ephemeral_mem")).await.unwrap();
+    expect_memory_by_id(&mut client, "ephemeral_mem").await;
+
+    // Drop triggers the handler's Drop, which should skip persistence.
+    drop(client);
+
+    // Wait for the server-side handler to be dropped.
+    sleep(Duration::from_secs(2)).await;
+
+    // Reconnect — memory should NOT be present.
+    let mut client2 =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+    let resp = client2.get_memory_by_id("ephemeral_mem", None).await.unwrap();
+    assert!(!resp.success, "memory should not persist when disable_persistence_on_close is set");
+
+    ctx.teardown().await;
+}
+
+/// Control test: with the default session config (persistence enabled),
+/// dropping the client should persist the database.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_default_persistence_on_close() {
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
+    let pm_uid = "test_default_persist_user";
+
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+
+    // Add a memory with default session config (persistence enabled).
+    client.add_memory(create_test_memory("persistent_mem")).await.unwrap();
+    expect_memory_by_id(&mut client, "persistent_mem").await;
+
+    // Drop should trigger persistence.
+    drop(client);
+
+    // Small delay to let the persistence worker finish.
+    sleep(Duration::from_secs(2)).await;
+
+    // Reconnect — memory should be present.
+    let mut client2 =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+    expect_memory_by_id(&mut client2, "persistent_mem").await;
 
     ctx.teardown().await;
 }

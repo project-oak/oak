@@ -196,6 +196,13 @@ message InvalidRequestResponse {
   string error_message = 1;
 }
 
+message SessionConfig {
+  // If true, the database will not be persisted when the session closes. Client
+  // must explicitly call SyncDatabaseRequest to commit changes. False by
+  // default (database is persisted on close.)
+  bool disable_persistence_on_close = 1;
+}
+
 message KeySyncRequest {
   // The key should be a byte string of size 32 bytes (256 bits).
   bytes key_encryption_key = 1;
@@ -203,6 +210,8 @@ message KeySyncRequest {
   // The ID of the user. Currently it has one to one mapping to the database.
   // That is, each id has a unique database.
   string pm_uid = 2;
+
+  SessionConfig session_config = 3;
 }
 
 message KeySyncResponse {

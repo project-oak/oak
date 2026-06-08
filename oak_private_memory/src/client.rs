@@ -241,8 +241,11 @@ pub trait PrivateMemoryAppClient {
     }
 
     async fn key_sync(&mut self, pm_uid: &str, kek: &[u8]) -> Result<key_sync_response::Status> {
-        let request =
-            KeySyncRequest { pm_uid: pm_uid.to_string(), key_encryption_key: kek.to_vec() };
+        let request = KeySyncRequest {
+            pm_uid: pm_uid.to_string(),
+            key_encryption_key: kek.to_vec(),
+            session_config: None,
+        };
         let response = self.invoke(sealed_memory_request::Request::KeySyncRequest(request)).await?;
         match response {
             sealed_memory_response::Response::KeySyncResponse(resp) => Ok(resp.status()),

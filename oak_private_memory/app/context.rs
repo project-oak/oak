@@ -29,4 +29,6 @@ pub struct UserSessionContext {
     // checked, to prevent data loss due to concurrent database write-back.
     pub database_version: String,
     pub database_service_client: SealedMemoryDatabaseServiceClient<Channel>,
+    /// When true, the database is not persisted when the session closes.
+    pub disable_persistence_on_close: bool,
 }

@@ -70,12 +70,16 @@ pub struct SealedMemorySessionHandler {
 
 impl Drop for SealedMemorySessionHandler {
     fn drop(&mut self) {
-        info!("Dropping handler and sending session context to persistence service");
-        if let Some(context) = self.session_context.get_mut().take()
-            && let Err(e) = self.persistence_tx.send(context)
-        {
-            self.metrics.inc_persistence_enqueue_failures();
-            warn!("Failed to send session context to persistence service: {}", e);
+        if let Some(context) = self.session_context.get_mut().take() {
+            if context.disable_persistence_on_close {
+                info!("persistence disabled for this session, skipping");
+                return;
+            }
+            info!("sending session context to persistence service");
+            if let Err(e) = self.persistence_tx.send(context) {
+                self.metrics.inc_persistence_enqueue_failures();
+                warn!("failed to send session context to persistence service: {}", e);
+            }
         }
     }
 }
@@ -311,8 +315,8 @@ impl SealedMemorySessionHandler {
         uid: String,
         dek: Vec<u8>,
         key_derivation_info: KeyDerivationInfo,
-
         mut db_client: SealedMemoryDatabaseServiceClient<Channel>,
+        disable_persistence_on_close: bool,
     ) -> tonic::Result<()> {
         let (database, database_version, initial_size) = get_or_create_db(
             &mut db_client,
@@ -342,6 +346,7 @@ impl SealedMemorySessionHandler {
             database_service_client: db_client,
             database_version,
             database,
+            disable_persistence_on_close,
         });
         Ok(())
     }
@@ -428,9 +433,15 @@ impl SealedMemorySessionHandler {
         info!("Successfully registered new user {}", uid);
         // All errors from setup_user_session_context are infrastructure failures
         // (DB fetch, decryption, import) outside the caller's control.
-        self.setup_user_session_context(uid.clone(), dek, boot_strap_info.clone(), db_client)
-            .await
-            .into_internal_error("Failed to setup user session context")?;
+        self.setup_user_session_context(
+            uid.clone(),
+            dek,
+            boot_strap_info.clone(),
+            db_client,
+            false,
+        )
+        .await
+        .into_internal_error("Failed to setup user session context")?;
         Ok(UserRegistrationResponse {
             status: user_registration_response::Status::Success.into(),
             key_derivation_info: Some(boot_strap_info),
@@ -449,6 +460,9 @@ impl SealedMemorySessionHandler {
         if !Self::is_valid_key(&key) {
             return Ok(KeySyncResponse { status: key_sync_response::Status::InvalidKey.into() });
         }
+
+        let disable_persistence_on_close =
+            request.session_config.map(|c| c.disable_persistence_on_close).unwrap_or(false);
 
         let mut db_client = self
             .db_client
@@ -489,9 +503,15 @@ impl SealedMemorySessionHandler {
             return Ok(KeySyncResponse { status: key_sync_response::Status::InvalidPmUid.into() });
         }
 
-        self.setup_user_session_context(uid, dek, key_derivation_info, db_client)
-            .await
-            .into_internal_error("Failed to setup user session context")?;
+        self.setup_user_session_context(
+            uid,
+            dek,
+            key_derivation_info,
+            db_client,
+            disable_persistence_on_close,
+        )
+        .await
+        .into_internal_error("Failed to setup user session context")?;
 
         let cleanup_start_time = Instant::now();
         self.clean_expired_memories().await.unwrap_or_else(|e| {
