@@ -23,8 +23,7 @@ use x86_64::{
     PhysAddr, VirtAddr,
     addr::{align_down, align_up},
     structures::paging::{
-        FrameAllocator, Page, PageSize, PageTable, PageTableFlags as BasePageTableFlags, PhysFrame,
-        Size2MiB, Size4KiB,
+        FrameAllocator, Page, PageSize, PageTable, PageTableFlags, PhysFrame, Size2MiB, Size4KiB,
         frame::PhysFrameRange,
         mapper::{Mapper, OffsetPageTable},
     },
@@ -78,68 +77,14 @@ pub trait Translator {
     fn translate_physical_frame<S: PageSize>(&self, frame: PhysFrame<S>) -> Option<Page<S>>;
 }
 
-bitflags::bitflags! {
-    /// Possible flags for a page table entry.
-    ///
-    /// See <x86_64::structures::paging::PageTableFlags> for more details.
-    #[derive(Clone, Copy, Debug)]
-    pub struct PageTableFlags: u64 {
-        const PRESENT = 1;
-        const WRITABLE = 1 << 1;
-        const USER_ACCESSIBLE = 1 << 2;
-        const WRITE_THROUGH = 1 << 3;
-        const NO_CACHE = 1 << 4;
-        const ACCESSED = 1<< 5;
-        const DIRTY = 1 << 6;
-        const HUGE_PAGE = 1 << 7;
-        const GLOBAL = 1 << 8;
-        /// Marks the page as encrypted. Ignored under <NoEncryption>.
-        ///
-        /// The bit value is hardcoded to be 51 here, but that's because it's not possible to
-        /// represent `ENCRYPTED = 1 << C` in Rust right now. The actual bit set may not be 51.
-        const ENCRYPTED = 1 << 51;
-        const NO_EXECUTE = 1 << 63;
+pub fn encryption_aware_page_table_flags(
+    mut flags: PageTableFlags,
+    encrypted: bool,
+) -> PageTableFlags {
+    if crate::is_memory_encryption_enabled() {
+        flags.set_encrypted(encrypted);
     }
-}
-
-impl From<PageTableFlags> for BasePageTableFlags {
-    fn from(value: PageTableFlags) -> Self {
-        let mut flags = BasePageTableFlags::empty();
-        if value.contains(PageTableFlags::PRESENT) {
-            flags |= BasePageTableFlags::PRESENT
-        }
-        if value.contains(PageTableFlags::WRITABLE) {
-            flags |= BasePageTableFlags::WRITABLE
-        }
-        if value.contains(PageTableFlags::USER_ACCESSIBLE) {
-            flags |= BasePageTableFlags::USER_ACCESSIBLE
-        }
-        if value.contains(PageTableFlags::WRITE_THROUGH) {
-            flags |= BasePageTableFlags::WRITE_THROUGH
-        }
-        if value.contains(PageTableFlags::NO_CACHE) {
-            flags |= BasePageTableFlags::NO_CACHE
-        }
-        if value.contains(PageTableFlags::ACCESSED) {
-            flags |= BasePageTableFlags::ACCESSED
-        }
-        if value.contains(PageTableFlags::DIRTY) {
-            flags |= BasePageTableFlags::DIRTY
-        }
-        if value.contains(PageTableFlags::HUGE_PAGE) {
-            flags |= BasePageTableFlags::HUGE_PAGE
-        }
-        if value.contains(PageTableFlags::GLOBAL) {
-            flags |= BasePageTableFlags::GLOBAL
-        }
-        if crate::is_memory_encryption_enabled() {
-            flags.set_encrypted(value.contains(PageTableFlags::ENCRYPTED));
-        }
-        if value.contains(PageTableFlags::NO_EXECUTE) {
-            flags |= BasePageTableFlags::NO_EXECUTE
-        }
-        flags
-    }
+    flags
 }
 
 pub fn init(memory_map: &[BootE820Entry], program_headers: &[ProgramHeader], ramdisk: &Ramdisk) {
@@ -279,7 +224,7 @@ pub fn initial_pml4(program_headers: &[ProgramHeader]) -> Result<PhysFrame, &'st
                 fa.allocate_frame().ok_or("couldn't allocate a frame for PML3")?;
             let pml3 = unsafe { &mut *(pml3_frame.start_address().as_u64() as *mut PageTable) };
             pml3.zero();
-            entry.set_frame(pml3_frame, PageTableFlags::PRESENT.into());
+            entry.set_frame(pml3_frame, PageTableFlags::PRESENT);
         }
     };
 
@@ -296,11 +241,13 @@ pub fn initial_pml4(program_headers: &[ProgramHeader]) -> Result<PhysFrame, &'st
                 PhysFrame::from_start_address(PhysAddr::new(0x20_0000_0000)).unwrap(),
             ),
             DIRECT_MAPPING_OFFSET,
-            PageTableFlags::PRESENT
-                | PageTableFlags::GLOBAL
-                | PageTableFlags::WRITABLE
-                | PageTableFlags::NO_EXECUTE
-                | PageTableFlags::ENCRYPTED,
+            encryption_aware_page_table_flags(
+                PageTableFlags::PRESENT
+                    | PageTableFlags::GLOBAL
+                    | PageTableFlags::WRITABLE
+                    | PageTableFlags::NO_EXECUTE,
+                true,
+            ),
             &mut page_table,
         )
         .map_err(|_| "couldn't set up paging for physical memory")?;
@@ -343,14 +290,17 @@ pub fn allocate_stack() -> VirtAddr {
             .map_to_with_table_flags(
                 stack_page,
                 frame,
-                (PageTableFlags::GLOBAL
-                    | PageTableFlags::PRESENT
-                    | PageTableFlags::ENCRYPTED
-                    | PageTableFlags::NO_EXECUTE
-                    | PageTableFlags::WRITABLE)
-                    .into(),
-                (PageTableFlags::ENCRYPTED | PageTableFlags::PRESENT | PageTableFlags::WRITABLE)
-                    .into(),
+                encryption_aware_page_table_flags(
+                    PageTableFlags::GLOBAL
+                        | PageTableFlags::PRESENT
+                        | PageTableFlags::NO_EXECUTE
+                        | PageTableFlags::WRITABLE,
+                    true,
+                ),
+                encryption_aware_page_table_flags(
+                    PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+                    true,
+                ),
                 FRAME_ALLOCATOR.lock().deref_mut(),
             )
             .expect("failed to update page tables for syscall stack")

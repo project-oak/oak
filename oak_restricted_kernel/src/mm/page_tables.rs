@@ -21,7 +21,7 @@ use x86_64::{
     PhysAddr, VirtAddr, align_down, align_up,
     registers::control::{Cr3, Cr3Flags},
     structures::paging::{
-        FrameAllocator, Page, PageSize, PageTable, PhysFrame, Size2MiB, Size4KiB,
+        FrameAllocator, Page, PageSize, PageTable, PageTableFlags, PhysFrame, Size2MiB, Size4KiB,
         frame::PhysFrameRange,
         mapper::{
             FlagUpdateError, MapToError, Mapper, MapperFlush, MapperFlushAll, OffsetPageTable,
@@ -31,7 +31,7 @@ use x86_64::{
     },
 };
 
-use super::{KERNEL_OFFSET, PageTableFlags, Translator};
+use super::{KERNEL_OFFSET, Translator, encryption_aware_page_table_flags};
 use crate::FRAME_ALLOCATOR;
 
 /// Map a region of physical memory to a virtual address using 2 MiB pages.
@@ -58,11 +58,11 @@ pub unsafe fn create_offset_map<S: PageSize, M: Mapper<S>>(
                 .map_to_with_table_flags(
                     Page::<S>::from_start_address(offset + (i as u64) * S::SIZE).unwrap(),
                     frame,
-                    flags.into(),
-                    (PageTableFlags::PRESENT
-                        | PageTableFlags::WRITABLE
-                        | PageTableFlags::ENCRYPTED)
-                        .into(),
+                    flags,
+                    encryption_aware_page_table_flags(
+                        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+                        true,
+                    ),
                     FRAME_ALLOCATOR.lock().deref_mut(),
                 )?
                 .ignore();
@@ -123,19 +123,21 @@ pub unsafe fn create_kernel_map<M: Mapper<Size2MiB> + Mapper<Size4KiB>>(
                 ),
                 VirtAddr::new(phdr.p_vaddr),
                 /* It's not possible to mark a page not readable, so we ignore PF_R. */
-                PageTableFlags::PRESENT
-                    | PageTableFlags::GLOBAL
-                    | PageTableFlags::ENCRYPTED
-                    | if phdr.p_flags & PF_W > 0 {
-                        PageTableFlags::WRITABLE
-                    } else {
-                        PageTableFlags::empty()
-                    }
-                    | if phdr.p_flags & PF_X == 0 {
-                        PageTableFlags::NO_EXECUTE
-                    } else {
-                        PageTableFlags::empty()
-                    },
+                encryption_aware_page_table_flags(
+                    PageTableFlags::PRESENT
+                        | PageTableFlags::GLOBAL
+                        | if phdr.p_flags & PF_W > 0 {
+                            PageTableFlags::WRITABLE
+                        } else {
+                            PageTableFlags::empty()
+                        }
+                        | if phdr.p_flags & PF_X == 0 {
+                            PageTableFlags::NO_EXECUTE
+                        } else {
+                            PageTableFlags::empty()
+                        },
+                    true,
+                ),
             )
         })
         .try_for_each(|(range, offset, flags)| unsafe {
@@ -223,8 +225,8 @@ impl Mapper<Size4KiB> for RootPageTable {
         &mut self,
         page: Page<Size4KiB>,
         frame: PhysFrame<Size4KiB>,
-        flags: x86_64::structures::paging::PageTableFlags,
-        parent_table_flags: x86_64::structures::paging::PageTableFlags,
+        flags: PageTableFlags,
+        parent_table_flags: PageTableFlags,
         allocator: &mut A,
     ) -> Result<MapperFlush<Size4KiB>, MapToError<Size4KiB>>
     where
@@ -245,7 +247,7 @@ impl Mapper<Size4KiB> for RootPageTable {
     unsafe fn update_flags(
         &mut self,
         page: Page<Size4KiB>,
-        flags: x86_64::structures::paging::PageTableFlags,
+        flags: PageTableFlags,
     ) -> Result<MapperFlush<Size4KiB>, FlagUpdateError> {
         unsafe { self.inner.update_flags(page, flags) }
     }
@@ -253,7 +255,7 @@ impl Mapper<Size4KiB> for RootPageTable {
     unsafe fn set_flags_p4_entry(
         &mut self,
         page: Page<Size4KiB>,
-        flags: x86_64::structures::paging::PageTableFlags,
+        flags: PageTableFlags,
     ) -> Result<MapperFlushAll, FlagUpdateError> {
         unsafe { self.inner.set_flags_p4_entry(page, flags) }
     }
@@ -261,7 +263,7 @@ impl Mapper<Size4KiB> for RootPageTable {
     unsafe fn set_flags_p3_entry(
         &mut self,
         page: Page<Size4KiB>,
-        flags: x86_64::structures::paging::PageTableFlags,
+        flags: PageTableFlags,
     ) -> Result<MapperFlushAll, FlagUpdateError> {
         unsafe { self.inner.set_flags_p3_entry(page, flags) }
     }
@@ -269,7 +271,7 @@ impl Mapper<Size4KiB> for RootPageTable {
     unsafe fn set_flags_p2_entry(
         &mut self,
         page: Page<Size4KiB>,
-        flags: x86_64::structures::paging::PageTableFlags,
+        flags: PageTableFlags,
     ) -> Result<MapperFlushAll, FlagUpdateError> {
         unsafe { self.inner.set_flags_p2_entry(page, flags) }
     }
@@ -284,8 +286,8 @@ impl Mapper<Size2MiB> for RootPageTable {
         &mut self,
         page: Page<Size2MiB>,
         frame: PhysFrame<Size2MiB>,
-        flags: x86_64::structures::paging::PageTableFlags,
-        parent_table_flags: x86_64::structures::paging::PageTableFlags,
+        flags: PageTableFlags,
+        parent_table_flags: PageTableFlags,
         allocator: &mut A,
     ) -> Result<MapperFlush<Size2MiB>, MapToError<Size2MiB>>
     where
@@ -306,7 +308,7 @@ impl Mapper<Size2MiB> for RootPageTable {
     unsafe fn update_flags(
         &mut self,
         page: Page<Size2MiB>,
-        flags: x86_64::structures::paging::PageTableFlags,
+        flags: PageTableFlags,
     ) -> Result<MapperFlush<Size2MiB>, FlagUpdateError> {
         unsafe { self.inner.update_flags(page, flags) }
     }
@@ -314,7 +316,7 @@ impl Mapper<Size2MiB> for RootPageTable {
     unsafe fn set_flags_p4_entry(
         &mut self,
         page: Page<Size2MiB>,
-        flags: x86_64::structures::paging::PageTableFlags,
+        flags: PageTableFlags,
     ) -> Result<MapperFlushAll, FlagUpdateError> {
         unsafe { self.inner.set_flags_p4_entry(page, flags) }
     }
@@ -322,7 +324,7 @@ impl Mapper<Size2MiB> for RootPageTable {
     unsafe fn set_flags_p3_entry(
         &mut self,
         page: Page<Size2MiB>,
-        flags: x86_64::structures::paging::PageTableFlags,
+        flags: PageTableFlags,
     ) -> Result<MapperFlushAll, FlagUpdateError> {
         unsafe { self.inner.set_flags_p3_entry(page, flags) }
     }
@@ -330,7 +332,7 @@ impl Mapper<Size2MiB> for RootPageTable {
     unsafe fn set_flags_p2_entry(
         &mut self,
         page: Page<Size2MiB>,
-        flags: x86_64::structures::paging::PageTableFlags,
+        flags: PageTableFlags,
     ) -> Result<MapperFlushAll, FlagUpdateError> {
         unsafe { self.inner.set_flags_p2_entry(page, flags) }
     }

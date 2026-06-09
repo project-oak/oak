@@ -28,7 +28,7 @@ use spinning_top::Spinlock;
 use x86_64::{
     PhysAddr, VirtAddr,
     structures::paging::{
-        FrameAllocator, Page, PageSize, PhysFrame, Size2MiB, Size4KiB,
+        FrameAllocator, Page, PageSize, PageTableFlags, PhysFrame, Size2MiB, Size4KiB,
         mapper::{FlagUpdateError, Mapper},
         page::PageRange,
     },
@@ -38,7 +38,7 @@ use zeroize::Zeroize;
 
 use crate::{
     FRAME_ALLOCATOR, PAGE_TABLES,
-    mm::{PageTableFlags, Translator},
+    mm::{Translator, encryption_aware_page_table_flags},
 };
 
 #[cfg(not(test))]
@@ -90,18 +90,20 @@ impl GrowableHeap {
                 .map_to_with_table_flags(
                     self.available.next().ok_or("kernel heap exhausted")?,
                     frame,
-                    (PageTableFlags::PRESENT
-                        | PageTableFlags::WRITABLE
-                        | PageTableFlags::GLOBAL
-                        | PageTableFlags::NO_EXECUTE
-                        | PageTableFlags::HUGE_PAGE
-                        | PageTableFlags::ENCRYPTED)
-                        .into(),
-                    (PageTableFlags::PRESENT
-                        | PageTableFlags::WRITABLE
-                        | PageTableFlags::NO_EXECUTE
-                        | PageTableFlags::ENCRYPTED)
-                        .into(),
+                    encryption_aware_page_table_flags(
+                        PageTableFlags::PRESENT
+                            | PageTableFlags::WRITABLE
+                            | PageTableFlags::GLOBAL
+                            | PageTableFlags::NO_EXECUTE
+                            | PageTableFlags::HUGE_PAGE,
+                        true,
+                    ),
+                    encryption_aware_page_table_flags(
+                        PageTableFlags::PRESENT
+                            | PageTableFlags::WRITABLE
+                            | PageTableFlags::NO_EXECUTE,
+                        true,
+                    ),
                     FRAME_ALLOCATOR.lock().deref_mut(),
                 )
                 .map_err(|_| "unable to create page mapping for kernel heap")?
@@ -257,11 +259,13 @@ unsafe fn init_guest_host_allocator<S: PageSize, M: Mapper<S>>(
             mapper
                 .update_flags(
                     page,
-                    (PageTableFlags::PRESENT
-                        | PageTableFlags::WRITABLE
-                        | PageTableFlags::GLOBAL
-                        | PageTableFlags::NO_EXECUTE)
-                        .into(),
+                    encryption_aware_page_table_flags(
+                        PageTableFlags::PRESENT
+                            | PageTableFlags::WRITABLE
+                            | PageTableFlags::GLOBAL
+                            | PageTableFlags::NO_EXECUTE,
+                        false,
+                    ),
                 )?
                 .flush();
         }

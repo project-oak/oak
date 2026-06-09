@@ -28,10 +28,12 @@ use oak_restricted_kernel_interface::{
 };
 use x86_64::{
     VirtAddr, align_up,
-    structures::paging::{FrameAllocator, Page, PageSize, Size2MiB, mapper::Mapper},
+    structures::paging::{
+        FrameAllocator, Page, PageSize, PageTableFlags, Size2MiB, mapper::Mapper,
+    },
 };
 
-use crate::{FRAME_ALLOCATOR, PAGE_TABLES, mm::PageTableFlags};
+use crate::{FRAME_ALLOCATOR, PAGE_TABLES, mm::encryption_aware_page_table_flags};
 
 pub fn mmap(
     addr: Option<VirtAddr>,
@@ -73,19 +75,21 @@ pub fn mmap(
     // Iterator that keeps allocating physical frames.
     let frames = repeat_with(|| FRAME_ALLOCATOR.lock().allocate_frame());
 
-    let pt_flags = PageTableFlags::PRESENT
-        | PageTableFlags::USER_ACCESSIBLE
-        | PageTableFlags::ENCRYPTED
-        | if prot.contains(MmapProtection::PROT_EXEC) {
-            PageTableFlags::empty()
-        } else {
-            PageTableFlags::NO_EXECUTE
-        }
-        | if prot.contains(MmapProtection::PROT_WRITE) {
-            PageTableFlags::WRITABLE
-        } else {
-            PageTableFlags::empty()
-        };
+    let pt_flags = encryption_aware_page_table_flags(
+        PageTableFlags::PRESENT
+            | PageTableFlags::USER_ACCESSIBLE
+            | if prot.contains(MmapProtection::PROT_EXEC) {
+                PageTableFlags::empty()
+            } else {
+                PageTableFlags::NO_EXECUTE
+            }
+            | if prot.contains(MmapProtection::PROT_WRITE) {
+                PageTableFlags::WRITABLE
+            } else {
+                PageTableFlags::empty()
+            },
+        true,
+    );
 
     let pages = {
         // This critical section is rather long...
@@ -135,12 +139,13 @@ pub fn mmap(
 
                         Errno::ENOMEM
                     })?,
-                    pt_flags.into(),
-                    (PageTableFlags::PRESENT
-                        | PageTableFlags::WRITABLE
-                        | PageTableFlags::ENCRYPTED
-                        | PageTableFlags::USER_ACCESSIBLE)
-                        .into(),
+                    pt_flags,
+                    encryption_aware_page_table_flags(
+                        PageTableFlags::PRESENT
+                            | PageTableFlags::WRITABLE
+                            | PageTableFlags::USER_ACCESSIBLE,
+                        true,
+                    ),
                     FRAME_ALLOCATOR.lock().deref_mut(),
                 )
                 .map_err(|err| {

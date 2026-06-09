@@ -28,12 +28,12 @@ use x86_64::{
     addr::VirtAddr,
     registers::control::Cr3,
     structures::paging::{
-        Page, PageSize, PhysFrame, Size2MiB, Size4KiB,
+        Page, PageSize, PageTableFlags, PhysFrame, Size2MiB, Size4KiB,
         mapper::{Mapper, OffsetPageTable},
     },
 };
 
-use crate::mm::{PageTableFlags, Translator};
+use crate::mm::{Translator, encryption_aware_page_table_flags};
 
 /// A wrapper to ensure that the GHCB is alone in a 2MiB page.
 ///
@@ -75,11 +75,13 @@ pub fn reshare_ghcb<M: Mapper<Size4KiB>>(mapper: &mut M) {
             // Turn the 2M page into a 4K page. This unwrap will not fail, as 2M pages are
             // 4K-aligned by definition.
             Page::from_start_address(ghcb_page.start_address()).unwrap(),
-            (PageTableFlags::PRESENT
-                | PageTableFlags::WRITABLE
-                | PageTableFlags::GLOBAL
-                | PageTableFlags::NO_EXECUTE)
-                .into(),
+            encryption_aware_page_table_flags(
+                PageTableFlags::PRESENT
+                    | PageTableFlags::WRITABLE
+                    | PageTableFlags::GLOBAL
+                    | PageTableFlags::NO_EXECUTE,
+                false,
+            ),
         ) {
             Ok(mapper_flush) => mapper_flush.flush(),
             Err(error) => panic!("couldn't update page table flags for GHCB: {:?}", error),
@@ -103,9 +105,13 @@ fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
     // stage 0 firmware are only marked as present and writable, and possibly
     // encrypted.
     unsafe {
-        match mapper
-            .update_flags(ghcb_page, (PageTableFlags::PRESENT | PageTableFlags::WRITABLE).into())
-        {
+        match mapper.update_flags(
+            ghcb_page,
+            encryption_aware_page_table_flags(
+                PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+                false,
+            ),
+        ) {
             Ok(mapper_flush) => mapper_flush.flush(),
             Err(error) => panic!("couldn't update page table flags for GHCB: {:?}", error),
         };
