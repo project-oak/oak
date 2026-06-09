@@ -152,6 +152,7 @@ async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Resu
                 get_global_metrics()
                     .record_db_persist_latency_with_retries(elapsed.as_millis() as u64);
                 get_global_metrics().record_db_persist_attempts(attempt);
+                user_context.database.mark_persisted();
                 return Ok(());
             }
             Ok(MetadataPersistResult::RetryNeeded) => {

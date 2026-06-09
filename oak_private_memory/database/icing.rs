@@ -1578,6 +1578,13 @@ impl IcingMetaDatabase {
         !self.applied_operations.is_empty()
     }
 
+    /// Clear the mutation log after the database has been successfully
+    /// persisted. Without this, stale operations would be replayed on
+    /// subsequent rebases, causing spurious upserts and redundant persists.
+    pub fn mark_persisted(&mut self) {
+        self.applied_operations.clear();
+    }
+
     // Return a new [`IcingMetadataBase`] instance that contains all changes applied
     // to this one, but on top of a new base blob.
     //
@@ -2882,6 +2889,90 @@ mod tests {
             handle.join().expect("thread panicked")?;
         }
 
+        Ok(())
+    }
+
+    // =========================================================================
+    // mark_persisted tests
+    // =========================================================================
+
+    #[gtest]
+    fn mark_persisted_clears_mutation_log() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        add_test_memory(&mut db, "1");
+        add_test_memory(&mut db, "2");
+        assert_that!(db.needs_writeback(), eq(true));
+
+        db.mark_persisted();
+        assert_that!(db.needs_writeback(), eq(false));
+        Ok(())
+    }
+
+    #[gtest]
+    fn mark_persisted_prevents_stale_rebase_replay() -> anyhow::Result<()> {
+        // Simulate: add memory, persist, then rebase onto the persisted blob.
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        let (mem_id, blob_id) = add_test_memory(&mut db, "1");
+        let exported = db.export()?.encode_to_vec();
+
+        // Simulate successful persist
+        db.mark_persisted();
+        assert_that!(db.needs_writeback(), eq(false));
+
+        // Rebase onto the same blob (simulates pull_and_rebase fetching what
+        // we just uploaded). With an empty mutation log, the rebase should
+        // produce a clean import with no replayed operations.
+        let (rebased, failed) =
+            IcingMetaDatabase::import_with_changes(tempdir(), exported.as_slice(), &db)?;
+        assert_eq!(failed, 0);
+
+        // The rebased db should have the memory (from the base blob)
+        // and no pending mutations.
+        assert_that!(rebased.get_blob_id_by_memory_id(mem_id)?, some(eq(&blob_id)));
+        assert_that!(rebased.needs_writeback(), eq(false));
+        Ok(())
+    }
+
+    #[gtest]
+    fn mark_persisted_does_not_affect_data() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        let (mem_id, blob_id) = add_test_memory(&mut db, "1");
+        add_test_memory(&mut db, "2");
+
+        db.mark_persisted();
+
+        // Data should still be accessible after clearing the mutation log.
+        assert_that!(db.get_blob_id_by_memory_id(mem_id)?, some(eq(&blob_id)));
+        let all_ids = db.get_all_memory_ids()?;
+        assert_that!(all_ids, len(eq(2)));
+        Ok(())
+    }
+
+    #[gtest]
+    fn rebase_after_persist_produces_clean_state() -> anyhow::Result<()> {
+        // Simulates the persist → rebase cycle that happens in
+        // sync_persist_database. Without mark_persisted the rebase replays
+        // stale operations (AddMemory upsert), leaving needs_writeback()
+        // true and causing an infinite persist loop.
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        let (mem_id, blob_id) = add_test_memory(&mut db, "1");
+        let exported = db.export()?.encode_to_vec();
+
+        // Simulate successful persist — clear the mutation log.
+        // Removing this line causes the assertion below to fail.
+        db.mark_persisted();
+
+        // Rebase onto the blob we just persisted (simulates pull_and_rebase
+        // fetching what we just uploaded).
+        let (rebased, failed) =
+            IcingMetaDatabase::import_with_changes(tempdir(), exported.as_slice(), &db)?;
+        assert_eq!(failed, 0);
+
+        // After persist + rebase, no pending mutations should remain.
+        assert_that!(rebased.needs_writeback(), eq(false));
+
+        // Data is intact.
+        assert_that!(rebased.get_blob_id_by_memory_id(mem_id)?, some(eq(&blob_id)));
         Ok(())
     }
 }

@@ -108,6 +108,12 @@ impl Database {
         self.database.needs_writeback()
     }
 
+    /// Clear the mutation log after the database has been successfully
+    /// persisted.
+    pub fn mark_persisted(&mut self) {
+        self.database.mark_persisted();
+    }
+
     /// Rebases the database onto a new base blob, replaying any pending
     /// mutations. Returns the number of operations that failed to replay.
     pub fn rebase(&mut self, new_blob: &[u8]) -> anyhow::Result<usize> {
