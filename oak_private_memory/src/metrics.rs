@@ -84,6 +84,9 @@ pub struct Metrics {
     tls_receive_failures: Counter<u64>,
     // Number of failures when enqueueing a session for persistence.
     persistence_enqueue_failures: Counter<u64>,
+    // Number of blobs that should have been soft-deleted but were not
+    // (due to flush failures after persist).
+    orphaned_blob_deletes: Counter<u64>,
 }
 
 /// The possible metrics request types.
@@ -285,6 +288,12 @@ impl Metrics {
         tls_handshake_failures.add(0, &[]);
         tls_receive_failures.add(0, &[]);
         persistence_enqueue_failures.add(0, &[]);
+        let orphaned_blob_deletes = observer
+            .meter
+            .u64_counter("orphaned_blob_deletes")
+            .with_description("Number of blobs that should have been soft-deleted but were not.")
+            .build();
+        orphaned_blob_deletes.add(0, &[]);
         observer.register_metric(rpc_count.clone());
         observer.register_metric(rpc_failure_count.clone());
         observer.register_metric(rpc_latency.clone());
@@ -309,6 +318,7 @@ impl Metrics {
         observer.register_metric(tls_handshake_failures.clone());
         observer.register_metric(tls_receive_failures.clone());
         observer.register_metric(persistence_enqueue_failures.clone());
+        observer.register_metric(orphaned_blob_deletes.clone());
         Self {
             rpc_count,
             rpc_failure_count,
@@ -336,6 +346,7 @@ impl Metrics {
             tls_handshake_failures,
             tls_receive_failures,
             persistence_enqueue_failures,
+            orphaned_blob_deletes,
         }
     }
 
@@ -465,6 +476,10 @@ impl Metrics {
 
     pub fn inc_persistence_enqueue_failures(&self) {
         self.persistence_enqueue_failures.add(1, &[]);
+    }
+
+    pub fn inc_orphaned_blob_deletes(&self, count: u64) {
+        self.orphaned_blob_deletes.add(count, &[]);
     }
 }
 

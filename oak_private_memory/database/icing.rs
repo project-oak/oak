@@ -144,11 +144,13 @@ enum MutationOperation {
     // need to be re-written to a new database version on version conflicts.
     AddMemory { metadata: PendingMetadata, views: Vec<PendingLlmViewMetadata> },
 
-    // The item with the given ID was removed.
+    // The item with the given ID was removed. The associated blob ID is
+    // recorded so that the external blob soft-delete can be deferred until
+    // after the Icing index has been successfully persisted (crash consistency).
     // Note that exact operation timing is not maintained. So if another session
     // wrote this ID later than the remove occurred, but wrote its metadatabase
     // back earlier, this remove would still result in removing the item.
-    Remove(MemoryId),
+    Remove { memory_id: MemoryId, blob_id: BlobId },
 
     // The entire metadata database was reset.
     // Note that exact operation timing is not maintained.
@@ -1562,14 +1564,40 @@ impl IcingMetaDatabase {
 
     pub fn delete_memories(&mut self, memory_ids: &[MemoryId]) -> anyhow::Result<()> {
         for memory_id in memory_ids {
-            let view_ids = self.get_view_ids_by_memory_id(memory_id.clone())?;
-            for view_id in view_ids {
-                self.delete_document(&view_id)?;
-            }
-            self.delete_document(memory_id)?;
-            self.applied_operations.push(MutationOperation::Remove(memory_id.clone()));
+            // Resolve the blob ID before deleting the document, since the
+            // mapping lives inside the Icing document itself.
+            let blob_id =
+                self.get_blob_id_by_memory_id(memory_id.clone())?.context("memory has no blob")?;
+            self.delete_memory_documents(memory_id)?;
+            self.applied_operations
+                .push(MutationOperation::Remove { memory_id: memory_id.clone(), blob_id });
         }
         Ok(())
+    }
+
+    /// Remove memory documents from the Icing index without recording a
+    /// mutation. Used during rebase replay for AddMemory upsert cleanup
+    /// where the deleted documents belong to the remote base.
+    fn delete_memory_documents(&mut self, memory_id: &MemoryId) -> anyhow::Result<()> {
+        let view_ids = self.get_view_ids_by_memory_id(memory_id.clone())?;
+        for view_id in view_ids {
+            self.delete_document(&view_id)?;
+        }
+        self.delete_document(memory_id)
+    }
+
+    /// Returns the blob IDs from all `Remove` operations in the mutation log.
+    ///
+    /// These are the blobs whose external storage should be soft-deleted
+    /// after the Icing index has been successfully persisted.
+    pub fn pending_blob_deletes(&self) -> Vec<BlobId> {
+        self.applied_operations
+            .iter()
+            .filter_map(|op| match op {
+                MutationOperation::Remove { blob_id, .. } => Some(blob_id.clone()),
+                _ => None,
+            })
+            .collect()
     }
 
     /// Returns true if this instance was created fresh, without any previously
@@ -1626,18 +1654,24 @@ impl IcingMetaDatabase {
                     if let Some(name) = metadata.name()
                         && let Ok(Some((existing_id, _))) = new_db.get_memory_metadata_by_name(name)
                     {
-                        let _ = new_db.delete_memories(&[existing_id]);
+                        let _ = new_db.delete_memory_documents(&existing_id);
                     }
                     // Also handle ID-based upsert: if the memory ID already
                     // exists, delete it first to clear stale views.
                     if let Some(memory_id) = metadata.memory_id()
                         && let Ok(Some(_)) = new_db.get_blob_id_by_memory_id(memory_id.to_string())
                     {
-                        let _ = new_db.delete_memories(&[memory_id.to_string()]);
+                        let _ = new_db.delete_memory_documents(&memory_id.to_string());
                     }
                     new_db.put_memory_with_views(metadata.clone(), views.clone())
                 }
-                MutationOperation::Remove(id) => new_db.delete_memories(&[id.to_string()]),
+                MutationOperation::Remove { memory_id, .. } => {
+                    // Replay the user's delete. If the memory still exists in
+                    // the new base, delete_memories records a fresh Remove
+                    // with the correct blob_id. If it's already gone, the
+                    // error is counted and skipped.
+                    new_db.delete_memories(&[memory_id.to_string()])
+                }
                 MutationOperation::Reset => Ok(new_db.reset()?),
             };
 
@@ -2973,6 +3007,126 @@ mod tests {
 
         // Data is intact.
         assert_that!(rebased.get_blob_id_by_memory_id(mem_id)?, some(eq(&blob_id)));
+        Ok(())
+    }
+
+    // =========================================================================
+    // Deferred blob delete tests
+    // =========================================================================
+
+    #[gtest]
+    fn pending_blob_deletes_empty_initially() -> anyhow::Result<()> {
+        let db = IcingMetaDatabase::new(test_config())?;
+        assert!(db.pending_blob_deletes().is_empty());
+        Ok(())
+    }
+
+    #[gtest]
+    fn delete_memories_records_pending_blob_deletes() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        let (mem_id, blob_id) = add_test_memory(&mut db, "1");
+        let (mem_id_2, blob_id_2) = add_test_memory(&mut db, "2");
+
+        db.delete_memories(&[mem_id])?;
+        assert_that!(db.pending_blob_deletes(), unordered_elements_are![eq(&blob_id)]);
+
+        db.delete_memories(&[mem_id_2])?;
+        assert_that!(
+            db.pending_blob_deletes(),
+            unordered_elements_are![eq(&blob_id), eq(&blob_id_2)]
+        );
+        Ok(())
+    }
+
+    #[gtest]
+    fn pending_blob_deletes_cleared_by_mark_persisted() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        let (mem_id, _blob_id) = add_test_memory(&mut db, "1");
+
+        db.delete_memories(&[mem_id])?;
+        assert_that!(db.pending_blob_deletes(), len(eq(1)));
+
+        // Simulates successful persist — pending deletes should be gone.
+        db.mark_persisted();
+        assert!(db.pending_blob_deletes().is_empty());
+        Ok(())
+    }
+
+    #[gtest]
+    fn rebase_remove_replay_records_pending_blob_deletes() -> anyhow::Result<()> {
+        // db1: base with one memory.
+        let mut db1 = IcingMetaDatabase::new(test_config())?;
+        let (mem_id, _blob_id) = add_test_memory(&mut db1, "1");
+        let db1_exported = db1.export()?.encode_to_vec();
+
+        // db2: concurrent session deletes the memory.
+        let mut db2 = IcingMetaDatabase::import(db1_exported.as_slice(), test_config())?;
+        db2.delete_memories(std::slice::from_ref(&mem_id))?;
+        assert_that!(db2.pending_blob_deletes(), len(eq(1)));
+
+        // Rebase db2 onto db1 (memory still exists in db1's base).
+        let (rebased, failed) =
+            IcingMetaDatabase::import_with_changes(tempdir(), db1_exported.as_slice(), &db2)?;
+        assert_eq!(failed, 0);
+
+        // The rebased db should still have a pending blob delete.
+        assert_that!(rebased.pending_blob_deletes(), len(eq(1)));
+
+        // The memory should be gone.
+        assert_that!(rebased.get_blob_id_by_memory_id(mem_id)?, none());
+        Ok(())
+    }
+
+    #[gtest]
+    fn rebase_add_memory_upsert_records_pending_delete_for_old_blob() -> anyhow::Result<()> {
+        // db1: base with one memory.
+        let mut db1 = IcingMetaDatabase::new(test_config())?;
+        let (_mem_id, old_blob_id) = add_test_memory(&mut db1, "1");
+        let db1_exported = db1.export()?.encode_to_vec();
+
+        // db2: concurrent session adds memory with the same ID (upsert).
+        // add_memory internally calls delete_memories for the old memory,
+        // recording Remove { old_blob_id } in the mutation log.
+        let mut db2 = IcingMetaDatabase::import(db1_exported.as_slice(), test_config())?;
+        let new_blob_id = "new_blob_id".to_string();
+        db2.add_memory(
+            &Memory {
+                id: "memory_id_1".to_string(),
+                tags: vec!["updated_tag".to_string()],
+                ..Default::default()
+            },
+            new_blob_id.clone(),
+        )?;
+
+        // Rebase db2 onto the original base (memory exists → upsert cleanup).
+        let (rebased, failed) =
+            IcingMetaDatabase::import_with_changes(tempdir(), db1_exported.as_slice(), &db2)?;
+        assert_eq!(failed, 0);
+
+        // The old blob should be pending deletion (from the Remove in the
+        // upsert's mutation log).
+        assert_that!(rebased.pending_blob_deletes(), unordered_elements_are![eq(&old_blob_id)]);
+
+        // The memory should reference the new blob.
+        let resolved_blob = rebased.get_blob_id_by_memory_id("memory_id_1".to_string())?;
+        assert_that!(resolved_blob, some(eq(&new_blob_id)));
+        Ok(())
+    }
+
+    #[gtest]
+    fn delete_all_memories_records_all_pending_blob_deletes() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        let (_id1, blob_1) = add_test_memory(&mut db, "1");
+        let (_id2, blob_2) = add_test_memory(&mut db, "2");
+        let (_id3, blob_3) = add_test_memory(&mut db, "3");
+
+        let all_ids = db.get_all_memory_ids()?;
+        db.delete_memories(&all_ids)?;
+
+        assert_that!(
+            db.pending_blob_deletes(),
+            unordered_elements_are![eq(&blob_1), eq(&blob_2), eq(&blob_3)]
+        );
         Ok(())
     }
 }

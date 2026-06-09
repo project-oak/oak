@@ -14,7 +14,7 @@
 
 use std::sync::Arc;
 
-use anyhow::bail;
+use anyhow::{Context, bail};
 use external_db_client::{BlobId, ExternalDbClient};
 use icing::OptimizeResultProto;
 use log::info;
@@ -316,18 +316,30 @@ impl Database {
     }
 
     pub async fn delete_memories(&mut self, ids: Vec<MemoryId>) -> anyhow::Result<()> {
-        // First, look up the BlobIds for each MemoryId before deleting from meta_db.
-        // The cache is keyed by BlobId, not MemoryId.
-        let blob_ids: Vec<BlobId> = ids
-            .iter()
-            .filter_map(|memory_id| {
-                self.meta_db().get_blob_id_by_memory_id(memory_id.clone()).ok().flatten()
-            })
-            .collect();
-
+        // Blob ID lookup and mutation log recording happen inside
+        // IcingMetaDatabase::delete_memories. The blob IDs are stored in
+        // the mutation log so they can be flushed after persistence.
         self.meta_db().delete_memories(&ids)?;
-        self.blob_store.delete_memories(&blob_ids).await?;
         Ok(())
+    }
+
+    /// Execute all pending blob soft-deletes against external storage.
+    ///
+    /// Call this **after** the Icing index has been successfully persisted.
+    /// The pending deletes are derived from the Icing mutation log.
+    /// Returns the number of blobs that were requested for deletion.
+    pub async fn flush_pending_blob_deletes(&mut self) -> anyhow::Result<usize> {
+        let blob_ids = self.database.pending_blob_deletes();
+        if blob_ids.is_empty() {
+            return Ok(0);
+        }
+        let count = blob_ids.len();
+        info!("flushing {count} pending blob deletes");
+        self.blob_store
+            .delete_memories(&blob_ids)
+            .await
+            .context("flushing pending blob deletes")?;
+        Ok(count)
     }
 
     #[allow(deprecated)]

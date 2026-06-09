@@ -15,7 +15,7 @@
 //
 use anyhow::Context;
 use external_db_client::{DataBlobHandler, MetadataPersistResult};
-use log::info;
+use log::{error, info};
 use metrics::get_global_metrics;
 use oak_private_memory_database::encryption::{decrypt_database, encrypt_database};
 use prost::Message;
@@ -152,6 +152,14 @@ async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Resu
                 get_global_metrics()
                     .record_db_persist_latency_with_retries(elapsed.as_millis() as u64);
                 get_global_metrics().record_db_persist_attempts(attempt);
+                // Flush deferred blob soft-deletes now that the index is
+                // durably persisted. Orphaned blobs are tracked in metrics
+                // and can be cleaned by GC.
+                let pending_count = user_context.database.meta_db().pending_blob_deletes().len();
+                if let Err(e) = user_context.database.flush_pending_blob_deletes().await {
+                    get_global_metrics().inc_orphaned_blob_deletes(pending_count as u64);
+                    error!("{e}");
+                }
                 user_context.database.mark_persisted();
                 return Ok(());
             }

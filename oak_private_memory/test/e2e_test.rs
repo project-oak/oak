@@ -910,3 +910,52 @@ async fn test_default_persistence_on_close() {
 
     ctx.teardown().await;
 }
+
+/// Verifies that blob soft-deletes are deferred until after persistence.
+///
+/// Before the deferred-delete change, `delete_memory` immediately
+/// soft-deleted the blob in external storage, making it unreadable by
+/// other sessions even before the deleting session persisted its index.
+///
+/// After the change, the blob is only soft-deleted when the deleting
+/// session calls `SyncDatabase` (which persists the index and then
+/// flushes the pending blob deletes). Until that point, other sessions
+/// that still reference the blob can read it.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_deferred_blob_delete_visible_until_sync() {
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
+    let pm_uid = "test_deferred_blob_delete_user";
+
+    // --- Step 1: Session A adds a memory and syncs to persist it. ---
+    let mut session_a =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+    session_a.add_memory(create_test_memory("deferred_del_mem")).await.unwrap();
+    session_a.sync_database().await.unwrap();
+
+    // --- Step 2: Session A deletes the memory (no sync yet). ---
+    // The Icing index is updated locally, but the blob in external
+    // storage should NOT be soft-deleted yet.
+    session_a.delete_memory(vec!["deferred_del_mem".to_string()]).await.unwrap();
+
+    // --- Step 3: Session B opens fresh — should still see the memory. ---
+    // Session B's key_sync loads the last-persisted index (which still
+    // contains the memory), and the blob is still present because
+    // Session A has not yet synced.
+    let mut session_b =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+    expect_memory_by_id(&mut session_b, "deferred_del_mem").await;
+
+    // --- Step 4: Session A syncs — persists the delete + flushes blobs. ---
+    session_a.sync_database().await.unwrap();
+
+    // --- Step 5: Session C opens fresh — should NOT see the memory. ---
+    // The persisted index no longer contains the memory, and the blob
+    // has been soft-deleted.
+    let mut session_c =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
+    let resp = session_c.get_memory_by_id("deferred_del_mem", None).await.unwrap();
+    assert!(!resp.success, "memory should be gone after Session A synced");
+
+    ctx.teardown().await;
+}
