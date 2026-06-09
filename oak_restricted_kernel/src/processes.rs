@@ -177,12 +177,11 @@ impl Process {
         // Load the process's page table, so the application can be loaded into its
         // memory. Hold onto the previous PT, so we can revert to it once the
         // application has been mapped into the process pt.
-        let mut outer_prev_page_table = {
+        let outer_prev_page_table = {
             let pml4_frame = identify_pml4_frame(&pml4).context("could not get pml4 frame")?;
             // Safety: the new page table maintains the same mappings for kernel space.
             unsafe { crate::PAGE_TABLES.lock().replace(pml4_frame) }
                 .context("at this point there should be a previous root pt")?
-                .into_inner()
         };
 
         // Safety: caller ensured the application is a valid ELF file representing an
@@ -192,8 +191,7 @@ impl Process {
         // We've mapped the memory into the process page tables. Let's revert to the
         // previous page table.
         {
-            let mapped_prev_pt = outer_prev_page_table.inner().lock();
-            let prev_page_table = mapped_prev_pt.level_4_table();
+            let prev_page_table = outer_prev_page_table.level_4_table();
             let pml4_frame =
                 identify_pml4_frame(prev_page_table).context("could not get pml4 frame")?;
             // Safety: the new page table maintains the same mappings for kernel space.

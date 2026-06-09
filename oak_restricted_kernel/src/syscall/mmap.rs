@@ -18,6 +18,7 @@ use core::{
     cmp::max,
     ffi::{c_int, c_size_t, c_void},
     iter::repeat_with,
+    ops::DerefMut,
     slice,
 };
 
@@ -27,13 +28,10 @@ use oak_restricted_kernel_interface::{
 };
 use x86_64::{
     VirtAddr, align_up,
-    structures::paging::{FrameAllocator, Page, PageSize, Size2MiB},
+    structures::paging::{FrameAllocator, Page, PageSize, Size2MiB, mapper::Mapper},
 };
 
-use crate::{
-    FRAME_ALLOCATOR, PAGE_TABLES,
-    mm::{Mapper, PageTableFlags},
-};
+use crate::{FRAME_ALLOCATOR, PAGE_TABLES, mm::PageTableFlags};
 
 pub fn mmap(
     addr: Option<VirtAddr>,
@@ -91,8 +89,8 @@ pub fn mmap(
 
     let pages = {
         // This critical section is rather long...
-        let pt_guard = PAGE_TABLES.lock();
-        let pt = pt_guard.get().unwrap();
+        let mut pt_guard = PAGE_TABLES.lock();
+        let pt = pt_guard.get_mut().unwrap();
 
         // Now, find a gap in the page tables that satisifies the following:
         //  - in the lower half of virtual memory (user space)
@@ -137,11 +135,13 @@ pub fn mmap(
 
                         Errno::ENOMEM
                     })?,
-                    pt_flags,
-                    PageTableFlags::PRESENT
+                    pt_flags.into(),
+                    (PageTableFlags::PRESENT
                         | PageTableFlags::WRITABLE
                         | PageTableFlags::ENCRYPTED
-                        | PageTableFlags::USER_ACCESSIBLE,
+                        | PageTableFlags::USER_ACCESSIBLE)
+                        .into(),
+                    FRAME_ALLOCATOR.lock().deref_mut(),
                 )
                 .map_err(|err| {
                     log::error!(

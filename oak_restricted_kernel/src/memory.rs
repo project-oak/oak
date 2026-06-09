@@ -17,7 +17,7 @@
 use alloc::vec::Vec;
 use core::{
     alloc::{GlobalAlloc, Layout},
-    ops::Deref,
+    ops::{Deref, DerefMut},
     ptr::NonNull,
 };
 
@@ -28,7 +28,8 @@ use spinning_top::Spinlock;
 use x86_64::{
     PhysAddr, VirtAddr,
     structures::paging::{
-        FrameAllocator, Page, PageSize, PhysFrame, Size2MiB, Size4KiB, mapper::FlagUpdateError,
+        FrameAllocator, Page, PageSize, PhysFrame, Size2MiB, Size4KiB,
+        mapper::{FlagUpdateError, Mapper},
         page::PageRange,
     },
 };
@@ -37,7 +38,7 @@ use zeroize::Zeroize;
 
 use crate::{
     FRAME_ALLOCATOR, PAGE_TABLES,
-    mm::{Mapper, PageTableFlags, Translator},
+    mm::{PageTableFlags, Translator},
 };
 
 #[cfg(not(test))]
@@ -77,8 +78,8 @@ impl GrowableHeap {
             .lock()
             .allocate_frame()
             .ok_or("failed to allocate memory for kernel heap")?;
-        let pt_guard = PAGE_TABLES.lock();
-        let mapper = pt_guard.get().unwrap();
+        let mut pt_guard = PAGE_TABLES.lock();
+        let mapper = pt_guard.get_mut().unwrap();
 
         // Safety: if the page is already mapped, then we'll get an error and thus we
         // won't overwrite any existing mappings, Otherwise, creating a new
@@ -89,16 +90,19 @@ impl GrowableHeap {
                 .map_to_with_table_flags(
                     self.available.next().ok_or("kernel heap exhausted")?,
                     frame,
-                    PageTableFlags::PRESENT
+                    (PageTableFlags::PRESENT
                         | PageTableFlags::WRITABLE
                         | PageTableFlags::GLOBAL
                         | PageTableFlags::NO_EXECUTE
                         | PageTableFlags::HUGE_PAGE
-                        | PageTableFlags::ENCRYPTED,
-                    PageTableFlags::PRESENT
+                        | PageTableFlags::ENCRYPTED)
+                        .into(),
+                    (PageTableFlags::PRESENT
                         | PageTableFlags::WRITABLE
                         | PageTableFlags::NO_EXECUTE
-                        | PageTableFlags::ENCRYPTED,
+                        | PageTableFlags::ENCRYPTED)
+                        .into(),
+                    FRAME_ALLOCATOR.lock().deref_mut(),
                 )
                 .map_err(|_| "unable to create page mapping for kernel heap")?
                 .flush();
@@ -228,7 +232,7 @@ pub fn init_guest_host_heap<P: Platform>() {
     if crate::GUEST_HOST_HEAP
         .set(
             unsafe {
-                init_guest_host_allocator(guest_host_pages, PAGE_TABLES.lock().get().unwrap())
+                init_guest_host_allocator(guest_host_pages, PAGE_TABLES.lock().get_mut().unwrap())
             }
             .unwrap(),
         )
@@ -246,17 +250,18 @@ pub fn init_guest_host_heap<P: Platform>() {
 /// we will change page table flags for pages in that range.
 unsafe fn init_guest_host_allocator<S: PageSize, M: Mapper<S>>(
     pages: PageRange<S>,
-    mapper: &M,
+    mapper: &mut M,
 ) -> Result<LockedHeap, FlagUpdateError> {
     for page in pages {
         unsafe {
             mapper
                 .update_flags(
                     page,
-                    PageTableFlags::PRESENT
+                    (PageTableFlags::PRESENT
                         | PageTableFlags::WRITABLE
                         | PageTableFlags::GLOBAL
-                        | PageTableFlags::NO_EXECUTE,
+                        | PageTableFlags::NO_EXECUTE)
+                        .into(),
                 )?
                 .flush();
         }

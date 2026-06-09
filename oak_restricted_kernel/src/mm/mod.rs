@@ -14,10 +14,11 @@
 // limitations under the License.
 //
 
+use core::ops::DerefMut;
+
 use goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 use log::info;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType, Ramdisk};
-use oak_sev_guest::msr::{SevStatus, get_sev_status};
 use x86_64::{
     PhysAddr, VirtAddr,
     addr::{align_down, align_up},
@@ -25,15 +26,13 @@ use x86_64::{
         FrameAllocator, Page, PageSize, PageTable, PageTableFlags as BasePageTableFlags, PhysFrame,
         Size2MiB, Size4KiB,
         frame::PhysFrameRange,
-        mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
+        mapper::{Mapper, OffsetPageTable},
     },
 };
 
-use self::encrypted_mapper::{EncryptedPageTable, MemoryEncryption};
 use crate::{FRAME_ALLOCATOR, PAGE_TABLES, VMA_ALLOCATOR};
 
 mod bitmap_frame_allocator;
-pub mod encrypted_mapper;
 pub mod frame_allocator;
 pub mod page_tables;
 pub mod virtual_address_allocator;
@@ -44,9 +43,20 @@ pub const KERNEL_OFFSET: u64 = 0xFFFF_FFFF_8000_0000;
 /// The offset used for the direct mapping of all physical memory.
 const DIRECT_MAPPING_OFFSET: VirtAddr = VirtAddr::new_truncate(0xFFFF_8800_0000_0000);
 
-/// For now we use a fixed position for the encrypted bit. For now we assume
-/// that we will be running on AMD Arcadia-Milan CPUs, which use bit 51.
-pub const ENCRYPTED_BIT_POSITION: u8 = 51;
+impl Translator for OffsetPageTable<'_> {
+    fn translate_virtual(&self, addr: VirtAddr) -> Option<PhysAddr> {
+        use x86_64::structures::paging::Translate;
+        self.translate_addr(addr)
+    }
+
+    fn translate_physical(&self, addr: PhysAddr) -> Option<VirtAddr> {
+        Some(self.phys_offset() + addr.as_u64())
+    }
+
+    fn translate_physical_frame<S: PageSize>(&self, frame: PhysFrame<S>) -> Option<Page<S>> {
+        Page::from_start_address(self.translate_physical(frame.start_address())?).ok()
+    }
+}
 
 // TODO(#3394): Move to a shared crate.
 pub trait Translator {
@@ -122,47 +132,16 @@ impl From<PageTableFlags> for BasePageTableFlags {
         if value.contains(PageTableFlags::GLOBAL) {
             flags |= BasePageTableFlags::GLOBAL
         }
-        // There is no equivalent of ENCRYPTED in BasePageTableFlags.
+        if value.contains(PageTableFlags::ENCRYPTED)
+            && crate::hal::sev::is_memory_encryption_enabled()
+        {
+            flags.set_encrypted(true);
+        }
         if value.contains(PageTableFlags::NO_EXECUTE) {
             flags |= BasePageTableFlags::NO_EXECUTE
         }
         flags
     }
-}
-
-/// Page mapper for pages of type `<S>`.
-///
-/// This is equivalent to <x86_64::structures::paging::mapper::Mapper>, but
-/// knows about memory encryption.
-pub trait Mapper<S: PageSize> {
-    unsafe fn map_to_with_table_flags(
-        &self,
-        page: Page<S>,
-        frame: PhysFrame<S>,
-        flags: PageTableFlags,
-        parent_table_flags: PageTableFlags,
-    ) -> Result<MapperFlush<S>, MapToError<S>>;
-
-    /// Unmaps a page.
-    ///
-    /// # Safety
-    ///
-    /// No checks are done whether the page is actually in use or not.
-    unsafe fn unmap(&self, page: Page<S>) -> Result<(PhysFrame<S>, MapperFlush<S>), UnmapError>;
-
-    /// Changes the flags on a page table entry by unmapping and remapping it.
-    ///
-    /// # Safety
-    ///
-    /// There are many ways how changing page table entries can break memory
-    /// safety or cause other failures, e.g. by setting the `NO_EXECUTE` bit
-    /// on pages that contain your code or removing `WRITABLE` from the page
-    /// that contains your stack.
-    unsafe fn update_flags(
-        &self,
-        page: Page<S>,
-        flags: PageTableFlags,
-    ) -> Result<MapperFlush<S>, FlagUpdateError>;
 }
 
 pub fn init(memory_map: &[BootE820Entry], program_headers: &[ProgramHeader], ramdisk: &Ramdisk) {
@@ -264,16 +243,6 @@ pub fn ramdisk_range(ramdisk: &Ramdisk) -> PhysFrameRange<Size2MiB> {
     )
 }
 
-pub fn encryption() -> MemoryEncryption {
-    // Should we set the C-bit (encrypted memory for SEV)? For now, let's assume
-    // it's bit 51.
-    if get_sev_status().unwrap_or(SevStatus::empty()).contains(SevStatus::SEV_ENABLED) {
-        MemoryEncryption::Encrypted(ENCRYPTED_BIT_POSITION)
-    } else {
-        MemoryEncryption::NoEncryption
-    }
-}
-
 /// Creates the initial page tables used by the kernel.
 ///
 /// The memory layout we follow is largely based on the Linux layout
@@ -316,7 +285,7 @@ pub fn initial_pml4(program_headers: &[ProgramHeader]) -> Result<PhysFrame, &'st
         }
     };
 
-    let mut page_table = EncryptedPageTable::new(pml4, VirtAddr::new(0), encryption());
+    let mut page_table = unsafe { OffsetPageTable::new(pml4, VirtAddr::new(0)) };
 
     // Safety: these operations are safe as they're not done on active page tables.
     unsafe {
@@ -371,17 +340,20 @@ pub fn allocate_stack() -> VirtAddr {
     unsafe {
         PAGE_TABLES
             .lock()
-            .get()
+            .get_mut()
             .unwrap()
             .map_to_with_table_flags(
                 stack_page,
                 frame,
-                PageTableFlags::GLOBAL
+                (PageTableFlags::GLOBAL
                     | PageTableFlags::PRESENT
                     | PageTableFlags::ENCRYPTED
                     | PageTableFlags::NO_EXECUTE
-                    | PageTableFlags::WRITABLE,
-                PageTableFlags::ENCRYPTED | PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+                    | PageTableFlags::WRITABLE)
+                    .into(),
+                (PageTableFlags::ENCRYPTED | PageTableFlags::PRESENT | PageTableFlags::WRITABLE)
+                    .into(),
+                FRAME_ALLOCATOR.lock().deref_mut(),
             )
             .expect("failed to update page tables for syscall stack")
             .flush();
