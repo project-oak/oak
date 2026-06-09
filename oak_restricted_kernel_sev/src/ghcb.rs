@@ -17,6 +17,7 @@
 use core::ptr::addr_of;
 
 use oak_core::sync::OnceCell;
+use oak_restricted_kernel::{Translator, encryption_aware_page_table_flags};
 use oak_sev_guest::{
     ghcb::{Ghcb, GhcbProtocol},
     msr::{
@@ -32,8 +33,6 @@ use x86_64::{
         mapper::{Mapper, OffsetPageTable},
     },
 };
-
-use crate::mm::{Translator, encryption_aware_page_table_flags};
 
 /// A wrapper to ensure that the GHCB is alone in a 2MiB page.
 ///

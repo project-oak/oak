@@ -40,20 +40,21 @@ mod args;
 mod avx;
 mod descriptors;
 mod elf;
-mod ghcb;
+
 pub mod hal;
 mod interrupts;
 mod libm;
 mod logging;
 mod memory;
 mod mm;
+pub use mm::{Translator, encryption_aware_page_table_flags};
 mod processes;
 #[cfg(feature = "serial_channel")]
 mod serial;
 pub mod shutdown;
 #[cfg(feature = "simple_io_channel")]
 mod simpleio;
-mod snp;
+
 mod syscall;
 #[cfg(feature = "virtio_console_channel")]
 mod virtio_console;
@@ -89,7 +90,7 @@ use x86_64::{
     structures::paging::{Page, PageTable, Size2MiB},
 };
 
-use crate::{acpi::Acpi, mm::Translator, processes::Process};
+use crate::{acpi::Acpi, processes::Process};
 
 /// Allocator for physical memory frames in the system.
 /// We reserve enough room to handle up to 512 GiB of memory, for now.

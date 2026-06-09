@@ -18,14 +18,13 @@ use core::{panic, slice::from_raw_parts};
 
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootParams, CCBlobSevInfo, CCSetupData, SetupDataType};
+use oak_restricted_kernel::Translator;
 use oak_sev_guest::{cpuid::CpuidPage, secrets::SecretsPage};
 use x86_64::{
     PhysAddr, VirtAddr,
     structures::paging::{PageSize, Size4KiB},
 };
 use zerocopy::FromBytes;
-
-use crate::mm::Translator;
 
 /// The exclusive upper limit of the address range where we expect the
 /// SNP-specific pages to reside.

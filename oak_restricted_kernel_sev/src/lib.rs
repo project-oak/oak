@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2026 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,24 +15,9 @@
 //
 
 #![no_std]
-#![no_main]
-#![feature(alloc_error_handler)]
 
-use core::panic::PanicInfo;
+pub mod ghcb;
+pub mod sev;
+pub mod snp;
 
-use oak_linux_boot_params::BootParams;
-
-#[unsafe(no_mangle)]
-pub extern "C" fn rust64_start(_rdi: u64, rsi: &BootParams) -> ! {
-    oak_restricted_kernel::start_kernel::<oak_restricted_kernel_sev::Sev>(rsi);
-}
-
-#[alloc_error_handler]
-fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
-    panic!("error allocating memory: {:#?}", layout);
-}
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    oak_restricted_kernel::panic(info);
-}
+pub use sev::Sev;

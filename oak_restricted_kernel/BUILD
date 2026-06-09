@@ -33,7 +33,6 @@ _OAK_RESTRICTED_KERNEL_COMMON_DEPS = [
     "//oak_linux_boot_params",
     "//oak_restricted_kernel_dice",
     "//oak_restricted_kernel_interface",
-    "//oak_sev_guest",
     "//sev_serial",
     "@oak_crates_index//:acpi",
     "@oak_crates_index//:aml",

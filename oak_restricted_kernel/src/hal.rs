@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-pub mod sev;
-
 use oak_linux_boot_params::BootParams;
 
 /// Kernel-specific trait for the Hardware Abstraction Layer (HAL).

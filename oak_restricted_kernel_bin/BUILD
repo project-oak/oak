@@ -31,6 +31,7 @@ rust_binary(
     deps = [
         "//oak_linux_boot_params",
         "//oak_restricted_kernel:oak_restricted_kernel_virtio_console_channel",
+        "//oak_restricted_kernel_sev:oak_restricted_kernel_sev_virtio_console_channel",
     ],
 )
 
@@ -44,6 +45,7 @@ rust_binary(
     deps = [
         "//oak_linux_boot_params",
         "//oak_restricted_kernel:oak_restricted_kernel_simple_io_channel",
+        "//oak_restricted_kernel_sev:oak_restricted_kernel_sev_simple_io_channel",
     ],
 )
 
@@ -57,5 +59,6 @@ rust_binary(
     deps = [
         "//oak_linux_boot_params",
         "//oak_restricted_kernel:oak_restricted_kernel_serial_channel",
+        "//oak_restricted_kernel_sev:oak_restricted_kernel_sev_serial_channel",
     ],
 )

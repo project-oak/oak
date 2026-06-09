@@ -21,6 +21,7 @@ use log::error;
 pub use mmio::SevMmio;
 use oak_core::sync::OnceCell;
 use oak_hal::{PageAssignment, PageEncryption, Platform, PortFactory};
+use oak_restricted_kernel::{PAGE_TABLES, Translator, shutdown};
 use oak_sev_guest::{
     interrupts::{MutableInterruptStackFrame, mutable_interrupt_handler_with_error_code},
     msr::{
@@ -34,12 +35,7 @@ use x86_64::structures::{
     port::{PortRead, PortWrite},
 };
 
-use crate::{
-    PAGE_TABLES,
-    mm::Translator,
-    shutdown,
-    snp::{CPUID_PAGE, get_snp_page_addresses, init_snp_pages},
-};
+use crate::snp::{CPUID_PAGE, get_snp_page_addresses, init_snp_pages};
 
 static SEV_STATUS: OnceCell<SevStatus> = OnceCell::new();
 
@@ -53,7 +49,7 @@ fn sev_status() -> SevStatus {
 
 pub struct Sev {}
 
-impl crate::Platform for Sev {
+impl Platform for Sev {
     type Mmio = SevMmio;
 
     fn init_memory_encryption() -> bool {
@@ -244,7 +240,7 @@ mutable_interrupt_handler_with_error_code!(
     }
 );
 
-impl crate::hal::KernelPlatform for Sev {
+impl oak_restricted_kernel::hal::KernelPlatform for Sev {
     fn initialize_platform(info: &oak_linux_boot_params::BootParams) {
         let sev_status = sev_status();
         if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
