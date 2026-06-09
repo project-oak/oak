@@ -132,10 +132,8 @@ impl From<PageTableFlags> for BasePageTableFlags {
         if value.contains(PageTableFlags::GLOBAL) {
             flags |= BasePageTableFlags::GLOBAL
         }
-        if value.contains(PageTableFlags::ENCRYPTED)
-            && crate::hal::sev::is_memory_encryption_enabled()
-        {
-            flags.set_encrypted(true);
+        if crate::is_memory_encryption_enabled() {
+            flags.set_encrypted(value.contains(PageTableFlags::ENCRYPTED));
         }
         if value.contains(PageTableFlags::NO_EXECUTE) {
             flags |= BasePageTableFlags::NO_EXECUTE

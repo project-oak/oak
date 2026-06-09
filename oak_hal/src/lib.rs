@@ -198,6 +198,12 @@ pub trait Platform: MsrAccess {
             addr_size
         }
     }
+
+    /// Initializes memory encryption if supported and enabled by the platform.
+    /// Returns whether memory encryption was enabled.
+    fn init_memory_encryption() -> bool {
+        false
+    }
 }
 
 /// Abstraction around MSR (model-specific register) read/write access.

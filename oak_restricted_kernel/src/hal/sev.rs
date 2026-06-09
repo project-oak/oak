@@ -47,20 +47,6 @@ static SEV_STATUS: OnceCell<SevStatus> = OnceCell::new();
 /// that we will be running on AMD Arcadia-Milan CPUs, which use bit 51.
 pub const ENCRYPTED_BIT_POSITION: u8 = 51;
 
-pub fn init_memory_encryption() {
-    if get_sev_status().unwrap_or(SevStatus::empty()).contains(SevStatus::SEV_ENABLED) {
-        unsafe {
-            enable_memory_encryption(MemoryEncryptionConfiguration::EncryptedBit(
-                ENCRYPTED_BIT_POSITION,
-            ));
-        }
-    }
-}
-
-pub fn is_memory_encryption_enabled() -> bool {
-    sev_status().contains(SevStatus::SEV_ENABLED)
-}
-
 fn sev_status() -> SevStatus {
     *SEV_STATUS.get().expect("SEV status not set")
 }
@@ -69,6 +55,19 @@ pub struct Sev {}
 
 impl crate::Platform for Sev {
     type Mmio = SevMmio;
+
+    fn init_memory_encryption() -> bool {
+        if get_sev_status().unwrap_or(SevStatus::empty()).contains(SevStatus::SEV_ENABLED) {
+            unsafe {
+                enable_memory_encryption(MemoryEncryptionConfiguration::EncryptedBit(
+                    ENCRYPTED_BIT_POSITION,
+                ));
+            }
+            true
+        } else {
+            false
+        }
+    }
 
     fn cpuid(_leaf: u32) -> CpuidResult {
         todo!();
@@ -131,9 +130,6 @@ impl crate::Platform for Sev {
         SEV_STATUS
             .set(get_sev_status().unwrap_or(SevStatus::empty()))
             .expect("SEV status already set");
-        if sev_status().contains(SevStatus::SEV_ENABLED) {
-            init_memory_encryption();
-        }
         if sev_status().contains(SevStatus::SEV_ES_ENABLED) {
             crate::ghcb::init(sev_status().contains(SevStatus::SNP_ACTIVE));
         }

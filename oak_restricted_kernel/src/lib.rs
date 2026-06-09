@@ -64,7 +64,12 @@ extern crate std;
 extern crate alloc;
 
 use alloc::{alloc::Allocator, boxed::Box};
-use core::{panic::PanicInfo, pin::Pin, str::FromStr};
+use core::{
+    panic::PanicInfo,
+    pin::Pin,
+    str::FromStr,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use goblin::elf64::program_header::ProgramHeader;
 use linked_list_allocator::LockedHeap;
@@ -117,12 +122,20 @@ pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =
         },
     )));
 
+static MEMORY_ENCRYPTION_ENABLED: AtomicBool = AtomicBool::new(false);
+
+fn is_memory_encryption_enabled() -> bool {
+    MEMORY_ENCRYPTION_ENABLED.load(Ordering::Relaxed)
+}
+
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel<P: Platform + crate::hal::KernelPlatform + 'static>(info: &BootParams) -> ! {
     avx::enable_avx();
     descriptors::init_gdt_early();
     interrupts::init_idt_early::<P>();
     shutdown::init::<P>();
+    let memory_encryption_enabled = P::init_memory_encryption();
+    MEMORY_ENCRYPTION_ENABLED.store(memory_encryption_enabled, Ordering::Relaxed);
     P::early_initialize_platform();
     logging::init_logging::<P>();
 
