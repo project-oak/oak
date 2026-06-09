@@ -89,15 +89,13 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddChecksum {
     ) -> Result<(), &'static str> {
         let file = files.get_file_mut(self.file())?;
 
-        if self.start as usize > file.len()
-            || (self.start + self.length) as usize > file.len()
-            || self.offset as usize >= file.len()
-        {
+        let start = self.start as usize;
+        let end = start + self.length as usize;
+        if start > file.len() || end > file.len() || self.offset as usize >= file.len() {
             return Err("COMMAND_ADD_CHECKSUM invalid; read or write would overflow file");
         }
 
-        let checksum =
-            AddChecksum::checksum(&file[self.start as usize..(self.start + self.length) as usize]);
+        let checksum = AddChecksum::checksum(&file[start..end]);
         let val = file.get_mut(self.offset as usize).unwrap();
         *val = val.wrapping_sub(checksum);
         Ok(())

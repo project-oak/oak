@@ -381,6 +381,18 @@ mod tests {
             err(anything())
         );
 
+        // `start + length` overflows u32 but wraps below the file length, so a
+        // naive bounds check would pass and then read out of range.
+        expect_that!(
+            AddChecksum::new("test", 0, 1, u32::MAX).invoke(
+                &mut files,
+                &mut TestFirmware,
+                None,
+                &mut digest
+            ),
+            err(anything())
+        );
+
         // Finally, a basic success test (although we don't check the result)
         expect_that!(
             AddChecksum::new("test", 0, 1, 3).invoke(
