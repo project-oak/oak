@@ -28,7 +28,7 @@ use core::{arch::x86_64::CpuidResult, mem::MaybeUninit};
 use oak_attestation::dice::DiceAttester;
 use oak_core::sync::OnceCell;
 use oak_dice::evidence::TeePlatform;
-use oak_hal::{MsrAccess, PageAssignment, PageEncryption, Platform};
+use oak_hal::{MsrAccess, PageAssignment, Platform};
 use oak_linux_boot_params::BootE820Entry;
 use oak_sev_guest::{
     ap_jump_table::ApJumpTable, cpuid::CpuidInput, ghcb::GhcbProtocol, msr::SevStatus,
@@ -39,7 +39,10 @@ use oak_stage0::{
     hal::{Base, FirmwarePlatform, PortFactory},
 };
 use spinning_top::{RawSpinlock, Spinlock, lock_api::MutexGuard};
-use x86_64::{PhysAddr, VirtAddr};
+use x86_64::{
+    PhysAddr, VirtAddr,
+    structures::mem_encrypt::{MemoryEncryptionConfiguration, enable_memory_encryption},
+};
 use zerocopy::{FromBytes, IntoBytes};
 
 #[unsafe(link_section = ".boot")]
@@ -133,13 +136,13 @@ fn sev_status() -> SevStatus {
 }
 
 /// Returns the location of the ENCRYPTED bit when running under AMD SEV.
-pub(crate) fn encrypted() -> u64 {
+pub(crate) fn encrypted_bit_position() -> u64 {
     #[unsafe(no_mangle)]
-    static mut ENCRYPTED: u64 = 0;
+    static mut ENCRYPTED_BIT_POSITION: u64 = 0;
 
     // Safety: we don't allow mutation and this is initialized in the bootstrap
     // assembly.
-    unsafe { ENCRYPTED }
+    unsafe { ENCRYPTED_BIT_POSITION }
 }
 
 trait IntoMsrPageAssignment {
@@ -209,18 +212,6 @@ impl Platform for Sev {
         }
     }
 
-    fn page_table_mask(encryption_state: PageEncryption) -> u64 {
-        if sev_status().contains(SevStatus::SEV_ENABLED) {
-            match encryption_state {
-                PageEncryption::Unset => 0,
-                PageEncryption::Encrypted => encrypted(),
-                PageEncryption::Unencrypted => 0,
-            }
-        } else {
-            0
-        }
-    }
-
     fn change_frame_state(
         frame: x86_64::structures::paging::PhysFrame<x86_64::structures::paging::Size4KiB>,
         state: PageAssignment,
@@ -235,12 +226,28 @@ impl Platform for Sev {
         accept_memory::revalidate_page(page).expect("failed to revalidate memory");
     }
 
-    fn encrypted() -> u64 {
-        encrypted()
-    }
-
     fn wbvind() {
         Base::wbvind()
+    }
+
+    fn init_memory_encryption() -> bool {
+        if sev_status().contains(SevStatus::SEV_ENABLED) {
+            // Safety: we use the correct encrypted bit location that was set by the
+            // bootstrap assembly. All the relevant pages tables are updated after
+            // this is set.
+            unsafe {
+                enable_memory_encryption(MemoryEncryptionConfiguration::EncryptedBit(
+                    encrypted_bit_position() as u8,
+                ));
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    fn is_memory_encryption_enabled() -> bool {
+        sev_status().contains(SevStatus::SEV_ENABLED)
     }
 }
 

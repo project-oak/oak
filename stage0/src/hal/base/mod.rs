@@ -33,7 +33,7 @@ use x86_64::{
 use zerocopy::{FromBytes, IntoBytes};
 
 use super::{PageAssignment, PortFactory};
-use crate::{acpi::tables::AcpiTables, paging::PageEncryption, zero_page::ZeroPage};
+use crate::{acpi::tables::AcpiTables, zero_page::ZeroPage};
 
 pub struct Base {}
 
@@ -76,14 +76,6 @@ impl crate::Platform for Base {
 
     fn revalidate_page(_page: Page<Size4KiB>) {}
 
-    fn page_table_mask(_encryption_state: PageEncryption) -> u64 {
-        0
-    }
-
-    fn encrypted() -> u64 {
-        0
-    }
-
     fn wbvind() {
         // Safety: this shouldn't have any (visible) effects that affect Rust safety.
         unsafe {
@@ -93,6 +85,14 @@ impl crate::Platform for Base {
 
             }
         }
+    }
+
+    fn init_memory_encryption() -> bool {
+        false
+    }
+
+    fn is_memory_encryption_enabled() -> bool {
+        false
     }
 }
 

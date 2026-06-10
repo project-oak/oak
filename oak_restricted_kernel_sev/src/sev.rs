@@ -20,7 +20,7 @@ pub mod mmio;
 use log::error;
 pub use mmio::SevMmio;
 use oak_core::sync::OnceCell;
-use oak_hal::{PageAssignment, PageEncryption, Platform, PortFactory};
+use oak_hal::{PageAssignment, Platform, PortFactory};
 use oak_restricted_kernel::{PAGE_TABLES, Translator, shutdown};
 use oak_sev_guest::{
     interrupts::{MutableInterruptStackFrame, mutable_interrupt_handler_with_error_code},
@@ -51,19 +51,6 @@ pub struct Sev {}
 
 impl Platform for Sev {
     type Mmio = SevMmio;
-
-    fn init_memory_encryption() -> bool {
-        if get_sev_status().unwrap_or(SevStatus::empty()).contains(SevStatus::SEV_ENABLED) {
-            unsafe {
-                enable_memory_encryption(MemoryEncryptionConfiguration::EncryptedBit(
-                    ENCRYPTED_BIT_POSITION,
-                ));
-            }
-            true
-        } else {
-            false
-        }
-    }
 
     fn cpuid(_leaf: u32) -> CpuidResult {
         todo!();
@@ -152,16 +139,28 @@ impl Platform for Sev {
         todo!();
     }
 
-    fn page_table_mask(_encryption_state: PageEncryption) -> u64 {
-        todo!();
-    }
-
-    fn encrypted() -> u64 {
-        todo!();
-    }
-
     fn wbvind() {
         todo!();
+    }
+
+    fn init_memory_encryption() -> bool {
+        if get_sev_status().unwrap_or(SevStatus::empty()).contains(SevStatus::SEV_ENABLED) {
+            // Safety: we use the correct encrypted bit location for the platform that we
+            // currently support (AMD Arcadia-Milan). All the relevant pages tables are
+            // updated after this is set.
+            unsafe {
+                enable_memory_encryption(MemoryEncryptionConfiguration::EncryptedBit(
+                    ENCRYPTED_BIT_POSITION,
+                ));
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    fn is_memory_encryption_enabled() -> bool {
+        sev_status().contains(SevStatus::SEV_ENABLED)
     }
 }
 

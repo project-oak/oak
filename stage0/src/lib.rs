@@ -128,6 +128,7 @@ pub fn rust64_start<P: hal::Platform + hal::FirmwarePlatform>() -> ! {
     unsafe {
         BDA.zeroize();
     }
+    P::init_memory_encryption();
     paging::init_page_table_refs::<P>();
 
     P::early_initialize_platform();

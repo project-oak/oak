@@ -228,15 +228,18 @@ impl<L: PageTableLevel + Leaf> PageTableEntry<L> {
         flags: PageTableFlags,
         state: PageEncryption,
     ) {
-        let addr = PhysAddr::new(addr.as_u64() | P::page_table_mask(state));
-        self.inner.set_addr(addr, flags | L::FLAGS);
+        let mut flags = flags | L::FLAGS;
+        if P::is_memory_encryption_enabled() && state != PageEncryption::Unset {
+            flags.set_encrypted(state == PageEncryption::Encrypted);
+        }
+        self.inner.set_addr(addr, flags);
     }
 }
 
 impl<L: PageTableLevel> PageTableEntry<L> {
     /// Returns the physical address mapped by this entry. May be zero.
     pub fn address<P: Platform>(&self) -> PhysAddr {
-        PhysAddr::new(self.inner.addr().as_u64() & !P::encrypted())
+        self.inner.addr()
     }
 
     /// Returns whether the entry is zero.

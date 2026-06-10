@@ -115,6 +115,7 @@ pub enum PageAssignment {
 }
 
 /// Encryption state of a page in the page table.
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum PageEncryption {
     /// Always defaults to "don't set the encrypted bit", no matter its
     /// semantics. This should be the default for non-leaf page table
@@ -162,15 +163,6 @@ pub trait Platform: MsrAccess {
     /// PRIVATE state.
     fn revalidate_page(page: Page<Size4KiB>);
 
-    /// Mask to use in the page tables for the given encrypion state.
-    ///
-    /// SEV and TDX have opposite behaviours: for SEV, encrypted pages are
-    /// marked; for TDX, unencrypted pages are marked.
-    fn page_table_mask(encryption_state: PageEncryption) -> u64;
-
-    /// Encrypted/shared bit mask irrespective of its semantics.
-    fn encrypted() -> u64;
-
     /// Write Back and Invalidate Cache
     ///
     /// Writes back all modified cache lines in the processor’s internal cache
@@ -201,9 +193,10 @@ pub trait Platform: MsrAccess {
 
     /// Initializes memory encryption if supported and enabled by the platform.
     /// Returns whether memory encryption was enabled.
-    fn init_memory_encryption() -> bool {
-        false
-    }
+    fn init_memory_encryption() -> bool;
+
+    /// Whether memory encryption is enabled.
+    fn is_memory_encryption_enabled() -> bool;
 }
 
 /// Abstraction around MSR (model-specific register) read/write access.

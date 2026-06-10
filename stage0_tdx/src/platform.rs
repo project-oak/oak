@@ -17,16 +17,10 @@
 extern crate alloc;
 
 use alloc::{alloc::Allocator, boxed::Box};
-use core::{
-    mem::size_of,
-    ops::{Index, IndexMut},
-    pin::pin,
-    ptr::addr_of,
-    sync::atomic::Ordering,
-};
+use core::{mem::size_of, pin::pin, ptr::addr_of, sync::atomic::Ordering};
 
 use log::info;
-use oak_hal::{MsrAccess, PageAssignment, PageEncryption, Platform};
+use oak_hal::{MsrAccess, PageAssignment, Platform};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_stage0::{
     AcpiTable, AcpiTables, BOOT_ALLOC, HIGH_MEMORY_ALLOCATOR, Madt, MultiprocessorWakeup,
@@ -42,10 +36,9 @@ use serial::Debug;
 use x86_64::{
     PhysAddr, VirtAddr,
     instructions::tlb,
-    registers::control::Cr3,
-    structures::paging::{
-        OffsetPageTable, Page, PageSize, PageTable, PageTableFlags, PageTableIndex, PhysFrame,
-        Size1GiB, Size2MiB, Size4KiB,
+    structures::{
+        mem_encrypt::{MemoryEncryptionConfiguration, enable_memory_encryption},
+        paging::{PageSize, PageTableFlags, PhysFrame, Size4KiB},
     },
 };
 use zerocopy::{FromBytes, IntoBytes};
@@ -80,45 +73,6 @@ static HELLO_OAK: &str = "Hello from stage0_bin_tdx!";
 
 fn get_tdx_shared_bit() -> usize {
     unsafe { GPAW as usize - 1 }
-}
-// Inspired by TD-shim and credits to TD-shim
-fn offset_pt() -> OffsetPageTable<'static> {
-    let cr3 = Cr3::read().0.start_address().as_u64();
-    unsafe { OffsetPageTable::new(&mut *(cr3 as *mut _), VirtAddr::new(0)) }
-}
-
-fn pt_entry_set_shared_bit(page_table: &mut PageTable, index: PageTableIndex, shared: bool) {
-    let entry = page_table.index(index);
-    let shared_bit = 1 << get_tdx_shared_bit();
-
-    let addr = if shared {
-        entry.addr().as_u64() | shared_bit
-    } else {
-        entry.addr().as_u64() & !shared_bit
-    };
-    let flags = entry.flags();
-
-    page_table.index_mut(index).set_addr(PhysAddr::new(addr), flags);
-}
-
-// TODO: b/360129756 - simplify this function. consider merging it into stage0
-fn pt_set_shared_bit(pt: &mut OffsetPageTable, page: &Page, shared: bool) {
-    let p4 = pt.level_4_table();
-    let p3 = unsafe { &mut *(p4.index(page.p4_index()).addr().as_u64() as *mut PageTable) };
-
-    if page.size() == Size1GiB::SIZE {
-        pt_entry_set_shared_bit(p3, page.p3_index(), shared);
-    }
-
-    let p2 = unsafe { &mut *(p3.index(page.p3_index()).addr().as_u64() as *mut PageTable) };
-    if page.size() == Size2MiB::SIZE {
-        pt_entry_set_shared_bit(p2, page.p2_index(), shared);
-    }
-
-    let p1 = unsafe { &mut *(p2.index(page.p2_index()).addr().as_u64() as *mut PageTable) };
-    if page.size() == Size4KiB::SIZE {
-        pt_entry_set_shared_bit(p1, page.p1_index(), shared);
-    }
 }
 
 /// Prints debug messages of the raw contents of the memory where
@@ -322,41 +276,29 @@ impl Platform for Tdx {
         serial::debug!("early_initialize_platform completed");
     }
 
-    fn change_frame_state(frame: x86_64::structures::paging::PhysFrame, attr: PageAssignment) {
-        let shared: bool = match attr {
-            PageAssignment::Shared => true,
-            PageAssignment::Private => false,
-        };
-        let mut pt = offset_pt();
-        // In stage0 we use identity mapping, so we can construct a virtual
-        // Page from the frame's physical address.
-        let page = Page::from_start_address(VirtAddr::new(frame.start_address().as_u64())).unwrap();
-        pt_set_shared_bit(&mut pt, &page, shared);
-    }
+    fn change_frame_state(_: PhysFrame<Size4KiB>, _: PageAssignment) {}
 
     fn revalidate_page(_: x86_64::structures::paging::Page) {
         // TODO: b/360488924 - impl revalidate_page
     }
 
-    fn page_table_mask(enc: PageEncryption) -> u64 {
-        // a. When 4-level EPT is active, the SHARED bit position would
-        // always be bit 47.
-        // b. When 5-level EPT is active, the SHARED bit position would
-        // be bit 47 if GPAW is 0. Otherwise, else it would be bit 51.
-        match enc {
-            PageEncryption::Unset => 0,
-            PageEncryption::Encrypted => 0,
-            PageEncryption::Unencrypted => 1 << get_tdx_shared_bit(),
-        }
-    }
-
-    fn encrypted() -> u64 {
-        // stage0_bin_tdx does not support regular VM
-        1 << get_tdx_shared_bit()
-    }
-
     fn wbvind() {
         tdvmcall_wbinvd().unwrap()
+    }
+
+    fn init_memory_encryption() -> bool {
+        // Safety: we use the correct shared bit location that was set by the bootstrap
+        // assembly. All the relevant pages tables are updated after this is set.
+        unsafe {
+            enable_memory_encryption(MemoryEncryptionConfiguration::SharedBit(
+                get_tdx_shared_bit() as u8,
+            ));
+        }
+        true
+    }
+
+    fn is_memory_encryption_enabled() -> bool {
+        true
     }
 }
 

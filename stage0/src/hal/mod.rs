@@ -40,7 +40,6 @@ pub mod test_mocks {
     };
 
     use super::*;
-    use crate::paging::PageEncryption;
 
     mockall::mock! {
         pub Platform {}
@@ -52,10 +51,10 @@ pub mod test_mocks {
             fn early_initialize_platform();
             fn change_frame_state(frame: PhysFrame<Size4KiB>, state: PageAssignment);
             fn revalidate_page(page: Page<Size4KiB>);
-            fn page_table_mask(encryption_state: PageEncryption) -> u64;
-            fn encrypted() -> u64;
             fn wbvind();
             fn guest_phys_addr_size() -> u8;
+            fn init_memory_encryption() -> bool;
+            fn is_memory_encryption_enabled() -> bool;
         }
     }
     impl MsrAccess for MockPlatform {
