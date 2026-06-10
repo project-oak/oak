@@ -96,13 +96,13 @@ impl GrowableHeap {
                             | PageTableFlags::GLOBAL
                             | PageTableFlags::NO_EXECUTE
                             | PageTableFlags::HUGE_PAGE,
-                        true,
+                        PageAssignment::Private,
                     ),
                     encryption_aware_page_table_flags(
                         PageTableFlags::PRESENT
                             | PageTableFlags::WRITABLE
                             | PageTableFlags::NO_EXECUTE,
-                        true,
+                        PageAssignment::Private,
                     ),
                     FRAME_ALLOCATOR.lock().deref_mut(),
                 )
@@ -264,7 +264,7 @@ unsafe fn init_guest_host_allocator<S: PageSize, M: Mapper<S>>(
                             | PageTableFlags::WRITABLE
                             | PageTableFlags::GLOBAL
                             | PageTableFlags::NO_EXECUTE,
-                        false,
+                        PageAssignment::Shared,
                     ),
                 )?
                 .flush();

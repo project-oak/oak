@@ -17,6 +17,7 @@
 use alloc::alloc::{alloc, dealloc};
 use core::{alloc::Layout, mem::size_of};
 
+use oak_hal::PageAssignment;
 use x86_64::{
     PhysAddr, VirtAddr,
     instructions::tlb::flush_all,
@@ -24,7 +25,7 @@ use x86_64::{
 };
 
 use super::Base;
-use crate::paging::{PAGE_TABLE_REFS, PageEncryption, PageTableEntry, page_table_level::PT};
+use crate::paging::{PAGE_TABLE_REFS, PageTableEntry, page_table_level::PT};
 
 pub struct Mmio {
     pub base_address: PhysAddr,
@@ -56,7 +57,7 @@ impl Mmio {
         tables.pt_0[mmio_memory.p1_index()].set_address::<Base>(
             base_address,
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_CACHE,
-            PageEncryption::Unencrypted,
+            PageAssignment::Shared,
         );
         flush_all();
 

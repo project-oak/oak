@@ -17,6 +17,7 @@
 use core::ops::DerefMut;
 
 use goblin::elf64::program_header::{PF_W, PF_X, PT_LOAD, ProgramHeader};
+use oak_hal::PageAssignment;
 use x86_64::{
     PhysAddr, VirtAddr, align_down, align_up,
     registers::control::{Cr3, Cr3Flags},
@@ -61,7 +62,7 @@ pub unsafe fn create_offset_map<S: PageSize, M: Mapper<S>>(
                     flags,
                     encryption_aware_page_table_flags(
                         PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-                        true,
+                        PageAssignment::Private,
                     ),
                     FRAME_ALLOCATOR.lock().deref_mut(),
                 )?
@@ -136,7 +137,7 @@ pub unsafe fn create_kernel_map<M: Mapper<Size2MiB> + Mapper<Size4KiB>>(
                         } else {
                             PageTableFlags::empty()
                         },
-                    true,
+                    PageAssignment::Private,
                 ),
             )
         })

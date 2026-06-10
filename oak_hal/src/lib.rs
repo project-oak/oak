@@ -110,23 +110,12 @@ pub trait Mmio {
 /// Whether a memory page is private to the guest or shared with the hypervisor.
 #[derive(Copy, Clone, Debug)]
 pub enum PageAssignment {
+    /// A memory page that is shared with the hypervisor. The page content will
+    /// be unencrypted and will not be integrity protected.
     Shared,
+    /// A memory page that is private to the guest. The page content will be
+    /// encrypted and integrity protected if the platform supports it.
     Private,
-}
-
-/// Encryption state of a page in the page table.
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum PageEncryption {
-    /// Always defaults to "don't set the encrypted bit", no matter its
-    /// semantics. This should be the default for non-leaf page table
-    /// entries.
-    Unset,
-
-    /// Ensures that the encrypted bit is enabled.
-    Encrypted,
-
-    /// Ensures that the encrypted bit is disabled.
-    Unencrypted,
 }
 
 pub trait Platform: MsrAccess {

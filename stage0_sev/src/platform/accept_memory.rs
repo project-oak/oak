@@ -19,13 +19,17 @@ use core::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 
+use oak_hal::PageAssignment;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_sev_guest::{
     instructions::{InstructionError, PageSize as SevPageSize, Validation, pvalidate},
-    msr::{PageAssignment, SevStatus, SnpPageStateChangeRequest, change_snp_page_state},
+    msr::{
+        PageAssignment as MsrPageAssignment, SevStatus, SnpPageStateChangeRequest,
+        change_snp_page_state,
+    },
 };
 use oak_stage0::paging::{
-    PageEncryption, PageTable,
+    PageTable,
     page_table_level::{Leaf, PD, PT},
 };
 use x86_64::{
@@ -39,7 +43,7 @@ use x86_64::{
 };
 use zeroize::Zeroize;
 
-use crate::platform::{GHCB_WRAPPER, Sev, sev_status};
+use crate::platform::{GHCB_WRAPPER, IntoMsrPageAssignment, Sev, sev_status};
 
 //
 // Page tables come in three sizes: for 1 GiB, 2 MiB and 4 KiB pages. However,
@@ -141,7 +145,7 @@ where
             entry.set_address::<Sev>(
                 frame.start_address(),
                 PageTableFlags::PRESENT | flags,
-                PageEncryption::Encrypted,
+                PageAssignment::Private,
             )
         })
         .count()
@@ -273,11 +277,11 @@ impl Validatable2MiB for PhysFrameRange<Size2MiB> {
 }
 
 trait PageStateChange {
-    fn page_state_change(&self, assignment: PageAssignment) -> Result<(), &'static str>;
+    fn page_state_change(&self, assignment: MsrPageAssignment) -> Result<(), &'static str>;
 }
 
 impl<S: NotGiantPageSize> PageStateChange for PhysFrameRange<S> {
-    fn page_state_change(&self, assignment: PageAssignment) -> Result<(), &'static str> {
+    fn page_state_change(&self, assignment: MsrPageAssignment) -> Result<(), &'static str> {
         // Future optimization: do this operation in batches of 253 frames (that's how
         // many can fit in one PageStateChange request) instead of one at a time.
         for frame in *self {
@@ -380,7 +384,7 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
                 PhysFrame::from_start_address(start_address).unwrap(),
                 PhysFrame::from_start_address(limit).unwrap(),
             );
-            range.page_state_change(PageAssignment::Private).unwrap();
+            range.page_state_change(MsrPageAssignment::Private).unwrap();
             range.pvalidate(&mut validation_pt).expect("failed to validate memory");
         }
 
@@ -393,7 +397,7 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
                 PhysFrame::from_start_address(hugepage_start).unwrap(),
                 PhysFrame::from_start_address(hugepage_limit).unwrap(),
             );
-            range.page_state_change(PageAssignment::Private).unwrap();
+            range.page_state_change(MsrPageAssignment::Private).unwrap();
             range
                 .pvalidate(&mut validation_pd, &mut validation_pt)
                 .expect("failed to validate memory");
@@ -408,7 +412,7 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
                 PhysFrame::from_start_address(start).unwrap(),
                 PhysFrame::from_start_address(limit_address).unwrap(),
             );
-            range.page_state_change(PageAssignment::Private).unwrap();
+            range.page_state_change(MsrPageAssignment::Private).unwrap();
             range.pvalidate(&mut validation_pt).expect("failed to validate memory");
         }
     }
@@ -467,9 +471,11 @@ pub fn change_frame_state(
     state: PageAssignment,
 ) -> Result<(), &'static str> {
     if sev_status().contains(SevStatus::SNP_ACTIVE) {
-        let request =
-            SnpPageStateChangeRequest::new(frame.start_address().as_u64() as usize, state)
-                .expect("invalid address for page location");
+        let request = SnpPageStateChangeRequest::new(
+            frame.start_address().as_u64() as usize,
+            state.into_msr(),
+        )
+        .expect("invalid address for page location");
         change_snp_page_state(request)?;
     }
     Ok(())

@@ -216,8 +216,7 @@ impl Platform for Sev {
         frame: x86_64::structures::paging::PhysFrame<x86_64::structures::paging::Size4KiB>,
         state: PageAssignment,
     ) {
-        accept_memory::change_frame_state(frame, state.into_msr())
-            .expect("failed to change page state");
+        accept_memory::change_frame_state(frame, state).expect("failed to change page state");
     }
 
     fn revalidate_page(

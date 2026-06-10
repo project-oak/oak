@@ -18,6 +18,7 @@ use core::ops::DerefMut;
 
 use goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 use log::info;
+use oak_hal::PageAssignment;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType, Ramdisk};
 use x86_64::{
     PhysAddr, VirtAddr,
@@ -79,10 +80,13 @@ pub trait Translator {
 
 pub fn encryption_aware_page_table_flags(
     mut flags: PageTableFlags,
-    encrypted: bool,
+    assignment: PageAssignment,
 ) -> PageTableFlags {
     if crate::is_memory_encryption_enabled() {
-        flags.set_encrypted(encrypted);
+        flags.set_encrypted(match assignment {
+            PageAssignment::Private => true,
+            PageAssignment::Shared => false,
+        });
     }
     flags
 }
@@ -246,7 +250,7 @@ pub fn initial_pml4(program_headers: &[ProgramHeader]) -> Result<PhysFrame, &'st
                     | PageTableFlags::GLOBAL
                     | PageTableFlags::WRITABLE
                     | PageTableFlags::NO_EXECUTE,
-                true,
+                PageAssignment::Private,
             ),
             &mut page_table,
         )
@@ -295,11 +299,11 @@ pub fn allocate_stack() -> VirtAddr {
                         | PageTableFlags::PRESENT
                         | PageTableFlags::NO_EXECUTE
                         | PageTableFlags::WRITABLE,
-                    true,
+                    PageAssignment::Private,
                 ),
                 encryption_aware_page_table_flags(
                     PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-                    true,
+                    PageAssignment::Private,
                 ),
                 FRAME_ALLOCATOR.lock().deref_mut(),
             )

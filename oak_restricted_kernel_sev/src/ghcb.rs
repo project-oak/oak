@@ -17,11 +17,13 @@
 use core::ptr::addr_of;
 
 use oak_core::sync::OnceCell;
+use oak_hal::PageAssignment;
 use oak_restricted_kernel::{Translator, encryption_aware_page_table_flags};
 use oak_sev_guest::{
     ghcb::{Ghcb, GhcbProtocol},
     msr::{
-        PageAssignment, RegisterGhcbGpaRequest, change_snp_state_for_frame, register_ghcb_location,
+        PageAssignment as MsrPageAssignment, RegisterGhcbGpaRequest, change_snp_state_for_frame,
+        register_ghcb_location,
     },
 };
 use spinning_top::Spinlock;
@@ -79,7 +81,7 @@ pub fn reshare_ghcb<M: Mapper<Size4KiB>>(mapper: &mut M) {
                     | PageTableFlags::WRITABLE
                     | PageTableFlags::GLOBAL
                     | PageTableFlags::NO_EXECUTE,
-                false,
+                PageAssignment::Shared,
             ),
         ) {
             Ok(mapper_flush) => mapper_flush.flush(),
@@ -108,7 +110,7 @@ fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
             ghcb_page,
             encryption_aware_page_table_flags(
                 PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-                false,
+                PageAssignment::Shared,
             ),
         ) {
             Ok(mapper_flush) => mapper_flush.flush(),
@@ -129,7 +131,7 @@ fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
         // to mark every individual 4KiB area in the 2MiB page as shared in the
         // RMP. It is OK to crash if we cannot share the GHCB with the
         // hypervisor.
-        change_snp_state_for_frame(&ghcb_frame, PageAssignment::Shared)
+        change_snp_state_for_frame(&ghcb_frame, MsrPageAssignment::Shared)
             .expect("couldn't change SNP state for frame");
 
         let ghcb_location_request =

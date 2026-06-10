@@ -187,7 +187,7 @@ impl<L: PageTableLevel> IndexMut<PageTableIndex> for PageTable<L> {
     }
 }
 
-/// Thin wrapper around x86_64::PageTableEntry that forces use of PageEncryption
+/// Thin wrapper around x86_64::PageTableEntry that forces use of PageAssignment
 /// for addresses.
 #[repr(transparent)]
 #[derive(Clone)]
@@ -226,11 +226,14 @@ impl<L: PageTableLevel + Leaf> PageTableEntry<L> {
         &mut self,
         addr: PhysAddr,
         flags: PageTableFlags,
-        state: PageEncryption,
+        state: PageAssignment,
     ) {
         let mut flags = flags | L::FLAGS;
-        if P::is_memory_encryption_enabled() && state != PageEncryption::Unset {
-            flags.set_encrypted(state == PageEncryption::Encrypted);
+        if P::is_memory_encryption_enabled() {
+            flags.set_encrypted(match state {
+                PageAssignment::Private => true,
+                PageAssignment::Shared => false,
+            });
         }
         self.inner.set_addr(addr, flags);
     }
@@ -274,26 +277,6 @@ impl<L: PageTableLevel> From<&mut BasePageTableEntry> for &mut PageTableEntry<L>
     }
 }
 
-/// Encryption state of a page in the page table.
-///
-/// Setting the encrypted bit makes only sense for a leaf page table.
-///
-/// For AMD SEV, see Section 15.34.5, SEV Encryption Behavior:
-/// > When a guest is executed with SEV enabled, the guest page tables are used
-/// > to determine the C-bit for a memory page and hence the encryption status
-/// > of that memory page. This allows a guest to determine which pages are
-/// > private or shared, but this control is available only for data pages.
-/// > Memory accesses on behalf of instruction fetches and guest page table
-/// > walks are always treated as private, regardless of the software value of
-/// > the C-bit.
-///
-/// As the memory accesses for page table walks are always treated as private,
-/// it doesn't matter whether we set the C-bit on non-leaf entries.
-///
-/// For Intel TDX, the `Encrypted` == `Unset``, so it's safe to use `Unset` for
-/// TDX page tables as well.
-pub use oak_hal::PageEncryption;
-
 /// Initialises the page table references.
 pub fn init_page_table_refs<P: Platform>() {
     // Safety: accessing the mutable statics here is safe since we only do it once
@@ -316,7 +299,7 @@ pub fn init_page_table_refs<P: Platform>() {
         entry.set_address::<P>(
             PhysAddr::new((i as u64) * Size4KiB::SIZE),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-            PageEncryption::Encrypted,
+            PageAssignment::Private,
         );
     });
     // Let the first entry of PD_0 point to pt_0:
@@ -344,7 +327,7 @@ pub fn map_additional_memory<P: Platform>() {
             entry.set_address::<P>(
                 PhysAddr::new((i as u64) * Size2MiB::SIZE),
                 PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
-                PageEncryption::Encrypted,
+                PageAssignment::Private,
             );
         });
     }
@@ -362,7 +345,7 @@ pub fn remap_first_huge_page<P: Platform>() {
         pd[0].set_address::<P>(
             PhysAddr::new(0x0),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
-            PageEncryption::Encrypted,
+            PageAssignment::Private,
         );
     }
 
@@ -382,7 +365,7 @@ pub fn share_page<P: Platform>(page: Page<Size4KiB>) {
         pt[page.p1_index()].set_address::<P>(
             PhysAddr::new(page_start),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-            PageEncryption::Unencrypted,
+            PageAssignment::Shared,
         );
     }
     flush_all();
@@ -411,7 +394,7 @@ pub fn unshare_page<P: Platform>(page: Page<Size4KiB>) {
         pt[page.p1_index()].set_address::<P>(
             PhysAddr::new(page_start),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-            PageEncryption::Encrypted,
+            PageAssignment::Private,
         );
     }
     flush_all();

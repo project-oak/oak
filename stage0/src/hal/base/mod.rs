@@ -21,6 +21,7 @@ use core::arch::x86_64::{__cpuid, CpuidResult};
 pub use mmio::*;
 use oak_attestation::dice::DiceAttester;
 use oak_dice::evidence::TeePlatform;
+use oak_hal::PageAssignment;
 use oak_linux_boot_params::BootE820Entry;
 use oak_stage0_dice::DerivedKey;
 use x86_64::{
@@ -32,7 +33,7 @@ use x86_64::{
 };
 use zerocopy::{FromBytes, IntoBytes};
 
-use super::{PageAssignment, PortFactory};
+use super::PortFactory;
 use crate::{acpi::tables::AcpiTables, zero_page::ZeroPage};
 
 pub struct Base {}

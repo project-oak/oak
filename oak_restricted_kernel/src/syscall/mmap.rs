@@ -22,6 +22,7 @@ use core::{
     slice,
 };
 
+use oak_hal::PageAssignment;
 use oak_restricted_kernel_interface::{
     Errno,
     syscalls::{MmapFlags, MmapProtection},
@@ -88,7 +89,7 @@ pub fn mmap(
             } else {
                 PageTableFlags::empty()
             },
-        true,
+        PageAssignment::Private,
     );
 
     let pages = {
@@ -144,7 +145,7 @@ pub fn mmap(
                         PageTableFlags::PRESENT
                             | PageTableFlags::WRITABLE
                             | PageTableFlags::USER_ACCESSIBLE,
-                        true,
+                        PageAssignment::Private,
                     ),
                     FRAME_ALLOCATOR.lock().deref_mut(),
                 )
