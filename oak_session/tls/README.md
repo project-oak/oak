@@ -105,3 +105,45 @@ preserving backward compatibility with existing deployments.
 WebPKI/X.509 verification. A `CustomCertVerifier` receives the result of
 standard verification (including any SAN mismatch) and can choose to override
 failures or add additional checks.
+
+## Handshake and Initial Application Data (`initial_data`)
+
+When completing the TLS handshake via `new_initialized_session` (Rust) or
+`NewInitializedSession` (C++), the initializer returns both the established
+session object and a buffer of `initial_data` (as a `Vec<u8>` in Rust or
+`std::string` in C++).
+
+### What is `initial_data`?
+
+During the TLS 1.3 handshake, the client may bundle its first application-level
+request payload with the final handshake message (like the `Finished` message)
+in a single TCP or transport flight. When the server processes this flight to
+complete the TLS handshake, the underlying TLS library (rustls or BoringSSL)
+decrypts this trailing application data and places it into its internal read
+buffer.
+
+The initializer drains this buffer before returning, exposing it as
+`initial_data`.
+
+### Handling `initial_data` Correctly
+
+1. **Check and Process:** The caller MUST check if `initial_data` is non-empty.
+   If it contains data, the application must process it as the first incoming
+   message.
+2. **Do Not Expect Full Messages:** `initial_data` contains raw decrypted bytes
+   received from the transport. It is **not** guaranteed to represent a
+   complete, deserializable message or a full protobuf. Its contents and framing
+   depend entirely on the application-level protocol.
+   - For example, in a gRPC-over-TLS stream, `initial_data` might contain only a
+     partial gRPC frame, or a gRPC frame header followed by the serialized
+     request protobuf.
+   - In stream-based protocols, it may contain only a fragment of a larger
+     message.
+3. **Feed to the Framing Layer:** The caller should buffer these bytes or feed
+   them directly to the application's message framing/deserialization layer,
+   exactly as if they had been read from the stream after the handshake.
+4. **Subsequent Decryptions:** Because these bytes have already been decrypted
+   and drained from the TLS buffer during the handshake, calling `decrypt`
+   (Rust) or `Decrypt` (C++) on newly received transport frames will **not**
+   yield this data again. If you ignore `initial_data` and wait for the next
+   transport frame, the application may hang or lose the initial request.

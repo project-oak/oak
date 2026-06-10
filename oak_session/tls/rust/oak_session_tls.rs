@@ -568,9 +568,31 @@ impl OakSessionTlsClientContext {
     }
 
     /// Create a new session and perform the TLS handshake using the provided
-    /// send/receive callbacks. Returns an initialized session ready for use.
+    /// send/receive callbacks. Returns a tuple containing the initialized
+    /// session (`OakSessionTls`) and any initial application-level
+    /// plaintext data received during the handshake (`Vec<u8>`).
     ///
     /// This is the recommended API for most use cases.
+    ///
+    /// The returned `initial_data` (the second element of the tuple) contains
+    /// any plaintext application data that was received and decrypted
+    /// during the final flight of the handshake (for example, if the peer
+    /// bundled their first application request with the final handshake
+    /// message).
+    ///
+    /// **Important:**
+    /// 1. The caller MUST check if `initial_data` is non-empty. If it is, this
+    ///    data must be processed as the first received application message.
+    ///    Because it has already been decrypted and extracted during the
+    ///    handshake, it will NOT be returned by subsequent calls to
+    ///    [`OakSessionTls::decrypt`]. Ignoring it can result in lost messages
+    ///    or protocol hangs.
+    /// 2. `initial_data` contains raw decrypted bytes from the transport
+    ///    stream. It is **not** guaranteed to represent a complete,
+    ///    deserializable message or a full protobuf. Its contents and framing
+    ///    depend entirely on the application-level protocol. Feed these bytes
+    ///    to the application's message framing or deserialization layer exactly
+    ///    as if they had been read from the stream after the handshake.
     ///
     /// # Example
     /// ```ignore
@@ -578,6 +600,9 @@ impl OakSessionTlsClientContext {
     ///     |frame| async { socket.send(frame).await },
     ///     || async { socket.receive().await },
     /// ).await?;
+    /// if !initial_data.is_empty() {
+    ///     process_request(&initial_data);
+    /// }
     /// ```
     pub async fn new_initialized_session<S, FutS, R, FutR, E>(
         &self,
@@ -691,9 +716,31 @@ impl OakSessionTlsServerContext {
     }
 
     /// Create a new session and perform the TLS handshake using the provided
-    /// send/receive callbacks. Returns an initialized session ready for use.
+    /// send/receive callbacks. Returns a tuple containing the initialized
+    /// session (`OakSessionTls`) and any initial application-level
+    /// plaintext data received during the handshake (`Vec<u8>`).
     ///
     /// This is the recommended API for most use cases.
+    ///
+    /// The returned `initial_data` (the second element of the tuple) contains
+    /// any plaintext application data that was received and decrypted
+    /// during the final flight of the handshake (for example, if the peer
+    /// bundled their first application request with the final handshake
+    /// message).
+    ///
+    /// **Important:**
+    /// 1. The caller MUST check if `initial_data` is non-empty. If it is, this
+    ///    data must be processed as the first received application message.
+    ///    Because it has already been decrypted and extracted during the
+    ///    handshake, it will NOT be returned by subsequent calls to
+    ///    [`OakSessionTls::decrypt`]. Ignoring it can result in lost messages
+    ///    or protocol hangs.
+    /// 2. `initial_data` contains raw decrypted bytes from the transport
+    ///    stream. It is **not** guaranteed to represent a complete,
+    ///    deserializable message or a full protobuf. Its contents and framing
+    ///    depend entirely on the application-level protocol. Feed these bytes
+    ///    to the application's message framing or deserialization layer exactly
+    ///    as if they had been read from the stream after the handshake.
     ///
     /// # Example
     /// ```ignore
@@ -701,6 +748,9 @@ impl OakSessionTlsServerContext {
     ///     |frame| async { socket.send(frame).await },
     ///     || async { socket.receive().await },
     /// ).await?;
+    /// if !initial_data.is_empty() {
+    ///     process_request(&initial_data);
+    /// }
     /// ```
     pub async fn new_initialized_session<S, FutS, R, FutR, E>(
         &self,
@@ -763,12 +813,23 @@ impl OakSessionTlsInitializer {
         !self.connection.is_handshaking() && !self.connection.wants_write()
     }
 
-    /// Returns the open Oak TLS session, any initial application data received
-    /// during the handshake, and any pending TLS data to be sent for completing
-    /// the handshake.
+    /// Consumes the initializer and returns the open Oak TLS session
+    /// (`OakSessionTls`) and any initial application-level plaintext data
+    /// received during the handshake (`Vec<u8>`).
     ///
-    /// Consumes the initializer. Returns an error if the handshake is not yet
-    /// complete.
+    /// Returns an error if the handshake is not yet complete.
+    ///
+    /// The returned `initial_data` contains any plaintext application data that
+    /// was received and decrypted during the final flight of the handshake.
+    ///
+    /// **Important:**
+    /// 1. The caller MUST check if this returned data is non-empty and process
+    ///    it before reading new frames. Because this data has already been
+    ///    decrypted, it will not be returned by subsequent calls to
+    ///    [`OakSessionTls::decrypt`].
+    /// 2. This data is not guaranteed to represent a complete message or a full
+    ///    deserializable proto. It contains raw decrypted bytes; format and
+    ///    framing depend on the application-level protocol.
     pub fn get_open_session(self) -> Result<(OakSessionTls, Vec<u8>), InitializationError> {
         if !self.is_ready() {
             return Err(InitializationError::HandshakeNotFinished);
@@ -781,6 +842,9 @@ impl OakSessionTlsInitializer {
 
     /// Drives the handshake to completion using the provided sender and
     /// receiver closures.
+    ///
+    /// Returns the open session and any initial application-level plaintext
+    /// data received during the final flight of the handshake.
     pub(crate) async fn handshake<S, FutS, R, FutR, E>(
         mut self,
         mut sender: S,

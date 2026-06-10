@@ -57,8 +57,23 @@ struct InitializedSession {
   // The initialized session, ready for encrypt/decrypt operations.
   std::unique_ptr<OakSessionTls> session;
 
-  // Application data received bundled with the final handshake message.
-  // This is typically only populated on the server side.
+  // Application-level plaintext data received and decrypted during the handshake.
+  // This occurs if the peer bundled their first application request with the final
+  // handshake message (e.g. in TLS 1.3). This is typically only populated on the
+  // server side.
+  //
+  // **Important:**
+  // 1. The caller MUST check if `initial_data` is non-empty. If it is, this data
+  //    must be processed as the first received application message. Because it has
+  //    already been decrypted and extracted during the handshake, it will NOT be
+  //    returned by subsequent calls to `OakSessionTls::Decrypt`. Ignoring it can
+  //    result in lost messages or protocol hangs.
+  // 2. `initial_data` contains raw decrypted bytes from the transport stream. It is
+  //    **not** guaranteed to represent a complete, deserializable message or a
+  //    full protobuf. Its contents and framing depend entirely on the application-level
+  //    protocol. Feed these bytes to the application's message framing or
+  //    deserialization layer exactly as if they had been read from the stream after
+  //    the handshake.
   std::string initial_data;
 };
 
@@ -172,10 +187,32 @@ class OakSessionTlsContext {
   // blocking: send() should block until the data is sent, and receive() should
   // block until data is available.
   //
+  // The returned `InitializedSession` contains both the session and any `initial_data`
+  // that was received and decrypted during the final flight of the handshake. The
+  // caller MUST check and process `initial_data` if it is non-empty.
+  //
+  // **Important:**
+  // 1. The caller MUST check if `initial_data` is non-empty. If it is, this data
+  //    must be processed as the first received application message. Because it has
+  //    already been decrypted and extracted during the handshake, it will NOT be
+  //    returned by subsequent calls to `OakSessionTls::Decrypt`. Ignoring it can
+  //    result in lost messages or protocol hangs.
+  // 2. `initial_data` contains raw decrypted bytes from the transport stream. It is
+  //    **not** guaranteed to represent a complete, deserializable message or a
+  //    full protobuf. Its contents and framing depend entirely on the application-level
+  //    protocol. Feed these bytes to the application's message framing or
+  //    deserialization layer exactly as if they had been read from the stream after
+  //    the handshake.
+  //
   // Example:
   //   auto result = context->NewInitializedSession(
   //       [&](absl::string_view data) { return socket.Send(data); },
   //       [&]() { return socket.Receive(); });
+  //   if (result.ok()) {
+  //     if (!result->initial_data.empty()) {
+  //       ProcessRequest(result->initial_data);
+  //     }
+  //   }
   absl::StatusOr<InitializedSession> NewInitializedSession(SendFn send,
                                                            ReceiveFn receive);
 
@@ -246,9 +283,25 @@ class OakSessionTlsInitializer {
   bool IsReady();
 
   // If the handshake is complete, returns an initialized session containing
-  // the open Oak TLS session and any initial application data received.
+  // the open Oak TLS session and any initial application-level plaintext data received
+  // during the handshake.
   //
   // Otherwise, returns an error.
+  //
+  // The caller MUST check and process the returned `initial_data` if it is non-empty.
+  //
+  // **Important:**
+  // 1. The caller MUST check if `initial_data` is non-empty. If it is, this data
+  //    must be processed as the first received application message. Because it has
+  //    already been decrypted and extracted during the handshake, it will NOT be
+  //    returned by subsequent calls to `OakSessionTls::Decrypt`. Ignoring it can
+  //    result in lost messages or protocol hangs.
+  // 2. `initial_data` contains raw decrypted bytes from the transport stream. It is
+  //    **not** guaranteed to represent a complete, deserializable message or a
+  //    full protobuf. Its contents and framing depend entirely on the application-level
+  //    protocol. Feed these bytes to the application's message framing or
+  //    deserialization layer exactly as if they had been read from the stream after
+  //    the handshake.
   //
   // This method can only be called once. After calling this method the first
   // time, any subsequent calls will return an error.
