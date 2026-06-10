@@ -118,21 +118,16 @@ pub fn sign_endorsement(
     }
 }
 
-/// Creates a [`SignedEndorsement`] where the in-toto statement's subject
-/// digest is the sha2_256 measurement itself (not a hash of it).
-///
-/// Use this for cases where `acquire_expected_digests` is called — it
-/// extracts the `HexDigest` from the statement and converts it to a
-/// `RawDigest` to compare against the evidence measurement directly.
+/// Creates a [`SignedEndorsement`] for the provided digest. The in-toto
+/// statement's subject is set to the provided digest.
 pub fn make_signed_endorsement_for_digest(
-    measurement: &[u8],
+    digest: &RawDigest,
     not_before: Instant,
     not_after: Instant,
     signing_key: &p256::ecdsa::SigningKey,
     claim_types: Vec<&str>,
 ) -> SignedEndorsement {
-    let hex_digest =
-        raw_to_hex_digest(&RawDigest { sha2_256: measurement.to_vec(), ..Default::default() });
+    let hex_digest = raw_to_hex_digest(digest);
     let statement = make_statement(
         "fake_subject_name",
         &hex_digest,
@@ -141,7 +136,8 @@ pub fn make_signed_endorsement_for_digest(
         not_after,
         claim_types,
     );
-    sign_endorsement(&statement, signing_key, measurement)
+    // The full subject must remain empty because it is unavailable.
+    sign_endorsement(&statement, signing_key, &[])
 }
 
 /// Creates a [`SignedEndorsement`] for serialized contents (e.g.

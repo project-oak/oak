@@ -23,9 +23,7 @@ use anyhow::{Context, Error};
 use intoto::statement::{
     DefaultStatement, Validity, get_hex_digest_from_statement, parse_statement,
 };
-use oak_digest::{
-    hex_to_raw_digest, is_hex_digest_match, raw_digest_from_contents, raw_to_hex_digest,
-};
+use oak_digest::hex_to_raw_digest;
 use oak_proto_rust::oak::{
     RawDigest,
     attestation::v1::{
@@ -648,8 +646,8 @@ fn get_verified_stage0_attachment(
     now_utc_millis: i64,
     endorsement: &TransparentReleaseEndorsement,
     ref_value: &EndorsementReferenceValue,
-) -> anyhow::Result<FirmwareAttachment> {
-    verify_endorsement_wrapper(
+) -> anyhow::Result<(FirmwareAttachment, DefaultStatement)> {
+    let statement = verify_endorsement_wrapper(
         now_utc_millis,
         &endorsement.endorsement,
         &endorsement.endorsement_signature,
@@ -658,17 +656,13 @@ fn get_verified_stage0_attachment(
     )
     .context("verifying firmware endorsement")?;
     // Parse endorsement statement and verify attachment digest.
-    let statement =
-        parse_statement(&endorsement.endorsement).context("parsing endorsement statement")?;
     if !is_firmware_type(&statement) {
         anyhow::bail!("expected endorsement for firmware-type binary");
     }
-    let expected_digest =
-        get_hex_digest_from_statement(&statement).context("getting expected digest")?;
-    let actual_digest = raw_to_hex_digest(&raw_digest_from_contents(&endorsement.subject));
-    is_hex_digest_match(&actual_digest, &expected_digest).context("comparing digests")?;
-    FirmwareAttachment::decode(&*endorsement.subject)
-        .map_err(|_| anyhow::anyhow!("couldn't parse stage0 attachment"))
+    statement.validate_subject(&endorsement.subject)?;
+    let decoded = FirmwareAttachment::decode(&*endorsement.subject)
+        .map_err(|_| anyhow::anyhow!("couldn't parse stage0 attachment"))?;
+    Ok((decoded, statement))
 }
 
 fn acquire_verified_stage0_attachment(
@@ -682,15 +676,11 @@ fn acquire_verified_stage0_attachment(
         anyhow::bail!("expected endorsement for firmware-type binary");
     }
 
-    let expected_digest =
-        get_hex_digest_from_statement(&statement).context("getting expected digest")?;
     let endorsement = signed_endorsement
         .endorsement
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("missing endorsement"))?;
-    let actual_digest = raw_to_hex_digest(&raw_digest_from_contents(&endorsement.subject));
-    is_hex_digest_match(&actual_digest, &expected_digest).context("comparing expected digest")?;
-
+    statement.validate_subject(&endorsement.subject)?;
     let decoded = FirmwareAttachment::decode(&*endorsement.subject)
         .map_err(|_| anyhow::anyhow!("couldn't parse firmware attachment"))?;
     Ok((decoded, statement))
@@ -715,22 +705,17 @@ pub(crate) fn get_stage0_expected_values(
             let endorsement =
                 endorsement.context("matching endorsement not found for reference value")?;
 
-            let firmware_attachment =
+            let (firmware_attachment, endorsement_statement) =
                 get_verified_stage0_attachment(now_utc_millis, endorsement, public_keys)
                     .context("getting verified stage0 attachment")?;
 
-            let endorsement_statement = parse_statement(&endorsement.endorsement)
-                .context("parsing endorsement statement")?;
-
-            Ok(to_expected_digests(
-                firmware_attachment
-                    .configs
-                    .values()
-                    .map(|digest| hex_to_raw_digest(digest).unwrap())
-                    .collect::<Vec<RawDigest>>()
-                    .as_slice(),
-                endorsement_statement.predicate.validity.as_ref(),
-            ))
+            let mut raw_digests = Vec::new();
+            for digest in firmware_attachment.configs.values() {
+                let raw = hex_to_raw_digest(digest)
+                    .context("converting hex to raw digest in firmware attachment")?;
+                raw_digests.push(raw);
+            }
+            Ok(to_expected_digests(&raw_digests, endorsement_statement.predicate.validity.as_ref()))
         }
         Some(binary_reference_value::Type::Digests(expected_digests)) => {
             Ok(to_expected_digests(expected_digests.digests.as_slice(), None))
@@ -750,22 +735,20 @@ pub(crate) fn acquire_stage0_expected_values(
             r#type: Some(expected_digests::Type::Skipped(VerificationSkipped {})),
         }),
         Some(binary_reference_value::Type::Endorsement(ref_value)) => {
-            let (firmware_attachment, statement) = acquire_verified_stage0_attachment(
-                now_utc_millis,
-                endorsement.and_then(|value| value.firmware.as_ref()).expect(""),
-                ref_value,
-            )
-            .context("getting verified stage0 attachment")?;
+            let signed_endorsement = endorsement
+                .and_then(|value| value.firmware.as_ref())
+                .context("missing firmware endorsement")?;
+            let (firmware_attachment, statement) =
+                acquire_verified_stage0_attachment(now_utc_millis, signed_endorsement, ref_value)
+                    .context("getting verified stage0 attachment")?;
 
-            Ok(to_expected_digests(
-                firmware_attachment
-                    .configs
-                    .values()
-                    .map(|digest| hex_to_raw_digest(digest).unwrap())
-                    .collect::<Vec<RawDigest>>()
-                    .as_slice(),
-                statement.predicate.validity.as_ref(),
-            ))
+            let mut raw_digests = Vec::new();
+            for digest in firmware_attachment.configs.values() {
+                let raw = hex_to_raw_digest(digest)
+                    .context("converting hex to raw digest in firmware attachment")?;
+                raw_digests.push(raw);
+            }
+            Ok(to_expected_digests(&raw_digests, statement.predicate.validity.as_ref()))
         }
         Some(binary_reference_value::Type::Digests(expected_digests)) => {
             Ok(to_expected_digests(expected_digests.digests.as_slice(), None))
@@ -781,8 +764,8 @@ fn get_verified_kernel_attachment(
     now_utc_millis: i64,
     endorsement: &TransparentReleaseEndorsement,
     ref_value: &EndorsementReferenceValue,
-) -> anyhow::Result<KernelAttachment> {
-    verify_endorsement_wrapper(
+) -> anyhow::Result<(KernelAttachment, DefaultStatement)> {
+    let statement = verify_endorsement_wrapper(
         now_utc_millis,
         &endorsement.endorsement,
         &endorsement.endorsement_signature,
@@ -791,17 +774,13 @@ fn get_verified_kernel_attachment(
     )
     .context("verifying kernel endorsement")?;
     // Parse endorsement statement and verify attachment digest.
-    let statement =
-        parse_statement(&endorsement.endorsement).context("parsing endorsement statement")?;
     if !is_kernel_type(&statement) {
         anyhow::bail!("expected endorsement for kernel-type binary");
     }
-    let expected_digest =
-        get_hex_digest_from_statement(&statement).context("getting expected digest")?;
-    let actual_digest = raw_to_hex_digest(&raw_digest_from_contents(&endorsement.subject));
-    is_hex_digest_match(&actual_digest, &expected_digest).context("comparing expected digest")?;
-    KernelAttachment::decode(&*endorsement.subject)
-        .map_err(|_| anyhow::anyhow!("couldn't parse kernel attachment"))
+    statement.validate_subject(&endorsement.subject)?;
+    let decoded = KernelAttachment::decode(&*endorsement.subject)
+        .map_err(|_| anyhow::anyhow!("couldn't parse kernel attachment"))?;
+    Ok((decoded, statement))
 }
 
 fn acquire_verified_kernel_attachment(
@@ -814,15 +793,12 @@ fn acquire_verified_kernel_attachment(
     if !is_kernel_type(&statement) {
         anyhow::bail!("expected endorsement for kernel-type binary");
     }
-    let expected_digest =
-        get_hex_digest_from_statement(&statement).context("getting expected digest")?;
     let endorsement = signed_endorsement
         .endorsement
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("missing endorsement"))?;
-    let actual_digest = raw_to_hex_digest(&raw_digest_from_contents(&endorsement.subject));
-    is_hex_digest_match(&actual_digest, &expected_digest).context("comparing expected digest")?;
 
+    statement.validate_subject(&endorsement.subject)?;
     let decoded = KernelAttachment::decode(&*endorsement.subject)
         .map_err(|_| anyhow::anyhow!("couldn't parse kernel attachment"))?;
     Ok((decoded, statement))
@@ -849,7 +825,7 @@ fn get_kernel_expected_values(
             }),
         }),
         Some(kernel_binary_reference_value::Type::Endorsement(public_keys)) => {
-            let kernel_attachment = get_verified_kernel_attachment(
+            let (kernel_attachment, statement) = get_verified_kernel_attachment(
                 now_utc_millis,
                 endorsement.context("matching endorsement not found for reference value")?,
                 public_keys,
@@ -861,10 +837,6 @@ fn get_kernel_expected_values(
             let expected_setup_data = kernel_attachment
                 .setup_data
                 .ok_or_else(|| anyhow::anyhow!("no setup data digest in kernel attachment"))?;
-
-            let endorsement = endorsement.context("no endorsement provided")?;
-            let statement = parse_statement(&endorsement.endorsement)
-                .context("parsing endorsement statement")?;
 
             Ok(KernelExpectedValues {
                 image: Some(to_expected_digests(
@@ -975,15 +947,12 @@ fn acquire_verified_mpm_attachment(
         anyhow::bail!("expected endorsement for mpm-type binary");
     }
 
-    let expected_digest =
-        get_hex_digest_from_statement(&statement).context("getting expected digest")?;
     let endorsement = signed_endorsement
         .endorsement
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("missing endorsement"))?;
-    let actual_digest = raw_to_hex_digest(&raw_digest_from_contents(&endorsement.subject));
-    is_hex_digest_match(&actual_digest, &expected_digest).context("comparing expected digest")?;
 
+    statement.validate_subject(&endorsement.subject)?;
     let decoded = MpmAttachment::decode(&*endorsement.subject)
         .map_err(|_| anyhow::anyhow!("couldn't parse mpm attachment"))?;
     Ok(decoded)
@@ -1033,7 +1002,7 @@ pub(crate) fn get_text_expected_values(
         Some(text_reference_value::Type::Endorsement(ref_value)) => {
             let endorsement =
                 endorsement.context("matching endorsement not found for text reference value")?;
-            verify_endorsement_wrapper(
+            let statement = verify_endorsement_wrapper(
                 now_utc_millis,
                 &endorsement.endorsement,
                 &endorsement.endorsement_signature,
@@ -1041,9 +1010,10 @@ pub(crate) fn get_text_expected_values(
                 ref_value,
             )
             .context("verifying text endorsement")?;
+            statement.validate_subject(&endorsement.subject)?;
             // Compare the actual command line against the one inlined in the endorsement.
             let regex = String::from_utf8(endorsement.subject.clone())
-                .expect("endorsement subject is not utf8");
+                .context("endorsement subject is not utf8")?;
             Ok(TextExpectedValue {
                 r#type: Some(text_expected_value::Type::Regex(ExpectedRegex { value: regex })),
             })
@@ -1075,12 +1045,13 @@ pub(crate) fn acquire_text_expected_values(
         }),
         Some(text_reference_value::Type::Endorsement(ref_value)) => {
             let signed = signed_endorsement.context("missing signed endorsement")?;
-            let _statement = verify_endorsement(now_utc_millis, signed, ref_value)
+            let statement = verify_endorsement(now_utc_millis, signed, ref_value)
                 .context("verifying text endorsement")?;
-            // Compare the actual command line against the one inlined in the endorsement.
             let endorsement = signed.endorsement.as_ref().context("missing endorsement")?;
+            statement.validate_subject(&endorsement.subject)?;
+            // Compare the actual command line against the one inlined in the endorsement.
             let regex = String::from_utf8(endorsement.subject.clone())
-                .expect("endorsement subject is not utf8");
+                .context("endorsement subject is not utf8")?;
             Ok(TextExpectedValue {
                 r#type: Some(text_expected_value::Type::Regex(ExpectedRegex { value: regex })),
             })
@@ -1124,7 +1095,7 @@ fn verify_endorsement_wrapper(
     signature: &[u8],
     log_entry: &[u8],
     ref_value: &EndorsementReferenceValue,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<DefaultStatement> {
     // Use the new-style `endorser` field to determine if the reference value
     // has the new fields populated. If not, fall back to the deprecated code
     // branch.
@@ -1134,14 +1105,15 @@ fn verify_endorsement_wrapper(
     //     new-style fields in EndorsementReferenceValue.
     if ref_value.endorser.is_none() {
         #[allow(deprecated)]
-        return verify_binary_endorsement(
+        verify_binary_endorsement(
             now_utc_millis,
             endorsement,
             signature,
             log_entry,
             &ref_value.endorser_public_key,
             &ref_value.rekor_public_key,
-        );
+        )?;
+        return parse_statement(endorsement);
     }
 
     // Suboptimal but OK to make the new-style reference values work with the
@@ -1168,8 +1140,8 @@ fn verify_endorsement_wrapper(
         };
 
         let result = verify_endorsement(now_utc_millis, &signed_endorsement, ref_value);
-        if result.is_ok() {
-            return Ok(());
+        if let Ok(statement) = result {
+            return Ok(statement);
         }
         err = result.err().unwrap();
     }

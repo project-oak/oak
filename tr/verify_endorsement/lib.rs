@@ -27,6 +27,7 @@ use anyhow::Context;
 use c2sp::{Policy, TLogProof};
 use intoto::statement::{DefaultStatement, parse_statement};
 use key_util::{convert_pem_to_raw, verify_signature};
+use oak_digest::{raw_digest_from_contents, raw_to_hex_digest};
 use oak_proto_rust::oak::attestation::v1::{
     C2sptLogProofReferenceValue, ClaimReferenceValue, Endorsement, EndorsementReferenceValue,
     KeyType, Signature, SignedEndorsement, SkipVerification, TLogReferenceValues, VerifyingKey,
@@ -182,7 +183,14 @@ pub fn verify_endorsement(
         parse_statement(&endorsement.serialized).context("parsing endorsement statement")?;
     let current_time = Instant::from_unix_millis(now_utc_millis);
     let claims: Vec<&str> = required_claims.claim_types.iter().map(|x| &**x).collect();
-    statement.validate(None, current_time, &claims).context("validating endorsement statement")?;
+    let subject_digest = if endorsement.subject.is_empty() {
+        None
+    } else {
+        Some(raw_to_hex_digest(&raw_digest_from_contents(&endorsement.subject)))
+    };
+    statement
+        .validate(subject_digest, current_time, &claims)
+        .context("validating endorsement statement")?;
 
     if let Some(tlog) = ref_value.tlog.as_ref() {
         verify_tlog(tlog, signed_endorsement, now_utc_millis).context("verifying t-log")?;

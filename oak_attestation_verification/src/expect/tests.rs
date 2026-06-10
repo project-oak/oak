@@ -23,10 +23,12 @@ use oak_digest::{
 use oak_proto_rust::oak::{
     HexDigest,
     attestation::v1::{
-        ExpectedDigests, FirmwareAttachment, KernelAttachment, RawDigests,
-        TransparentReleaseEndorsement, expected_digests,
+        ExpectedDigests, ExpectedRegex, FirmwareAttachment, KernelAttachment, RawDigests,
+        TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement, expected_digests,
+        text_expected_value, text_reference_value,
     },
 };
+use oak_time::Instant;
 use prost::Message;
 use verify_endorsement::{FIRMWARE_CLAIM_TYPE, KERNEL_CLAIM_TYPE};
 
@@ -193,4 +195,141 @@ fn test_get_kernel_expected_values_validity() {
             })),
         })
     );
+}
+
+fn text_reference_value_for_endorser_pk(public_key: p256::PublicKey) -> TextReferenceValue {
+    TextReferenceValue {
+        r#type: Some(text_reference_value::Type::Endorsement(
+            test_util::endorsement_reference_value(public_key),
+        )),
+    }
+}
+
+#[test]
+fn test_get_text_expected_values_validity() {
+    let original_content = b"^some regex$";
+    let (signing_key, public_key) = test_util::new_random_signing_keypair();
+
+    // Create endorsement statement and sign it.
+    let hex_digest = hex_digest_from_contents(original_content);
+    let endorsement = test_util::fake_endorsement(&hex_digest, vec![]);
+    let (serialized_endorsement, endorsement_signature) =
+        test_util::serialize_and_sign_endorsement(&endorsement, signing_key);
+
+    let tr_endorsement = TransparentReleaseEndorsement {
+        endorsement: serialized_endorsement,
+        endorsement_signature: endorsement_signature.as_bytes().to_vec(),
+        subject: original_content.to_vec(),
+        ..Default::default()
+    };
+
+    let reference_value = text_reference_value_for_endorser_pk(public_key);
+    let now_utc_millis = make_valid_now_utc_millis(endorsement.validity());
+
+    let result =
+        super::get_text_expected_values(now_utc_millis, Some(&tr_endorsement), &reference_value);
+    assert!(result.is_ok(), "expected success, got: {:?}", result.err());
+
+    let expected = result.unwrap();
+    assert_eq!(
+        expected,
+        TextExpectedValue {
+            r#type: Some(text_expected_value::Type::Regex(ExpectedRegex {
+                value: "^some regex$".to_string(),
+            })),
+        }
+    );
+}
+
+#[test]
+fn test_get_text_expected_values_fails_with_tampered_subject() {
+    let original_content = b"^some regex$";
+    let (signing_key, public_key) = test_util::new_random_signing_keypair();
+
+    // Create endorsement statement and sign it.
+    let hex_digest = hex_digest_from_contents(original_content);
+    let endorsement = test_util::fake_endorsement(&hex_digest, vec![]);
+    let (serialized_endorsement, endorsement_signature) =
+        test_util::serialize_and_sign_endorsement(&endorsement, signing_key);
+
+    let tr_endorsement = TransparentReleaseEndorsement {
+        endorsement: serialized_endorsement,
+        endorsement_signature: endorsement_signature.as_bytes().to_vec(),
+        subject: b".*".to_vec(), // Tampered!
+        ..Default::default()
+    };
+
+    let reference_value = text_reference_value_for_endorser_pk(public_key);
+    let now_utc_millis = make_valid_now_utc_millis(endorsement.validity());
+
+    let result =
+        super::get_text_expected_values(now_utc_millis, Some(&tr_endorsement), &reference_value);
+    assert!(result.is_err(), "expected error due to tampered subject, but it succeeded");
+}
+
+#[test]
+fn test_acquire_text_expected_values_validity() {
+    let original_content = b"^some regex$";
+    let (signing_key, public_key) = test_util::new_random_signing_keypair();
+
+    let not_before = oak_time::make_instant!("2025-09-01T12:00:00Z");
+    let not_after = oak_time::make_instant!("2025-12-01T12:00:00Z");
+    let now_utc_millis = make_valid_now_utc_millis(&Validity { not_before, not_after });
+
+    let signed_endorsement = test_util::make_signed_endorsement_for_contents(
+        original_content,
+        not_before,
+        not_after,
+        &signing_key,
+        vec![],
+    );
+
+    let reference_value = text_reference_value_for_endorser_pk(public_key);
+
+    let result = super::acquire_text_expected_values(
+        now_utc_millis,
+        Some(&signed_endorsement),
+        &reference_value,
+    );
+    assert!(result.is_ok(), "expected success, got: {:?}", result.err());
+
+    let expected = result.unwrap();
+    assert_eq!(
+        expected,
+        TextExpectedValue {
+            r#type: Some(text_expected_value::Type::Regex(ExpectedRegex {
+                value: "^some regex$".to_string(),
+            })),
+        }
+    );
+}
+
+#[test]
+fn test_acquire_text_expected_values_fails_with_tampered_subject() {
+    let original_content = b"^some regex$";
+    let (signing_key, public_key) = test_util::new_random_signing_keypair();
+
+    let not_before = oak_time::make_instant!("2025-09-01T12:00:00Z");
+    let not_after = oak_time::make_instant!("2025-12-01T12:00:00Z");
+    let now_utc_millis = make_valid_now_utc_millis(&Validity { not_before, not_after });
+
+    let mut signed_endorsement = test_util::make_signed_endorsement_for_contents(
+        original_content,
+        not_before,
+        not_after,
+        &signing_key,
+        vec![],
+    );
+
+    // Tamper the unsigned subject.
+    signed_endorsement.endorsement.as_mut().unwrap().subject = b".*".to_vec();
+
+    let reference_value = text_reference_value_for_endorser_pk(public_key);
+
+    let result = super::acquire_text_expected_values(
+        now_utc_millis,
+        Some(&signed_endorsement),
+        &reference_value,
+    );
+    assert!(result.is_err(), "expected error due to tampered subject, but it succeeded");
 }

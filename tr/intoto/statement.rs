@@ -28,7 +28,8 @@ use alloc::{
 
 use anyhow::{Context, ensure};
 use oak_digest::{
-    DigestSet, hex_to_raw_digest, hex_to_set_digest, is_hex_digest_match, set_to_hex_digest,
+    DigestSet, hex_to_raw_digest, hex_to_set_digest, is_hex_digest_match, raw_digest_from_contents,
+    raw_to_hex_digest, set_to_hex_digest,
 };
 use oak_proto_rust::oak::{HexDigest, attestation::v1::EndorsementDetails};
 use oak_time::Instant;
@@ -162,9 +163,16 @@ pub fn make_statement(
 /// Checks that the given endorsement statement is valid, based on timestamp
 impl DefaultStatement {
     /// Verifies that the given digest is mentioned in the subject.
-    pub fn validate_subject(&self, digest: &HexDigest) -> anyhow::Result<()> {
+    pub fn validate_subject_digest(&self, digest: &HexDigest) -> anyhow::Result<()> {
         let actual = get_hex_digest_from_statement(self)?;
         is_hex_digest_match(digest, &actual).context("comparing subject digests")
+    }
+
+    /// Verifies that the SHA-256 digest of the given subject raw payload
+    /// matches the subject digest in the verified in-toto statement.
+    pub fn validate_subject(&self, subject: &[u8]) -> anyhow::Result<()> {
+        let digest = raw_to_hex_digest(&raw_digest_from_contents(subject));
+        self.validate_subject_digest(&digest)
     }
 
     fn validate_header(&self) -> anyhow::Result<()> {
@@ -185,7 +193,7 @@ impl DefaultStatement {
     ) -> anyhow::Result<()> {
         self.validate_header()?;
         if let Some(d) = digest {
-            self.validate_subject(&d)?;
+            self.validate_subject_digest(&d)?;
         }
         self.predicate.validate(verification_time, required_claims)
     }

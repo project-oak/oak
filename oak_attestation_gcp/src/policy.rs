@@ -127,7 +127,7 @@ pub(crate) fn verify_endorsement_wrapper(
                 verify_endorsement(verification_time.into_unix_millis(), signed_endorsement, val)
                     .map_err(|err| EVError(format!("{err:#}")))?;
             statement
-                .validate_subject(&digest.clone().into())
+                .validate_subject_digest(&digest.clone().into())
                 .map_err(|err| EVError(format!("{err:#}")))
         }
         Some(binary_reference_value::Type::Skip(_)) => Ok(()),

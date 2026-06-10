@@ -410,21 +410,21 @@ mod tests {
         );
 
         let init_ram_fs_signed = test_util::make_signed_endorsement_for_digest(
-            &Vec::from(ram_disk_digest),
+            &RawDigest { sha2_256: Vec::from(ram_disk_digest), ..Default::default() },
             not_before,
             not_after,
             &signing_key,
             vec![],
         );
         let memory_map_signed = test_util::make_signed_endorsement_for_digest(
-            &Vec::from(memory_map_digest),
+            &RawDigest { sha2_256: Vec::from(memory_map_digest), ..Default::default() },
             not_before,
             not_after,
             &signing_key,
             vec![],
         );
         let acpi_signed = test_util::make_signed_endorsement_for_digest(
-            &Vec::from(acpi_digest),
+            &RawDigest { sha2_256: Vec::from(acpi_digest), ..Default::default() },
             not_before,
             not_after,
             &signing_key,
@@ -480,21 +480,24 @@ mod tests {
         );
 
         let runtime_agent_signed = test_util::make_signed_endorsement_for_digest(
-            &Vec::from(runtime_agent_measurement),
+            &RawDigest { sha2_256: Vec::from(runtime_agent_measurement), ..Default::default() },
             not_before,
             not_after,
             &signing_key,
             vec![],
         );
         let runtime_agent_binary_signed = test_util::make_signed_endorsement_for_digest(
-            &Vec::from(runtime_agent_binary_measurement),
+            &RawDigest {
+                sha2_256: Vec::from(runtime_agent_binary_measurement),
+                ..Default::default()
+            },
             not_before,
             not_after,
             &signing_key,
             vec![],
         );
         let userspace_signed = test_util::make_signed_endorsement_for_digest(
-            &Vec::from(userspace_measurement),
+            &RawDigest { sha2_256: Vec::from(userspace_measurement), ..Default::default() },
             not_before,
             not_after,
             &signing_key,
