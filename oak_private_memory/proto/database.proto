@@ -87,7 +87,12 @@ message WriteMetadataBlobRequest {
   google.protobuf.Timestamp coarsened_expiration_timestamp = 2;
 }
 
-message WriteMetadataBlobResponse {}
+message WriteMetadataBlobResponse {
+  // If true, the write was rejected due to a version mismatch (optimistic
+  // concurrency conflict). The caller should re-fetch the current metadata,
+  // re-apply changes, and retry.
+  bool version_conflict = 1;
+}
 
 message ReadMetadataBlobStreamRequest {
   string id = 1;
@@ -124,7 +129,12 @@ message WriteMetadataBlobStreamRequest {
   google.protobuf.Timestamp coarsened_expiration_timestamp = 3;
 }
 
-message WriteMetadataBlobStreamResponse {}
+message WriteMetadataBlobStreamResponse {
+  // If true, the write was rejected due to a version mismatch (optimistic
+  // concurrency conflict). The caller should re-fetch the current metadata,
+  // re-apply changes, and retry.
+  bool version_conflict = 1;
+}
 
 message ResetDatabaseRequest {}
 
@@ -146,8 +156,8 @@ service SealedMemoryDatabaseService {
   // Write a metadata blob to the database.
   //
   // If the current version of the stored metadata blob does not match the
-  // version provided in the request, the write will fail with a "failed
-  // precondition" status code.
+  // version provided in the request, the write will be rejected and
+  // `version_conflict` will be set to `true` in the response.
   //
   // In this case, you should fetch the latest version using `ReadMetadataBlob`,
   // apply your changes on the latest version, and re-attempt the write

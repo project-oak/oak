@@ -119,10 +119,9 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
             .add_metadata_blob_inner(metadata.data_blob.as_ref().unwrap().id.clone(), metadata)
             .await;
         if !added {
-            // "failed precondition" is a signal to the caller to re-fetch and try again.
-            Err(tonic::Status::failed_precondition("metadata blob version mismatch"))
+            Ok(tonic::Response::new(WriteMetadataBlobResponse { version_conflict: true }))
         } else {
-            Ok(tonic::Response::new(WriteMetadataBlobResponse {}))
+            Ok(tonic::Response::new(WriteMetadataBlobResponse { version_conflict: false }))
         }
     }
 
@@ -181,9 +180,9 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
             )
             .await;
         if !added {
-            Err(tonic::Status::failed_precondition("metadata blob version mismatch"))
+            Ok(tonic::Response::new(WriteMetadataBlobStreamResponse { version_conflict: true }))
         } else {
-            Ok(tonic::Response::new(WriteMetadataBlobStreamResponse {}))
+            Ok(tonic::Response::new(WriteMetadataBlobStreamResponse { version_conflict: false }))
         }
     }
 

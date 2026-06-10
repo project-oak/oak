@@ -154,11 +154,18 @@ impl DataBlobHandler for ExternalDbClient {
             })
             .await;
 
-        if let Err(ref status) = write_result {
-            if status.code() == Code::FailedPrecondition {
+        match write_result {
+            Ok(response) => {
+                if response.into_inner().version_conflict {
+                    return Ok(MetadataPersistResult::RetryNeeded);
+                }
+            }
+            Err(ref status) if status.code() == Code::FailedPrecondition => {
+                // Backwards compatibility: old host returns FAILED_PRECONDITION
+                // as an RPC error. Remove this branch once host is updated.
                 return Ok(MetadataPersistResult::RetryNeeded);
             }
-            write_result?;
+            Err(status) => return Err(status.into()),
         }
 
         let mut elapsed_time = start_time.elapsed().as_millis() as u64;
@@ -202,11 +209,18 @@ impl DataBlobHandler for ExternalDbClient {
         let start_time = tokio::time::Instant::now();
         let write_result = self.write_metadata_blob_stream(futures::stream::iter(messages)).await;
 
-        if let Err(ref status) = write_result {
-            if status.code() == Code::FailedPrecondition {
+        match write_result {
+            Ok(response) => {
+                if response.into_inner().version_conflict {
+                    return Ok(MetadataPersistResult::RetryNeeded);
+                }
+            }
+            Err(ref status) if status.code() == Code::FailedPrecondition => {
+                // Backwards compatibility: old host returns FAILED_PRECONDITION
+                // as an RPC error. Remove this branch once host is updated.
                 return Ok(MetadataPersistResult::RetryNeeded);
             }
-            write_result?;
+            Err(status) => return Err(status.into()),
         }
 
         let mut elapsed_time = start_time.elapsed().as_millis() as u64;
