@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -60,4 +60,9 @@ rust_library(
         "@oak_crates_index//:tonic",
         "@pm_crates//:rand",
     ],
+)
+
+rust_test(
+    name = "app_test",
+    crate = ":app",
 )

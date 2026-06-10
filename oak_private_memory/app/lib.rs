@@ -28,6 +28,7 @@ pub use persistence_worker::run_persistence_service;
 
 /// The trusted sever configuration.
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct ApplicationConfig {
     pub database_service_host: SocketAddr,
 
@@ -126,5 +127,25 @@ impl<T, E: core::fmt::Debug> IntoTonicResult<T> for std::result::Result<T, E> {
 impl<T> IntoTonicResult<T> for Option<T> {
     fn into_tonic_result(self, code: tonic::Code, message: &str) -> tonic::Result<T> {
         self.ok_or_else(|| tonic::Status::new(code, message.to_string()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn application_config_rejects_unknown_fields() {
+        let json = r#"{
+            "database_service_host": "127.0.0.1:8080",
+            "not_a_real_field": true
+        }"#;
+        let result = serde_json::from_str::<ApplicationConfig>(json);
+        assert!(result.is_err(), "expected deserialization to fail for unknown field");
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("not_a_real_field"),
+            "error should mention the unknown field, got: {err}"
+        );
     }
 }
