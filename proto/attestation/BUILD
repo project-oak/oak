@@ -19,6 +19,7 @@ load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 load("@com_google_protobuf//bazel:java_lite_proto_library.bzl", "java_lite_proto_library")
 load("@com_google_protobuf//bazel:java_proto_library.bzl", "java_proto_library")
 load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
+load("@com_google_protobuf//bazel:py_proto_library.bzl", "py_proto_library")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -186,6 +187,12 @@ proto_library(
     ],
 )
 
+py_proto_library(
+    name = "reference_value_py_pb2",
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [":reference_value_proto"],
+)
+
 cc_proto_library(
     name = "reference_value_cc_proto",
     target_compatible_with = ["@platforms//os:linux"],
@@ -215,6 +222,12 @@ proto_library(
 proto_library(
     name = "tcb_version_proto",
     srcs = ["tcb_version.proto"],
+)
+
+py_proto_library(
+    name = "tcb_version_py_pb2",
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [":tcb_version_proto"],
 )
 
 cc_proto_library(
@@ -283,10 +296,12 @@ build_test(
         ":reference_value_proto",
         ":reference_value_cc_proto",
         ":reference_value_java_proto",
+        ":reference_value_py_pb2",
         ":service_proto",
         ":tcb_version_proto",
         ":tcb_version_cc_proto",
         ":tcb_version_java_proto",
+        ":tcb_version_py_pb2",
         ":verification_proto",
         ":verification_cc_proto",
         ":verification_java_proto",
