@@ -181,8 +181,15 @@ pub struct ServerContextConfig {
 }
 
 /// Parameters to configure OakSessionTlsClientContext for client behavior.
+///
+/// Server certificate verification is always enabled by default. If no
+/// `server_trust_anchor_provider` is configured, standard certificate
+/// verification will fail. In this case, a `custom_cert_verifier` must be
+/// provided to perform validation or bypass standard verification checks.
 pub struct ClientContextConfig {
-    /// Optional trust anchor provider that can verify the server.
+    /// Optional trust anchor provider that can verify the server. If not set,
+    /// standard WebPKI verification will fail, and a `custom_cert_verifier`
+    /// must be provided to handle certificate validation.
     /// Called each time a new session is created.
     pub server_trust_anchor_provider: Option<Box<dyn TrustAnchorProvider>>,
     /// If provided, called each time a new session is created to get the

@@ -133,6 +133,53 @@ async fn test_decrypt_invalid() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[tokio::test]
+async fn test_default_client_config_handshake_fails() -> Result<(), Box<dyn std::error::Error>> {
+    let server_cert = load_test_cert("oak_session/tls/testing/test_server.pem");
+    let server_key = load_test_key("oak_session/tls/testing/test_server.key");
+
+    let server_ctx = OakSessionTlsServerContext::create(ServerContextConfig {
+        tls_identity_provider: utils::create_static_cert_identity_provider(
+            server_key.clone_key(),
+            vec![server_cert.clone()],
+        ),
+        client_trust_anchor_provider: None,
+        custom_cert_verifier: None,
+    })?;
+
+    // Default client config (no trust anchor or custom verifier).
+    let client_ctx = OakSessionTlsClientContext::create(ClientContextConfig {
+        server_trust_anchor_provider: None,
+        tls_identity_provider: None,
+        custom_cert_verifier: None,
+        expected_server_name: None,
+    })?;
+
+    let mut server = AsyncServer::spawn(server_ctx);
+
+    let rx = Arc::new(Mutex::new(&mut server.from_server_tls_rx));
+    let result = client_ctx
+        .new_initialized_session(
+            |frame| {
+                let tx = server.to_server_tls_tx.clone();
+                async move { tx.send(frame).map_err(|_| std::io::Error::other("send failed")) }
+            },
+            {
+                let rx = rx.clone();
+                move || {
+                    let rx = rx.clone();
+                    async move { Ok(rx.lock().await.recv().await) }
+                }
+            },
+        )
+        .await;
+
+    // Handshake should fail.
+    assert!(result.is_err());
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_certificate_rotation_works() -> Result<(), Box<dyn std::error::Error>> {
     let ca_cert = load_test_cert("oak_session/tls/testing/test_ca.pem");
     let server_cert = load_test_cert("oak_session/tls/testing/test_server.pem");

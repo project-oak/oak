@@ -142,12 +142,9 @@ OakSessionTlsContext::Create(ClientContextConfig config) {
                                      SSL_GROUP_X25519};
   SSL_CTX_set1_group_ids(ctx.get(), kGroups, std::size(kGroups));
 
-  // Enable server certificate verification if either a trust anchor or custom
-  // verifier is configured.
-  if (config.server_trust_anchor_provider != nullptr ||
-      config.custom_cert_verifier.has_value()) {
-    SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER, nullptr);
-  }
+  // Unconditionally enable server certificate verification.
+  // To bypass verification, the caller must provide a custom verifier.
+  SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER, nullptr);
 
   if (config.custom_cert_verifier.has_value()) {
     SSL_CTX_set_cert_verify_callback(ctx.get(), VerifyCallback, nullptr);

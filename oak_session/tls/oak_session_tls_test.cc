@@ -207,6 +207,44 @@ TEST(OakSessionTlsTest, UntrustedCertificateRejected) {
   EXPECT_THAT(result, StatusIs(absl::StatusCode::kFailedPrecondition));
 }
 
+TEST(OakSessionTlsTest, DefaultClientConfigHandshakeFails) {
+  auto server_provider =
+      util::CreateFromFiles(kTestServerKeyPath, kTestServerCertPath);
+  ASSERT_THAT(server_provider, IsOk());
+  ServerContextConfig server_config{
+      .tls_identity_provider = std::move(*server_provider),
+  };
+  auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
+  ASSERT_THAT(server_ctx, IsOk());
+
+  // Default client config (no trust anchor or custom verifier).
+  ClientContextConfig client_config;
+  auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
+  ASSERT_THAT(client_ctx, IsOk());
+
+  auto server_initializer = (*server_ctx)->NewSession();
+  ASSERT_THAT(server_initializer, IsOk());
+  auto client_initializer = (*client_ctx)->NewSession();
+  ASSERT_THAT(client_initializer, IsOk());
+
+  // Client sends ClientHello
+  auto client_hello = (*client_initializer)->GetTLSFrame();
+  ASSERT_THAT(client_hello, IsOk());
+
+  // Server processes ClientHello
+  ASSERT_THAT((*server_initializer)->PutTLSFrame(*client_hello), IsOk());
+
+  // Server sends ServerHello + Certificate
+  auto server_hello = (*server_initializer)->GetTLSFrame();
+  ASSERT_THAT(server_hello, IsOk());
+
+  // Client should fail to handshake/process the server hello because
+  // certificate verification is required but not configured (or fails default
+  // verification).
+  auto result = (*client_initializer)->PutTLSFrame(*server_hello);
+  EXPECT_THAT(result, StatusIs(absl::StatusCode::kFailedPrecondition));
+}
+
 TEST(OakSessionTlsTest, CustomCertVerifierSuccess) {
   auto server_provider =
       util::CreateFromFiles(kTestServerKeyPath, kTestServerCertPath);
