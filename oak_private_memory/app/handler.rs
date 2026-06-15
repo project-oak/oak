@@ -413,7 +413,8 @@ impl SealedMemorySessionHandler {
         let dek: Vec<u8> = dek.into();
         let nonce = generate_nonce();
         let wrapped_key = EncryptedDataBlob {
-            data: encrypt(&key, &nonce, &dek).into_internal_error("failed to encrypt data blob")?,
+            data: encrypt(&key, &nonce, &dek, b"")
+                .into_internal_error("failed to encrypt data blob")?,
             nonce,
         };
 
@@ -491,7 +492,7 @@ impl SealedMemorySessionHandler {
                 .wrapped_key
                 .clone()
                 .into_internal_error("Empty wrapped dek")?;
-            dek = if let Ok(dek) = decrypt(&key, &wrapped_dek.nonce, &wrapped_dek.data) {
+            dek = if let Ok(dek) = decrypt(&key, &wrapped_dek.nonce, &wrapped_dek.data, b"") {
                 dek
             } else {
                 self.metrics.inc_decrypt_dek_failures();

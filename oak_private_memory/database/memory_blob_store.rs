@@ -16,6 +16,7 @@
 use ::encryption::{decrypt, encrypt, generate_nonce};
 use anyhow::Context;
 use external_db_client::{BlobId, DataBlobHandler, ExternalDbClient};
+use log::warn;
 use prost::Message;
 use sealed_memory_rust_proto::prelude::v1::*;
 
@@ -32,6 +33,21 @@ impl MemoryBlobStore {
         Self { db_client, dek }
     }
 
+    /// Decrypts a blob, binding the blob identifier as AAD.
+    ///
+    /// Falls back to empty AAD for legacy blobs that were encrypted before
+    /// blob-id binding was introduced. New writes always use blob-id AAD,
+    /// so legacy blobs are naturally phased out via TTL expiration.
+    fn decrypt_blob(&self, blob_id: &BlobId, blob: &EncryptedDataBlob) -> anyhow::Result<Vec<u8>> {
+        decrypt(&self.dek, &blob.nonce, &blob.data, blob_id.as_bytes()).or_else(|_| {
+            warn!(
+                "blob {} failed AAD-bound decryption, retrying with empty AAD (legacy format)",
+                blob_id
+            );
+            decrypt(&self.dek, &blob.nonce, &blob.data, b"")
+        })
+    }
+
     async fn fetch_decrypt_decode_memory(&self, blob_id: &BlobId) -> anyhow::Result<Memory> {
         let encrypted_blob = self
             .db_client
@@ -39,7 +55,7 @@ impl MemoryBlobStore {
             .get_blob(blob_id, false)
             .await?
             .context(format!("blob not found for id: {}", blob_id))?;
-        let decrypted_data = decrypt(&self.dek, &encrypted_blob.nonce, &encrypted_blob.data)?;
+        let decrypted_data = self.decrypt_blob(blob_id, &encrypted_blob)?;
         Ok(Memory::decode(&*decrypted_data)?)
     }
 
@@ -58,24 +74,27 @@ impl MemoryBlobStore {
             .map(|(blob_id, encrypted_blob_opt)| {
                 let encrypted_blob = encrypted_blob_opt
                     .ok_or_else(|| anyhow::anyhow!("blob not found for id: {}", blob_id))?;
-                let decrypted_data =
-                    decrypt(&self.dek, &encrypted_blob.nonce, &encrypted_blob.data)?;
+                let decrypted_data = self.decrypt_blob(blob_id, &encrypted_blob)?;
                 Ok(Memory::decode(&*decrypted_data)?)
             })
             .collect()
     }
 
-    /// Encodes and encrypts a memory, returning the blob and a generated nonce.
-    fn encode_encrypt_memory(&self, memory: &Memory) -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
+    /// Encodes and encrypts a memory, binding the blob identifier as AAD.
+    fn encode_encrypt_memory(
+        &self,
+        memory: &Memory,
+        blob_id: &BlobId,
+    ) -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
         let memory_data = memory.encode_to_vec();
         let nonce = generate_nonce();
-        let encrypted_data = encrypt(&self.dek, &nonce, &memory_data)?;
+        let encrypted_data = encrypt(&self.dek, &nonce, &memory_data, blob_id.as_bytes())?;
         Ok((encrypted_data, nonce))
     }
 
     pub async fn add_memory(&mut self, memory: &Memory) -> anyhow::Result<BlobId> {
         let blob_id: BlobId = rand::random::<u128>().to_string();
-        let (encrypted_data, nonce) = self.encode_encrypt_memory(memory)?;
+        let (encrypted_data, nonce) = self.encode_encrypt_memory(memory, &blob_id)?;
         let encrypted_blob = EncryptedDataBlob { nonce, data: encrypted_data };
 
         let expiration_timestamp = memory

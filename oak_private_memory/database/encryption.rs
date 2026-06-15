@@ -26,7 +26,7 @@ pub fn encrypt_database(
 ) -> anyhow::Result<EncryptedDataBlob> {
     let nonce = generate_nonce();
     let datablob = database.encode_to_vec();
-    let data = encrypt(key, &nonce, &datablob)?;
+    let data = encrypt(key, &nonce, &datablob, b"")?;
     Ok(EncryptedDataBlob { nonce, data })
 }
 
@@ -36,7 +36,7 @@ pub fn decrypt_database(
 ) -> anyhow::Result<EncryptedUserInfo> {
     let nonce = datablob.nonce;
     let data = datablob.data;
-    let decrypted_data = match decrypt(key, &nonce, &data) {
+    let decrypted_data = match decrypt(key, &nonce, &data, b"") {
         Ok(data) => data,
         Err(err) => {
             error!(

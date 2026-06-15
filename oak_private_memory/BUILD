@@ -95,6 +95,12 @@ rust_library(
     ],
 )
 
+rust_test(
+    name = "encryption_test",
+    crate = ":encryption",
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 rust_library(
     name = "log",
     srcs = ["src/log.rs"],
