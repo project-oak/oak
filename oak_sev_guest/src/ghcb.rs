@@ -290,32 +290,7 @@ impl Ghcb {
 
     /// Zeroes the entire GHCB.
     pub fn reset(&mut self) {
-        reset_slice(&mut self._reserved_0[..]);
-        self.cpl = 0;
-        reset_slice(&mut self._reserved_1[..]);
-        self.xss = 0;
-        reset_slice(&mut self._reserved_2[..]);
-        self.dr7 = 0;
-        reset_slice(&mut self._reserved_3[..]);
-        self.rax = 0;
-        reset_slice(&mut self._reserved_4[..]);
-        self.rbx = 0;
-        self.rcx = 0;
-        self.rcx = 0;
-        reset_slice(&mut self._reserved_5[..]);
-        self.sw_exit_code = 0;
-        self.sw_exit_info_1 = 0;
-        self.sw_exit_info_2 = 0;
-        self.sw_scratch = 0;
-        reset_slice(&mut self._reserved_6[..]);
-        self.xcr0 = 0;
-        self.valid_bitmap = ValidBitmap::empty();
-        self.x87_state_gpa = 0;
-        reset_slice(&mut self._reserved_7[..]);
-        reset_slice(&mut self.shared_buffer[..]);
-        reset_slice(&mut self._reserved_8[..]);
-        self.protocol_version = 0;
-        self.ghcb_usage = 0;
+        self.zero();
     }
 }
 
@@ -663,13 +638,6 @@ where
             // For now we treat all non-zero return values as unrecoverable errors.
             Err("VMGEXIT call returned an error")
         }
-    }
-}
-
-/// Resets a byte slice to all zeroes.
-fn reset_slice(slice: &mut [u8]) {
-    for byte in slice {
-        *byte = 0;
     }
 }
 
