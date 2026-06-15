@@ -63,6 +63,11 @@ pub fn to_attestation_results(
     }
 }
 
+/// DICE attestation verifier that is rooted in software only.
+///
+/// WARNING: This verifier is a test-only verifier and must not be considered
+/// secure. It is not rooted in any TEE hardware, so the DICE chain cannot be
+/// trusted.
 // TODO: b/437347371 - To be moved out of the Oak repo.
 // NB: All attestation verifiers belong in verifiers.rs, not here, but we
 // didn't bother to move it since it goes away anyway.
