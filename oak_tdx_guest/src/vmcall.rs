@@ -24,9 +24,10 @@
 use core::arch::{asm, x86_64::CpuidResult};
 
 use bitflags::bitflags;
+use oak_hal::PageAssignment;
 use x86_64::{
     PhysAddr,
-    structures::paging::{frame::PhysFrameRange, page::Size4KiB},
+    structures::paging::{PageTableFlags, frame::PhysFrameRange, page::Size4KiB},
 };
 /// The result from an instruction that indicates success.
 const SUCCESS: u64 = 0;
@@ -154,7 +155,10 @@ pub enum MapGpaError {
 /// Sharing or unsharing a pages changes the guest-physical address for those
 /// pages, so the caller must make sure that the pages are appropriately mapped
 /// in the page tables after the operation is successful.
-pub unsafe fn map_gpa(frames: PhysFrameRange<Size4KiB>) -> Result<(), MapGpaError> {
+pub unsafe fn map_gpa(
+    frames: PhysFrameRange<Size4KiB>,
+    assignment: PageAssignment,
+) -> Result<(), MapGpaError> {
     // The VMCALL sub-function for MAP_GPA.
     const SUB_FUNCTION: u64 = 0x10001;
     // We use the same threshold as OVMF
@@ -166,8 +170,14 @@ pub unsafe fn map_gpa(frames: PhysFrameRange<Size4KiB>) -> Result<(), MapGpaErro
     let registers = Registers::default().union(Registers::R12).union(Registers::R13);
     let gpa_start = frames.start.start_address().as_u64();
     let gpa_size = frames.end.start_address().as_u64().checked_sub(gpa_start).unwrap();
+    let mut flags = PageTableFlags::empty();
+    match assignment {
+        PageAssignment::Private => flags.set_encrypted(true),
+        PageAssignment::Shared => flags.set_encrypted(false),
+    }
+
     let mut failing_gpa: u64 = u64::MAX;
-    let mut current_start = gpa_start;
+    let mut current_start = gpa_start | flags.bits();
     let mut current_size = gpa_size;
     let mut retry_times: u32 = 0;
 
