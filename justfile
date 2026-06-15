@@ -259,6 +259,12 @@ copy-oak-artifacts: \
     (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_measurement" "") \
     (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_serial_channel_bin" "") \
     (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_serial_channel_measurement" "") \
+    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_tdx_simple_io_channel_bin" "oak_restricted_kernel_simple_io_init_rd_wrapper_bin") \
+    (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_tdx_simple_io_channel_measurement" "") \
+    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_tdx_virtio_console_channel_bin" "oak_restricted_kernel_virtio_console_init_rd_wrapper_bin") \
+    (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_tdx_virtio_console_channel_measurement" "") \
+    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_tdx_serial_channel_bin" "") \
+    (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_tdx_serial_channel_measurement" "") \
     (copy-binaries "oak_session_json_wasm:oak_session_json_wasm" "oak_session_json_wasm") \
     (copy-binary "stage0_bin" "stage0_bin") \
     (copy-binary "stage0_bin_tdx" "stage0_bin_tdx")
