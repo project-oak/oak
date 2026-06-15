@@ -322,6 +322,9 @@ impl FirmwarePlatform for Tdx {
         serial::debug!("Prefill e820 table from TDHOB");
 
         let hit = hob::get_hit()?;
+        // The number of resource descriptors comes from the host-provided TD HoB and
+        // is otherwise unbounded, so writes must stay within the destination table.
+        let dest_len = dest.as_mut_bytes().len();
         let mut index = 0;
 
         for curr_ptr in hit.into_iter() {
@@ -339,6 +342,10 @@ impl FirmwarePlatform for Tdx {
                 serial::debug!("Resource attribute: ", curr_src.resource_attribute);
                 serial::debug!("Physical start: ", curr_src.physical_start);
                 serial::debug!("Resource length: ", curr_src.resource_length);
+
+                if index + size_of::<BootE820Entry>() > dest_len {
+                    return Err("too many resource descriptors in TD HoB");
+                }
 
                 // Figure out the location of the next E820 entry
                 let new_entry_ptr: *mut BootE820Entry = unsafe {
