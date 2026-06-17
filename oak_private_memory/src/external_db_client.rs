@@ -22,7 +22,7 @@ use prost_types::Timestamp;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
     DataBlob, DeleteBlobsRequest, EncryptedDataBlob, EncryptedMetadataBlob, MetadataBlob,
-    ReadDataBlobRequest, ReadMetadataBlobRequest, ReadMetadataBlobResponse,
+    ReadDataBlobRequest, ReadDataBlobsRequest, ReadMetadataBlobRequest, ReadMetadataBlobResponse,
     ReadMetadataBlobStreamRequest, ReadUnencryptedDataBlobRequest, WriteDataBlobRequest,
     WriteMetadataBlobRequest, WriteMetadataBlobStreamRequest, WriteUnencryptedDataBlobRequest,
     read_metadata_blob_stream_response, write_metadata_blob_stream_request,
@@ -375,15 +375,18 @@ impl DataBlobHandler for ExternalDbClient {
         &mut self,
         ids: &[BlobId],
     ) -> anyhow::Result<Vec<Option<EncryptedDataBlob>>> {
-        // TODO: b/412698203 - Replace with batch ReadDataBlobs RPC.
-        let mut result = Vec::with_capacity(ids.len());
-        for id in ids {
-            let mut client = self.clone();
-            let id = id.clone();
-            result.push(tokio::spawn(async move { client.get_blob(&id).await }));
-        }
-        let result = futures::future::join_all(result).await;
-        result.into_iter().map(|x| x.map_err(anyhow::Error::msg)?).collect()
+        let response =
+            self.read_data_blobs(ReadDataBlobsRequest { ids: ids.to_vec() }).await?.into_inner();
+        ids.iter()
+            .map(|id| match response.data_blobs.get(id) {
+                Some(data_blob) => {
+                    let encrypted = EncryptedDataBlob::decode(&*data_blob.blob)
+                        .context("decoding EncryptedDataBlob")?;
+                    Ok(Some(encrypted))
+                }
+                None => Ok(None),
+            })
+            .collect()
     }
 
     async fn add_unencrypted_blob(
