@@ -62,6 +62,16 @@ impl AddPciRootStage1 {
     pub fn file(&self) -> &CStr {
         CStr::from_bytes_until_nul(&self.file).unwrap()
     }
+
+    /// Builds a command targeting `file` whose 32-bit window start is written at
+    /// `pci32_start_offset`; all other offsets stay zero. Test-only.
+    #[cfg(test)]
+    pub fn new(file: &str, pci32_start_offset: u32) -> Self {
+        let mut cmd = <Self as zerocopy::FromZeros>::new_zeroed();
+        cmd.file[..file.len()].copy_from_slice(file.as_bytes());
+        cmd.pci32_start_offset = pci32_start_offset;
+        cmd
+    }
 }
 
 impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciRootStage1 {
@@ -77,6 +87,23 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciRootStage1 {
 
         if self.bus_index != 0 {
             return Err("AddPciRootStage1: only bus 0 supported for now");
+        }
+
+        let file_len = file.len();
+        let write_fits = |offset: u32, size: usize| offset as usize + size <= file_len;
+        if !write_fits(self.pci32_start_offset, size_of::<u32>())
+            || !write_fits(self.pci32_end_offset, size_of::<u32>())
+            || !write_fits(self.pci64_valid_offset, size_of::<u8>())
+            || !write_fits(self.pci64_start_offset, size_of::<u64>())
+            || !write_fits(self.pci64_end_offset, size_of::<u64>())
+            || !write_fits(self.pci64_length_offset, size_of::<u64>())
+            || !write_fits(self.pci16_io_start_offset, size_of::<u16>())
+            || !write_fits(self.pci16_io_end_offset, size_of::<u16>())
+            || self.allowlist_offsets.iter().any(|o| {
+                !write_fits(o.start, size_of::<u32>()) || !write_fits(o.end, size_of::<u32>())
+            })
+        {
+            return Err("AddPciRootStage1 invalid; offsets would overflow file");
         }
 
         let data = pci_windows.ok_or("no PCI holes for AddPciRootStage1 to add")?;
