@@ -830,8 +830,15 @@ impl IcingMetaDatabase {
             bail!("Icing search failed for memory_id {}: {:?}", memory_id, search_result.status);
         }
 
-        // Extract the blob_id (int64) from the first result, if any
-        Ok(search_result.results.first().and_then(Self::extract_blob_id_from_doc))
+        // Extract the blob_id from the first result, if any.
+        match search_result.results.first() {
+            None => Ok(None),
+            Some(doc) => {
+                let blob_id = Self::extract_blob_id_from_doc(doc)
+                    .context("memory document exists but has no blob_id property")?;
+                Ok(Some(blob_id))
+            }
+        }
     }
 
     fn extract_view_ids_from_search_result(search_result: icing::SearchResultProto) -> Vec<ViewId> {
@@ -1567,7 +1574,7 @@ impl IcingMetaDatabase {
             // Resolve the blob ID before deleting the document, since the
             // mapping lives inside the Icing document itself.
             let blob_id =
-                self.get_blob_id_by_memory_id(memory_id.clone())?.context("memory has no blob")?;
+                self.get_blob_id_by_memory_id(memory_id.clone())?.context("memory not found")?;
             self.delete_memory_documents(memory_id)?;
             self.applied_operations
                 .push(MutationOperation::Remove { memory_id: memory_id.clone(), blob_id });
@@ -3126,6 +3133,38 @@ mod tests {
         assert_that!(
             db.pending_blob_deletes(),
             unordered_elements_are![eq(&blob_1), eq(&blob_2), eq(&blob_3)]
+        );
+        Ok(())
+    }
+
+    #[gtest]
+    fn delete_nonexistent_memory_returns_not_found_error() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        let result = db.delete_memories(&["nonexistent_id".to_string()]);
+        assert!(result.is_err(), "expected delete of nonexistent memory to fail");
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("memory not found"),
+            "error should mention 'memory not found', got: {err}"
+        );
+        Ok(())
+    }
+
+    #[gtest]
+    fn delete_already_deleted_memory_returns_not_found_error() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        let (mem_id, _blob_id) = add_test_memory(&mut db, "1");
+
+        // First delete should succeed.
+        db.delete_memories(std::slice::from_ref(&mem_id))?;
+
+        // Second delete of the same memory should fail with "memory not found".
+        let result = db.delete_memories(std::slice::from_ref(&mem_id));
+        assert!(result.is_err(), "expected double-delete to fail");
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("memory not found"),
+            "error should mention 'memory not found', got: {err}"
         );
         Ok(())
     }
