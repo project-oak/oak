@@ -579,7 +579,7 @@ async fn test_get_database_metrics() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn test_delete_memory_concurrent_delete_fails() {
+async fn test_delete_memory_concurrent_delete_succeeds_with_not_found() {
     let ctx = TestContext::setup().await.unwrap();
     let url = &ctx.url;
     let pm_uid = "test_concurrent_delete_user";
@@ -614,10 +614,9 @@ async fn test_delete_memory_concurrent_delete_fails() {
     let res1 = res1.unwrap();
     let res2 = res2.unwrap();
 
-    // One should succeed, one should fail (if external DB fails on not found).
-    // We assert that exactly one fails.
-    let err_count = [res1.is_err(), res2.is_err()].iter().filter(|&&x| x).count();
-    assert_eq!(err_count, 1, "Exactly one delete should fail");
+    // Both should succeed. One will report the memory as not found.
+    assert!(res1.is_ok(), "First delete should succeed");
+    assert!(res2.is_ok(), "Second delete should succeed");
 
     ctx.teardown().await;
 }

@@ -315,12 +315,12 @@ impl Database {
         })
     }
 
-    pub async fn delete_memories(&mut self, ids: Vec<MemoryId>) -> anyhow::Result<()> {
+    pub async fn delete_memories(&mut self, ids: Vec<MemoryId>) -> anyhow::Result<Vec<MemoryId>> {
         // Blob ID lookup and mutation log recording happen inside
         // IcingMetaDatabase::delete_memories. The blob IDs are stored in
         // the mutation log so they can be flushed after persistence.
-        self.meta_db().delete_memories(&ids)?;
-        Ok(())
+        let not_found_ids = self.meta_db().delete_memories(&ids)?;
+        Ok(not_found_ids)
     }
 
     /// Execute all pending blob soft-deletes against external storage.

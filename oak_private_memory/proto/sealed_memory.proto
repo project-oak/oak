@@ -481,6 +481,9 @@ message DeleteMemoryRequest {
 message DeleteMemoryResponse {
   bool success = 1;
   string error_message = 2;
+  // IDs that were not found in the database. The delete operation still
+  // succeeds for all other IDs.
+  repeated string not_found_ids = 3;
 }
 
 message GetDatabaseMetricsRequest {
