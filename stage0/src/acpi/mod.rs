@@ -416,6 +416,42 @@ mod tests {
     }
 
     #[gtest]
+    pub fn test_add_pci_root_stage1_rejects_out_of_range_offset() {
+        let mut files = TestFiles::default();
+        let mut digest = Sha256::default();
+        files.new_file(c"test", &[0u8; 64]);
+
+        // A host-controlled offset past the end of the file must be rejected
+        // instead of panicking on an out-of-range slice write.
+        expect_that!(
+            AddPciRootStage1::new("test", 0xFFFF_FFF0).invoke(
+                &mut files,
+                &mut TestFirmware,
+                None,
+                &mut digest
+            ),
+            err(anything())
+        );
+    }
+
+    #[gtest]
+    pub fn test_add_pci_root_stage2_rejects_out_of_range_offset() {
+        let mut files = TestFiles::default();
+        let mut digest = Sha256::default();
+        files.new_file(c"test", &[0u8; 64]);
+
+        expect_that!(
+            AddPciRootStage2::new("test", 0xFFFF_FFF0).invoke(
+                &mut files,
+                &mut TestFirmware,
+                None,
+                &mut digest
+            ),
+            err(anything())
+        );
+    }
+
+    #[gtest]
     pub fn test_add_pointer() {
         let mut files = TestFiles::default();
         let mut digest = Sha256::default();
