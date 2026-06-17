@@ -22,6 +22,7 @@ syntax = "proto3";
 package oak.private_memory;
 
 import "google/protobuf/timestamp.proto";
+import "google/rpc/status.proto";
 
 // A simple key value pair.
 message DataBlob {
@@ -44,8 +45,6 @@ message WriteUnencryptedDataBlobResponse {}
 
 message ReadDataBlobRequest {
   string id = 1;
-  // Whether to perform a strong read to ensure the latest data is returned.
-  bool strong_read = 2;
 }
 
 message ReadUnencryptedDataBlobRequest {
@@ -146,6 +145,28 @@ message DeleteBlobsRequest {
 
 message DeleteBlobsResponse {}
 
+message ReadDataBlobsRequest {
+  repeated string ids = 1;
+}
+
+message ReadDataBlobsResponse {
+  // The data blobs that were successfully read, keyed by ID.
+  map<string, DataBlob> data_blobs = 1;
+
+  // IDs that failed to read, with their status.
+  map<string, google.rpc.Status> failed_ids = 2;
+}
+
+message WriteDataBlobsRequest {
+  repeated DataBlob data_blobs = 1;
+  google.protobuf.Timestamp coarsened_expiration_timestamp = 2;
+}
+
+message WriteDataBlobsResponse {
+  // IDs that failed to write, with their status.
+  map<string, google.rpc.Status> failed_ids = 1;
+}
+
 // The untrusted database service that the trusted application can connect to.
 service SealedMemoryDatabaseService {
   // Writes a data blob to the database.
@@ -205,4 +226,10 @@ service SealedMemoryDatabaseService {
 
   // Deletes multiple blobs from the database.
   rpc DeleteBlobs(DeleteBlobsRequest) returns (DeleteBlobsResponse) {}
+
+  // Reads multiple data blobs from the database.
+  rpc ReadDataBlobs(ReadDataBlobsRequest) returns (ReadDataBlobsResponse) {}
+
+  // Writes multiple data blobs to the database.
+  rpc WriteDataBlobs(WriteDataBlobsRequest) returns (WriteDataBlobsResponse) {}
 }

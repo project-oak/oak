@@ -52,7 +52,7 @@ impl MemoryBlobStore {
         let encrypted_blob = self
             .db_client
             .clone()
-            .get_blob(blob_id, false)
+            .get_blob(blob_id)
             .await?
             .context(format!("blob not found for id: {}", blob_id))?;
         let decrypted_data = self.decrypt_blob(blob_id, &encrypted_blob)?;
@@ -67,7 +67,7 @@ impl MemoryBlobStore {
         &self,
         blob_ids: &[BlobId],
     ) -> anyhow::Result<Vec<Memory>> {
-        let encrypted_blobs = self.db_client.clone().get_blobs(blob_ids, false).await?;
+        let encrypted_blobs = self.db_client.clone().get_blobs(blob_ids).await?;
         blob_ids
             .iter()
             .zip(encrypted_blobs)

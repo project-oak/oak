@@ -58,11 +58,7 @@ pub trait DataBlobHandler {
         coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<BlobId>;
 
-    async fn get_blob(
-        &mut self,
-        id: &BlobId,
-        strong_read: bool,
-    ) -> anyhow::Result<Option<EncryptedDataBlob>>;
+    async fn get_blob(&mut self, id: &BlobId) -> anyhow::Result<Option<EncryptedDataBlob>>;
     #[deprecated(note = "Use add_metadata_blob_stream instead")]
     async fn add_metadata_blob(
         &mut self,
@@ -87,11 +83,8 @@ pub trait DataBlobHandler {
         id: &BlobId,
         coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<Option<EncryptedMetadataBlob>>;
-    async fn get_blobs(
-        &mut self,
-        ids: &[BlobId],
-        strong_read: bool,
-    ) -> anyhow::Result<Vec<Option<EncryptedDataBlob>>>;
+    async fn get_blobs(&mut self, ids: &[BlobId])
+    -> anyhow::Result<Vec<Option<EncryptedDataBlob>>>;
     async fn add_unencrypted_blob(
         &mut self,
         data_blob: DataBlob,
@@ -232,13 +225,9 @@ impl DataBlobHandler for ExternalDbClient {
         Ok(MetadataPersistResult::Succeeded)
     }
 
-    async fn get_blob(
-        &mut self,
-        id: &BlobId,
-        strong_read: bool,
-    ) -> anyhow::Result<Option<EncryptedDataBlob>> {
+    async fn get_blob(&mut self, id: &BlobId) -> anyhow::Result<Option<EncryptedDataBlob>> {
         let start_time = tokio::time::Instant::now();
-        match self.read_data_blob(ReadDataBlobRequest { id: id.clone(), strong_read }).await {
+        match self.read_data_blob(ReadDataBlobRequest { id: id.clone() }).await {
             Ok(response) => {
                 let db_response = response.into_inner();
                 if let Some(data_blob) = db_response.data_blob {
@@ -385,14 +374,13 @@ impl DataBlobHandler for ExternalDbClient {
     async fn get_blobs(
         &mut self,
         ids: &[BlobId],
-        strong_read: bool,
     ) -> anyhow::Result<Vec<Option<EncryptedDataBlob>>> {
-        // TOOD: b/412698203 - Ideally we should have a rpc call that does batch get.
+        // TODO: b/412698203 - Replace with batch ReadDataBlobs RPC.
         let mut result = Vec::with_capacity(ids.len());
         for id in ids {
             let mut client = self.clone();
             let id = id.clone();
-            result.push(tokio::spawn(async move { client.get_blob(&id, strong_read).await }));
+            result.push(tokio::spawn(async move { client.get_blob(&id).await }));
         }
         let result = futures::future::join_all(result).await;
         result.into_iter().map(|x| x.map_err(anyhow::Error::msg)?).collect()

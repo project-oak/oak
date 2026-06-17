@@ -22,11 +22,12 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_servic
 };
 use sealed_memory_rust_proto::oak::private_memory::{
     DataBlob, DeleteBlobsRequest, DeleteBlobsResponse, MetadataBlob, ReadDataBlobRequest,
-    ReadDataBlobResponse, ReadMetadataBlobRequest, ReadMetadataBlobResponse,
-    ReadMetadataBlobStreamRequest, ReadMetadataBlobStreamResponse, ReadUnencryptedDataBlobRequest,
-    ReadUnencryptedDataBlobResponse, ResetDatabaseRequest, ResetDatabaseResponse,
-    WriteDataBlobRequest, WriteDataBlobResponse, WriteMetadataBlobRequest,
-    WriteMetadataBlobResponse, WriteMetadataBlobStreamRequest, WriteMetadataBlobStreamResponse,
+    ReadDataBlobResponse, ReadDataBlobsRequest, ReadDataBlobsResponse, ReadMetadataBlobRequest,
+    ReadMetadataBlobResponse, ReadMetadataBlobStreamRequest, ReadMetadataBlobStreamResponse,
+    ReadUnencryptedDataBlobRequest, ReadUnencryptedDataBlobResponse, ResetDatabaseRequest,
+    ResetDatabaseResponse, WriteDataBlobRequest, WriteDataBlobResponse, WriteDataBlobsRequest,
+    WriteDataBlobsResponse, WriteMetadataBlobRequest, WriteMetadataBlobResponse,
+    WriteMetadataBlobStreamRequest, WriteMetadataBlobStreamResponse,
     WriteUnencryptedDataBlobRequest, WriteUnencryptedDataBlobResponse,
     read_metadata_blob_stream_response, write_metadata_blob_stream_request,
 };
@@ -251,6 +252,36 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
             }
         }
         Ok(tonic::Response::new(DeleteBlobsResponse {}))
+    }
+
+    async fn read_data_blobs(
+        &self,
+        request: tonic::Request<ReadDataBlobsRequest>,
+    ) -> Result<tonic::Response<ReadDataBlobsResponse>, tonic::Status> {
+        let request = request.into_inner();
+        let db = self.database.lock().await;
+        let mut data_blobs = std::collections::HashMap::new();
+        for id in request.ids {
+            if let Some(blob) = db.get(&id) {
+                data_blobs.insert(id, blob.clone());
+            }
+        }
+        Ok(tonic::Response::new(ReadDataBlobsResponse {
+            data_blobs,
+            failed_ids: Default::default(),
+        }))
+    }
+
+    async fn write_data_blobs(
+        &self,
+        request: tonic::Request<WriteDataBlobsRequest>,
+    ) -> Result<tonic::Response<WriteDataBlobsResponse>, tonic::Status> {
+        let request = request.into_inner();
+        let mut db = self.database.lock().await;
+        for data_blob in request.data_blobs {
+            db.insert(data_blob.id.clone(), data_blob);
+        }
+        Ok(tonic::Response::new(WriteDataBlobsResponse { failed_ids: Default::default() }))
     }
 }
 
