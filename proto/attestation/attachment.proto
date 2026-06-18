@@ -27,9 +27,16 @@ option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
 option java_package = "com.google.oak.attestation.v1";
 
-// The Transparent Release attachment for Oak Stage 0. Measurements
-// are produced with:
+// The Transparent Release attachment for Oak Stage 0.
+//
+// We expect at least one of `configs` or `tdx_measurement` to be set; if the
+// firmware supports both, then both fields can be set.
+//
+// Measurements for AMD SEV-SNP are produced with:
 // https://github.com/project-oak/oak/tree/main/snp_measurement
+//
+// Measurement for Intel TDX are produced with:
+// https://github.com/project-oak/oak/tree/main/tdx_measurement
 message FirmwareAttachment {
   // Digest of the unmodified firmware-type binary. This field can remain
   // empty for attestation verification. It is only needed if identifying
@@ -37,7 +44,11 @@ message FirmwareAttachment {
   HexDigest binary = 2;
 
   // Maps number of vCPUs to measurement of the modified firmware binary.
+  // Used for AMD SEV, where the measurement depends on the number of vCPUs.
   map<int32, HexDigest> configs = 1;
+
+  // Measurement for Intel TDX.
+  HexDigest tdx_measurement = 3;
 }
 
 // The Transparent Release attachment for bzImage-like kernels.

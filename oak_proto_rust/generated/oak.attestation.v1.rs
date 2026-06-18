@@ -772,9 +772,16 @@ pub struct EndorsedEvidenceAssertion {
     #[prost(bytes = "vec", tag = "3")]
     pub asserted_data_signature: ::prost::alloc::vec::Vec<u8>,
 }
-/// The Transparent Release attachment for Oak Stage 0. Measurements
-/// are produced with:
+/// The Transparent Release attachment for Oak Stage 0.
+///
+/// We expect at least one of `configs` or `tdx_measurement` to be set; if the
+/// firmware supports both, then both fields can be set.
+///
+/// Measurements for AMD SEV-SNP are produced with:
 /// <https://github.com/project-oak/oak/tree/main/snp_measurement>
+///
+/// Measurement for Intel TDX are produced with:
+/// <https://github.com/project-oak/oak/tree/main/tdx_measurement>
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct FirmwareAttachment {
     /// Digest of the unmodified firmware-type binary. This field can remain
@@ -783,8 +790,12 @@ pub struct FirmwareAttachment {
     #[prost(message, optional, tag = "2")]
     pub binary: ::core::option::Option<super::super::HexDigest>,
     /// Maps number of vCPUs to measurement of the modified firmware binary.
+    /// Used for AMD SEV, where the measurement depends on the number of vCPUs.
     #[prost(btree_map = "int32, message", tag = "1")]
     pub configs: ::prost::alloc::collections::BTreeMap<i32, super::super::HexDigest>,
+    /// Measurement for Intel TDX.
+    #[prost(message, optional, tag = "3")]
+    pub tdx_measurement: ::core::option::Option<super::super::HexDigest>,
 }
 /// The Transparent Release attachment for bzImage-like kernels.
 /// Measurements are produced with:

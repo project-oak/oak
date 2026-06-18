@@ -95,8 +95,11 @@ fn test_get_stage0_expected_values_validity() {
     let measured_digest = raw_digest_from_contents(measured_content);
     let num_cpus = 2;
     configs.insert(num_cpus, raw_to_hex_digest(&measured_digest));
-    let subject =
-        FirmwareAttachment { binary: Some(hex_digest_from_contents(original_content)), configs };
+    let subject = FirmwareAttachment {
+        binary: Some(hex_digest_from_contents(original_content)),
+        configs,
+        tdx_measurement: None,
+    };
     let serialized_subject = subject.encode_to_vec();
 
     // Now create the endorsement, containing the subject. The *endorsement*

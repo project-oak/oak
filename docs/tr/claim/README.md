@@ -36,7 +36,7 @@ printf "%05d\n" $(shuf --input-range=0-99999 --head-count=1)
 ## Other
 
 - `10271`
-  [AMD SEV-SNP-Firmware-type binary](https://github.com/project-oak/oak/blob/main/docs/tr/claim/10271.md)
+  [Firmware binaries for AMD SEV-SNP and/or Intel TDX](https://github.com/project-oak/oak/blob/main/docs/tr/claim/10271.md)
 - `92939`
   [Binary built from open source](https://github.com/project-oak/oak/blob/main/docs/tr/claim/92939.md)
 - `26208`
