@@ -37,8 +37,8 @@ use oak_proto_rust::oak::{
 use regex_lite::Regex;
 
 use crate::platform::{
-    convert_amd_sev_snp_initial_measurement, verify_amd_sev_attestation_report_values,
-    verify_insecure, verify_intel_tdx_attestation_quote,
+    initial_measurement_to_raw_digest, verify_amd_sev_attestation_report_values, verify_insecure,
+    verify_intel_tdx_attestation_quote,
 };
 
 pub fn compare_expected_values(
@@ -194,7 +194,7 @@ pub(crate) fn compare_firmware_layer_measurement_digests(
     initial_measurement: &[u8],
     expected_values: &ExpectedDigests,
 ) -> anyhow::Result<()> {
-    let measurement = convert_amd_sev_snp_initial_measurement(initial_measurement);
+    let measurement = initial_measurement_to_raw_digest(initial_measurement);
     compare_measurement_digest(&measurement, expected_values)
 }
 

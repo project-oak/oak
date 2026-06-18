@@ -254,7 +254,7 @@ pub fn convert_amd_sev_snp_attestation_report(
     })
 }
 
-pub fn convert_amd_sev_snp_initial_measurement(initial_measurement: &[u8]) -> RawDigest {
+pub fn initial_measurement_to_raw_digest(initial_measurement: &[u8]) -> RawDigest {
     RawDigest { sha2_384: initial_measurement.to_vec(), ..Default::default() }
 }
 

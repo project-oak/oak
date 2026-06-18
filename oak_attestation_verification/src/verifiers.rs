@@ -304,6 +304,11 @@ impl AttestationVerifier for IntelTdxAttestationVerifier {
         let verification_time = self.clock.get_time();
 
         // Verify Intel TDX platform authenticity and configuration.
+        //
+        // The platform policy is also responsible for extracting the initial
+        // measurement, which implicitly includes the firmware. This is stored as an
+        // artifact in the platform results and later retrieved to verify it with the
+        // firmware policy.
         let root_layer = evidence.root_layer.as_ref().context("no root layer in evidence")?;
         let platform_endorsement =
             endorsements.platform.as_ref().context("no platform endorsement")?;
