@@ -311,18 +311,27 @@ impl PciBar {
                     let upper_half =
                         access.read(bdf, Self::BAR_REGISTER_OFFSET + offset + 1)? as u64;
 
-                    Some(PciBar::Memory64 {
-                        bdf,
-                        offset,
-                        prefetchable,
-                        bar_size: !((upper_half << 32) + (value as u64)) + 1,
-                    })
+                    // The size is the two's complement of the masked register value. A
+                    // BAR that reports no size bits would make `!mask + 1` overflow, and
+                    // a resulting size of zero divides by zero in the resource allocator,
+                    // so reject it instead of trusting the value the device read back.
+                    let mask = (upper_half << 32) + (value as u64);
+                    if mask == 0 {
+                        return Err("invalid BAR");
+                    }
+                    Some(PciBar::Memory64 { bdf, offset, prefetchable, bar_size: !mask + 1 })
                 } else {
+                    if value == 0 {
+                        return Err("invalid BAR");
+                    }
                     Some(PciBar::Memory32 { bdf, offset, prefetchable, bar_size: !value + 1 })
                 }
             }
             PciBarKind::Io => {
                 let value = value & !PciBarKind::MASK;
+                if value == 0 {
+                    return Err("invalid BAR");
+                }
                 Some(PciBar::Io { bdf, offset, bar_size: !value + 1 })
             }
         })
@@ -543,6 +552,47 @@ mod tests {
                 bar_size: eq(&4)
             })))
         );
+    }
+
+    #[test]
+    fn test_zero_size_memory32_bar_rejected() {
+        let mut access = MockConfigAccess::new();
+        access.expect_write().return_const(Ok(()));
+        // 32-bit memory BAR that reads back with the prefetchable bit set but no size
+        // bits. Computing `!value + 1` over the zero mask used to overflow.
+        access
+            .expect_read()
+            .with(mockall_eq(Bdf::root()), mockall_eq(PciBar::BAR_REGISTER_OFFSET))
+            .return_const(Ok(0x0000_0008));
+        assert_that!(PciBar::new(Bdf::root(), 0, &mut access), err(anything()));
+    }
+
+    #[test]
+    fn test_zero_size_memory64_bar_rejected() {
+        let mut access = MockConfigAccess::new();
+        access.expect_write().return_const(Ok(()));
+        // 64-bit memory BAR whose lower and upper halves both report a zero size mask.
+        access
+            .expect_read()
+            .with(mockall_eq(Bdf::root()), mockall_eq(PciBar::BAR_REGISTER_OFFSET))
+            .return_const(Ok(0x0000_000C));
+        access
+            .expect_read()
+            .with(mockall_eq(Bdf::root()), mockall_eq(PciBar::BAR_REGISTER_OFFSET + 1))
+            .return_const(Ok(0x0000_0000));
+        assert_that!(PciBar::new(Bdf::root(), 0, &mut access), err(anything()));
+    }
+
+    #[test]
+    fn test_zero_size_io_bar_rejected() {
+        let mut access = MockConfigAccess::new();
+        access.expect_write().return_const(Ok(()));
+        // I/O BAR with the I/O indicator bit set but no size bits.
+        access
+            .expect_read()
+            .with(mockall_eq(Bdf::root()), mockall_eq(PciBar::BAR_REGISTER_OFFSET))
+            .return_const(Ok(0x0000_0001));
+        assert_that!(PciBar::new(Bdf::root(), 0, &mut access), err(anything()));
     }
 
     #[test]
