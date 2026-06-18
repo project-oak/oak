@@ -24,8 +24,9 @@ use sealed_memory_rust_proto::oak::private_memory::{
     DataBlob, DeleteBlobsRequest, EncryptedDataBlob, EncryptedMetadataBlob, MetadataBlob,
     ReadDataBlobRequest, ReadDataBlobsRequest, ReadMetadataBlobRequest, ReadMetadataBlobResponse,
     ReadMetadataBlobStreamRequest, ReadUnencryptedDataBlobRequest, WriteDataBlobRequest,
-    WriteMetadataBlobRequest, WriteMetadataBlobStreamRequest, WriteUnencryptedDataBlobRequest,
-    read_metadata_blob_stream_response, write_metadata_blob_stream_request,
+    WriteDataBlobsRequest, WriteMetadataBlobRequest, WriteMetadataBlobStreamRequest,
+    WriteUnencryptedDataBlobRequest, read_metadata_blob_stream_response,
+    write_metadata_blob_stream_request,
 };
 use tonic::{Code, transport::Channel};
 
@@ -85,6 +86,11 @@ pub trait DataBlobHandler {
     ) -> anyhow::Result<Option<EncryptedMetadataBlob>>;
     async fn get_blobs(&mut self, ids: &[BlobId])
     -> anyhow::Result<Vec<Option<EncryptedDataBlob>>>;
+    async fn add_blobs(
+        &mut self,
+        data_blobs: Vec<DataBlob>,
+        coarsened_expiration_timestamp: Timestamp,
+    ) -> anyhow::Result<()>;
     async fn add_unencrypted_blob(
         &mut self,
         data_blob: DataBlob,
@@ -387,6 +393,25 @@ impl DataBlobHandler for ExternalDbClient {
                 None => Ok(None),
             })
             .collect()
+    }
+
+    async fn add_blobs(
+        &mut self,
+        data_blobs: Vec<DataBlob>,
+        coarsened_expiration_timestamp: Timestamp,
+    ) -> anyhow::Result<()> {
+        let response = self
+            .write_data_blobs(WriteDataBlobsRequest {
+                data_blobs,
+                coarsened_expiration_timestamp: Some(coarsened_expiration_timestamp),
+            })
+            .await?
+            .into_inner();
+        if !response.failed_ids.is_empty() {
+            let failed_keys: Vec<&String> = response.failed_ids.keys().collect();
+            anyhow::bail!("WriteDataBlobs failed for IDs: {:?}", failed_keys);
+        }
+        Ok(())
     }
 
     async fn add_unencrypted_blob(

@@ -836,3 +836,216 @@ async fn test_invoke_async_pipelining_speedup() {
     // significant speedup (requests overlap on the server).
     assert!(speedup > 1.5, "Expected pipelining speedup > 1.5x, got {speedup:.2}x");
 }
+
+fn make_test_memory(id: &str, tag: &str) -> Memory {
+    Memory {
+        id: id.to_string(),
+        tags: vec![tag.to_string()],
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    }
+}
+
+fn make_named_test_memory(id: &str, name: &str, tag: &str) -> Memory {
+    Memory {
+        id: id.to_string(),
+        name: name.to_string(),
+        tags: vec![tag.to_string()],
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    }
+}
+
+/// Test that batch add_memories successfully adds multiple memories.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_add_memories_basic() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_add_memories_basic_user";
+
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK).await.unwrap();
+
+    let memories = vec![make_test_memory("mem_1", "tag_a"), make_test_memory("mem_2", "tag_a")];
+
+    let response = client.add_memories(memories).await.unwrap();
+    assert_eq!(response.results.len(), 2);
+
+    // Both should succeed with their IDs.
+    for (i, result) in response.results.iter().enumerate() {
+        match &result.result {
+            Some(add_memories_response::add_memory_result::Result::Id(id)) => {
+                assert_eq!(id, &format!("mem_{}", i + 1));
+            }
+            other => panic!("Expected Id for memory {}, got {:?}", i, other),
+        }
+    }
+}
+
+/// Test that memories added via add_memories are retrievable by ID.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_add_memories_retrievable() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_add_memories_retrievable_user";
+
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK).await.unwrap();
+
+    let memories = vec![
+        make_test_memory("retrieve_1", "tag_r"),
+        make_test_memory("retrieve_2", "tag_r"),
+        make_test_memory("retrieve_3", "tag_r"),
+    ];
+
+    let response = client.add_memories(memories).await.unwrap();
+    assert_eq!(response.results.len(), 3);
+
+    // Verify each memory is retrievable.
+    for id in ["retrieve_1", "retrieve_2", "retrieve_3"] {
+        let get_response = client.get_memory_by_id(id, None).await.unwrap();
+        assert!(get_response.success, "Failed to retrieve memory {}", id);
+        assert_eq!(get_response.memory.unwrap().id, id);
+    }
+}
+
+/// Test that an empty batch returns an empty response.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_add_memories_empty() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_add_memories_empty_user";
+
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK).await.unwrap();
+
+    let response = client.add_memories(vec![]).await.unwrap();
+    assert_eq!(response.results.len(), 0);
+}
+
+/// Test mixed valid/invalid: duplicate named memories should return per-item
+/// errors while other memories succeed.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_add_memories_mixed_valid_invalid() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_add_memories_mixed_user";
+
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK).await.unwrap();
+
+    // First add a named memory.
+    let first_memory = make_named_test_memory("existing_1", "unique_name", "tag_m");
+    client.add_memory(first_memory).await.unwrap();
+
+    // Now batch: one valid, one conflicting name (different ID), one valid.
+    let memories = vec![
+        make_test_memory("batch_ok_1", "tag_m"),
+        make_named_test_memory("batch_conflict", "unique_name", "tag_m"),
+        make_test_memory("batch_ok_2", "tag_m"),
+    ];
+
+    let response = client.add_memories(memories).await.unwrap();
+    assert_eq!(response.results.len(), 3);
+
+    // First should succeed.
+    assert!(
+        matches!(
+            &response.results[0].result,
+            Some(add_memories_response::add_memory_result::Result::Id(_))
+        ),
+        "Expected first memory to succeed"
+    );
+
+    // Second should fail (name conflict).
+    assert!(
+        matches!(
+            &response.results[1].result,
+            Some(add_memories_response::add_memory_result::Result::Error(_))
+        ),
+        "Expected second memory (name conflict) to fail"
+    );
+
+    // Third should succeed.
+    assert!(
+        matches!(
+            &response.results[2].result,
+            Some(add_memories_response::add_memory_result::Result::Id(_))
+        ),
+        "Expected third memory to succeed"
+    );
+
+    // Verify the successful ones are retrievable.
+    let get_response = client.get_memory_by_id("batch_ok_1", None).await.unwrap();
+    assert!(get_response.success);
+    let get_response = client.get_memory_by_id("batch_ok_2", None).await.unwrap();
+    assert!(get_response.success);
+}
+
+/// Test that add_memories with duplicate IDs within the same batch works
+/// (last write wins for Icing, both get blob IDs).
+#[tokio::test(flavor = "multi_thread")]
+async fn test_add_memories_with_views() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_add_memories_views_user";
+
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK).await.unwrap();
+
+    let llm_views = LlmViews {
+        llm_views: vec![LlmView {
+            embedding: Some(Embedding {
+                model_signature: "test_model".to_string(),
+                values: vec![1.0, 0.0, 0.0],
+            }),
+            ..Default::default()
+        }],
+    };
+
+    let memories = vec![
+        Memory {
+            id: "view_mem_1".to_string(),
+            tags: vec!["tag_v".to_string()],
+            views: Some(llm_views.clone()),
+            expiration_timestamp: Some(system_time_to_timestamp(
+                SystemTime::now() + Duration::from_secs(3600),
+            )),
+            ..Default::default()
+        },
+        Memory {
+            id: "view_mem_2".to_string(),
+            tags: vec!["tag_v".to_string()],
+            views: Some(llm_views),
+            expiration_timestamp: Some(system_time_to_timestamp(
+                SystemTime::now() + Duration::from_secs(3600),
+            )),
+            ..Default::default()
+        },
+    ];
+
+    let response = client.add_memories(memories).await.unwrap();
+    assert_eq!(response.results.len(), 2);
+
+    for result in &response.results {
+        assert!(
+            matches!(&result.result, Some(add_memories_response::add_memory_result::Result::Id(_))),
+            "Expected success for memory with views"
+        );
+    }
+
+    // Verify retrievable.
+    for id in ["view_mem_1", "view_mem_2"] {
+        let get_response = client.get_memory_by_id(id, None).await.unwrap();
+        assert!(get_response.success, "Failed to retrieve {}", id);
+    }
+}

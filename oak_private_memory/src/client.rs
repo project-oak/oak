@@ -307,6 +307,13 @@ pub trait PrivateMemoryAppClient {
         expect_response_type!(response, sealed_memory_response::Response::AddMemoryResponse)
     }
 
+    async fn add_memories(&mut self, memories: Vec<Memory>) -> Result<AddMemoriesResponse> {
+        let request = AddMemoriesRequest { memories };
+        let response =
+            self.invoke(sealed_memory_request::Request::AddMemoriesRequest(request)).await?;
+        expect_response_type!(response, sealed_memory_response::Response::AddMemoriesResponse)
+    }
+
     #[allow(deprecated)]
     async fn get_memories(
         &mut self,

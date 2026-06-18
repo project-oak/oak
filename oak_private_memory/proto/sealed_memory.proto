@@ -161,6 +161,23 @@ message AddMemoryResponse {
   string id = 1;
 }
 
+message AddMemoriesRequest {
+  repeated Memory memories = 1;
+}
+
+message AddMemoriesResponse {
+  message AddMemoryResult {
+    oneof result {
+      // The ID of the successfully added memory.
+      string id = 1;
+      // The error status if the memory failed to be added.
+      google.rpc.Status error = 2;
+    }
+  }
+  // Results in the same order as the memories in the request.
+  repeated AddMemoryResult results = 1;
+}
+
 message GetMemoriesRequest {
   string tag = 1;
   // The maximum number of memories to return. The service may return fewer than
@@ -534,6 +551,8 @@ message SealedMemoryRequest {
 
     SyncDatabaseRequest sync_database_request = 14;
 
+    AddMemoriesRequest add_memories_request = 15;
+
     // Use SearchMemoriesRequest instead.
     GetMemoriesRequest get_memories_request = 2 [deprecated = true];
   }
@@ -564,6 +583,8 @@ message SealedMemoryResponse {
     GetDatabaseMetricsResponse get_database_metrics_response = 13;
 
     SyncDatabaseResponse sync_database_response = 14;
+
+    AddMemoriesResponse add_memories_response = 15;
 
     GetMemoriesResponse get_memories_response = 2 [deprecated = true];
 

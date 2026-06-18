@@ -216,11 +216,118 @@ impl SealedMemorySessionHandler {
             &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
         let memory = request.memory.into_invalid_argument("memory not set in AddMemoryRequest")?;
 
-        self.validate_memory_source(&memory)?;
+        self.validate_single_memory(&memory, database).await?;
+
+        let memory_id =
+            database.add_memory(memory).await.into_internal_error("failed to add memory")?;
+        Ok(AddMemoryResponse { id: memory_id.to_string() })
+    }
+
+    pub async fn add_memories_handler(
+        &self,
+        request: AddMemoriesRequest,
+    ) -> tonic::Result<AddMemoriesResponse> {
+        let mut mutex_guard = self.session_context().await;
+        let database =
+            &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
+
+        // Pre-validate each memory; track per-item validation errors.
+        let mut validated_memories: Vec<Option<Memory>> =
+            Vec::with_capacity(request.memories.len());
+        let mut validation_errors: Vec<Option<tonic::Status>> =
+            Vec::with_capacity(request.memories.len());
+
+        for memory in request.memories {
+            match self.validate_single_memory(&memory, database).await {
+                Ok(()) => {
+                    validated_memories.push(Some(memory));
+                    validation_errors.push(None);
+                }
+                Err(status) => {
+                    validated_memories.push(None);
+                    validation_errors.push(Some(status));
+                }
+            }
+        }
+
+        // Collect only validated memories for the batch call.
+        let batch_memories: Vec<Memory> =
+            validated_memories.iter().filter_map(|m| m.clone()).collect();
+
+        let batch_results = database.add_memories(batch_memories).await;
+
+        // Merge validation errors and batch results into final response.
+        let mut batch_iter = batch_results.into_iter();
+        let mut results = Vec::with_capacity(validated_memories.len());
+
+        for (_validated, validation_err) in validated_memories.iter().zip(validation_errors) {
+            if let Some(status) = validation_err {
+                results.push(Self::make_add_memory_error_result(
+                    status.code() as i32,
+                    status.message(),
+                ));
+            } else {
+                // validated is Some, so batch_iter must have a result.
+                let batch_result = batch_iter.next().unwrap();
+                match batch_result {
+                    Ok(id) => {
+                        results.push(add_memories_response::AddMemoryResult {
+                            result: Some(add_memories_response::add_memory_result::Result::Id(id)),
+                        });
+                    }
+                    Err(e) => {
+                        let code = Self::anyhow_to_tonic_code(&e);
+                        results
+                            .push(Self::make_add_memory_error_result(code as i32, &e.to_string()));
+                    }
+                }
+            }
+        }
+
+        Ok(AddMemoriesResponse { results })
+    }
+
+    fn make_add_memory_error_result(
+        code: i32,
+        message: &str,
+    ) -> add_memories_response::AddMemoryResult {
+        add_memories_response::AddMemoryResult {
+            result: Some(add_memories_response::add_memory_result::Result::Error(
+                sealed_memory_rust_proto::google::rpc::Status {
+                    code,
+                    message: message.to_string(),
+                    details: vec![],
+                },
+            )),
+        }
+    }
+
+    /// Maps an anyhow::Error to a tonic::Code by inspecting the error chain.
+    fn anyhow_to_tonic_code(err: &anyhow::Error) -> tonic::Code {
+        // Try downcasting to tonic::Status first.
+        if let Some(status) = err.downcast_ref::<tonic::Status>() {
+            return status.code();
+        }
+        let msg = err.to_string().to_lowercase();
+        if msg.contains("not found") {
+            tonic::Code::NotFound
+        } else if msg.contains("size limit exceeded") {
+            tonic::Code::ResourceExhausted
+        } else {
+            tonic::Code::Internal
+        }
+    }
+
+    /// Validates a single memory for add_memories_handler.
+    async fn validate_single_memory(
+        &self,
+        memory: &Memory,
+        database: &Database,
+    ) -> Result<(), tonic::Status> {
+        self.validate_memory_source(memory)?;
         self.validate_expiration_timestamp(memory.expiration_timestamp.as_ref())?;
 
         if !memory.name.is_empty() {
-            // Verify that there is no conflicting memory with this name.
             let existing_memory = database
                 .get_memory_by_name(&memory.name, &None)
                 .await
@@ -234,10 +341,7 @@ impl SealedMemorySessionHandler {
                 )));
             }
         }
-
-        let memory_id =
-            database.add_memory(memory).await.into_internal_error("failed to add memory")?;
-        Ok(AddMemoryResponse { id: memory_id.to_string() })
+        Ok(())
     }
 
     pub async fn get_memories_handler(
@@ -644,6 +748,9 @@ impl SealedMemorySessionHandler {
             }
             sealed_memory_request::Request::AddMemoryRequest(request) => {
                 self.add_memory_handler(request).await?.into_response()
+            }
+            sealed_memory_request::Request::AddMemoriesRequest(request) => {
+                self.add_memories_handler(request).await?.into_response()
             }
             #[allow(deprecated)]
             sealed_memory_request::Request::GetMemoriesRequest(request) => {

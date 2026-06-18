@@ -154,25 +154,93 @@ impl Database {
     }
 
     pub async fn add_memory(&mut self, mut memory: Memory) -> anyhow::Result<MemoryId> {
-        self.add_memory_id(&mut memory);
-        self.add_llm_view_ids(&mut memory);
-        self.add_created_timestamp(&mut memory);
+        let size = self.prepare_memory(&mut memory)?;
+        let blob_id = self.blob_store.add_memory(&memory).await?;
+        self.index_memory(&memory, blob_id, size)
+    }
 
-        let additional_size = crate::icing::calculate_memory_icing_size(&memory)?;
+    /// Batch-add multiple memories. Prepares each memory individually (fast),
+    /// writes blobs in a single batch RPC (slow), then indexes each in Icing
+    /// (fast). Returns a Vec of results in the same order as input.
+    pub async fn add_memories(
+        &mut self,
+        mut memories: Vec<Memory>,
+    ) -> Vec<anyhow::Result<MemoryId>> {
+        // Prepare each memory (assign IDs, validate size). Track per-item
+        // results so we can skip failed ones in the batch blob write.
+        let mut prep_results: Vec<Result<usize, anyhow::Error>> =
+            Vec::with_capacity(memories.len());
 
-        if self.current_size + additional_size > self.max_size {
+        for memory in &mut memories {
+            prep_results.push(self.prepare_memory(memory));
+        }
+
+        // Collect only successfully prepared memories for the batch blob write.
+        let valid_memories: Vec<&Memory> = memories
+            .iter()
+            .zip(prep_results.iter())
+            .filter(|(_, r)| r.is_ok())
+            .map(|(m, _)| m)
+            .collect();
+
+        let blob_ids = match self.blob_store.add_memories(&valid_memories).await {
+            Ok(ids) => ids,
+            Err(e) => {
+                return memories
+                    .iter()
+                    .map(|_| Err(anyhow::anyhow!("batch blob write failed: {e}")))
+                    .collect();
+            }
+        };
+
+        // Index each valid memory in Icing.
+        let mut blob_id_iter = blob_ids.into_iter();
+        let mut results = Vec::with_capacity(memories.len());
+
+        for (memory, prep) in memories.into_iter().zip(prep_results) {
+            match prep {
+                Err(e) => results.push(Err(e)),
+                Ok(size) => {
+                    let blob_id = blob_id_iter.next().unwrap();
+                    results.push(self.index_memory(&memory, blob_id, size));
+                }
+            }
+        }
+
+        results
+    }
+
+    /// Prepares a memory for insertion: assigns IDs, timestamps, and validates
+    /// size. Returns the Icing size on success.
+    fn prepare_memory(&mut self, memory: &mut Memory) -> anyhow::Result<usize> {
+        self.add_memory_id(memory);
+        self.add_llm_view_ids(memory);
+        self.add_created_timestamp(memory);
+
+        let size = crate::icing::calculate_memory_icing_size(memory)?;
+
+        if self.current_size + size > self.max_size {
             bail!(
                 "Database size limit exceeded: current {}, additional {}, limit {}",
                 self.current_size,
-                additional_size,
+                size,
                 self.max_size
             );
         }
 
-        let blob_id = self.blob_store.add_memory(&memory).await?;
-        self.meta_db().add_memory(&memory, blob_id)?;
-        self.current_size += additional_size;
-        Ok(memory.id)
+        Ok(size)
+    }
+
+    /// Indexes a prepared memory in Icing and updates the size tracker.
+    fn index_memory(
+        &mut self,
+        memory: &Memory,
+        blob_id: BlobId,
+        size: usize,
+    ) -> anyhow::Result<MemoryId> {
+        self.meta_db().add_memory(memory, blob_id)?;
+        self.current_size += size;
+        Ok(memory.id.clone())
     }
 
     pub async fn get_memories_by_tag(

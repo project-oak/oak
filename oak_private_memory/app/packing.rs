@@ -98,3 +98,5 @@ impl_packing!(Request => GetDatabaseMetricsRequest);
 impl_packing!(Response => GetDatabaseMetricsResponse);
 impl_packing!(Request => SyncDatabaseRequest);
 impl_packing!(Response => SyncDatabaseResponse);
+impl_packing!(Request => AddMemoriesRequest);
+impl_packing!(Response => AddMemoriesResponse);

@@ -18,6 +18,7 @@ use anyhow::Context;
 use external_db_client::{BlobId, DataBlobHandler, ExternalDbClient};
 use log::warn;
 use prost::Message;
+use prost_types::Timestamp;
 use sealed_memory_rust_proto::prelude::v1::*;
 
 /// Handles encrypting, decrypting, and storing Memory objects in the external
@@ -92,23 +93,61 @@ impl MemoryBlobStore {
         Ok((encrypted_data, nonce))
     }
 
-    pub async fn add_memory(&mut self, memory: &Memory) -> anyhow::Result<BlobId> {
+    /// Encrypts a memory and builds a DataBlob ready for storage.
+    /// Returns (blob_id, data_blob, expiration_timestamp).
+    fn prepare_blob(&self, memory: &Memory) -> anyhow::Result<(BlobId, DataBlob, Timestamp)> {
         let blob_id: BlobId = rand::random::<u128>().to_string();
         let (encrypted_data, nonce) = self.encode_encrypt_memory(memory, &blob_id)?;
         let encrypted_blob = EncryptedDataBlob { nonce, data: encrypted_data };
-
         let expiration_timestamp = memory
             .expiration_timestamp
             .ok_or_else(|| anyhow::anyhow!("missing expiration_timestamp in memory"))?;
+        let data_blob = DataBlob { id: blob_id.clone(), blob: encrypted_blob.encode_to_vec() };
+        Ok((blob_id, data_blob, expiration_timestamp))
+    }
+
+    pub async fn add_memory(&mut self, memory: &Memory) -> anyhow::Result<BlobId> {
+        let (blob_id, data_blob, expiration_timestamp) = self.prepare_blob(memory)?;
         let coarsened_expiration_timestamp =
             crate::clock::round_up_to_daily_boundary(expiration_timestamp);
-
-        // Store in external DB, explicitly providing the generated ID
-        self.db_client
-            .add_blob(encrypted_blob, Some(blob_id.clone()), coarsened_expiration_timestamp)
-            .await?;
-
+        self.db_client.add_blobs(vec![data_blob], coarsened_expiration_timestamp).await?;
         Ok(blob_id)
+    }
+
+    /// Batch-add multiple memories in a single WriteDataBlobs RPC.
+    /// Returns a Vec of blob_ids per memory, in order.
+    pub async fn add_memories(&mut self, memories: &[&Memory]) -> anyhow::Result<Vec<BlobId>> {
+        if memories.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let mut blob_ids = Vec::with_capacity(memories.len());
+        let mut data_blobs = Vec::with_capacity(memories.len());
+        let mut max_expiration: Option<Timestamp> = None;
+
+        for memory in memories {
+            let (blob_id, data_blob, expiration_timestamp) = self.prepare_blob(memory)?;
+
+            match &max_expiration {
+                Some(current_max) if expiration_timestamp.seconds > current_max.seconds => {
+                    max_expiration = Some(expiration_timestamp);
+                }
+                None => {
+                    max_expiration = Some(expiration_timestamp);
+                }
+                _ => {}
+            }
+
+            data_blobs.push(data_blob);
+            blob_ids.push(blob_id);
+        }
+
+        let coarsened_expiration_timestamp =
+            crate::clock::round_up_to_daily_boundary(max_expiration.unwrap());
+
+        self.db_client.add_blobs(data_blobs, coarsened_expiration_timestamp).await?;
+
+        Ok(blob_ids)
     }
 
     pub async fn delete_memories(&mut self, blob_ids: &[BlobId]) -> anyhow::Result<()> {
