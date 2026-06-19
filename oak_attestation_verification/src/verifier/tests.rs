@@ -88,6 +88,34 @@ fn test_milan_rk_staging_success() {
     assert!(p.status() == Status::Success);
 }
 
+#[test]
+fn event_log_with_unbound_event_is_rejected() {
+    let d = AttestationData::load_milan_oc_staging();
+    let event_log = d.evidence.event_log.as_ref().expect("no event log");
+
+    // Genuine evidence carries one event per DICE layer, so the binding validates.
+    super::validate_that_event_log_is_captured_in_dice_layers(
+        event_log,
+        &d.evidence.layers,
+        super::EventLogType::OriginalEventLog.into(),
+    )
+    .expect("genuine event log should validate");
+
+    // An event that no DICE layer commits to must be rejected: the surplus event is
+    // not captured anywhere in the chain, yet it would still be decoded as a
+    // measurement downstream.
+    let mut tampered = event_log.clone();
+    tampered.encoded_events.push(b"unbound event".to_vec());
+    assert!(
+        super::validate_that_event_log_is_captured_in_dice_layers(
+            &tampered,
+            &d.evidence.layers,
+            super::EventLogType::OriginalEventLog.into(),
+        )
+        .is_err()
+    );
+}
+
 fn create_endorsement(
     digest: &RawDigest,
     claim_types: Vec<&str>,
