@@ -748,6 +748,11 @@ pub(crate) fn acquire_stage0_expected_values(
                     .context("converting hex to raw digest in firmware attachment")?;
                 raw_digests.push(raw);
             }
+            if let Some(ref digest) = firmware_attachment.tdx_measurement {
+                let raw = hex_to_raw_digest(digest)
+                    .context("converting TDX hex to raw digest in firmware attachment")?;
+                raw_digests.push(raw);
+            }
             Ok(to_expected_digests(&raw_digests, statement.predicate.validity.as_ref()))
         }
         Some(binary_reference_value::Type::Digests(expected_digests)) => {
