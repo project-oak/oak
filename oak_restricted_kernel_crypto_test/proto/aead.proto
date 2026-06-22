@@ -1,0 +1,84 @@
+//
+// Copyright 2026 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.crypto_test;
+
+import "proto/micro_rpc/options.proto";
+
+// Request to encrypt plaintext using an AEAD cipher.
+message AeadEncryptRequest {
+  // The encryption key (raw bytes).
+  bytes key = 1;
+  // The nonce / initialization vector (raw bytes).
+  bytes nonce = 2;
+  // The plaintext to encrypt.
+  bytes plaintext = 3;
+  // Additional authenticated data.
+  bytes aad = 4;
+}
+
+// Response containing the encrypted ciphertext and authentication tag.
+message AeadEncryptResponse {
+  // The ciphertext (without the tag).
+  bytes ciphertext = 1;
+  // The authentication tag.
+  bytes tag = 2;
+}
+
+// Request to decrypt ciphertext using an AEAD cipher.
+message AeadDecryptRequest {
+  // The decryption key (raw bytes).
+  bytes key = 1;
+  // The nonce / initialization vector (raw bytes).
+  bytes nonce = 2;
+  // The ciphertext to decrypt (without the tag).
+  bytes ciphertext = 3;
+  // Additional authenticated data.
+  bytes aad = 4;
+  // The authentication tag.
+  bytes tag = 5;
+}
+
+// Response containing the decrypted plaintext.
+message AeadDecryptResponse {
+  // The decrypted plaintext.
+  bytes plaintext = 1;
+}
+
+// Service that exposes AEAD cryptographic operations.
+//
+// This is the interface that enclave apps must implement to support
+// AEAD-based Wycheproof test vector validation. Different enclave apps
+// may implement this using different crypto libraries, allowing us to
+// verify that alternative libraries produce correct results.
+service Aead {
+  // method_id: 2001
+  // Encrypts the given plaintext using the specified key and nonce.
+  rpc Encrypt(AeadEncryptRequest) returns (AeadEncryptResponse) {
+    option (.oak.micro_rpc.method_id) = 2001;
+  }
+
+  // method_id: 2002
+  // Decrypts the given ciphertext using the specified key, nonce, and tag.
+  //
+  // Returns a micro_rpc error if decryption fails (e.g. due to an
+  // invalid tag or tampered ciphertext).
+  rpc Decrypt(AeadDecryptRequest) returns (AeadDecryptResponse) {
+    option (.oak.micro_rpc.method_id) = 2002;
+  }
+}
