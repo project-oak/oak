@@ -1023,7 +1023,7 @@ pub struct C2sptLogProofReferenceValue {
     /// The sigsum policy specifying trusted log keys and witness quorum.
     /// Must contain at least one `log` line and a `quorum` line.
     /// See:
-    /// <https://git.glasklar.is/sigsum/core/sigsum-go/-/blob/main/doc/policy.md>
+    /// <https://c2sp.org/tlog-policy>
     #[prost(string, tag = "2")]
     pub policy: ::prost::alloc::string::String,
 }

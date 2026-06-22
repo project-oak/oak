@@ -14,13 +14,13 @@
 // limitations under the License.
 //
 
-//! Sigsum policies for C2SP transparency log proofs.
+//! [C2SP tlog-policy](https://c2sp.org/tlog-policy) parser and evaluator.
 //!
 //! A [`Policy`] defines the trusted log keys and the witness quorum required
 //! for a checkpoint to be considered valid.
 //!
 //! Policies are parsed from the
-//! [sigsum policy file format](https://git.glasklar.is/sigsum/core/sigsum-go/-/blob/main/doc/policy.md),
+//! [C2SP tlog-policy format](https://c2sp.org/tlog-policy),
 //! with the additional requirement that public keys must be provided as
 //! [C2SP verifying key strings](https://c2sp.org/signed-note#verifier-keys)
 //! (vkey format) rather than raw hex.
@@ -70,7 +70,8 @@ pub enum PolicyError {
     Parse { line: usize, reason: String },
 }
 
-/// A sigsum policy specifying trusted log keys and witness quorum.
+/// A [C2SP tlog-policy](https://c2sp.org/tlog-policy) specifying trusted log
+/// keys and witness quorum.
 ///
 /// The policy specifies a set of trusted log verifying keys, a set of known
 /// witnesses, and the quorum rule that determines whether enough witness
@@ -113,12 +114,13 @@ impl Policy {
     /// Parses a policy from its text representation.
     ///
     /// Follows the
-    /// [sigsum policy format](https://git.glasklar.is/sigsum/core/sigsum-go/-/blob/main/doc/policy.md),
+    /// [C2SP tlog-policy format](https://c2sp.org/tlog-policy),
     /// with the requirement that all public keys are specified as
     /// [C2SP verifying key strings](https://c2sp.org/signed-note#verifier-keys).
     ///
-    /// The policy must contain at least one `log` line specifying a trusted log
-    /// verifying key, and exactly one `quorum` line.
+    /// The policy must contain exactly one `quorum` line. The set of
+    /// logs may be empty if the application knows the appropriate log(s)
+    /// from other context.
     pub fn parse(data: &str) -> Result<Self, PolicyError> {
         let mut log_keys = Vec::new();
         let mut quorums = BTreeMap::new();
@@ -145,7 +147,7 @@ impl Policy {
                     }
                     // The vkey is the first argument; the optional second
                     // argument is a URL (ignored).
-                    // See: https://git.glasklar.is/sigsum/core/sigsum-go/-/blob/main/doc/policy.md#defining-a-log
+                    // See: https://c2sp.org/tlog-policy#defining-a-log
                     let vkey_str = tokens[1];
 
                     let vkey =
@@ -168,6 +170,17 @@ impl Policy {
                         });
                     }
 
+                    // Reject duplicate log keys (same underlying public
+                    // key).
+                    if log_keys.iter().any(|existing: &NoteVerifyingKey| {
+                        existing.verifying_key == vkey.verifying_key
+                    }) {
+                        return Err(PolicyError::Parse {
+                            line: lineno + 1,
+                            reason: "duplicate log key".into(),
+                        });
+                    }
+
                     log_keys.push(vkey);
                 }
                 "witness" => {
@@ -181,6 +194,12 @@ impl Policy {
                         });
                     }
                     let name = tokens[1];
+                    if name == "none" {
+                        return Err(PolicyError::Parse {
+                            line: lineno + 1,
+                            reason: "`none` is a reserved name".into(),
+                        });
+                    }
                     let vkey_str = tokens[2];
 
                     // Parse the vkey as a C2SP verifying key.
@@ -214,6 +233,19 @@ impl Policy {
                         });
                     }
 
+                    // Reject duplicate witness keys (same underlying
+                    // public key).
+                    for existing in quorums.values() {
+                        if let Quorum::Witness(existing_vkey) = existing
+                            && existing_vkey.verifying_key == vkey.verifying_key
+                        {
+                            return Err(PolicyError::Parse {
+                                line: lineno + 1,
+                                reason: "duplicate witness key".into(),
+                            });
+                        }
+                    }
+
                     quorums.insert(name, Quorum::Witness(vkey));
                 }
                 "group" => {
@@ -227,18 +259,18 @@ impl Policy {
                         });
                     }
                     let name = tokens[1];
+                    if name == "none" {
+                        return Err(PolicyError::Parse {
+                            line: lineno + 1,
+                            reason: "`none` is a reserved name".into(),
+                        });
+                    }
                     let k_str = tokens[2];
                     let members: Vec<QuorumName> =
                         tokens[3..].iter().map(|s| QuorumName::new(s)).collect();
 
-                    let k = parse_threshold(k_str, members.len()).ok_or_else(|| {
-                        PolicyError::Parse {
-                            line: lineno + 1,
-                            reason: alloc::format!(
-                                "invalid group rule: cannot parse `{k_str}` as a threshold"
-                            ),
-                        }
-                    })?;
+                    let k = parse_threshold(k_str, members.len())
+                        .map_err(|reason| PolicyError::Parse { line: lineno + 1, reason })?;
 
                     let name = QuorumName::new(name);
                     if quorums.contains_key(&name) {
@@ -248,8 +280,16 @@ impl Policy {
                         });
                     }
 
-                    // Validate all members refer to previously defined names.
+                    // Validate all members are unique and refer to
+                    // previously defined names.
+                    let mut seen_members = alloc::collections::BTreeSet::new();
                     for member in &members {
+                        if !seen_members.insert(member) {
+                            return Err(PolicyError::Parse {
+                                line: lineno + 1,
+                                reason: alloc::format!("duplicate group member `{member}`"),
+                            });
+                        }
                         if !quorums.contains_key(member) {
                             return Err(PolicyError::Parse {
                                 line: lineno + 1,
@@ -300,13 +340,6 @@ impl Policy {
             return Err(PolicyError::Parse {
                 line: data.lines().count(),
                 reason: "no quorum line found".into(),
-            });
-        }
-
-        if log_keys.is_empty() {
-            return Err(PolicyError::Parse {
-                line: data.lines().count(),
-                reason: "no log key found; policy must contain at least one `log` line".into(),
             });
         }
 
@@ -376,12 +409,22 @@ impl TryFrom<&C2sptLogProofReferenceValue> for Policy {
     }
 }
 
-/// Parses a threshold value: `"any"` → 1, `"all"` → n, or a numeric value.
-fn parse_threshold(s: &str, n: usize) -> Option<usize> {
+/// Parses a threshold value: `"any"` → 1, `"all"` → n, or a decimal
+/// integer k where 1 ≤ k ≤ n.
+fn parse_threshold(s: &str, n: usize) -> Result<usize, String> {
     match s {
-        "any" => Some(1),
-        "all" => Some(n),
-        _ => s.parse().ok(),
+        "any" => Ok(1),
+        "all" => Ok(n),
+        _ => {
+            let k: usize = s.parse().map_err(|_| alloc::format!("invalid threshold `{s}`"))?;
+            if (1..=n).contains(&k) {
+                Ok(k)
+            } else {
+                Err(alloc::format!(
+                    "threshold {k} out of range for group of size {n}, must satisfy 1 <= k <= {n}"
+                ))
+            }
+        }
     }
 }
 
@@ -418,9 +461,10 @@ mod tests {
     }
 
     #[test]
-    fn parse_no_log_key_fails() {
-        let err = Policy::parse("quorum none\n").unwrap_err();
-        assert!(err.to_string().contains("no log key found"));
+    fn parse_no_log_keys_accepted() {
+        let policy = Policy::parse("quorum none\n").unwrap();
+        assert!(policy.log_keys().is_empty());
+        assert!(policy.quorum.is_none());
     }
 
     #[test]
@@ -760,7 +804,7 @@ mod tests {
             w1.to_vkey_string()
         ))
         .unwrap_err();
-        assert!(err.to_string().contains("cannot parse `xyz` as a threshold"));
+        assert!(err.to_string().contains("invalid threshold `xyz`"));
     }
 
     #[test]
@@ -778,5 +822,100 @@ mod tests {
 
         // An unrelated witness key should not satisfy the quorum.
         assert!(!policy.check_quorum(&[&w_other]));
+    }
+
+    #[test]
+    fn parse_duplicate_log_key_fails() {
+        let lkey = make_log_vkey("example.com/log", [0x01; 32]);
+        // Same underlying key, even with a different origin name.
+        let lkey2 = NoteVerifyingKey::new("other.com/log", lkey.verifying_key.clone());
+        let policy_text = alloc::format!(
+            "log {}\nlog {}\nquorum none\n",
+            lkey.to_vkey_string(),
+            lkey2.to_vkey_string()
+        );
+        let err = Policy::parse(&policy_text).unwrap_err();
+        assert!(err.to_string().contains("duplicate log key"));
+    }
+
+    #[test]
+    fn parse_witness_name_none_fails() {
+        let lkey = make_log_vkey("example.com/log", [0x01; 32]);
+        let w1 = make_witness_vkey("witness.example.com/w1", [0xAA; 32]);
+        let policy_text = alloc::format!(
+            "{}witness none {}\nquorum none\n",
+            log_line(&lkey),
+            w1.to_vkey_string()
+        );
+        let err = Policy::parse(&policy_text).unwrap_err();
+        assert!(err.to_string().contains("`none` is a reserved name"));
+    }
+
+    #[test]
+    fn parse_group_name_none_fails() {
+        let lkey = make_log_vkey("example.com/log", [0x01; 32]);
+        let w1 = make_witness_vkey("witness.example.com/w1", [0xAA; 32]);
+        let policy_text = alloc::format!(
+            concat!("{}witness w1 {}\n", "group none any w1\n", "quorum w1\n",),
+            log_line(&lkey),
+            w1.to_vkey_string()
+        );
+        let err = Policy::parse(&policy_text).unwrap_err();
+        assert!(err.to_string().contains("`none` is a reserved name"));
+    }
+
+    #[test]
+    fn parse_threshold_zero_fails() {
+        let lkey = make_log_vkey("example.com/log", [0x01; 32]);
+        let w1 = make_witness_vkey("witness.example.com/w1", [0xAA; 32]);
+        let policy_text = alloc::format!(
+            concat!("{}witness w1 {}\n", "group G 0 w1\n", "quorum G\n",),
+            log_line(&lkey),
+            w1.to_vkey_string()
+        );
+        let err = Policy::parse(&policy_text).unwrap_err();
+        assert!(err.to_string().contains("threshold 0 out of range for group of size 1"));
+    }
+
+    #[test]
+    fn parse_threshold_exceeds_n_fails() {
+        let lkey = make_log_vkey("example.com/log", [0x01; 32]);
+        let w1 = make_witness_vkey("witness.example.com/w1", [0xAA; 32]);
+        let policy_text = alloc::format!(
+            concat!("{}witness w1 {}\n", "group G 2 w1\n", "quorum G\n",),
+            log_line(&lkey),
+            w1.to_vkey_string()
+        );
+        let err = Policy::parse(&policy_text).unwrap_err();
+        assert!(err.to_string().contains("threshold 2 out of range for group of size 1"));
+    }
+
+    #[test]
+    fn parse_duplicate_group_member_fails() {
+        let lkey = make_log_vkey("example.com/log", [0x01; 32]);
+        let w1 = make_witness_vkey("witness.example.com/w1", [0xAA; 32]);
+        let policy_text = alloc::format!(
+            concat!("{}witness w1 {}\n", "group G 1 w1 w1\n", "quorum G\n",),
+            log_line(&lkey),
+            w1.to_vkey_string()
+        );
+        let err = Policy::parse(&policy_text).unwrap_err();
+        assert!(err.to_string().contains("duplicate group member `w1`"));
+    }
+
+    #[test]
+    fn parse_duplicate_witness_key_fails() {
+        let lkey = make_log_vkey("example.com/log", [0x01; 32]);
+        let w1 = make_witness_vkey("witness.example.com/w1", [0xAA; 32]);
+        // Same underlying key with a different name.
+        let w2 = NoteVerifyingKey::new("witness.example.com/w2", w1.verifying_key.clone());
+        let policy_text = alloc::format!(
+            concat!("{}witness w1 {}\n", "witness w2 {}\n", "quorum none\n",),
+            log_line(&lkey),
+            w1.to_vkey_string(),
+            w2.to_vkey_string()
+        );
+        let err = Policy::parse(&policy_text).unwrap_err();
+        assert!(err.to_string().contains("duplicate witness key"));
     }
 }

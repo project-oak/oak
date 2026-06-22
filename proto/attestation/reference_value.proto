@@ -106,7 +106,7 @@ message C2SPTLogProofReferenceValue {
   // The sigsum policy specifying trusted log keys and witness quorum.
   // Must contain at least one `log` line and a `quorum` line.
   // See:
-  // https://git.glasklar.is/sigsum/core/sigsum-go/-/blob/main/doc/policy.md
+  // https://c2sp.org/tlog-policy
   string policy = 2;
 }
 
