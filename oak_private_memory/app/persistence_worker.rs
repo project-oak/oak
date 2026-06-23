@@ -26,6 +26,11 @@ use tokio::{sync::mpsc, time::Instant};
 
 static MAX_RETRY_ATTEMPTS: u64 = 25;
 
+/// Minimum number of optimizable (deleted/expired) documents before calling
+/// Icing.Optimize. GetOptimizeInfo (~0.16ms) is called on every persist to
+/// check, and Optimize (~1s) is only called when this threshold is exceeded.
+static OPTIMIZE_DOC_THRESHOLD: i64 = 100;
+
 use crate::context::UserSessionContext;
 
 // Attempt to persist the database once.
@@ -39,13 +44,6 @@ async fn try_persist_database(
         info!("Database is not changed, skip saving");
         return Ok(MetadataPersistResult::Succeeded);
     }
-    // Calling this multiple times should be fine because the database is persisted
-    // to disk after each call. Subsequent calls to optimize will be a no-op or
-    // fast.
-    let now = Instant::now();
-    user_context.database.optimize()?;
-    let elapsed = now.elapsed();
-    get_global_metrics().record_db_optimize_latency(elapsed.as_millis() as u64);
     let exported_db = user_context.database.export()?;
     let encrypted_info = exported_db.encrypted_info.context("encrypted info is empty")?;
     let database = encrypt_database(&encrypted_info, &user_context.dek)?;
@@ -179,6 +177,27 @@ pub async fn run_persistence_service(mut rx: mpsc::UnboundedReceiver<UserSession
     while let Some(mut user_context) = rx.recv().await {
         info!("Persistence service received a session to save");
         get_global_metrics().record_db_persist_queue_size(rx.len() as u64);
+
+        // Optimize is expensive (~1s for a 30MB database) and always rebuilds
+        // the entire index. Use GetOptimizeInfo (~0.16ms) to check whether
+        // there are enough deleted/expired documents to warrant optimization.
+        match user_context.database.get_optimize_info() {
+            Ok(info) if info.optimizable_docs() > OPTIMIZE_DOC_THRESHOLD => {
+                info!("optimizing database ({} optimizable docs)", info.optimizable_docs());
+                let now = Instant::now();
+                if let Err(e) = user_context.database.optimize() {
+                    error!("optimizing database: {e:?}");
+                } else {
+                    let elapsed = now.elapsed();
+                    get_global_metrics().record_db_optimize_latency(elapsed.as_millis() as u64);
+                }
+            }
+            Err(e) => {
+                error!("getting optimize info: {e:?}");
+            }
+            _ => {}
+        }
+
         if let Err(e) = persist_database(&mut user_context).await {
             get_global_metrics().inc_db_persist_failures();
             info!("Failed to persist database: {:?}", e);

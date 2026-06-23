@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use anyhow::{Context, bail};
 use external_db_client::{BlobId, ExternalDbClient};
-use icing::OptimizeResultProto;
+use icing::{GetOptimizeInfoResultProto, OptimizeResultProto};
 use log::info;
 use prost::Message;
 use prost_types::Timestamp;
@@ -100,6 +100,10 @@ impl Database {
 
     pub fn optimize(&mut self) -> anyhow::Result<OptimizeResultProto> {
         self.database.optimize()
+    }
+
+    pub fn get_optimize_info(&self) -> anyhow::Result<GetOptimizeInfoResultProto> {
+        self.database.get_optimize_info()
     }
 
     /// Returns true if the cached database contains content that doesnt exist

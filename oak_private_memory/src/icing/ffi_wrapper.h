@@ -238,6 +238,10 @@ class IcingSearchEngine {
     return ProtoToVec(inner_->Optimize());
   }
 
+  std::unique_ptr<std::vector<uint8_t>> get_optimize_info_impl() const {
+    return ProtoToVec(inner_->GetOptimizeInfo());
+  }
+
  private:
   std::unique_ptr<icing::lib::IcingSearchEngine> inner_;
 };

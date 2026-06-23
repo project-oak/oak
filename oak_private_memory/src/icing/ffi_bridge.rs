@@ -55,6 +55,7 @@ mod ffi {
         ) -> UniquePtr<CxxVector<u8>>;
         fn persist_to_disk(&self, persist_type: i32) -> UniquePtr<CxxVector<u8>>;
         fn optimize_impl(&self) -> UniquePtr<CxxVector<u8>>;
+        fn get_optimize_info_impl(&self) -> UniquePtr<CxxVector<u8>>;
 
         fn create_icing_search_engine(options: &[u8]) -> UniquePtr<IcingSearchEngine>;
     }
@@ -138,9 +139,9 @@ use cxx::UniquePtr;
 // Re-export all FFI functions and types
 pub use ffi::*;
 use icing_rust_proto::icing::lib::{
-    DeleteResultProto, DocumentProto, InitializeResultProto, OptimizeResultProto, PutResultProto,
-    ResultSpecProto, SchemaProto, ScoringSpecProto, SearchResultProto, SearchSpecProto,
-    SetSchemaResultProto, property_proto::VectorProto,
+    DeleteResultProto, DocumentProto, GetOptimizeInfoResultProto, InitializeResultProto,
+    OptimizeResultProto, PutResultProto, ResultSpecProto, SchemaProto, ScoringSpecProto,
+    SearchResultProto, SearchSpecProto, SetSchemaResultProto, property_proto::VectorProto,
 };
 use prost::Message;
 
@@ -211,6 +212,11 @@ impl ffi::IcingSearchEngine {
     pub fn optimize(&self) -> anyhow::Result<OptimizeResultProto> {
         let result = self.optimize_impl();
         Ok(OptimizeResultProto::decode(result.as_slice())?)
+    }
+
+    pub fn get_optimize_info(&self) -> anyhow::Result<GetOptimizeInfoResultProto> {
+        let result = self.get_optimize_info_impl();
+        Ok(GetOptimizeInfoResultProto::decode(result.as_slice())?)
     }
 }
 

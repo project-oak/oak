@@ -849,6 +849,10 @@ impl IcingMetaDatabase {
         self.icing_search_engine.optimize()
     }
 
+    pub fn get_optimize_info(&self) -> anyhow::Result<icing::GetOptimizeInfoResultProto> {
+        self.icing_search_engine.get_optimize_info()
+    }
+
     fn create_view_id_projection(schema_name: &str) -> icing::TypePropertyMask {
         icing::TypePropertyMask {
             schema_type: Some(schema_name.to_string()),
