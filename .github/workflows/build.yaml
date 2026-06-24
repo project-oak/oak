@@ -33,6 +33,8 @@ jobs:
           - buildconfigs/oak_orchestrator.sh
           - buildconfigs/oak_restricted_kernel_simple_io_channel.sh
           - buildconfigs/oak_restricted_kernel_virtio_console_channel.sh
+          - buildconfigs/oak_restricted_kernel_tdx_simple_io_channel.sh
+          - buildconfigs/oak_restricted_kernel_tdx_virtio_console_channel.sh
           - buildconfigs/private_memory_server.sh
           - buildconfigs/stage0_bin.sh
           - buildconfigs/stage0_bin_tdx.sh
