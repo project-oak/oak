@@ -452,7 +452,10 @@ pub struct BinaryArgvRegexMeasurement {
     #[prost(bool, tag = "2")]
     pub argv_regex_match: bool,
 }
-/// All the related measurements for Stage 0.
+/// Measurements performed by Stage 0.
+///
+/// Encoded as event_log\[0\] in both Oak Containers and Restricted Kernel
+/// evidence. During verification this is decoded into KernelLayerData.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Stage0Measurements {
     /// Kernel setup data digest.
@@ -499,14 +502,18 @@ pub struct Stage0TransparentMeasurements {
     #[prost(bytes = "vec", tag = "6")]
     pub kernel_cmdline_digest: ::prost::alloc::vec::Vec<u8>,
 }
-/// All the related measurements for Oak Container's Stage 1.
+/// All measurements by Oak Container's Stage 1.
+///
+/// Encoded as event_log\[1\] in legacy Oak Containers evidence.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Stage1Measurements {
     /// System image digest.
     #[prost(message, optional, tag = "1")]
     pub system_image: ::core::option::Option<super::super::RawDigest>,
 }
-/// All the related measurements for Oak Container's Stage 1.
+/// All measurements by Oak Containers orchestrator.
+///
+/// Encoded as event_log\[2\] in legacy Oak Containers evidence.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct OrchestratorMeasurements {
     #[prost(message, optional, tag = "1")]
@@ -2158,6 +2165,9 @@ pub struct KernelLayerData {
 }
 /// Values extracted from the evidence that represents an application running
 /// under the Oak Restricted Kernel.
+///
+/// Measurements of the application taken by the RK orchestrator.
+/// Encoded as event_log\[1\] in Restricted Kernel evidence.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ApplicationLayerData {
     /// Measurement RawDigest of the application binary.
@@ -2169,6 +2179,9 @@ pub struct ApplicationLayerData {
 }
 /// Values extracted from the evidence that represents the Oak Containers system
 /// image.
+///
+/// Measurements of the system image taken by Stage 1.
+/// Encoded as event_log\[1\] in Oak Containers evidence.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SystemLayerData {
     /// Measurement RawDigest of the system image.
@@ -2177,6 +2190,9 @@ pub struct SystemLayerData {
 }
 /// Values extracted from the evidence that represents the Container Runtime
 /// Bundle used in Oak Containers.
+///
+/// Measurements of the container bundle taken by the Oak Containers
+/// Orchestrator. Encoded as event_log\[2\] in Oak Containers evidence.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ContainerLayerData {
     /// Measurement RawDigest of the container bundle.

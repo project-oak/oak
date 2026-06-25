@@ -1132,3 +1132,63 @@ manipulate_tests! {
     load_milan_rk_release,
     load_milan_rk_staging,
 }
+
+/// Verifies that a forged application event in Restricted Kernel evidence is
+/// detected. The application event log entry is replaced with one containing
+/// an arbitrary binary digest, and the reference values are configured
+/// to expect that forged digest.
+#[test]
+fn forged_rk_application_event_is_detected() {
+    let mut d = AttestationData::load_milan_rk_staging();
+
+    // The genuine evidence has event_log[1] = ApplicationLayerData with the real
+    // app binary digest. A MITM replaces it with a forged ApplicationLayerData
+    // containing an attacker-chosen digest.
+    let forged_binary_digest = [
+        0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE,
+        0xEF, 0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD,
+        0xBE, 0xEFu8,
+    ]
+    .to_vec();
+    let forged_app_layer = oak_proto_rust::oak::attestation::v1::ApplicationLayerData {
+        binary: Some(RawDigest { sha2_256: forged_binary_digest.clone(), ..Default::default() }),
+        config: Some(RawDigest::default()),
+    };
+    let forged_event = oak_proto_rust::oak::attestation::v1::Event {
+        tag: "oak_restricted_kernel_orchestrator".to_string(),
+        event: Some(prost_types::Any {
+            type_url: "type.googleapis.com/oak.attestation.v1.ApplicationLayerData".to_string(),
+            value: forged_app_layer.encode_to_vec(),
+        }),
+    };
+
+    // Replace event_log[1] with the forged event.
+    d.evidence.event_log.as_mut().expect("no event log").encoded_events[1] =
+        forged_event.encode_to_vec();
+
+    // Now set up reference values that expect the FORGED digest (as a real
+    // verifier configured for the "legitimate" app would).
+    if let Some(reference_values::Type::OakRestrictedKernel(rk)) =
+        d.reference_values.r#type.as_mut()
+    {
+        rk.application_layer.as_mut().expect("no app layer ref values").binary =
+            Some(BinaryReferenceValue {
+                r#type: Some(binary_reference_value::Type::Digests(
+                    oak_proto_rust::oak::attestation::v1::Digests {
+                        digests: vec![RawDigest {
+                            sha2_256: forged_binary_digest,
+                            ..Default::default()
+                        }],
+                    },
+                )),
+            });
+    } else {
+        panic!("bad test setup: expected RK reference values");
+    }
+
+    // The forged event is detected: validate_events_and_layers checks the
+    // application event against the application key certificate, catching the
+    // hash mismatch.
+    let result = verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &d.reference_values);
+    assert!(result.is_err(), "forged RK application event should be detected and rejected",);
+}

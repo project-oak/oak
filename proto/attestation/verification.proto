@@ -225,6 +225,9 @@ message KernelLayerData {
 
 // Values extracted from the evidence that represents an application running
 // under the Oak Restricted Kernel.
+//
+// Measurements of the application taken by the RK orchestrator.
+// Encoded as event_log[1] in Restricted Kernel evidence.
 message ApplicationLayerData {
   // Measurement RawDigest of the application binary.
   RawDigest binary = 1;
@@ -235,6 +238,9 @@ message ApplicationLayerData {
 
 // Values extracted from the evidence that represents the Oak Containers system
 // image.
+//
+// Measurements of the system image taken by Stage 1.
+// Encoded as event_log[1] in Oak Containers evidence.
 message SystemLayerData {
   // Measurement RawDigest of the system image.
   RawDigest system_image = 1;
@@ -242,6 +248,9 @@ message SystemLayerData {
 
 // Values extracted from the evidence that represents the Container Runtime
 // Bundle used in Oak Containers.
+//
+// Measurements of the container bundle taken by the Oak Containers
+// Orchestrator. Encoded as event_log[2] in Oak Containers evidence.
 message ContainerLayerData {
   // Measurement RawDigest of the container bundle.
   RawDigest bundle = 1;

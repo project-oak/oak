@@ -283,6 +283,7 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
             extract_application_layer_data(final_layer_claims)
         {
             match &evidence.layers[..] {
+                // TODO: b/527437181 - Update when RK produces 2 layers instead of 1.
                 [kernel_layer] => {
                     let kernel_layer = Some(
                         extract_kernel_values(

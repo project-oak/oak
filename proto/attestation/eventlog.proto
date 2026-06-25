@@ -38,7 +38,10 @@ message BinaryArgvRegexMeasurement {
   bool argv_regex_match = 2;
 }
 
-// All the related measurements for Stage 0.
+// Measurements performed by Stage 0.
+//
+// Encoded as event_log[0] in both Oak Containers and Restricted Kernel
+// evidence. During verification this is decoded into KernelLayerData.
 message Stage0Measurements {
   // Kernel setup data digest.
   bytes setup_data_digest = 1;
@@ -73,7 +76,9 @@ message Stage0TransparentMeasurements {
   bytes kernel_cmdline_digest = 6;
 }
 
-// All the related measurements for Oak Container's Stage 1.
+// All measurements by Oak Container's Stage 1.
+//
+// Encoded as event_log[1] in legacy Oak Containers evidence.
 message Stage1Measurements {
   // replaced by SystemLayerData, which holds the same data. Will be removed.
   option deprecated = true;
@@ -81,7 +86,9 @@ message Stage1Measurements {
   oak.RawDigest system_image = 1;
 }
 
-// All the related measurements for Oak Container's Stage 1.
+// All measurements by Oak Containers orchestrator.
+//
+// Encoded as event_log[2] in legacy Oak Containers evidence.
 message OrchestratorMeasurements {
   // replaced by ContainerLayerData, which holds the same data. Will be removed.
   option deprecated = true;
