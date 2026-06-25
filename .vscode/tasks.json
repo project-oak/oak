@@ -8,9 +8,8 @@
             "args": [
                 "develop",
                 "--command",
-                "bazel",
-                "run",
-                "@rules_rust//tools/rust_analyzer:gen_rust_project"
+                "just",
+                "gen-rust-project"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"

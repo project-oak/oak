@@ -67,6 +67,27 @@ verify-bazelisk:
     rm -r ~/.cache/bazelisk
     bazel --version
 
+[doc("Generate rust-project.json for rust-analyzer (code navigation).")]
+gen-rust-project:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Querying packages with Rust targets..."
+    # gen_rust_project doesn't support `except` syntax, so we use bazel query
+    # to enumerate all packages while excluding //tr, which causes
+    # gen_rust_project to fail with "Failed to make progress on building crate
+    # dependency graph" when combined with the full workspace.
+    # Incompatible targets (bare-metal, wasm) are silently skipped by Bazel
+    # because we pass wildcard patterns (//pkg/...) rather than explicit labels.
+    mapfile -t packages < <(
+      bazel query --output=package '
+        kind("rust_(library|binary|test|proc_macro)", //... except //third_party/... except //tr/...)
+      ' 2>/dev/null \
+      | sed 's|^|//|; s|$|/...|'
+    )
+    echo "Found ${#packages[@]} packages with Rust targets."
+    bazel run @rules_rust//tools/rust_analyzer:gen_rust_project -- "${packages[@]}"
+    echo "rust-project.json generated successfully."
+
 # -- End Developer Workflow Tools --
 
 # Profile the Wasm execution and generate a flamegraph.
