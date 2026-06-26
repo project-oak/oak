@@ -541,6 +541,16 @@ fn validate_that_event_log_is_captured_in_dice_layers(
     dice_layers: &[LayerEvidence],
     event_id_type: EventIdType,
 ) -> anyhow::Result<()> {
+    // `zip` below stops at the shorter of the two sequences, so without this check
+    // a log carrying more events than there are layers (or a chain with more
+    // layers than logged events) would pass with the surplus left unverified.
+    // Each layer commits to exactly one event, so the counts must match.
+    anyhow::ensure!(
+        dice_layers.len() == event_log.encoded_events.len(),
+        "event log has {} events but the DICE chain has {} layers",
+        event_log.encoded_events.len(),
+        dice_layers.len()
+    );
     dice_layers.iter().zip(event_log.encoded_events.iter()).try_for_each(
         |(current_layer, encoded_event)| {
             let event_digest = {
