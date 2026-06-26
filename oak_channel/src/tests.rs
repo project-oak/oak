@@ -120,6 +120,36 @@ fn test_invocation_channel_double_start_frame() {
 }
 
 #[test]
+fn test_invocation_channel_undersized_message_length() {
+    // A peer sends a START frame (without END) whose declared total message
+    // length is smaller than a single frame body. Reassembly must reject it
+    // rather than underflowing the capacity reservation.
+    let mut invocation_channel = {
+        let mut body = vec![0u8; message::BODY_OFFSET];
+        body[message::LENGTH_OFFSET..(message::LENGTH_OFFSET + message::LENGTH_SIZE)]
+            .copy_from_slice(&(message::BODY_OFFSET as u32).to_le_bytes());
+        let mut frame_store = frame::Framed::new(Box::new(MessageStore::default()));
+        frame_store.write_frame(frame::Frame { flags: frame::Flags::START, body: &body }).unwrap();
+        InvocationChannel { inner: frame_store }
+    };
+
+    invocation_channel.read_message::<message::RequestMessage>().unwrap_err();
+}
+
+#[test]
+fn test_invocation_channel_truncated_first_frame() {
+    // The first frame is too short to even contain the message length header.
+    let mut invocation_channel = {
+        let body = vec![0u8; message::LENGTH_SIZE - 1];
+        let mut frame_store = frame::Framed::new(Box::new(MessageStore::default()));
+        frame_store.write_frame(frame::Frame { flags: frame::Flags::START, body: &body }).unwrap();
+        InvocationChannel { inner: frame_store }
+    };
+
+    invocation_channel.read_message::<message::RequestMessage>().unwrap_err();
+}
+
+#[test]
 fn test_invocation_channel_expected_start_frame() {
     let mut invocation_channel = {
         let message = message::RequestMessage { invocation_id: 0, body: mock_payload() }.encode();
