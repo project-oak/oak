@@ -280,9 +280,9 @@ copy-oak-artifacts: \
     (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_measurement" "") \
     (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_serial_channel_bin" "") \
     (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_serial_channel_measurement" "") \
-    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_tdx_simple_io_channel_bin" "oak_restricted_kernel_simple_io_init_rd_wrapper_bin_tdx") \
+    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_tdx_simple_io_channel_bin" "oak_restricted_kernel_tdx_simple_io_channel") \
     (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_tdx_simple_io_channel_measurement" "") \
-    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_tdx_virtio_console_channel_bin" "oak_restricted_kernel_virtio_console_init_rd_wrapper_bin_tdx") \
+    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_tdx_virtio_console_channel_bin" "oak_restricted_kernel_tdx_virtio_console_channel") \
     (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_tdx_virtio_console_channel_measurement" "") \
     (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_tdx_serial_channel_bin" "") \
     (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_tdx_serial_channel_measurement" "") \
