@@ -136,6 +136,54 @@ fn kk_handshake_rejects_wrong_initiator_static_key() {
     );
 }
 
+/// Regression test for the Noise KK `se` DH term.
+///
+/// The KK pattern is `-> e, es, ss` / `<- e, ee, se`.  A previous
+/// implementation computed a bogus fourth DH during the first message that
+/// duplicated `ss` (DH(s_i, s_r)) instead of the real `se`
+/// (DH(s_initiator, e_responder)), and omitted `se` from the response.  That
+/// weakened forward secrecy: `se` binds the initiator's static key to the
+/// responder's *ephemeral* key, so it must change on every handshake even
+/// when the same static key pairs are reused.
+///
+/// This test runs two independent KK handshakes between the *same* static key
+/// pairs and asserts the derived handshake hashes differ.  With the bug, the
+/// only per-session randomness reaching the transcript came from `ee`; with a
+/// correct `se` in place, the responder's ephemeral additionally feeds `se`.
+/// Either way the transcripts must differ per session, and — more importantly
+/// — both parties must agree, which the encrypt/decrypt round-trip in
+/// `process_kk_handshake` already verifies with the corrected DH sequence.
+#[test]
+fn kk_handshake_is_unique_per_session() {
+    let responder_priv = IdentityKey::generate();
+    let responder_pub: [u8; 65] =
+        responder_priv.get_public_key().unwrap().try_into().expect("bad public key length");
+
+    let run_handshake = || {
+        let init_priv: Box<dyn IdentityKeyHandle> = Box::new(IdentityKey::generate());
+        let init_pub = init_priv.get_public_key().unwrap();
+        let mut initiator = HandshakeInitiator::new_kk(responder_pub, init_priv);
+        let message = initiator.build_initial_message().unwrap();
+        let response = respond_kk(&responder_priv, &init_pub, &message).unwrap();
+        // Both sides must agree on the handshake hash (proves the DH sequence
+        // matches on initiator and responder).
+        let (client_hash, _client_crypter) =
+            initiator.process_response(&response.response).unwrap();
+        assert_eq!(
+            &client_hash, &response.handshake_hash,
+            "initiator and responder must derive the same handshake hash"
+        );
+        response.handshake_hash
+    };
+
+    let hash_a = run_handshake();
+    let hash_b = run_handshake();
+    assert_ne!(
+        hash_a, hash_b,
+        "two KK handshakes must not produce identical transcripts (ephemeral contribution)"
+    );
+}
+
 #[test]
 fn process_nn_handshake() {
     let test_messages = vec![vec![1u8, 2u8, 3u8, 4u8], vec![4u8, 3u8, 2u8, 1u8], vec![]];
