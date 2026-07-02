@@ -23,6 +23,12 @@ const EFI_HOB_TYPE_HANDOFF: u16 = 0x0001;
 const EFI_HOB_TYPE_RESOURCE_DESCRIPTOR: u16 = 0x0003;
 const EFI_HOB_TYPE_END_OF_HOB_LIST: u16 = 0xFFFF;
 
+/// Size in bytes of the memory region reserved for the TD HOB list.
+///
+/// The VMM writes the HOB list into this fixed-size region, so the walk over it
+/// must never leave these bounds. Keep in sync with `TD_HOB_SIZE` in layout.ld.
+const TD_HOB_SIZE: u64 = 0x2000;
+
 /// UEFI Standard HoB Header.
 /// See UEFI Platform Initialization Specification, section 5.2.
 /// https://uefi.org/sites/default/files/resources/PI_Spec_1_6.pdf
@@ -112,15 +118,32 @@ impl Iterator for HobIterator {
     type Item = *const Header;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if (self.current_hob as u64) < self.end_of_hob_list {
-            let current = self.current_hob;
-            self.current_hob =
-                unsafe { self.current_hob.byte_offset((*current).hob_length as isize) };
-            Some(current)
-        } else {
-            serial::debug!("End of HOB list reached", self.current_hob as u64);
-            None
+        let current = self.current_hob;
+        let start = current as u64;
+        // `end_of_hob_list` and every `hob_length` come from the untrusted
+        // VMM, so only walk an entry that lies entirely below the bound: the
+        // header dereferenced here, and the full HOB body the callers read (a
+        // 0x30-byte ResourceDescription in `prefill_e820_table`), must fit.
+        if start.checked_add(size_of::<Header>() as u64)? > self.end_of_hob_list {
+            // The serial port is driven by a TDX `tdcall`, which is illegal in
+            // the host test binary; skip the log there so the walk can be tested.
+            #[cfg(not(test))]
+            serial::debug!("End of HOB list reached", start);
+            return None;
         }
+        // SAFETY: the header lies fully within the region bounded above.
+        let hob_length = unsafe { (*current).hob_length } as u64;
+        // A HOB is at least a header long; a shorter (or zero) length would
+        // never advance the cursor and could loop forever.
+        if hob_length < size_of::<Header>() as u64
+            || start.checked_add(hob_length)? > self.end_of_hob_list
+        {
+            #[cfg(not(test))]
+            serial::debug!("End of HOB list reached", start);
+            return None;
+        }
+        self.current_hob = unsafe { current.byte_offset(hob_length as isize) };
+        Some(current)
     }
 }
 
@@ -131,9 +154,67 @@ impl IntoIterator for &HandoffInfoTable {
     fn into_iter(self) -> Self::IntoIter {
         // SAFETY: We assume a valid HOB is input by the VM so the `TD_HOB_START`
         // contains a valid HIT.
+        let hob_start = get_hob_start() as u64;
+        // The host-supplied `end_of_hob_list` is otherwise unbounded; clamp it
+        // to the reserved HOB region so the walk can never leave it.
+        let end_of_hob_list = self.end_of_hob_list.min(hob_start.saturating_add(TD_HOB_SIZE));
+        // SAFETY: We assume a valid HOB is input by the VM so the `TD_HOB_START`
+        // contains a valid HIT.
         let first_hob = unsafe {
             TD_HOB_START.as_ptr().byte_offset(self.header.hob_length as isize) as *const Header
         };
-        HobIterator { current_hob: first_hob, end_of_hob_list: self.end_of_hob_list }
+        HobIterator { current_hob: first_hob, end_of_hob_list }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Writes a HOB header at `offset` in `buf`. Callers keep it in bounds.
+    fn write_header(buf: &mut [u8], offset: usize, hob_type: u16, hob_length: u16) {
+        let header = Header { hob_type, hob_length, reserved: 0 };
+        // SAFETY: `offset + size_of::<Header>() <= buf.len()` for every caller.
+        unsafe { core::ptr::write(buf.as_mut_ptr().add(offset) as *mut Header, header) };
+    }
+
+    // Builds an iterator over `buf` with `end_of_hob_list` at the slice end,
+    // mirroring the bound `into_iter` applies to the real HOB region.
+    fn iter_over(buf: &[u8]) -> HobIterator {
+        HobIterator {
+            current_hob: buf.as_ptr() as *const Header,
+            end_of_hob_list: buf.as_ptr() as u64 + buf.len() as u64,
+        }
+    }
+
+    #[test]
+    fn yields_entry_fully_within_bound() {
+        let mut buf = [0u8; 0x38];
+        write_header(&mut buf, 0, EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, 0x30);
+        assert!(iter_over(&buf).next().is_some());
+    }
+
+    #[test]
+    fn stops_before_entry_body_crosses_bound() {
+        // A resource descriptor whose 0x30-byte body runs past the bound: the
+        // header fits but the body the caller reads would not.
+        let mut buf = [0u8; 0x20];
+        write_header(&mut buf, 0, EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, 0x30);
+        assert!(iter_over(&buf).next().is_none());
+    }
+
+    #[test]
+    fn stops_before_partial_header() {
+        // Only 4 bytes remain, not enough for the 8-byte header to dereference.
+        let buf = [0u8; 4];
+        assert!(iter_over(&buf).next().is_none());
+    }
+
+    #[test]
+    fn stops_on_zero_length_entry() {
+        // A zero-length entry would never advance the cursor.
+        let mut buf = [0u8; 0x10];
+        write_header(&mut buf, 0, EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, 0);
+        assert!(iter_over(&buf).next().is_none());
     }
 }
