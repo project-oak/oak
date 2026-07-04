@@ -125,6 +125,9 @@ impl Iterator for HobIterator {
         // header dereferenced here, and the full HOB body the callers read (a
         // 0x30-byte ResourceDescription in `prefill_e820_table`), must fit.
         if start.checked_add(size_of::<Header>() as u64)? > self.end_of_hob_list {
+            // The serial port is driven by a TDX `tdcall`, which is illegal in
+            // the host test binary; skip the log there so the walk can be tested.
+            #[cfg(not(test))]
             serial::debug!("End of HOB list reached", start);
             return None;
         }
@@ -135,6 +138,7 @@ impl Iterator for HobIterator {
         if hob_length < size_of::<Header>() as u64
             || start.checked_add(hob_length)? > self.end_of_hob_list
         {
+            #[cfg(not(test))]
             serial::debug!("End of HOB list reached", start);
             return None;
         }
