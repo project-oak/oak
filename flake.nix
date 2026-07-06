@@ -36,7 +36,7 @@
           bazelisk-as-bazel =
             let
               wrapper = pkgs.writeShellScriptBin "bazel" ''
-                export PATH="$(echo "$PATH" | tr ':' '\n' | grep '^/nix/store/' | tr '\n' ':' | sed 's/:$//'):/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+                export PATH="$(echo "$PATH" | tr ':' '\n' | grep -E '^/nix/store/|\.nix-profile/bin|/nix/var/nix/profiles/' | tr '\n' ':' | sed 's/:$//'):/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
                 exec ${pkgs.bazelisk}/bin/bazelisk "$@"
               '';
             in
