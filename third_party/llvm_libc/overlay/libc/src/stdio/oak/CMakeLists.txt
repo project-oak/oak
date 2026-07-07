@@ -95,3 +95,100 @@ add_entrypoint_object(
     libc.hdr.stdio_macros
     libc.src.__support.arg_list
 )
+
+add_entrypoint_object(
+  feof
+  SRCS
+    feof.cpp
+  HDRS
+    ../feof.h
+  DEPENDS
+    libc.hdr.types.FILE
+)
+
+add_entrypoint_object(
+  ferror
+  SRCS
+    ferror.cpp
+  HDRS
+    ../ferror.h
+  DEPENDS
+    libc.hdr.types.FILE
+)
+
+add_entrypoint_object(
+  fprintf
+  SRCS
+    fprintf.cpp
+  HDRS
+    ../fprintf.h
+  DEPENDS
+    .vfprintf_internal
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.src.__support.arg_list
+)
+
+add_entrypoint_object(
+  fputc
+  SRCS
+    fputc.cpp
+  HDRS
+    ../fputc.h
+  DEPENDS
+    .file_internal
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  fputs
+  SRCS
+    fputs.cpp
+  HDRS
+    ../fputs.h
+  DEPENDS
+    .file_internal
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  fread
+  SRCS
+    fread.cpp
+  HDRS
+    ../fread.h
+  DEPENDS
+    .file_internal
+    libc.hdr.types.FILE
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  fwrite
+  SRCS
+    fwrite.cpp
+  HDRS
+    ../fwrite.h
+  DEPENDS
+    .file_internal
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  vfprintf
+  SRCS
+    vfprintf.cpp
+  HDRS
+    ../vfprintf.h
+  DEPENDS
+    .vfprintf_internal
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.src.__support.arg_list
+)

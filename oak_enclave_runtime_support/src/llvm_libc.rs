@@ -27,7 +27,13 @@
 //!   [`__llvm_libc_malloc`]/[`__llvm_libc_free`], and
 //! - `src/__support/OSUtil/oak/` (exit and stdio) via [`__llvm_libc_exit`],
 //!   [`__llvm_libc_stdio_write`], [`__llvm_libc_stdio_read`], and the
-//!   stdin/stdout/stderr cookies.
+//!   stdin/stdout/stderr cookies, and
+//! - `src/time/oak/` (`timespec_get`) via [`__llvm_libc_timespec_get_utc`].
+//!
+//! It additionally provides the two C++ CRT symbols the compiler emits for
+//! static-destructor registration ([`__cxa_atexit`] and [`__dso_handle`]),
+//! which libc++abi does not own. See the "C++ CRT" section at the bottom of
+//! this file.
 //!
 //! Providing these here (rather than in each enclave application) means any
 //! binary that links `oak_enclave_runtime_support` and the Oak libc gets a
@@ -88,12 +94,49 @@ pub extern "C" fn __llvm_libc_exit(status: i32) -> ! {
 }
 
 /// Opaque cookies for stdin/stdout/stderr, following the baremetal convention.
+///
+/// libc treats each `FILE *` as a pointer to its cookie (see the Oak
+/// `src/__support/OSUtil/oak/io.cpp` port, which sets
+/// `stderr = reinterpret_cast<FILE *>(&__llvm_libc_stderr_cookie)`), and passes
+/// that same pointer back to
+/// [`__llvm_libc_stdio_write`]/[`__llvm_libc_stdio_read`].
+///
+/// Each cookie's *value* is its destination file descriptor. The callbacks map
+/// an incoming `FILE *` to an fd with [`cookie_to_fd`], which matches the
+/// pointer against these three known addresses by *identity* and never
+/// dereferences the caller-supplied pointer. This way a null or otherwise
+/// invalid `FILE *` (e.g. from buggy caller code, for which the C stdio
+/// contract makes such a call undefined behavior) is rejected with an error
+/// rather than triggering an out-of-bounds read.
+///
+/// The three values are distinct (0/1/2) and the symbols are exported
+/// (`#[no_mangle]`), both of which prevent the linker from merging them to a
+/// single address and collapsing the identity check.
 #[unsafe(no_mangle)]
 pub static __llvm_libc_stdin_cookie: u8 = 0;
 #[unsafe(no_mangle)]
 pub static __llvm_libc_stdout_cookie: u8 = 1;
 #[unsafe(no_mangle)]
 pub static __llvm_libc_stderr_cookie: u8 = 2;
+
+/// Maps a libc stream cookie pointer to its destination file descriptor.
+///
+/// Returns `None` for any pointer that is not one of the three known stream
+/// cookies (`stdin`/`stdout`/`stderr`). Matching is by pointer identity, so the
+/// untrusted `FILE *` is never dereferenced; recovering the fd afterwards reads
+/// only our own immutable statics.
+fn cookie_to_fd(cookie: *const core::ffi::c_void) -> Option<i32> {
+    let cookie = cookie as *const u8;
+    if core::ptr::eq(cookie, &raw const __llvm_libc_stdin_cookie) {
+        Some(__llvm_libc_stdin_cookie as i32)
+    } else if core::ptr::eq(cookie, &raw const __llvm_libc_stdout_cookie) {
+        Some(__llvm_libc_stdout_cookie as i32)
+    } else if core::ptr::eq(cookie, &raw const __llvm_libc_stderr_cookie) {
+        Some(__llvm_libc_stderr_cookie as i32)
+    } else {
+        None
+    }
+}
 
 /// Called by LLVM libc's `write_to_stderr` and stdio output functions.
 #[unsafe(no_mangle)]
@@ -102,8 +145,22 @@ pub extern "C" fn __llvm_libc_stdio_write(
     buf: *const u8,
     size: usize,
 ) -> isize {
-    let fd = cookie as usize as i32;
-    // SAFETY: the libc caller guarantees `buf` points to at least `size` bytes.
+    // Reject any stream we don't recognise (including a null `FILE *`) instead
+    // of dereferencing an untrusted cookie pointer.
+    let Some(fd) = cookie_to_fd(cookie) else {
+        return -1;
+    };
+    if size == 0 {
+        return 0;
+    }
+    // A null `buf` with a non-zero `size` is a caller contract violation
+    // (undefined behavior under C 7.1.4); reject it rather than form an invalid
+    // slice.
+    if buf.is_null() {
+        return -1;
+    }
+    // SAFETY: `buf` is non-null and the caller must guarantee it points to at least
+    // `size` initialized bytes.
     let data = unsafe { core::slice::from_raw_parts(buf, size) };
     match oak_restricted_kernel_interface::syscall::write(fd, data) {
         Ok(n) => n as isize,
@@ -119,4 +176,59 @@ pub extern "C" fn __llvm_libc_stdio_read(
     _size: usize,
 ) -> isize {
     -1 // not supported
+}
+
+// --- Time ---
+
+/// Called by LLVM libc's `timespec_get` to obtain the current UTC time.
+///
+/// The Restricted Kernel exposes no clock syscall (see
+/// `oak_restricted_kernel_interface::syscalls`), so there is no time source
+/// available to the enclave. Reporting failure here makes `timespec_get` return
+/// `0`, which is the contract for "time not available". When the kernel gains a
+/// clock syscall, only this callback needs to change.
+#[unsafe(no_mangle)]
+pub extern "C" fn __llvm_libc_timespec_get_utc(_ts: *mut core::ffi::c_void) -> bool {
+    false // no clock source in the Restricted Kernel
+}
+
+// --- Errno ---
+
+/// Backing storage for the C `errno`.
+static mut ERRNO: core::ffi::c_int = 0;
+
+/// Returns a pointer to the enclave's single `errno` slot, as required by LLVM
+/// libc's EXTERNAL errno mode.
+#[unsafe(no_mangle)]
+pub extern "C" fn __llvm_libc_errno() -> *mut core::ffi::c_int {
+    &raw mut ERRNO
+}
+
+// --- C++ CRT ---
+//
+// These are the two C runtime symbols the compiler references for a C++
+// translation unit that has static-storage-duration objects, and which
+// libc++abi does not itself provide.
+//
+// Reference: Itanium C++ ABI
+// <https://itanium-cxx-abi.github.io/cxx-abi/abi.html#dso-dtor>
+
+/// The per-DSO handle the compiler passes as the third argument to
+/// [`__cxa_atexit`]. Only its address is used to identify the (single, nominal)
+/// DSO of a statically linked enclave, so a zero-initialized, pointer-sized
+/// slot is sufficient; the value is never dereferenced.
+#[unsafe(no_mangle)]
+pub static __dso_handle: usize = 0;
+
+/// Registers a destructor to run at "program exit". An Oak enclave application
+/// never returns (it terminates via the exit syscall), so registered static
+/// destructors need never run: registration is a no-op that reports success
+/// (`0`). The function/argument/DSO handle are intentionally ignored.
+#[unsafe(no_mangle)]
+pub extern "C" fn __cxa_atexit(
+    _func: Option<unsafe extern "C" fn(*mut core::ffi::c_void)>,
+    _arg: *mut core::ffi::c_void,
+    _dso_handle: *mut core::ffi::c_void,
+) -> core::ffi::c_int {
+    0
 }

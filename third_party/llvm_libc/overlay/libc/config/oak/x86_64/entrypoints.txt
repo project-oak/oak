@@ -116,7 +116,15 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
 
-    # stdio.h entrypoints (limited — no file I/O)
+    # stdio.h entrypoints (FILE I/O routed through the RK write/read syscalls
+    # via the baremetal cookie FILE stack; see src/stdio/oak).
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.fprintf
+    libc.src.stdio.fputc
+    libc.src.stdio.fputs
+    libc.src.stdio.fread
+    libc.src.stdio.fwrite
     libc.src.stdio.getchar
     libc.src.stdio.printf
     libc.src.stdio.putchar
@@ -124,9 +132,15 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.remove
     libc.src.stdio.snprintf
     libc.src.stdio.sprintf
+    libc.src.stdio.vfprintf
     libc.src.stdio.vprintf
     libc.src.stdio.vsnprintf
     libc.src.stdio.vsprintf
+
+    # time.h entrypoints. `timespec_get` delegates to the vendor callback
+    # `__llvm_libc_timespec_get_utc`; the Restricted Kernel has no clock source,
+    # so that callback currently reports failure (see oak_enclave_runtime_support).
+    libc.src.time.timespec_get
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
