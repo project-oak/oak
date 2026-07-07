@@ -53,16 +53,42 @@ pub struct ElfExecuteable {
     binary: Binary,
 }
 
+/// Checks the ELF invariant that a loadable segment's on-disk size does not
+/// exceed its in-memory size.
+///
+/// `load_segment` maps `p_memsz` bytes for the segment but copies `p_filesz`
+/// bytes into it. goblin accepts a segment with `p_filesz > p_memsz`, so
+/// without this check such a segment would copy past the mapped region.
+fn validate_load_segment(phdr: &ProgramHeader) -> Result<()> {
+    if phdr.p_filesz > phdr.p_memsz {
+        return Err(anyhow!(
+            "invalid ELF segment: p_filesz {} exceeds p_memsz {}",
+            phdr.p_filesz,
+            phdr.p_memsz
+        ));
+    }
+    Ok(())
+}
+
 impl ElfExecuteable {
     /// Attempts to parse the provided binary blob as an ELF file representing
     /// a Restricted Application.
     pub fn new(blob: Box<[u8]>) -> Result<Self> {
-        Ok(ElfExecuteable {
+        let elf_executeable = ElfExecuteable {
             binary: Binary::try_new(blob, |boxed| {
                 goblin::elf::Elf::parse(boxed)
                     .map_err(|err| anyhow!("failed to parse ELF file: {}", err))
             })?,
-        })
+        };
+        // The binary is untrusted: it arrives via the host-supplied ramdisk or the
+        // `create_process` syscall. Reject segments that violate the on-disk vs
+        // in-memory size invariant here, before any of them are mapped, so
+        // `load_segment` never writes past the memory it allocates for a segment.
+        for phdr in elf_executeable.program_headers().iter().filter(|&phdr| phdr.p_type == PT_LOAD)
+        {
+            validate_load_segment(phdr)?;
+        }
+        Ok(elf_executeable)
     }
 
     fn program_headers(&self) -> &ProgramHeaders {
@@ -107,8 +133,9 @@ impl ElfExecuteable {
         )
         .expect("failed to allocate user memory");
 
-        // Safety: we know the target memory is valid as we've just allocated it with
-        // mmap().
+        // Safety: we've just allocated the target memory with mmap(), and
+        // `ElfExecuteable::new` rejected any segment whose `p_filesz` exceeds its
+        // `p_memsz`, so copying `p_filesz` bytes stays within the mapped region.
         unsafe {
             core::ptr::copy_nonoverlapping(
                 self.slice(phdr.p_offset, phdr.p_filesz).as_ptr(),
@@ -223,5 +250,25 @@ impl Process {
                 options(noreturn)
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn load_segment(p_filesz: u64, p_memsz: u64) -> ProgramHeader {
+        ProgramHeader { p_type: PT_LOAD, p_filesz, p_memsz, ..Default::default() }
+    }
+
+    #[test]
+    fn rejects_filesz_greater_than_memsz() {
+        assert!(validate_load_segment(&load_segment(0x2000, 0x1000)).is_err());
+    }
+
+    #[test]
+    fn accepts_filesz_within_memsz() {
+        assert!(validate_load_segment(&load_segment(0x1000, 0x1000)).is_ok());
+        assert!(validate_load_segment(&load_segment(0, 0x1000)).is_ok());
     }
 }
