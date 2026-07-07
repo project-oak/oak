@@ -158,3 +158,4 @@ terraform.tfstate.backup
 
 # Local sqlite database files.
 *.db
+

@@ -1,0 +1,70 @@
+--- a/libc/CMakeLists.txt
++++ b/libc/CMakeLists.txt
+@@ -216,7 +216,7 @@
+   message(STATUS "${opt_name}: ${opt_value}")
+   set(${opt_name} ${opt_value})
+ endforeach()
+-generate_config_doc(${main_config_file} ${LIBC_SOURCE_DIR}/docs/configure.rst)
++generate_config_doc(${main_config_file} ${CMAKE_CURRENT_BINARY_DIR}/docs/configure.rst)
+ 
+ # Load each target specific config.
+ foreach(config_path IN LISTS LIBC_CONFIG_JSON_FILE_LIST)
+--- a/libc/cmake/modules/LLVMLibCArchitectures.cmake
++++ b/libc/cmake/modules/LLVMLibCArchitectures.cmake
+@@ -209,7 +209,9 @@
+ elseif(LIBC_TARGET_OS STREQUAL "gpu")
+   set(LIBC_TARGET_OS_IS_GPU TRUE)
+ elseif(LIBC_TARGET_OS STREQUAL "uefi")
+   set(LIBC_TARGET_OS_IS_UEFI TRUE)
++elseif(LIBC_TARGET_OS STREQUAL "oak")
++  set(LIBC_TARGET_OS_IS_OAK TRUE)
+ else()
+   message(FATAL_ERROR
+           "Unsupported libc target operating system ${LIBC_TARGET_OS}")
+--- a/libc/lib/CMakeLists.txt
++++ b/libc/lib/CMakeLists.txt
+@@ -69,7 +69,7 @@
+   )
+ endforeach()
+ 
+-if(NOT LIBC_TARGET_OS_IS_BAREMETAL)
++if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_OAK)
+   # For now we will disable libc-startup installation for baremetal. The
+   # correct way to do it would be to make a hookable startup for baremetal
+   # and install it as part of the libc installation.
+--- a/libc/src/stdlib/CMakeLists.txt
++++ b/libc/src/stdlib/CMakeLists.txt
+@@ -428,5 +428,5 @@
+ )
+ 
+-if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
++if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU AND NOT LIBC_TARGET_OS_IS_OAK)
+   if(LLVM_LIBC_INCLUDE_SCUDO)
+     set(SCUDO_DEPS "")
+@@ -600,5 +600,5 @@
+ endif()
+ 
+-if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
++if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU OR LIBC_TARGET_OS_IS_OAK)
+   add_entrypoint_object(
+     malloc
+@@ -688,9 +688,9 @@
+ list(APPEND exit_deps
+   libc.src.__support.OSUtil.osutil
+   ._Exit
+ )
+-if (NOT LIBC_TARGET_OS_IS_BAREMETAL)
++if (NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_OAK)
+   list(APPEND exit_deps
+     .atexit
+   )
+ endif()
+--- a/libc/include/CMakeLists.txt
++++ b/libc/include/CMakeLists.txt
+@@ -386,5 +386,6 @@
+     .llvm-libc-types.lldiv_t
+     .llvm-libc-types.locale_t
+     .llvm-libc-types.size_t
++    .llvm-libc-types.wchar_t
+     .llvm_libc_common_h
+ )

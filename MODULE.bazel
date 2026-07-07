@@ -373,6 +373,42 @@ http_archive(
     urls = ["https://mirrors.edge.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v1.47.0/e2fsprogs-1.47.0.tar.xz"],
 )
 
+# LLVM libc for Oak Restricted Kernel.
+# Full-build port targeting the Oak Restricted Kernel (triple
+# x86_64-unknown-oak-elf), built via the native CMake build system using
+# rules_foreign_cc. The Oak-specific source files live under
+# //third_party/llvm_libc/overlay and are merged into this archive at build
+# time by //third_party/llvm_libc:llvm_libc; the only in-archive modifications
+# are the cmake changes in the patch below.
+# https://github.com/llvm/llvm-project/releases/tag/llvmorg-22.1.0
+http_archive(
+    name = "llvm_libc_src",
+    build_file = "//:third_party/llvm_libc/BUILD.llvm_libc",
+    patch_args = ["-p1"],
+    patch_tool = "patch",
+    patches = [
+        "//:third_party/llvm_libc/patches/oak_cmake.patch",
+    ],
+    sha256 = "25d2e2adc4356d758405dd885fcfd6447bce82a90eb78b6b87ce0934bd077173",
+    strip_prefix = "llvm-project-22.1.0.src",
+    urls = ["https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.0/llvm-project-22.1.0.src.tar.xz"],
+)
+
+# PyYAML, needed by the LLVM libc header generator (hdrgen), which imports the
+# `yaml` module and calls `yaml.safe_load`. Only PyYAML's pure-Python code is
+# required (the optional `_yaml` C extension is not built here), so we vendor
+# the source distribution and put it on `PYTHONPATH` for the CMake build (see
+# //third_party/llvm_libc:BUILD). This keeps header generation hermetic and
+# independent of whatever Python the sandbox happens to find.
+# https://pypi.org/project/PyYAML/6.0.2/
+http_archive(
+    name = "pyyaml_src",
+    build_file = "//:third_party/llvm_libc/BUILD.pyyaml",
+    sha256 = "d584d9ec91ad65861cc08d42e834324ef890a082e591037abe114850ff7bbc3e",
+    strip_prefix = "pyyaml-6.0.2/lib",
+    urls = ["https://files.pythonhosted.org/packages/54/ed/79a089b6be93607fa5cdaedf301d7dfb23af5f25c398d5ead2525b063e17/pyyaml-6.0.2.tar.gz"],
+)
+
 ##### Base Image Files and Sysroot Files #####
 
 # The binary is used for stage0 tdx measurement test

@@ -16,11 +16,14 @@
 
 #![no_std]
 
+extern crate alloc;
+
 #[cfg(feature = "global_allocator")]
 use heap::LockedGrowableHeap;
 
 pub mod heap;
 mod libm;
+mod llvm_libc;
 
 #[cfg(feature = "global_allocator")]
 #[global_allocator]

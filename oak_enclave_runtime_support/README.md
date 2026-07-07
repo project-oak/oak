@@ -6,4 +6,19 @@
 
 Runtime support library for applications built for Oak Restricted Kernel.
 
-For now, the runtime support library provides a global heap allocator.
+For now, the runtime support library provides:
+
+- a global heap allocator (module `heap`);
+- math (`libm`) symbols required by dependencies compiled to C (module `libm`);
+- the LLVM libc vendor callbacks (`__llvm_libc_*` for heap, exit and stdio)
+  required by the Oak port of LLVM libc (module `llvm_libc`). These delegate to
+  the shared global allocator and the Restricted Kernel syscalls, so any enclave
+  application that links the Oak libc gets a working C runtime automatically.
+  See [`third_party/llvm_libc`](../third_party/llvm_libc) for details.
+
+## Testing
+
+[`tests/libc`](tests/libc) holds an end-to-end integration test that boots the
+FFI test app (`//oak_enclave_runtime_support/tests/libc/app`) under Oak
+Restricted Kernel and checks that the libc-backed C code runs correctly through
+the vendor callbacks above.

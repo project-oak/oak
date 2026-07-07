@@ -1,0 +1,97 @@
+add_header_library(
+  file_internal
+  HDRS
+    file_internal.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.src.__support.CPP.string_view
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  vfprintf_internal
+  HDRS
+    vfprintf_internal.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.hdr.stdio_macros
+    libc.src.__support.arg_list
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.string_view
+    libc.src.__support.libc_errno
+    libc.src.__support.OSUtil.osutil
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.writer
+    libc.src.stdio.printf_core.error_mapper
+    libc.src.stdio.printf_core.core_structs
+)
+
+add_entrypoint_object(
+  getchar
+  SRCS
+    getchar.cpp
+  HDRS
+    ../getchar.h
+  DEPENDS
+    .file_internal
+    libc.hdr.types.FILE
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  remove
+  SRCS
+    remove.cpp
+  HDRS
+    ../remove.h
+  DEPENDS
+    libc.include.stdio
+)
+
+add_entrypoint_object(
+  printf
+  SRCS
+    printf.cpp
+  HDRS
+    ../printf.h
+  DEPENDS
+    .vfprintf_internal
+    libc.hdr.stdio_macros
+    libc.src.__support.arg_list
+)
+
+add_entrypoint_object(
+  putchar
+  SRCS
+    putchar.cpp
+  HDRS
+    ../putchar.h
+  DEPENDS
+    .file_internal
+    libc.hdr.stdio_macros
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  puts
+  SRCS
+    puts.cpp
+  HDRS
+    ../puts.h
+  DEPENDS
+    .file_internal
+    libc.hdr.stdio_macros
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  vprintf
+  SRCS
+    vprintf.cpp
+  HDRS
+    ../vprintf.h
+  DEPENDS
+    .vfprintf_internal
+    libc.hdr.stdio_macros
+    libc.src.__support.arg_list
+)
