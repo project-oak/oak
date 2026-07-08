@@ -1,0 +1,57 @@
+diff --git a/crypto/rand/oak.cc b/crypto/rand/oak.cc
+new file mode 100644
+--- /dev/null
++++ b/crypto/rand/oak.cc
+@@ -0,0 +1,52 @@
++// Copyright 2026 The BoringSSL Authors
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     https://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++#include <openssl/rand.h>
++
++#include "../bcm_support.h"
++#include "internal.h"
++
++#if defined(OPENSSL_RAND_OAK)
++
++#include <immintrin.h>
++#include <stdint.h>
++#include <string.h>
++
++// Oak Restricted Kernel runs on x86_64 CPUs with RDRAND support.
++// RDRAND provides a NIST SP 800-90A compliant random number generator
++// built into the CPU.  In a TEE context (AMD SEV-SNP / Intel TDX),
++// RDRAND output is not under host control.
++
++using namespace bssl;
++
++void bssl::CRYPTO_init_sysrand() {}
++
++void bssl::CRYPTO_sysrand(uint8_t *out, size_t requested) {
++  while (requested >= 8) {
++    unsigned long long val;
++    while (!_rdrand64_step(&val)) {
++    }
++    memcpy(out, &val, 8);
++    out += 8;
++    requested -= 8;
++  }
++  if (requested > 0) {
++    unsigned long long val;
++    while (!_rdrand64_step(&val)) {
++    }
++    memcpy(out, &val, requested);
++  }
++}
++
++#endif  // OPENSSL_RAND_OAK

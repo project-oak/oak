@@ -1,0 +1,21 @@
+--- a/crypto/rand/internal.h
++++ b/crypto/rand/internal.h
+@@ -19,6 +19,8 @@
+ 
+ #if defined(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)
+ #define OPENSSL_RAND_DETERMINISTIC
++#elif defined(OPENSSL_OAK)
++#define OPENSSL_RAND_OAK
+ #elif defined(OPENSSL_TRUSTY)
+ #define OPENSSL_RAND_TRUSTY
+ #elif defined(OPENSSL_WINDOWS)
+@@ -47,7 +49,8 @@
+ #define OPENSSL_FORK_DETECTION
+ #define OPENSSL_FORK_DETECTION_PTHREAD_ATFORK
+ #elif defined(OPENSSL_WINDOWS) || defined(OPENSSL_TRUSTY) || \
+-    defined(__ZEPHYR__) || defined(CROS_EC)
++    defined(__ZEPHYR__) || defined(CROS_EC) ||               \
++    defined(OPENSSL_OAK)
+ // These platforms do not fork.
+ #define OPENSSL_DOES_NOT_FORK
+ #endif

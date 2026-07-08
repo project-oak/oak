@@ -1,0 +1,10 @@
+--- a/gen/sources.bzl
++++ b/gen/sources.bzl
+@@ -436,6 +436,7 @@
+     "crypto/rand/forkunsafe.cc",
+     "crypto/rand/getentropy.cc",
+     "crypto/rand/ios.cc",
++    "crypto/rand/oak.cc",
+     "crypto/rand/passive.cc",
+     "crypto/rand/rand.cc",
+     "crypto/rand/trusty.cc",

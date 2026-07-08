@@ -1,0 +1,118 @@
+diff --git a/rust/BUILD.bazel b/rust/BUILD.bazel
+new file mode 100644
+--- /dev/null
++++ b/rust/BUILD.bazel
+@@ -0,0 +1,113 @@
++# Copyright 2026 The BoringSSL Authors
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#     https://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++load("@rules_cc//cc:cc_library.bzl", "cc_library")
++load("@rules_rust//rust:defs.bzl", "rust_library")
++load("@rules_rust_bindgen//:defs.bzl", "rust_bindgen")
++
++package(
++    default_visibility = ["//visibility:public"],
++)
++
++# Thin cc_library that makes the upstream wrapper.h available to
++# rust_bindgen.  Depends on //:crypto for the include paths.
++cc_library(
++    name = "boringssl_wrapper",
++    hdrs = ["bssl-sys/wrapper.h"],
++    deps = ["//:crypto"],
++)
++
++# Generate Rust FFI bindings from BoringSSL's public headers at build
++# time.
++#
++# The bindgen flags match the upstream CMake-based build
++# (rust/bssl-sys/CMakeLists.txt) to ensure compatibility with the
++# bssl-crypto crate.
++#
++# Key flags:
++#   --default-macro-constant-type=signed  - constants like EVP_PKEY_RSA
++#     are emitted as i32, matching the types expected by bssl-crypto.
++#   --rustified-enum=point_conversion_form_t  - generates a Rust enum
++#     instead of a newtype, required by the ec module.
++#   --wrap-static-fns (via wrap_static_fns)  - generates C wrappers
++#     for static inline functions like CBS_init / CBS_len.
++#
++# See: https://boringssl.googlesource.com/boringssl/+/refs/heads/master/rust/bssl-sys/CMakeLists.txt
++rust_bindgen(
++    name = "bssl_sys_bindgen",
++    bindgen_flags = [
++        "--no-derive-default",
++        "--enable-function-attribute-detection",
++        "--use-core",
++        "--default-macro-constant-type=signed",
++        "--rustified-enum=point_conversion_form_t",
++        "--rust-edition=2021",
++    ],
++    cc_lib = ":boringssl_wrapper",
++    header = "bssl-sys/wrapper.h",
++    wrap_static_fns = True,
++)
++
++# Macro crate for BoringSSL Rust bindings.
++#
++# Provides the bssl_enum! macro used by bssl_sys to define type-safe
++# enum wrappers over C integer constants.
++#
++# See: https://boringssl.googlesource.com/boringssl/+/refs/heads/master/rust/bssl-macros/
++rust_library(
++    name = "bssl_macros",
++    srcs = glob(["bssl-macros/src/**/*.rs"]),
++    crate_name = "bssl_macros",
++    crate_root = "bssl-macros/src/lib.rs",
++    edition = "2021",
++)
++
++# Rust FFI bindings for BoringSSL's crypto library.
++#
++# Uses the upstream bssl-sys crate structure with build-time generated
++# bindgen bindings.  The upstream lib.rs supports Bazel via the
++# bindgen_rs_file cfg flag: when set, it includes the generated
++# bindings from the path in the BINDGEN_RS_FILE env var instead of
++# using Cargo's OUT_DIR.
++#
++# See: https://boringssl.googlesource.com/boringssl/+/refs/heads/master/rust/bssl-sys/
++rust_library(
++    name = "bssl_sys",
++    srcs = ["bssl-sys/src/lib.rs"],
++    compile_data = [":bssl_sys_bindgen"],
++    crate_name = "bssl_sys",
++    edition = "2021",
++    rustc_env = {"BINDGEN_RS_FILE": "$(location :bssl_sys_bindgen)"},
++    rustc_flags = ["--cfg=bindgen_rs_file"],
++    deps = [
++        "//:crypto",
++        ":bssl_macros",
++    ],
++)
++
++# Safe Rust bindings for BoringSSL's crypto library.
++#
++# This wraps the upstream bssl-crypto crate which provides idiomatic
++# Rust APIs (AEAD, hashing, ECDSA, HKDF, etc.) on top of the raw
++# bssl_sys FFI bindings.  The crate supports no_std (with alloc).
++#
++# See: https://boringssl.googlesource.com/boringssl/+/refs/heads/master/rust/bssl-crypto/
++rust_library(
++    name = "bssl_crypto",
++    srcs = glob(["bssl-crypto/src/**/*.rs"]),
++    crate_name = "bssl_crypto",
++    crate_root = "bssl-crypto/src/lib.rs",
++    edition = "2021",
++    deps = [":bssl_sys"],
++)

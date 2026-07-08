@@ -1,0 +1,20 @@
+--- a/rust/bssl-sys/wrapper.h
++++ b/rust/bssl-sys/wrapper.h
+@@ -26,7 +26,6 @@
+ #include <openssl/digest.h>
+ #include <openssl/dsa.h>
+-#include <openssl/dtls1.h>
+ #include <openssl/e_os2.h>
+ #include <openssl/ec.h>
+ #include <openssl/ec_key.h>
+@@ -70,10 +69,6 @@
+ #include <openssl/siphash.h>
+ #include <openssl/slhdsa.h>
+ #include <openssl/span.h>
+-#include <openssl/srtp.h>
+-#include <openssl/ssl.h>
+-#include <openssl/ssl3.h>
+ #include <openssl/stack.h>
+ #include <openssl/thread.h>
+-#include <openssl/tls1.h>
+ #include <openssl/tls_prf.h>

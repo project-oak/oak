@@ -52,7 +52,7 @@ async fn launch_aead_enclave() -> (
     Box<dyn oak_launcher_utils::launcher::GuestInstance>,
     AeadAsyncClient<oak_launcher_utils::channel::ConnectorHandle>,
 ) {
-    let enclave_app_path = data_path("oak_restricted_kernel_crypto_test/enclave_app/enclave_app");
+    let enclave_app_path = data_path(env!("ENCLAVE_APP_PATH"));
     let orchestrator_path = data_path("enclave_apps/oak_orchestrator/oak_orchestrator");
     let kernel = data_path(
         "oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin",
@@ -238,6 +238,7 @@ impl AeadTestVector {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_wycheproof_aead_vectors() {
+    env_logger::init();
     let test_vectors_path = data_path("third_party/wycheproof/testvectors_v1/aes_gcm_test.json");
     let test_file_json = std::fs::read_to_string(&test_vectors_path).unwrap_or_else(|e| {
         panic!("reading test vectors from {}: {e}", test_vectors_path.display())

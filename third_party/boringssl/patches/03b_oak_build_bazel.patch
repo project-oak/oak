@@ -1,0 +1,29 @@
+--- a/BUILD.bazel
++++ b/BUILD.bazel
+@@ -74,1 +74,13 @@
+-    copts = ["-DBORINGSSL_IMPLEMENTATION"],
++    copts = ["-DBORINGSSL_IMPLEMENTATION"] + select({
++        "@platforms//os:none": [
++            "-DOPENSSL_OAK",
++            "-ffreestanding",
++            "-nostdlibinc",
++            "-nostdinc++",
++            "-mrdrnd",
++            "-fno-exceptions",
++            "-fno-rtti",
++            "-fno-stack-protector",
++        ],
++        "//conditions:default": [],
++    }),
+@@ -81,1 +93,2 @@
+         ],
++        "@platforms//os:none": [],
+@@ -84,1 +97,8 @@
+     visibility = ["//visibility:public"],
++    deps = select({
++        "@platforms//os:none": [
++            "@@//third_party/llvm_libc:llvm_libcxx",
++            "@@//third_party/llvm_libc:llvm_libc",
++        ],
++        "//conditions:default": [],
++    }),

@@ -1,0 +1,7 @@
+--- a/rust/bssl-macros/src/lib.rs
++++ b/rust/bssl-macros/src/lib.rs
+@@ -1,3 +1,4 @@
++#![no_std]
+ // Copyright 2026 The BoringSSL Authors
+ //
+ // Licensed under the Apache License, Version 2.0 (the "License");

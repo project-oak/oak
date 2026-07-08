@@ -88,7 +88,29 @@ register_toolchains(
 bazel_dep(name = "grpc", version = "1.78.0", repo_name = "com_github_grpc_grpc")
 
 # https://github.com/google/boringssl
-bazel_dep(name = "boringssl", version = "0.20250415.0")
+bazel_dep(name = "boringssl", version = "0.20260413.0")
+archive_override(
+    module_name = "boringssl",
+    integrity = "sha256-NWD33T8I4WufhNh3pb4h7GIHFWR4MAlXGvX8xvrXNNI=",
+    # New files (crypto/rand/oak.cc, rust/BUILD.bazel) are created via
+    # git-format patches (07, 08).  Patches are split into single-file
+    # diffs because the patcher mispositions hunks when several files
+    # share one patch.
+    patch_strip = 1,
+    patches = [
+        "//:third_party/boringssl/patches/01_oak_platform.patch",
+        "//:third_party/boringssl/patches/02a_oak_rand_internal.patch",
+        "//:third_party/boringssl/patches/02b_oak_rand_sources.patch",
+        "//:third_party/boringssl/patches/03b_oak_build_bazel.patch",
+        "//:third_party/boringssl/patches/04_rust_module.patch",
+        "//:third_party/boringssl/patches/05_rust_no_std.patch",
+        "//:third_party/boringssl/patches/06_rust_wrapper.patch",
+        "//:third_party/boringssl/patches/07_oak_rand_source.patch",
+        "//:third_party/boringssl/patches/08_rust_build.patch",
+    ],
+    strip_prefix = "boringssl-0.20260413.0",
+    urls = ["https://github.com/google/boringssl/releases/download/0.20260413.0/boringssl-0.20260413.0.tar.gz"],
+)
 
 # https://github.com/google/protobuf
 bazel_dep(name = "protobuf", version = "30.0", repo_name = "com_google_protobuf")
@@ -285,6 +307,7 @@ bazel_dep(name = "rules_java", version = "8.14.0")
 
 bazel_dep(name = "rules_shell", version = "0.6.1")
 bazel_dep(name = "rules_rust", version = "0.70.0")
+bazel_dep(name = "rules_rust_bindgen", version = "0.70.0")
 bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.70.0")
 
 # All Rust toolchains are configured in //bazel/rust:extensions.bzl
@@ -337,6 +360,8 @@ register_toolchains(
     "@oak_rust_darwin__aarch64-apple-darwin__nightly//:all",
     "@oak_rust_darwin__x86_64-unknown-none__nightly//:all",
 )
+
+register_toolchains("@rules_rust_bindgen//:default_bindgen_toolchain")
 
 ##### rules_foreign_cc packages #####
 

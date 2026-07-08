@@ -1,0 +1,32 @@
+--- a/include/openssl/target.h
++++ b/include/openssl/target.h
+@@ -97,7 +97,8 @@
+ // defines it.
+ #if defined(__linux__) && !defined(__TRUSTY__) && \
+     !defined(ANDROID_BAREMETAL) && !defined(OPENSSL_NANOLIBC) && \
+-    !defined(CROS_EC)
++    !defined(CROS_EC) && \
++    !defined(OPENSSL_OAK)
+ #define OPENSSL_LINUX
+ #endif
+ 
+@@ -119,6 +120,19 @@
+ #define OPENSSL_NO_THREADS_CORRUPT_MEMORY_AND_LEAK_SECRETS_IF_THREADED
+ #endif
+ 
++// Oak Restricted Kernel is a TEE-based enclave environment running on
++// x86_64 under AMD SEV-SNP or Intel TDX.  It uses LLVM libc and libc++
++// as its C/C++ standard library and has no filesystem, sockets, or
++// threading support.
++//
++// https://github.com/nicstange/project-oak
++#if defined(OPENSSL_OAK)
++#define OPENSSL_NO_FILESYSTEM
++#define OPENSSL_NO_POSIX_IO
++#define OPENSSL_NO_SOCK
++#define OPENSSL_NO_THREADS_CORRUPT_MEMORY_AND_LEAK_SECRETS_IF_THREADED
++#endif
++
+ // nanolibc is a particular minimal libc implementation. Defining this on any
+ // other platform is not supported. Other embedded platforms must introduce
+ // their own defines.
