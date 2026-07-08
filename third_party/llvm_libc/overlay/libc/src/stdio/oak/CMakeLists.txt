@@ -192,3 +192,57 @@ add_entrypoint_object(
     libc.hdr.types.FILE
     libc.src.__support.arg_list
 )
+
+add_entrypoint_object(
+  fgets
+  SRCS
+    fgets.cpp
+  HDRS
+    ../fgets.h
+  DEPENDS
+    .file_internal
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  fclose
+  SRCS
+    fclose.cpp
+  HDRS
+    ../fclose.h
+  DEPENDS
+    libc.hdr.types.FILE
+)
+
+add_entrypoint_object(
+  fflush
+  SRCS
+    fflush.cpp
+  HDRS
+    ../fflush.h
+  DEPENDS
+    libc.hdr.types.FILE
+)
+
+add_entrypoint_object(
+  fseek
+  SRCS
+    fseek.cpp
+  HDRS
+    ../fseek.h
+  DEPENDS
+    libc.hdr.types.FILE
+)
+
+add_entrypoint_object(
+  ftell
+  SRCS
+    ftell.cpp
+  HDRS
+    ../ftell.h
+  DEPENDS
+    libc.hdr.types.FILE
+)
+

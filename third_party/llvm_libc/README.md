@@ -24,9 +24,9 @@ implementations.
 |-----------|-------------------------------|---------|
 | Config | `libc/config/oak/` | Entrypoints, headers, and feature knobs |
 | OSUtil | `libc/src/__support/OSUtil/oak/` | `exit()` and `write_to_stderr()` |
-| stdlib | `libc/src/stdlib/oak/` | `malloc`/`free`/`calloc`/`realloc`/`aligned_alloc` (Oak-specific, Rust heap); `abort` (re-exports baremetal) |
-| stdio | `libc/src/stdio/oak/` | `printf`, `puts`, `putchar`, `getchar`, `vprintf`, `remove`, plus the `FILE`-stream functions `fprintf`, `vfprintf`, `fputc`, `fputs`, `fwrite`, `fread`, `feof`, `ferror` (all re-export baremetal) |
-| time | `libc/src/time/oak/` | `timespec_get` (re-exports baremetal; routes to the `__llvm_libc_timespec_get_utc` vendor callback) |
+| stdlib | `libc/src/stdlib/oak/` | `malloc`/`free`/`calloc`/`realloc`/`aligned_alloc` (Oak-specific, Rust heap); `abort` (re-exports baremetal); `getenv` (Oak-specific, always `NULL` — no environment) |
+| stdio | `libc/src/stdio/oak/` | `printf`, `puts`, `putchar`, `getchar`, `vprintf`, `remove`, plus the `FILE`-stream functions `fprintf`, `vfprintf`, `fputc`, `fputs`, `fwrite`, `fread`, `fgets`, `feof`, `ferror` (all re-export baremetal); `fclose`/`fflush`/`fseek`/`ftell` (Oak-specific: no-ops / failures, since streams are unbuffered and non-seekable) |
+| time | `libc/src/time/oak/` | `timespec_get` (re-exports baremetal; routes to the `__llvm_libc_timespec_get_utc` vendor callback); `time` (Oak-specific, reports the epoch — no wall clock) |
 
 ## Vendor callbacks
 
@@ -121,12 +121,13 @@ provided:
   `time.h` declares it, and `TIME_UTC` comes from the installed
   `llvm-libc-macros/time-macros.h` (the `llvm_libc` target copies in the
   `baremetal/` variant; see its `postfix_script`).
-- `fflush` / `fclose` / `fileno` are neither Oak entrypoints nor declared by the
-  generated `stdio.h`. libc++ references them only in code paths excluded by the
-  current build configuration (localization is off, and there is no `<unistd.h>`
-  or Win32 API), so those references are never instantiated and no shim is
-  needed. Re-enabling such a feature (e.g. localization) could reintroduce a
-  reference and require declaring these again.
+- `fileno` is neither an Oak entrypoint nor declared by the generated
+  `stdio.h`. libc++ references it only in code paths excluded by the current
+  build configuration (localization is off, and there is no `<unistd.h>` or
+  Win32 API), so the reference is never instantiated and no shim is needed.
+  Re-enabling such a feature (e.g. localization) could reintroduce a reference
+  and require declaring it again. (`fflush`/`fclose` used to be listed here too,
+  but they are now real Oak entrypoints — see the stdio row above.)
 
 Enclave applications link libc++ by depending on
 `//third_party/llvm_libc:llvm_libcxx`, which exports `libc++.a`, `libc++abi.a`,
@@ -160,7 +161,15 @@ for a worked example.
      the `stdlib` header target. Upstream 22.1's `stdlib.yaml` lists `wchar_t`
      among its types (so `hdrgen` emits `#include
      "llvm-libc-types/wchar_t.h"`) but the header target's `DEPENDS` omits it,
-     which would otherwise leave the referenced header uninstalled.
+     which would otherwise leave the referenced header uninstalled. Also drop
+     the `pthread_*` types from the `sys_types` header target's `DEPENDS`.
+   - `libc/include/sys/types.yaml` — drop the `pthread_*` types from the
+     generated `sys/types.h`. Oak is single-threaded (BoringSSL is built with
+     `OPENSSL_NO_THREADS`), and the upstream pthread type headers (e.g.
+     `llvm-libc-types/__mutex_type.h`, `pthread_once_t.h`) `#error` on
+     freestanding targets. `sys/types.h` is only pulled in for the plain integer
+     typedefs (`ssize_t`, `off_t`, ...) that consumers such as BoringSSL need,
+     so the pthread declarations are both unnecessary and unbuildable here.
 4. New Oak files live under `overlay/`. The `stdio`/`time` entrypoints and
    `abort` are thin re-exports of the upstream baremetal sources (they
    `#include "src/stdio/baremetal/..."` / `"src/time/baremetal/..."` /
@@ -173,10 +182,13 @@ for a worked example.
 The following categories of libc functionality are intentionally excluded
 because Oak Restricted Kernel has no filesystem or process model:
 
-- **Filesystem I/O** (`fopen`, `fclose`, `remove` on real files, etc.) — there
-  is no filesystem. The `FILE`-stream *output* functions (`fprintf`, `fwrite`,
-  `fputs`, ...) do work, but only against the standard streams, which route to
-  the serial console via `__llvm_libc_stdio_write`.
+- **A real filesystem** (`fopen`, `fileno`, `remove` on real files, etc.) —
+  there is no backing store. The `FILE`-stream functions that operate on the
+  standard streams (`fprintf`, `fwrite`, `fputs`, `fread`, `fgets`, ...) do
+  work and route to the serial console via `__llvm_libc_stdio_write` /
+  `__llvm_libc_stdio_read`. The seek/flush/close family (`fseek`, `ftell`,
+  `fflush`, `fclose`) is declared and linkable but reduces to no-ops or failure
+  returns, because the streams are unbuffered and non-seekable.
 - **Process management** (`fork`, `exec`, `wait`, etc.)
 - **Networking** (`socket`, `connect`, `bind`, etc.)
 - **atexit handlers** (no process lifecycle)

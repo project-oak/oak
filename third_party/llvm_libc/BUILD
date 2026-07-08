@@ -15,6 +15,7 @@
 #
 
 load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
 
 package(default_visibility = ["//visibility:public"])

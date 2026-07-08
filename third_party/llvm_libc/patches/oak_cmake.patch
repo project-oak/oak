@@ -11,8 +11,7 @@
  foreach(config_path IN LISTS LIBC_CONFIG_JSON_FILE_LIST)
 --- a/libc/cmake/modules/LLVMLibCArchitectures.cmake
 +++ b/libc/cmake/modules/LLVMLibCArchitectures.cmake
-@@ -209,7 +209,9 @@
- elseif(LIBC_TARGET_OS STREQUAL "gpu")
+@@ -210,6 +210,8 @@
    set(LIBC_TARGET_OS_IS_GPU TRUE)
  elseif(LIBC_TARGET_OS STREQUAL "uefi")
    set(LIBC_TARGET_OS_IS_UEFI TRUE)
@@ -34,22 +33,63 @@
    # and install it as part of the libc installation.
 --- a/libc/src/stdlib/CMakeLists.txt
 +++ b/libc/src/stdlib/CMakeLists.txt
-@@ -428,5 +428,5 @@
+@@ -56,16 +56,6 @@
+ )
+ 
+ add_entrypoint_object(
+-  getenv
+-  SRCS
+-    getenv.cpp
+-  HDRS
+-    getenv.h
+-  DEPENDS
+-  libc.config.app_h
+-)
+-
+-add_entrypoint_object(
+   strfromf
+   SRCS
+     strfromf.cpp
+@@ -427,7 +417,7 @@
+     libc.src.__support.libc_errno
  )
  
 -if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
 +if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU AND NOT LIBC_TARGET_OS_IS_OAK)
    if(LLVM_LIBC_INCLUDE_SCUDO)
      set(SCUDO_DEPS "")
-@@ -600,5 +600,5 @@
+ 
+@@ -599,7 +589,28 @@
+   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
  endif()
  
 -if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
++# Use the target OS's getenv implementation if it provides one (e.g. Oak's
++# environment-free stub); otherwise fall back to the standard entrypoint.
++if(TARGET libc.src.stdlib.${LIBC_TARGET_OS}.getenv)
++  add_entrypoint_object(
++    getenv
++    ALIAS
++    DEPENDS
++      .${LIBC_TARGET_OS}.getenv
++  )
++else()
++  add_entrypoint_object(
++    getenv
++    SRCS
++      getenv.cpp
++    HDRS
++      getenv.h
++    DEPENDS
++    libc.config.app_h
++  )
++endif()
++
 +if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU OR LIBC_TARGET_OS_IS_OAK)
    add_entrypoint_object(
      malloc
-@@ -688,9 +688,9 @@
- list(APPEND exit_deps
+     ALIAS
+@@ -689,7 +700,7 @@
    libc.src.__support.OSUtil.osutil
    ._Exit
  )
@@ -58,13 +98,88 @@
    list(APPEND exit_deps
      .atexit
    )
- endif()
 --- a/libc/include/CMakeLists.txt
 +++ b/libc/include/CMakeLists.txt
-@@ -386,5 +386,6 @@
+@@ -386,6 +386,7 @@
      .llvm-libc-types.lldiv_t
      .llvm-libc-types.locale_t
      .llvm-libc-types.size_t
 +    .llvm-libc-types.wchar_t
      .llvm_libc_common_h
  )
+ 
+@@ -711,12 +712,6 @@
+     .llvm-libc-types.nlink_t
+     .llvm-libc-types.off_t
+     .llvm-libc-types.pid_t
+-    .llvm-libc-types.pthread_attr_t
+-    .llvm-libc-types.pthread_key_t
+-    .llvm-libc-types.pthread_mutex_t
+-    .llvm-libc-types.pthread_mutexattr_t
+-    .llvm-libc-types.pthread_once_t
+-    .llvm-libc-types.pthread_t
+     .llvm-libc-types.size_t
+     .llvm-libc-types.ssize_t
+     .llvm-libc-types.suseconds_t
+--- a/libc/src/time/CMakeLists.txt
++++ b/libc/src/time/CMakeLists.txt
+@@ -190,19 +190,28 @@
+     libc.src.time.strftime_core.strftime_main
+ )
+ 
+-add_entrypoint_object(
+-  time
+-  SRCS
+-    time.cpp
+-  HDRS
+-    time_func.h
+-  DEPENDS
+-    libc.hdr.time_macros
+-    libc.hdr.types.time_t
+-    libc.src.__support.time.clock_gettime
+-    libc.src.errno.errno
+-    libc.hdr.types.struct_tm
+-)
++if(TARGET libc.src.time.${LIBC_TARGET_OS}.time)
++  add_entrypoint_object(
++    time
++    ALIAS
++    DEPENDS
++      .${LIBC_TARGET_OS}.time
++  )
++else()
++  add_entrypoint_object(
++    time
++    SRCS
++      time.cpp
++    HDRS
++      time_func.h
++    DEPENDS
++      libc.hdr.time_macros
++      libc.hdr.types.time_t
++      libc.src.__support.time.clock_gettime
++      libc.src.errno.errno
++      libc.hdr.types.struct_tm
++  )
++endif()
+ 
+ add_entrypoint_object(
+   timespec_get
+--- a/libc/include/sys/types.yaml
++++ b/libc/include/sys/types.yaml
+@@ -12,15 +12,6 @@
+   - type_name: nlink_t
+   - type_name: off_t
+   - type_name: pid_t
+-  - type_name: pthread_attr_t
+-  - type_name: pthread_condattr_t
+-  - type_name: pthread_key_t
+-  - type_name: pthread_mutex_t
+-  - type_name: pthread_mutexattr_t
+-  - type_name: pthread_once_t
+-  - type_name: pthread_rwlock_t
+-  - type_name: pthread_rwlockattr_t
+-  - type_name: pthread_t
+   - type_name: size_t
+   - type_name: ssize_t
+   - type_name: suseconds_t

@@ -56,3 +56,12 @@ add_entrypoint_object(
   DEPENDS
     libc.src.string.memory_utils.inline_memcpy
 )
+
+add_entrypoint_object(
+  getenv
+  SRCS
+    getenv.cpp
+  HDRS
+    ../getenv.h
+)
+
