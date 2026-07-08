@@ -34,15 +34,12 @@ use rmcp::{
         tool::ToolCallContext,
     },
     model::{
-        CallToolResult, Content, Implementation, InitializeRequestParam, InitializeResult,
-        JsonObject, ServerCapabilities, ServerInfo, Tool,
+        CallToolResult, ContentBlock, InitializeRequestParams, InitializeResult, JsonObject, Tool,
     },
     service::RequestContext,
     tool_handler,
 };
 use serde_json::Value;
-
-const INSTRUCTIONS: &str = "An Oak Functions MCP server that provides sandboxing for arbitrary stateless logic that can be invoked via a tool call.";
 
 /// Configuration for the dynamically created MCP tool.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -151,7 +148,7 @@ where
             let result: Value = serde_json::from_str(&response_str).map_err(|e| {
                 ErrorData::internal_error(format!("Failed to parse response as JSON: {e}"), None)
             })?;
-            let content = Content::json(result).map_err(|e| {
+            let content = ContentBlock::json(result).map_err(|e| {
                 ErrorData::internal_error(format!("JSON serialization failed: {e}"), None)
             })?;
             Ok(CallToolResult::success(vec![content]))
@@ -202,28 +199,18 @@ where
     }
 }
 
-#[tool_handler]
+#[tool_handler(
+    router = self.tool_router,
+    instructions = "An Oak Functions MCP server that provides sandboxing for arbitrary stateless logic that can be invoked via a tool call."
+)]
 impl<H> ServerHandler for OakFunctionsMcpService<H>
 where
     H: Handler + 'static,
     H::HandlerType: Send + Sync,
 {
-    fn get_info(&self) -> ServerInfo {
-        ServerInfo {
-            server_info: Implementation::from_build_env(),
-            instructions: Some(INSTRUCTIONS.into()),
-            capabilities: ServerCapabilities {
-                tools: Some(rmcp::model::ToolsCapability::default()),
-                ..Default::default()
-            },
-            // Note that this uses the latest protocol version.
-            ..Default::default()
-        }
-    }
-
     async fn initialize(
         &self,
-        _request: InitializeRequestParam,
+        _request: InitializeRequestParams,
         _context: RequestContext<RoleServer>,
     ) -> Result<InitializeResult, ErrorData> {
         Ok(self.get_info())

@@ -19,7 +19,7 @@ use rmcp::{
     ErrorData, RoleServer, ServerHandler,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
     model::{
-        CallToolResult, Content, Implementation, InitializeRequestParam, InitializeResult,
+        CallToolResult, ContentBlock, Implementation, InitializeRequestParams, InitializeResult,
         ProtocolVersion, ServerCapabilities, ServerInfo,
     },
     schemars,
@@ -90,25 +90,23 @@ impl Service {
             }
         };
 
-        let result = Content::json(result).expect("couldn't serialize JSON resuls");
+        let result = ContentBlock::json(result).expect("couldn't serialize JSON resuls");
         Ok(CallToolResult::success(vec![result]))
     }
 }
 
-#[tool_handler]
+#[tool_handler(router = self.tool_router)]
 impl ServerHandler for Service {
     fn get_info(&self) -> ServerInfo {
-        ServerInfo {
-            protocol_version: ProtocolVersion::V_2025_06_18,
-            capabilities: ServerCapabilities::builder().enable_tools().build(),
-            server_info: Implementation::from_build_env(),
-            instructions: Some(INSTRUCTIONS.into()),
-        }
+        ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
+            .with_protocol_version(ProtocolVersion::V_2025_06_18)
+            .with_server_info(Implementation::from_build_env())
+            .with_instructions(INSTRUCTIONS)
     }
 
     async fn initialize(
         &self,
-        _request: InitializeRequestParam,
+        _request: InitializeRequestParams,
         _context: RequestContext<RoleServer>,
     ) -> Result<InitializeResult, ErrorData> {
         Ok(self.get_info())
