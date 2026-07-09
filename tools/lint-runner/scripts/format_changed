@@ -12,11 +12,11 @@ set -o pipefail
 # --- Build oak_lint_runner via Bazel ---
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-RUNNER_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 
 # Build once; bazel caches so subsequent runs are near-instant.
-(cd "${RUNNER_DIR}" && bazel build //:oak_lint_runner 1>/dev/null)
-RUNNER_BIN="${RUNNER_DIR}/bazel-bin/oak_lint_runner"
+(cd "${REPO_ROOT}" && bazel build //tools/lint-runner:oak_lint_runner 1>/dev/null)
+RUNNER_BIN="${REPO_ROOT}/bazel-bin/tools/lint-runner/oak_lint_runner"
 
 # --- Build file list (try jj, then git) ---
 

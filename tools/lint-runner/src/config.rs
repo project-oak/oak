@@ -134,15 +134,11 @@ impl Tool {
     /// Determines if a file matches the tool's inclusion/exclusion criteria and
     /// tags.
     pub fn matches(&self, filename: &str, tags: &HashSet<String>) -> bool {
-        if let Some(ref re) = self.exclude {
-            if re.is_match(filename) {
-                return false;
-            }
+        if self.exclude.as_ref().is_some_and(|re| re.is_match(filename)) {
+            return false;
         }
-        if let Some(ref re) = self.files {
-            if !re.is_match(filename) {
-                return false;
-            }
+        if self.files.as_ref().is_some_and(|re| !re.is_match(filename)) {
+            return false;
         }
         if !self.types.is_empty() && !self.types.iter().any(|t| tags.contains(t)) {
             return false;

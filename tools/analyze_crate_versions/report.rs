@@ -194,7 +194,7 @@ fn find_latest_updates(actual: &Version, all_versions: &[Version]) -> Updates {
         } else {
             &mut updates.patch
         };
-        if slot.as_ref().map_or(true, |existing| v > existing) {
+        if slot.as_ref().is_none_or(|existing| v > existing) {
             *slot = Some(v.clone());
         }
     }
@@ -325,12 +325,10 @@ fn print_rows(
         let requested = strip_metadata(&entry.requested);
 
         // Skip pre-release requested versions unless flag is set.
-        if !include_pre_release {
-            if let Some(v) = parse_version_lenient(requested) {
-                if !v.pre.is_empty() {
-                    continue;
-                }
-            }
+        if !include_pre_release
+            && parse_version_lenient(requested).is_some_and(|v| !v.pre.is_empty())
+        {
+            continue;
         }
         displayed += 1;
 

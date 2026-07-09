@@ -61,10 +61,8 @@ fn get_tags(path: &Path, tokei_config: &tokei::Config) -> HashSet<String> {
     // 1. Content/Text detection
     if let Ok(mut f) = std::fs::File::open(path) {
         let mut buf = [0; 1024];
-        if let Ok(n) = f.read(&mut buf) {
-            if inspect(&buf[..n]) != ContentType::BINARY {
-                tags.insert("text".to_string());
-            }
+        if f.read(&mut buf).is_ok_and(|n| inspect(&buf[..n]) != ContentType::BINARY) {
+            tags.insert("text".to_string());
         }
     }
 
@@ -85,10 +83,12 @@ fn get_tags(path: &Path, tokei_config: &tokei::Config) -> HashSet<String> {
     }
 
     // 4. Fallback for template files
-    if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
-        if filename.ends_with(".sh.tpl") || filename.ends_with(".bash.tpl") {
-            tags.insert("bash".to_string());
-        }
+    if path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .is_some_and(|filename| filename.ends_with(".sh.tpl") || filename.ends_with(".bash.tpl"))
+    {
+        tags.insert("bash".to_string());
     }
     tags
 }

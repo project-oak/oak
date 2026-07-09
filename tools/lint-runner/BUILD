@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-load("@crates//:defs.bzl", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
 
 package(
@@ -33,14 +32,36 @@ rust_library(
     ],
     crate_name = "oak_lint_runner",
     crate_root = "src/lib.rs",
-    deps = all_crate_deps(normal = True),
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:colored",
+        "@oak_crates_index//:content_inspector",
+        "@oak_crates_index//:futures",
+        "@oak_crates_index//:ignore",
+        "@oak_crates_index//:indicatif",
+        "@oak_crates_index//:num_cpus",
+        "@oak_crates_index//:regex",
+        "@oak_crates_index//:serde",
+        "@oak_crates_index//:shlex",
+        "@oak_crates_index//:tokei",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:toml",
+    ],
 )
 
 rust_binary(
     name = "oak_lint_runner",
     srcs = ["src/main.rs"],
     crate_root = "src/main.rs",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_lint_runner_lib",
-    ] + all_crate_deps(normal = True),
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:colored",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:toml",
+    ],
 )

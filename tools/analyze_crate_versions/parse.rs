@@ -21,7 +21,7 @@ use std::{collections::HashMap, path::Path};
 
 use anyhow::{Context, Result};
 use regex::Regex;
-use tree_sitter::{Parser, Query, QueryCursor};
+use tree_sitter::{Parser, Query, QueryCursor, StreamingIterator};
 
 use crate::crate_key::CrateKey;
 
@@ -36,7 +36,7 @@ pub fn parse_crate_specs(path: &Path) -> Result<HashMap<String, String>> {
     // Load the Python/Starlark grammar
     let mut parser = Parser::new();
     let language = tree_sitter_python::language();
-    parser.set_language(language).context("error loading python grammar")?;
+    parser.set_language(&language).context("error loading python grammar")?;
 
     // Parse the MODULE.bazel file into a concrete Syntax Tree
     let tree = parser.parse(&content, None).context("failed to parse AST")?;
@@ -54,12 +54,13 @@ pub fn parse_crate_specs(path: &Path) -> Result<HashMap<String, String>> {
         )
     "#;
 
-    let query = Query::new(language, query_str)?;
+    let query = Query::new(&language, query_str)?;
     let mut cursor = QueryCursor::new();
     let mut crates = HashMap::new();
 
     // Iterate through every `crate.spec()` match found in the AST
-    for match_ in cursor.matches(&query, tree.root_node(), content.as_bytes()) {
+    let mut matches = cursor.matches(&query, tree.root_node(), content.as_bytes());
+    while let Some(match_) = matches.next() {
         // Grab the `argument_list` node from our query capture
         let args_node = match_
             .captures
@@ -187,7 +188,7 @@ pub fn parse_version_lenient(s: &str) -> Option<semver::Version> {
     if s == "*" || s == "git" {
         return None;
     }
-    let s = s.trim_start_matches(|c| c == '=' || c == '^' || c == '~');
+    let s = s.trim_start_matches(['=', '^', '~']);
     // Try direct parse
     if let Ok(v) = semver::Version::parse(s) {
         return Some(v);

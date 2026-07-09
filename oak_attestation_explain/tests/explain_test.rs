@@ -51,23 +51,23 @@ https://search.sigstore.dev/?hash=30fa578f7781cdffc9f5c52ecfab95fe09e067583660c3
 The evidence describing this layer is outlined below.
 
 sev_snp:
+  report_data: 3e25197771c57f52a65c7bc55aada68f667d3a85f8b3fb0c15493ce0ae4e68b60000000000000000000000000000000000000000000000000000000000000000
   current_tcb:
     boot_loader: 4
-    fmc: 0
-    microcode: 219
-    snp: 24
     tee: 0
-  debug: false
-  hardware_id: 6c65aee8a139e984657ee8bfe50cbdc39067e3a99da09bba4e948236c91df95baa7bbd233fa56b101b90d136c7a78091013a7ce62c31fc25be1c6ca87da31a5a
-  initial_measurement: 0a3c0fa3f1558a883660cb3f37491e6da05e3445dc0f517ab5f9b8f7be6dc2ae2fa46a23b501d66d1d7e24796d1c2e20
-  product: 1
-  report_data: 3e25197771c57f52a65c7bc55aada68f667d3a85f8b3fb0c15493ce0ae4e68b60000000000000000000000000000000000000000000000000000000000000000
+    snp: 24
+    microcode: 219
+    fmc: 0
   reported_tcb:
     boot_loader: 4
-    fmc: 0
-    microcode: 219
-    snp: 24
     tee: 0
+    snp: 24
+    microcode: 219
+    fmc: 0
+  debug: false
+  initial_measurement: 0a3c0fa3f1558a883660cb3f37491e6da05e3445dc0f517ab5f9b8f7be6dc2ae2fa46a23b501d66d1d7e24796d1c2e20
+  product: 1
+  hardware_id: 6c65aee8a139e984657ee8bfe50cbdc39067e3a99da09bba4e948236c91df95baa7bbd233fa56b101b90d136c7a78091013a7ce62c31fc25be1c6ca87da31a5a
   vmpl: 0
 "
                     );
@@ -79,17 +79,17 @@ Initial Ramdisk: https://search.sigstore.dev/?hash=15fe687a68a1f0d8aff14611fd4d1
 
 The evidence describing the kernel layer is outlined below.
 
-acpi:
-  sha2_256: 141f52e83b42331118ed7b2a0b8b1f1bbab304e01973c79ad4cf6e172612d9f8
-init_ram_fs:
-  sha2_256: 15fe687a68a1f0d8aff14611fd4d108d7c132e3f8072bb64ff1073fb816a9ae8
 kernel_image:
   sha2_256: 3e7c371858f2bd9c032894694bd5bb4893f2403ce8a0bcf73c07af3ef6a35a15
-kernel_raw_cmd_line: console=ttyS0
 kernel_setup_data:
   sha2_256: 4cd020820da663063f4185ca14a7e803cd7c9ca1483c64e836db840604b6fac1
+kernel_raw_cmd_line: console=ttyS0
+init_ram_fs:
+  sha2_256: 15fe687a68a1f0d8aff14611fd4d108d7c132e3f8072bb64ff1073fb816a9ae8
 memory_map:
   sha2_256: 79ae6053b1afd95db05643d3676af49fa7ea30c5b3579d090be9a18ae7030308
+acpi:
+  sha2_256: 141f52e83b42331118ed7b2a0b8b1f1bbab304e01973c79ad4cf6e172612d9f8
 "
                     );
                     assert_eq!(
@@ -129,38 +129,38 @@ Attestations identifying firmware artifacts accepted by the reference values for
 The reference values describing this layer are printed below.
 
 amd_sev:
-  allow_debug: false
-  check_vcek_cert_expiry: true
-  genoa:
-    minimum:
-      boot_loader: 4
-      fmc: 0
-      microcode: 219
-      snp: 24
-      tee: 0
+  min_tcb_version:
+    boot_loader: 4
+    tee: 0
+    snp: 24
+    microcode: 219
+    fmc: 0
   milan:
     minimum:
       boot_loader: 4
-      fmc: 0
-      microcode: 219
-      snp: 24
       tee: 0
-  min_tcb_version:
-    boot_loader: 4
-    fmc: 0
-    microcode: 219
-    snp: 24
-    tee: 0
-  stage0:
-    digests:
-    - sha2_384: 0a3c0fa3f1558a883660cb3f37491e6da05e3445dc0f517ab5f9b8f7be6dc2ae2fa46a23b501d66d1d7e24796d1c2e20
+      snp: 24
+      microcode: 219
+      fmc: 0
+  genoa:
+    minimum:
+      boot_loader: 4
+      tee: 0
+      snp: 24
+      microcode: 219
+      fmc: 0
   turin:
     minimum:
       boot_loader: 4
-      fmc: 0
-      microcode: 219
-      snp: 24
       tee: 0
+      snp: 24
+      microcode: 219
+      fmc: 0
+  allow_debug: false
+  check_vcek_cert_expiry: true
+  stage0:
+    digests:
+    - sha2_384: 0a3c0fa3f1558a883660cb3f37491e6da05e3445dc0f517ab5f9b8f7be6dc2ae2fa46a23b501d66d1d7e24796d1c2e20
 
 
 _____ Kernel Layer _____
@@ -175,12 +175,6 @@ Accepted Initial Ramdisk Artifacts:
 
 The reference values describing this layer are printed below.
 
-acpi:
-  digests:
-  - sha2_256: 141f52e83b42331118ed7b2a0b8b1f1bbab304e01973c79ad4cf6e172612d9f8
-init_ram_fs:
-  digests:
-  - sha2_256: 15fe687a68a1f0d8aff14611fd4d108d7c132e3f8072bb64ff1073fb816a9ae8
 kernel:
   digests:
     image:
@@ -190,9 +184,15 @@ kernel:
 kernel_cmd_line_text:
   string_literals:
   - console=ttyS0
+init_ram_fs:
+  digests:
+  - sha2_256: 15fe687a68a1f0d8aff14611fd4d108d7c132e3f8072bb64ff1073fb816a9ae8
 memory_map:
   digests:
   - sha2_256: 79ae6053b1afd95db05643d3676af49fa7ea30c5b3579d090be9a18ae7030308
+acpi:
+  digests:
+  - sha2_256: 141f52e83b42331118ed7b2a0b8b1f1bbab304e01973c79ad4cf6e172612d9f8
 
 
 _____ Application Layer _____

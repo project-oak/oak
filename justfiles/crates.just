@@ -18,8 +18,8 @@ Examples:
 versions *ARGS:
     #!/usr/bin/env bash
     set -euo pipefail
-    (cd tools/analyze_crate_versions && bazel build //:analyze_crate_versions)
-    exec tools/analyze_crate_versions/bazel-bin/analyze_crate_versions {{ARGS}}
+    bazel build //tools/analyze_crate_versions:analyze_crate_versions
+    exec bazel-bin/tools/analyze_crate_versions/analyze_crate_versions {{ARGS}}
 
 # Show dependency tree for a crate to understand why it's included.
 [doc("Show full dependency info for a crate in the lock file.
@@ -34,5 +34,5 @@ Examples:
 deps crate depth="1":
     #!/usr/bin/env bash
     set -euo pipefail
-    (cd tools/analyze_crate_versions && bazel build //:analyze_crate_versions)
-    exec tools/analyze_crate_versions/bazel-bin/analyze_crate_versions --deps={{crate}} --depth={{depth}}
+    bazel build //tools/analyze_crate_versions:analyze_crate_versions
+    exec bazel-bin/tools/analyze_crate_versions/analyze_crate_versions --deps={{crate}} --depth={{depth}}
