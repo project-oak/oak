@@ -21,6 +21,10 @@ pkg_tar(
     name = "sysroot_overlay",
     srcs = ["BUILD.sysroot"],
     remap_paths = {"BUILD.sysroot": "BUILD"},
+    symlinks = {
+        "lib": "usr/lib",
+        "lib64": "usr/lib64",
+    },
 )
 
 flatten(

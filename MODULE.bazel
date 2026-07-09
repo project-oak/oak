@@ -422,7 +422,7 @@ http_file(
     url = "https://storage.googleapis.com/oak-bins/binary/{}/stage0_bin_tdx/binary".format(STAGE0_BIN_TDX_COMMIT),
 )
 
-BASE_IMAGE_SHA256 = "6d118b6ab663c3a4afd2f109d2cab75f17469eca99808b9090d56ae0df05cf9c"
+BASE_IMAGE_SHA256 = "989bd12b5bb7241f1e30c6d63f176291ae1b236bf650cf30cad8b3f33358ae41"
 
 http_file(
     name = "oak_containers_system_image_base",
@@ -431,7 +431,7 @@ http_file(
     url = "https://storage.googleapis.com/oak-bins/base-image/{}.tar.xz".format(BASE_IMAGE_SHA256),
 )
 
-NVIDIA_BASE_IMAGE_SHA256 = "10e665a269b79aef1e12a45a60abd1bf4638edae3bad0c41cec764ceacbfe0a9"
+NVIDIA_BASE_IMAGE_SHA256 = "a08714eca57900c86dea992641210c7a18103b92c06b6c4d27b14da04029af2c"
 
 http_file(
     name = "oak_containers_nvidia_system_image_base",
@@ -1382,10 +1382,18 @@ crate.spec(
     repositories = ALL_STD,
     version = "0.13.1",
 )
+
+# Pin time and time-macros to prevent cargo-audit failures due to
+# RUSTSEC-2026-0009 (Denial of Service via Stack Exhaustion in time <= 0.3.36).
 crate.spec(
     package = "time-macros",
     repositories = ALL_STD,
-    version = "=0.2.18",
+    version = "=0.2.27",
+)
+crate.spec(
+    package = "time",
+    repositories = ALL_STD,
+    version = "=0.3.47",
 )
 crate.spec(
     default_features = False,
@@ -1948,12 +1956,16 @@ crate.spec(
     repositories = ALL_REPOSITORIES,
     version = "0.4.8",
 )
+
+# Pin x86_64 to =0.15.4 because 0.15.5 uses unstable Step trait methods
+# (forward_overflowing/backward_overflowing) that are not available in
+# our pinned nightly-2026-04-11 Rust compiler.
 crate.spec(
     default_features = True,
     features = ["memory_encryption"],
     package = "x86_64",
     repositories = ALL_REPOSITORIES,
-    version = "0.15.4",
+    version = "=0.15.4",
 )
 crate.spec(
     default_features = True,
