@@ -103,16 +103,19 @@ impl ZeroPage {
         // data.
         let hdr_start = 0x1F1usize;
         // We can determine the end of the setup header information by adding the value
-        // of the byte as offset 0x201 to the value 0x202.
-        let hdr_end = 0x202usize + (buf[0x201] as usize);
+        // of the byte at offset 0x201 to the value 0x202. That byte is supplied by the
+        // untrusted host, and a newer kernel may declare a header larger than the one
+        // we keep, so clamp the range to the size of `hdr` and to the data we read.
+        let dest = self.inner.hdr.as_mut_bytes();
+        let hdr_end =
+            (0x202usize + (buf[0x201] as usize)).min(hdr_start + dest.len()).min(buf.len());
         let src = &buf[hdr_start..hdr_end];
         // If we are loading an older kernel, the setup header might be a bit shorter.
         // New fields for more recent versions of the boot protocol are
         // added to the end of the setup header and there is padding after
         // header, so the resulting data stucture should still be understood
         // correctly by the kernel.
-        let dest = &mut self.inner.hdr.as_mut_bytes()[..src.len()];
-        dest.copy_from_slice(src);
+        dest[..src.len()].copy_from_slice(src);
         Some((buf, measurement))
     }
 
