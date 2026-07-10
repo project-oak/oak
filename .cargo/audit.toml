@@ -1,11 +1,23 @@
 [advisories]
 ignore = [
-  "RUSTSEC-2023-0071", # b/352738504
-  "RUSTSEC-2026-0009", # b/504985121
+  # b/352738504
+  # rsa crate does not yet have a fix.
+  "RUSTSEC-2023-0071", 
+
+  # Old time crate pulled in via rcgen and syslog
+  # b/504985121
+  #"RUSTSEC-2026-0009",
 
   # outdated rustls-webpki in use. b/504996249
   "RUSTSEC-2026-0099",
   "RUSTSEC-2026-0098",
   "RUSTSEC-2026-0049",
   "RUSTSEC-2026-0104",
+
+  # quick-xml related failures. 
+  # Old quick-xml pulled in by outdated pprof
+  # b/531801238
+  "RUSTSEC-2026-0194",
+  "RUSTSEC-2026-0195",
 ]
+
