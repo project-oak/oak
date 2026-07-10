@@ -144,7 +144,7 @@ impl Machine for I440fx {
         firmware: &mut dyn Firmware,
         zero_page: &ZeroPage,
     ) -> Result<Range<u32>, &'static str> {
-        let mut mmio32_hole_base = firmware
+        let mut mmio32_hole_base: u32 = firmware
             .find(PCI_MMIO32_HOLE_BASE_FILE_NAME)
             .and_then(|file| {
                 // The VMM is providing us the start of the hole.
@@ -189,8 +189,10 @@ impl Machine for I440fx {
             let mut should_reserve: u64 = 0;
             firmware.read_file(&file, should_reserve.as_mut_bytes())?;
             if should_reserve == 1 {
-                // Bump the base by 256 MoB
-                mmio32_hole_base += 0x10000000;
+                // Bump the base by 256 MiB
+                mmio32_hole_base = mmio32_hole_base
+                    .checked_add(0x10000000)
+                    .ok_or("not enough space to move the 32-bit PCI MMIO hole")?;
             }
         }
 
@@ -200,6 +202,12 @@ impl Machine for I440fx {
         // https://github.com/coreboot/seabios/blob/b686f4600792c504f01929f761be473e298de33d/src/fw/pciinit.c#L51 (defined at 0xFEC0_0000)
         // For now we choose the lower of the two.
         let mmio32_hole_end = 0xFC00_0000;
+
+        if mmio32_hole_base >= mmio32_hole_end
+            || !zero_page.check_e820_gap(mmio32_hole_base as usize..mmio32_hole_end as usize)
+        {
+            return Err("could not find memory region for 32-bit PCI MMIO hole");
+        }
 
         Ok(mmio32_hole_base..mmio32_hole_end)
     }
@@ -472,5 +480,61 @@ mod tests {
                 field!(&Range.end, eq((MMIO64_HOLE_SIZE + MMIO64_HOLE_SIZE) as u64))
             ))
         );
+    }
+
+    #[googletest::test]
+    fn pc_hole_mmcfg_reservation_overflow() {
+        // If the base is close enough to u32::MAX that adding 256 MiB would
+        // overflow, the checked_add should catch it and return an error.
+        let mut firmware = TestFirmware::default();
+        let zero_page = ZeroPage::new();
+
+        // Place the base at 0xF800_0000 (just 128 MiB below the 4 GiB mark).
+        firmware.files.insert(
+            PCI_MMIO32_HOLE_BASE_FILE_NAME.to_owned(),
+            Box::new(0xF800_0000u64.to_le_bytes()),
+        );
+        // Request the 256 MiB MMCFG reservation, which would push the base to
+        // 0x1_0800_0000 — past u32::MAX.
+        firmware.files.insert(MMCFG_MEM_RESERVATION_FILE.to_owned(), Box::new(1u64.to_le_bytes()));
+
+        assert_that!(I440fx::mmio32_hole(&mut firmware, &zero_page), err(anything()));
+    }
+
+    #[googletest::test]
+    fn pc_hole_base_past_end() {
+        // If the base is at or past the fixed end (0xFC00_0000), the hole is
+        // invalid.
+        let mut firmware = TestFirmware::default();
+        let zero_page = ZeroPage::new();
+
+        firmware.files.insert(
+            PCI_MMIO32_HOLE_BASE_FILE_NAME.to_owned(),
+            Box::new(0xFC00_0000u64.to_le_bytes()),
+        );
+
+        assert_that!(I440fx::mmio32_hole(&mut firmware, &zero_page), err(anything()));
+    }
+
+    #[googletest::test]
+    fn pc_hole_overlaps_ram() {
+        // If RAM is mapped inside the proposed hole range, the hole is rejected.
+        let mut firmware = TestFirmware::default();
+        let mut zero_page = ZeroPage::new();
+
+        // Place the base at the 2 GiB mark via fwcfg.
+        firmware.files.insert(
+            PCI_MMIO32_HOLE_BASE_FILE_NAME.to_owned(),
+            Box::new(0x8000_0000u64.to_le_bytes()),
+        );
+
+        // Map RAM that overlaps the proposed hole [0x8000_0000, 0xFC00_0000).
+        zero_page.insert_e820_entry(BootE820Entry::new(
+            0x9000_0000,
+            0x1000_0000,
+            E820EntryType::RAM,
+        ));
+
+        assert_that!(I440fx::mmio32_hole(&mut firmware, &zero_page), err(anything()));
     }
 }
