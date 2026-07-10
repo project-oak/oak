@@ -36,8 +36,14 @@ pub fn create_tls_context(
     let ca_file = std::fs::File::open(ca_path).context("failed to open CA certificate file")?;
     let ca_der = oak_session_tls::utils::load_cert_der(std::io::BufReader::new(ca_file));
 
-    let tls_config =
-        ClientContextConfig { server_trust_anchor_der: Some(ca_der), tls_identity: None };
+    let tls_config = ClientContextConfig {
+        server_trust_anchor_provider: Some(
+            oak_session_tls::utils::create_static_trust_anchor_provider(ca_der),
+        ),
+        tls_identity_provider: None,
+        custom_cert_verifier: None,
+        expected_server_name: None,
+    };
     Ok(Arc::new(
         OakSessionTlsClientContext::create(tls_config)
             .map_err(|e| anyhow!("failed to create TLS context: {}", e))?,

@@ -22,7 +22,7 @@ use oak_proxy_lib::{
     proxy::{PeerRole, TlsProxySession, proxy},
     websocket::{read_raw_message, write_raw_message},
 };
-use oak_session_tls::{OakSessionTlsServerContext, ServerContextConfig, TlsIdentity};
+use oak_session_tls::{OakSessionTlsServerContext, ServerContextConfig};
 use tokio::{
     io::AsyncWriteExt,
     net::{TcpListener, TcpStream},
@@ -48,8 +48,12 @@ pub fn create_tls_context(
     let key_der = oak_session_tls::utils::load_key_der(std::io::BufReader::new(key_file));
 
     let tls_config = ServerContextConfig {
-        tls_identity: TlsIdentity { key_der, cert_der },
-        client_trust_anchor_der: None,
+        tls_identity_provider: oak_session_tls::utils::create_static_cert_identity_provider(
+            key_der,
+            vec![cert_der],
+        ),
+        client_trust_anchor_provider: None,
+        custom_cert_verifier: None,
     };
     Ok(Arc::new(
         OakSessionTlsServerContext::create(tls_config)
