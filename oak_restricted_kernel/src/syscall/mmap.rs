@@ -36,6 +36,11 @@ use x86_64::{
 
 use crate::{FRAME_ALLOCATOR, PAGE_TABLES, mm::encryption_aware_page_table_flags};
 
+/// Exclusive upper bound of user space: the lower half of the 48-bit virtual
+/// address space. Mirrors the split used by
+/// [`crate::mm::page_tables::RootPageTable::find_unallocated_pages`].
+const USERSPACE_VIRT_END: u64 = 1 << 47;
+
 pub fn mmap(
     addr: Option<VirtAddr>,
     size: usize,
@@ -59,6 +64,18 @@ pub fn mmap(
         let addr = addr.ok_or(Errno::EINVAL)?;
         if !addr.is_aligned(Size2MiB::SIZE) || addr.as_u64() < Size2MiB::SIZE {
             log::warn!("mmap: requested address invalid: {:?}", addr);
+            return Err(Errno::EINVAL);
+        }
+        // The whole requested range must stay in the lower half of the virtual
+        // address space (user space), matching the bound that
+        // `find_unallocated_pages` enforces for non-fixed mappings. Reject a
+        // fixed address whose range would reach into the upper (kernel) half.
+        let end = addr
+            .as_u64()
+            .checked_add(align_up(size as u64, Size2MiB::SIZE))
+            .ok_or(Errno::EINVAL)?;
+        if end > USERSPACE_VIRT_END {
+            log::warn!("mmap: requested address outside user space: {:?}", addr);
             return Err(Errno::EINVAL);
         }
         addr
@@ -197,6 +214,16 @@ pub fn syscall_mmap(
         return Errno::EINVAL as isize;
     };
 
-    mmap(Some(VirtAddr::from_ptr(addr)), size, prot, flags)
+    // `addr` is untrusted user input; a non-canonical value must not be allowed
+    // to panic the kernel (`VirtAddr::new`). Reject it with EINVAL instead.
+    let addr = match VirtAddr::try_new(addr as u64) {
+        Ok(addr) => addr,
+        Err(_) => {
+            log::warn!("mmap: non-canonical address passed to mmap");
+            return Errno::EINVAL as isize;
+        }
+    };
+
+    mmap(Some(addr), size, prot, flags)
         .map_or_else(|err| err as isize, |ptr| ptr.as_ptr() as isize)
 }
