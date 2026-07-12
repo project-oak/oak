@@ -17,6 +17,7 @@
 use alloc::{boxed::Box, ffi::CString, string::String, vec};
 use core::{ffi::c_void, slice};
 
+use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use x86_64::{PhysAddr, VirtAddr};
 
 use crate::{Measured, fw_cfg::FwCfg};
@@ -28,6 +29,36 @@ unsafe extern "C" {
 
 /// The default location for loading a compressed (bzImage format) kerne.
 const DEFAULT_BZIMAGE_START: u64 = 0x2000000; // See b/359144829 before changing.
+
+/// Returns whether a kernel image of `size` bytes loaded at the fixed
+/// [`DEFAULT_BZIMAGE_START`] address is fully contained in a single region of
+/// guest RAM that stage0 has identity mapped.
+///
+/// The image size comes from the untrusted VMM (the fw_cfg `KernelSize` item),
+/// so it can be any `u32`. Without this bound a large value makes
+/// [`Kernel::try_load_kernel_image`] write past the load region, over unmapped
+/// memory or memory that does not back the kernel. The initrd path already
+/// bounds its host-supplied size via `find_suitable_dma_address`; this mirrors
+/// that for the fixed kernel address.
+fn kernel_fits_in_memory(size: usize, e820_table: &[BootE820Entry]) -> bool {
+    let start = DEFAULT_BZIMAGE_START;
+    let Some(end) = start.checked_add(size as u64) else {
+        return false;
+    };
+    // The kernel is written through the identity map, which only covers the first
+    // `TOP_OF_VIRTUAL_MEMORY` bytes.
+    if end > crate::TOP_OF_VIRTUAL_MEMORY {
+        return false;
+    }
+    e820_table.iter().any(|entry| {
+        entry.entry_type() == Some(E820EntryType::RAM)
+            && (entry.addr() as u64) <= start
+            && entry
+                .addr()
+                .checked_add(entry.size())
+                .is_some_and(|entry_end| (entry_end as u64) >= end)
+    })
+}
 
 /// A bzImage-compatible kernel loaded into memory.
 #[repr(transparent)]
@@ -49,17 +80,27 @@ impl Kernel {
     /// We load the kernel directly into memory, bypassing the usual allocation
     /// mechanisms. The caller must guarantee that only one instance of `Kernel`
     /// is alive at any given time.
-    /// The caller also needs to guarantee that there is enough physical memory
-    /// available to load the kernel starting at `DEFAULT_BZIMAGE_START`.
-    pub unsafe fn try_load_kernel_image<P: crate::Platform>(fw_cfg: &mut FwCfg<P>) -> Option<Self> {
+    pub unsafe fn try_load_kernel_image<P: crate::Platform>(
+        fw_cfg: &mut FwCfg<P>,
+        e820_table: &[BootE820Entry],
+    ) -> Option<Self> {
         let file = fw_cfg.get_kernel_file().expect("did not find kernel file");
         let size = file.size();
+
+        // The size is supplied by the untrusted VMM. Reject a kernel that would not
+        // fit at the fixed load address before forming the destination slice, so we
+        // never write past the mapped RAM that backs it.
+        assert!(
+            kernel_fits_in_memory(size, e820_table),
+            "kernel image of {size} bytes does not fit in mapped guest memory"
+        );
 
         let dma_address = PhysAddr::new(DEFAULT_BZIMAGE_START);
         let start_address = crate::phys_to_virt(dma_address);
         log::debug!("Kernel image size {}", size);
         log::debug!("Kernel image start address {:#018x}", start_address.as_u64());
-        // Safety: the caller needs to guarantee there is enough memory available.
+        // Safety: we checked above that `size` bytes at `DEFAULT_BZIMAGE_START` lie
+        // within mapped RAM.
         let buf = unsafe { slice::from_raw_parts_mut::<u8>(start_address.as_mut_ptr(), size) };
         let actual_size = fw_cfg.read_file(&file, buf).expect("could not read kernel file");
         assert_eq!(actual_size, size, "kernel size did not match expected size");
@@ -159,4 +200,46 @@ pub fn try_load_cmdline<P: crate::Platform>(fw_cfg: &mut FwCfg<P>) -> Option<Ker
         .expect("invalid kernel command-line");
     log::debug!("Kernel cmdline: {}", cmdline);
     Some(KernelCmdLine { kernel_cmdline: cmdline.clone() })
+}
+
+#[cfg(test)]
+mod tests {
+    use googletest::prelude::*;
+
+    use super::*;
+
+    fn ram(addr: usize, size: usize) -> BootE820Entry {
+        BootE820Entry::new(addr, size, E820EntryType::RAM)
+    }
+
+    #[gtest]
+    fn accepts_kernel_that_fits_in_ram() {
+        // 512 MiB of RAM starting just above the first 1 MiB.
+        let e820 = [ram(0x10_0000, 0x2000_0000)];
+        // A 64 MiB kernel at 32 MiB ends at 96 MiB, inside RAM and the identity map.
+        expect_that!(kernel_fits_in_memory(0x0400_0000, &e820), eq(true));
+    }
+
+    #[gtest]
+    fn rejects_kernel_past_mapped_window() {
+        // RAM extends past the 1 GiB identity map.
+        let e820 = [ram(0x10_0000, 0x1_0000_0000)];
+        // A ~3.75 GiB size would write far past TOP_OF_VIRTUAL_MEMORY.
+        expect_that!(kernel_fits_in_memory(0xF000_0000, &e820), eq(false));
+    }
+
+    #[gtest]
+    fn rejects_kernel_past_backing_ram() {
+        // Only ~513 MiB of RAM is present.
+        let e820 = [ram(0x10_0000, 0x2000_0000)];
+        // A 544 MiB kernel at 32 MiB ends at 576 MiB: inside the map, past RAM.
+        expect_that!(kernel_fits_in_memory(0x2200_0000, &e820), eq(false));
+    }
+
+    #[gtest]
+    fn rejects_when_no_ram_covers_load_address() {
+        // RAM present but entirely below the load address.
+        let e820 = [ram(0x0, 0x100_0000)];
+        expect_that!(kernel_fits_in_memory(0x1000, &e820), eq(false));
+    }
 }
