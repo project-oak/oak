@@ -40,6 +40,57 @@ pub mod virtual_address_allocator;
 /// The start of kernel memory.
 pub const KERNEL_OFFSET: u64 = 0xFFFF_FFFF_8000_0000;
 
+/// Exclusive upper bound of user space: the end of the lower half of the 48-bit
+/// virtual address space. User space is `0x0000_0000_0000_0000 ..=
+/// 0x0000_7FFF_FFFF_FFFF` (see the memory layout table on [`initial_pml4`]);
+/// this is the same split `find_unallocated_pages` and the userspace stack in
+/// `processes.rs` rely on.
+pub const USERSPACE_VIRT_END: u64 = 0x8000_0000_0000;
+
+/// Returns `true` if the whole `[start, start + len)` byte range lies within
+/// user space (the lower half) and does not wrap around the address space.
+///
+/// The range is accepted iff its exclusive end is `<= USERSPACE_VIRT_END`, so
+/// the last accessible byte is at most `USERSPACE_VIRT_END - 1` (the final user
+/// address). A zero-length range only requires `start` itself to be in range.
+/// Note: being in user space does not imply the range is mapped; an unmapped
+/// user address still faults when accessed.
+pub fn is_user_range(start: u64, len: usize) -> bool {
+    match start.checked_add(len as u64) {
+        Some(end) => end <= USERSPACE_VIRT_END,
+        None => false, // address-space wrap
+    }
+}
+
+#[cfg(test)]
+mod user_range_tests {
+    use super::{USERSPACE_VIRT_END, is_user_range};
+
+    #[test]
+    fn accepts_normal_lower_half_range() {
+        assert!(is_user_range(0x1000, 0x1000));
+        assert!(is_user_range(0, 0)); // null, zero length
+        // A range ending exactly at the boundary (last byte = USERSPACE_VIRT_END-1).
+        assert!(is_user_range(USERSPACE_VIRT_END - 0x1000, 0x1000));
+    }
+
+    #[test]
+    fn rejects_range_crossing_or_above_boundary() {
+        // Starts at the first kernel-half address.
+        assert!(!is_user_range(USERSPACE_VIRT_END, 1));
+        // Lower-half start but the range spills one byte past the boundary.
+        assert!(!is_user_range(USERSPACE_VIRT_END - 0x1000, 0x1001));
+        // Kernel image address.
+        assert!(!is_user_range(0xFFFF_FFFF_8000_0000, 8));
+    }
+
+    #[test]
+    fn rejects_wrapping_range() {
+        assert!(!is_user_range(u64::MAX, 1));
+        assert!(!is_user_range(u64::MAX - 3, 16));
+    }
+}
+
 /// The offset used for the direct mapping of all physical memory.
 const DIRECT_MAPPING_OFFSET: VirtAddr = VirtAddr::new_truncate(0xFFFF_8800_0000_0000);
 

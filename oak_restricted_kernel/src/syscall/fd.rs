@@ -77,9 +77,21 @@ pub fn unregister(fd: Fd) -> Option<Box<dyn FileDescriptor>> {
 }
 
 pub fn syscall_read(fd: c_int, buf: *mut c_void, count: c_size_t) -> c_ssize_t {
-    // Safety: we should validate that the pointer and count are valid, as these
-    // come from userspace and therefore are not to be trusted, but right now
-    // everything is in kernel space so there is nothing to check.
+    // A zero-length read touches no memory; return early so we never call
+    // `from_raw_parts_mut`, which requires a valid (non-null, aligned) pointer
+    // even for length 0.
+    if count == 0 {
+        return 0;
+    }
+    // `buf`/`count` are untrusted ring-3 input. Require the whole range to be in
+    // user space (the lower half) so a process cannot make the kernel write to
+    // an arbitrary kernel address. (Being in the lower half does not prove the
+    // range is mapped; an unmapped user address still faults.)
+    if !crate::mm::is_user_range(buf as u64, count) {
+        return Errno::EFAULT as isize;
+    }
+    // Safety: `count > 0` and `is_user_range` verified `[buf, buf + count)` is a
+    // non-wrapping user-space range.
     let data = unsafe { slice::from_raw_parts_mut(buf as *mut u8, count) };
 
     FILE_DESCRIPTORS
@@ -90,9 +102,21 @@ pub fn syscall_read(fd: c_int, buf: *mut c_void, count: c_size_t) -> c_ssize_t {
 }
 
 pub fn syscall_write(fd: c_int, buf: *const c_void, count: c_size_t) -> c_ssize_t {
-    // Safety: we should validate that the pointer and count are valid, as these
-    // come from userspace and therefore are not to be trusted, but right now
-    // everything is in kernel space so there is nothing to check.
+    // A zero-length write touches no memory; return early so we never call
+    // `from_raw_parts`, which requires a valid (non-null, aligned) pointer even
+    // for length 0.
+    if count == 0 {
+        return 0;
+    }
+    // `buf`/`count` are untrusted ring-3 input. Require the whole range to be in
+    // user space (the lower half) so a process cannot make the kernel read (and
+    // leak) arbitrary kernel memory. (Being in the lower half does not prove the
+    // range is mapped; an unmapped user address still faults.)
+    if !crate::mm::is_user_range(buf as u64, count) {
+        return Errno::EFAULT as isize;
+    }
+    // Safety: `count > 0` and `is_user_range` verified `[buf, buf + count)` is a
+    // non-wrapping user-space range.
     let data = unsafe { slice::from_raw_parts(buf as *mut u8, count) };
 
     FILE_DESCRIPTORS
