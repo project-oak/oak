@@ -30,7 +30,10 @@ use oak_proto_rust::oak::attestation::v1::{CollectedAttestation, collected_attes
 use oak_proxy_lib::config::ClientConfig;
 use oak_session::session::{AttestationEvidence, AttestationPublisher};
 use prost::Message;
-use tokio::net::TcpListener;
+use tokio::{
+    io::AsyncWriteExt,
+    net::{TcpListener, TcpStream},
+};
 use url::Url;
 
 #[derive(Parser, Debug)]
@@ -150,4 +153,23 @@ async fn main() -> anyhow::Result<()> {
     } else {
         noise::run_loop(listener, config).await
     }
+}
+
+pub(crate) async fn write_http_502(
+    mut app_stream: TcpStream,
+    err: &anyhow::Error,
+) -> anyhow::Error {
+    let error_msg = format!("Attestation/Handshake Failed: {:#}", err);
+    let body = format!("[Oak-Proxy] {}\n", error_msg);
+    let response = format!(
+        "HTTP/1.1 502 Bad Gateway\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        body.len(),
+        body
+    );
+    if let Err(write_err) = app_stream.write_all(response.as_bytes()).await {
+        log::warn!("Failed to write HTTP 502 error response: {:?}", write_err);
+    }
+    let _ = app_stream.flush().await;
+    let _ = app_stream.shutdown().await;
+    anyhow::anyhow!("Handshake/attestation failed (sent HTTP 502 to client): {:#}", err)
 }

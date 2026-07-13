@@ -40,28 +40,38 @@ pub async fn run_loop(listener: TcpListener, config: Arc<ClientConfig>) -> anyho
 }
 
 async fn run_proxy(app_stream: TcpStream, config: &ClientConfig) -> anyhow::Result<()> {
-    let server_proxy_url =
-        config.server_proxy_url.as_ref().context("server_proxy_url wasn't set")?;
-    let (server_proxy_stream, _) = tokio_tungstenite::connect_async(server_proxy_url).await?;
-    log::info!("[Client] Connected to server proxy at {}", server_proxy_url);
+    let setup_result = async {
+        let server_proxy_url =
+            config.server_proxy_url.as_ref().context("server_proxy_url wasn't set")?;
+        let (server_proxy_stream, _) = tokio_tungstenite::connect_async(server_proxy_url).await?;
+        log::info!("[Client] Connected to server proxy at {}", server_proxy_url);
 
-    // Create an attestation publisher if an output file is configured.
-    let attestation_publisher: Option<Arc<dyn AttestationPublisher>> =
-        config.attestation_output_file.as_ref().map(|path| {
-            log::info!(
-                "[Client] Attestation publisher CREATED, will write to '{}'",
-                path.display()
-            );
-            Arc::new(crate::FileAttestationPublisher {
-                output_path: path.clone(),
-                server_proxy_url: server_proxy_url.to_string(),
-            }) as Arc<dyn AttestationPublisher>
-        });
+        // Create an attestation publisher if an output file is configured.
+        let attestation_publisher: Option<Arc<dyn AttestationPublisher>> =
+            config.attestation_output_file.as_ref().map(|path| {
+                log::info!(
+                    "[Client] Attestation publisher CREATED, will write to '{}'",
+                    path.display()
+                );
+                Arc::new(crate::FileAttestationPublisher {
+                    output_path: path.clone(),
+                    server_proxy_url: server_proxy_url.to_string(),
+                }) as Arc<dyn AttestationPublisher>
+            });
 
-    let (session, stream) =
-        establish_noise_session(server_proxy_stream, config, attestation_publisher.as_ref())
-            .await?;
-    proxy(PeerRole::Client, session, app_stream, stream, config.keep_alive_interval).await
+        let (session, stream) =
+            establish_noise_session(server_proxy_stream, config, attestation_publisher.as_ref())
+                .await?;
+        Ok((session, stream))
+    }
+    .await;
+
+    match setup_result {
+        Ok((session, stream)) => {
+            proxy(PeerRole::Client, session, app_stream, stream, config.keep_alive_interval).await
+        }
+        Err(err) => Err(crate::write_http_502(app_stream, &err).await),
+    }
 }
 
 async fn establish_noise_session(

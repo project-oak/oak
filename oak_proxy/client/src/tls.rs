@@ -70,13 +70,23 @@ async fn run_proxy(
     config: &ClientConfig,
     tls_context: &OakSessionTlsClientContext,
 ) -> anyhow::Result<()> {
-    let server_proxy_url =
-        config.server_proxy_url.as_ref().context("server_proxy_url wasn't set")?;
-    let (server_proxy_stream, _) = tokio_tungstenite::connect_async(server_proxy_url).await?;
-    log::info!("[Client] Connected to server proxy at {}", server_proxy_url);
+    let setup_result = async {
+        let server_proxy_url =
+            config.server_proxy_url.as_ref().context("server_proxy_url wasn't set")?;
+        let (server_proxy_stream, _) = tokio_tungstenite::connect_async(server_proxy_url).await?;
+        log::info!("[Client] Connected to server proxy at {}", server_proxy_url);
 
-    let (session, stream) = establish_tls_session(server_proxy_stream, tls_context).await?;
-    proxy(PeerRole::Client, session, app_stream, stream, config.keep_alive_interval).await
+        let (session, stream) = establish_tls_session(server_proxy_stream, tls_context).await?;
+        Ok((session, stream))
+    }
+    .await;
+
+    match setup_result {
+        Ok((session, stream)) => {
+            proxy(PeerRole::Client, session, app_stream, stream, config.keep_alive_interval).await
+        }
+        Err(err) => Err(crate::write_http_502(app_stream, &err).await),
+    }
 }
 
 async fn establish_tls_session(
