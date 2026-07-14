@@ -32,7 +32,7 @@ use oak_proto_rust::{
         PublicEndorsement, VerificationMaterial as ProtoVerificationMaterial,
         verification_material::VerificationMaterial,
     },
-    oak::attestation::v1::{KeyType, VerifyingKeySet},
+    oak::attestation::v1::{KeyType, VerifyingKey, VerifyingKeySet},
 };
 use x509_cert::der::{Decode, Encode};
 
@@ -54,6 +54,7 @@ pub fn verify_pes_confirmation(
     pes_confirmation_bytes: &[u8],
     pes_key_set: &VerifyingKeySet,
     expected_endorsement_bytes: &[u8],
+    trusted_endorser_key: &VerifyingKey,
 ) -> anyhow::Result<()> {
     let public_endorsement = parse_pes_confirmation(pes_confirmation_bytes)?;
 
@@ -81,6 +82,16 @@ pub fn verify_pes_confirmation(
         .ok_or_else(|| anyhow::anyhow!("missing verification_material"))?;
 
     let endorser_raw_vm_bytes = extract_raw_vm_bytes(endorser_vm)?;
+
+    // Verify that the endorser key in the confirmation matches the trusted endorser
+    // key.
+    let endorser_public_key_der =
+        extract_public_key_der(endorser_vm).context("extracting endorser public key DER")?;
+    anyhow::ensure!(
+        key_util::equal_keys(&endorser_public_key_der, &trusted_endorser_key.raw)
+            .context("comparing endorser keys")?,
+        "endorser public key in PES confirmation does not match trusted endorser key"
+    );
 
     // Construct the Pre-Authentication Encoding (PAE) canonical byte string.
     let pae_bytes = pae::calculate(

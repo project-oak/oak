@@ -32,6 +32,8 @@ use super::*;
 fn test_verify_pes_confirmation_success() {
     use base64::Engine;
     use rsa::pkcs8::DecodePrivateKey;
+    let dummy_endorser_key_hex = "3059301306072a8648ce3d020106082a8648ce3d030107034200048b159e54b0cda5de273bf535ae7cd5946680dbfb87b6cc1348373b78de32806a7f26bb00459ba16edce02221acd1c4a0a45c9e627784dd4590f3bb29c98637f8";
+    let dummy_endorser_key_bytes = hex::decode(dummy_endorser_key_hex).unwrap();
 
     let cert_base64 = "MIIDDTCCAfWgAwIBAgIUPBaPsaiMewIvsmo7QISZwW5kQHMwDQYJKoZIhvcNAQELBQAwFjEUMBIG\
 A1UEAwwLdGVzdF9pc3N1ZXIwHhcNMjYwNTA3MTU1MjM3WhcNMjcwNTA3MTU1MjM3WjAWMRQwEgYD\
@@ -97,7 +99,7 @@ A1edf0NSAidb4q69a5aAcE+c+w==";
             signature: vec![0; 64], // Dummy endorser signature
             verification_material: Some(VerificationMaterial {
                 verification_material: Some(VmOneof::EcdsaP256Sha256(EcdsaP256PublicKey {
-                    der_bytes: vec![1, 2, 3], // Dummy endorser key
+                    der_bytes: dummy_endorser_key_bytes.clone(),
                 })),
             }),
         }),
@@ -113,7 +115,8 @@ A1edf0NSAidb4q69a5aAcE+c+w==";
     };
 
     // 2. Calculate PAE for signing
-    let pae = crate::pae::calculate(endorsement_bytes, &[1, 2, 3], &[0; 64], entry_id);
+    let pae =
+        crate::pae::calculate(endorsement_bytes, &dummy_endorser_key_bytes, &[0; 64], entry_id);
 
     // 3. Sign the PAE
     let mut hasher = Sha256Hasher::new();
@@ -173,8 +176,19 @@ A1edf0NSAidb4q69a5aAcE+c+w==";
         ..Default::default()
     };
 
+    let trusted_endorser_key = VerifyingKey {
+        r#type: KeyType::EcdsaP256Sha256.into(),
+        key_id: 4711,
+        raw: dummy_endorser_key_bytes.clone(),
+    };
+
     // 6. Verify!
-    let result = verify_pes_confirmation(&pes_confirmation_bytes, &pes_key_set, endorsement_bytes);
+    let result = verify_pes_confirmation(
+        &pes_confirmation_bytes,
+        &pes_key_set,
+        endorsement_bytes,
+        &trusted_endorser_key,
+    );
 
     assert!(result.is_ok(), "Verification failed: {:?}", result.err());
 }

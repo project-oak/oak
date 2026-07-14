@@ -48,7 +48,10 @@ rust_test(
         "//oak_attestation_verification:test_util",
         "//oak_crypto:oak_crypto_tink",
         "@oak_crates_index//:base64",
+        "@oak_crates_index//:ecdsa",
         "@oak_crates_index//:ed25519-dalek",
-        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:hex",
+        "@oak_crates_index//:p256",
+        "@oak_crates_index//:serde_json",
     ],
 )
