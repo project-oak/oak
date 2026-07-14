@@ -930,9 +930,11 @@ pub fn serialize_cb_layer1_transparent_reference_values(
 pub fn serialize_cb_layer2_transparent_reference_values(
     instance: &CbLayer2TransparentReferenceValues,
 ) -> serde_json::Value {
-    let CbLayer2TransparentReferenceValues { binary_mpm } = instance;
+    #[allow(deprecated)]
+    let CbLayer2TransparentReferenceValues { binary_mpm, binary_mpms } = instance;
     json!({
         "binary_mpm": binary_mpm.as_ref().map(serialize_mpm_reference_value),
+        "binary_mpms": binary_mpms.iter().map(serialize_mpm_reference_value).collect::<Vec<_>>(),
     })
 }
 

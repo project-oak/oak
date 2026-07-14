@@ -325,11 +325,16 @@ pub struct CbLayer1TransparentEndorsement {
     pub userspace: ::core::option::Option<SignedEndorsement>,
 }
 /// Event endorsement for the layer matching `CbLayer2TransparentEvent`.
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CbLayer2TransparentEndorsement {
     /// Endorsement of the binary MPM running on CB.
+    /// DEPRECATED: Use binary_mpms instead.
+    #[deprecated]
     #[prost(message, optional, tag = "1")]
     pub binary_mpm: ::core::option::Option<SignedEndorsement>,
+    /// Endorsements of the binary MPMs running on CB.
+    #[prost(message, repeated, tag = "2")]
+    pub binary_mpms: ::prost::alloc::vec::Vec<SignedEndorsement>,
 }
 /// Endorsement for a public key used to verify that an encrypted session is
 /// bound to the enclave's evidence.
@@ -1515,8 +1520,13 @@ pub struct CbLayer1TransparentReferenceValues {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CbLayer2TransparentReferenceValues {
+    /// DEPRECATED: Use binary_mpms instead.
+    #[deprecated]
     #[prost(message, optional, tag = "2")]
     pub binary_mpm: ::core::option::Option<MpmReferenceValue>,
+    /// Reference values for the binary MPMs running on CB.
+    #[prost(message, repeated, tag = "3")]
+    pub binary_mpms: ::prost::alloc::vec::Vec<MpmReferenceValue>,
 }
 /// Verifies a transparent CB evidence, i.e. uses the `transparent_event_log`
 /// branch in the associated `Evidence` proto.

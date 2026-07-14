@@ -493,7 +493,11 @@ message CbLayer1TransparentReferenceValues {
 
 message CbLayer2TransparentReferenceValues {
   reserved 1;
-  MpmReferenceValue binary_mpm = 2;
+  // DEPRECATED: Use binary_mpms instead.
+  MpmReferenceValue binary_mpm = 2 [deprecated = true];
+
+  // Reference values for the binary MPMs running on CB.
+  repeated MpmReferenceValue binary_mpms = 3;
 }
 
 // Verifies a transparent CB evidence, i.e. uses the `transparent_event_log`

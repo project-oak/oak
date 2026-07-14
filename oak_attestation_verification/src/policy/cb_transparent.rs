@@ -181,8 +181,11 @@ impl Policy<[u8]> for TransparentLayer2Policy {
         anyhow::ensure!(!event.packages.is_empty(), "no packages in layer 2 event");
 
         // Acquire the expected text value from the binary_mpm reference value.
+        #[allow(deprecated)]
         let binary_mpm_ref_value =
             self.reference_values.binary_mpm.as_ref().context("no binary mpm reference value")?;
+        // Allow `binary_mpm` to be used as we migrate to `binary_mpms`.
+        #[allow(deprecated)]
         let expected = acquire_mpm_expected_values(
             verification_time.into_unix_millis(),
             endorsement.as_ref().and_then(|e| e.binary_mpm.as_ref()),
@@ -292,6 +295,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn transparent_layer2_verify_multiple_packages_succeeds() {
         use oak_proto_rust::oak::attestation::v1::{
             MpmReferenceValue, SkipVerification, mpm_reference_value::Type as MrvType,
@@ -308,7 +312,8 @@ mod tests {
             "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
             &event,
         );
-        let reference_values = CbLayer2TransparentReferenceValues { binary_mpm: Some(skip_ref) };
+        let reference_values =
+            CbLayer2TransparentReferenceValues { binary_mpm: Some(skip_ref), binary_mpms: vec![] };
         let policy = TransparentLayer2Policy::new(&reference_values);
 
         let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
@@ -317,6 +322,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn transparent_layer2_verify_no_packages_fails() {
         use oak_proto_rust::oak::attestation::v1::{
             MpmReferenceValue, SkipVerification, mpm_reference_value::Type as MrvType,
@@ -328,7 +334,8 @@ mod tests {
             "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
             &event,
         );
-        let reference_values = CbLayer2TransparentReferenceValues { binary_mpm: Some(skip_ref) };
+        let reference_values =
+            CbLayer2TransparentReferenceValues { binary_mpm: Some(skip_ref), binary_mpms: vec![] };
         let policy = TransparentLayer2Policy::new(&reference_values);
 
         let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
@@ -522,6 +529,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn transparent_layer2_verify_with_signed_endorsement_succeeds() {
         use oak_proto_rust::oak::attestation::v1::{
             MpmReferenceValue, mpm_reference_value::Type as MrvType,
@@ -542,8 +550,10 @@ mod tests {
             vec![MPM_CLAIM_TYPE],
         );
 
-        let layer2_endorsement =
-            CbLayer2TransparentEndorsement { binary_mpm: Some(binary_mpm_signed) };
+        let layer2_endorsement = CbLayer2TransparentEndorsement {
+            binary_mpm: Some(binary_mpm_signed),
+            binary_mpms: vec![],
+        };
         let endorsement_variant: Variant = layer2_endorsement.into();
 
         let event = CbLayer2TransparentEvent {
@@ -562,6 +572,7 @@ mod tests {
             binary_mpm: Some(MpmReferenceValue {
                 r#type: Some(MrvType::Endorsement(endorsement_rv)),
             }),
+            binary_mpms: vec![],
         };
         let policy = TransparentLayer2Policy::new(&reference_values);
 
@@ -571,6 +582,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn transparent_layer2_verify_signed_endorsement_not_present_fails() {
         use oak_proto_rust::oak::attestation::v1::{
             MpmReferenceValue, mpm_reference_value::Type as MrvType,
@@ -593,8 +605,10 @@ mod tests {
             vec![MPM_CLAIM_TYPE],
         );
 
-        let layer2_endorsement =
-            CbLayer2TransparentEndorsement { binary_mpm: Some(binary_mpm_signed) };
+        let layer2_endorsement = CbLayer2TransparentEndorsement {
+            binary_mpm: Some(binary_mpm_signed),
+            binary_mpms: vec![],
+        };
         let endorsement_variant: Variant = layer2_endorsement.into();
 
         let event = CbLayer2TransparentEvent {
@@ -610,6 +624,7 @@ mod tests {
             binary_mpm: Some(MpmReferenceValue {
                 r#type: Some(MrvType::Endorsement(endorsement_rv)),
             }),
+            binary_mpms: vec![],
         };
         let policy = TransparentLayer2Policy::new(&reference_values);
 
@@ -619,6 +634,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn transparent_layer2_verify_partial_match_fails() {
         use oak_proto_rust::oak::attestation::v1::{
             MpmReferenceValue, mpm_reference_value::Type as MrvType,
@@ -639,8 +655,10 @@ mod tests {
             vec![MPM_CLAIM_TYPE],
         );
 
-        let layer2_endorsement =
-            CbLayer2TransparentEndorsement { binary_mpm: Some(binary_mpm_signed) };
+        let layer2_endorsement = CbLayer2TransparentEndorsement {
+            binary_mpm: Some(binary_mpm_signed),
+            binary_mpms: vec![],
+        };
         let endorsement_variant: Variant = layer2_endorsement.into();
 
         // One package matches the endorsement, but the other does not.
@@ -660,6 +678,7 @@ mod tests {
             binary_mpm: Some(MpmReferenceValue {
                 r#type: Some(MrvType::Endorsement(endorsement_rv)),
             }),
+            binary_mpms: vec![],
         };
         let policy = TransparentLayer2Policy::new(&reference_values);
 

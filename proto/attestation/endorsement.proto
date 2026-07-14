@@ -234,7 +234,11 @@ message CbLayer1TransparentEndorsement {
 // Event endorsement for the layer matching `CbLayer2TransparentEvent`.
 message CbLayer2TransparentEndorsement {
   // Endorsement of the binary MPM running on CB.
-  SignedEndorsement binary_mpm = 1;
+  // DEPRECATED: Use binary_mpms instead.
+  SignedEndorsement binary_mpm = 1 [deprecated = true];
+
+  // Endorsements of the binary MPMs running on CB.
+  repeated SignedEndorsement binary_mpms = 2;
 }
 
 // Endorsement for a public key used to verify that an encrypted session is
