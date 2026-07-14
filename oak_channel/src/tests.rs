@@ -150,6 +150,26 @@ fn test_invocation_channel_truncated_first_frame() {
 }
 
 #[test]
+fn test_invocation_channel_undersized_single_frame() {
+    // A single frame carrying the whole message (START and END both set) whose
+    // body is shorter than the message header must be rejected rather than
+    // panicking on the out-of-range header slice in decode.
+    let mut invocation_channel = {
+        let body = vec![0u8; message::BODY_OFFSET - 1];
+        let mut frame_store = frame::Framed::new(Box::new(MessageStore::default()));
+        frame_store
+            .write_frame(frame::Frame {
+                flags: frame::Flags::START | frame::Flags::END,
+                body: &body,
+            })
+            .unwrap();
+        InvocationChannel { inner: frame_store }
+    };
+
+    invocation_channel.read_message::<message::RequestMessage>().unwrap_err();
+}
+
+#[test]
 fn test_invocation_channel_expected_start_frame() {
     let mut invocation_channel = {
         let message = message::RequestMessage { invocation_id: 0, body: mock_payload() }.encode();

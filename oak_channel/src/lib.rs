@@ -99,6 +99,9 @@ impl InvocationChannel {
         }
 
         if first_frame.flags.contains(frame::Flags::END) {
+            if message_buffer.len() < message::BODY_OFFSET {
+                anyhow::bail!("message is smaller than the message header");
+            }
             return Ok((M::decode(&message_buffer[..]), timer));
         }
 
