@@ -893,19 +893,53 @@ impl IcingMetaDatabase {
         Ok(Self::extract_view_ids_from_search_result(search_result))
     }
 
-    fn extract_blob_id_from_doc(
-        doc_hit: &icing::search_result_proto::ResultProto,
-    ) -> Option<BlobId> {
+    /// Extract the `blob_id` property from a memory `DocumentProto`.
+    fn extract_blob_id_from_document(doc: &icing::DocumentProto) -> Option<BlobId> {
         let blob_id_name = BLOB_ID_NAME.to_string();
-        doc_hit
-            .document
-            .as_ref()?
-            .properties
+        doc.properties
             .iter()
             .find(|prop| prop.name.as_ref() == Some(&blob_id_name))?
             .string_values
             .first()
             .cloned()
+    }
+
+    fn extract_blob_id_from_doc(
+        doc_hit: &icing::search_result_proto::ResultProto,
+    ) -> Option<BlobId> {
+        Self::extract_blob_id_from_document(doc_hit.document.as_ref()?)
+    }
+
+    /// Resolve the blob id for `memory_id` with a direct point lookup.
+    ///
+    /// The memory document's Icing URI is the `memory_id` itself (see the
+    /// `set_key(NAMESPACE_NAME, memory_id)` call in `PendingMetadata::new`), so
+    /// `Get` fetches it in O(1) without evaluating a query over the corpus.
+    /// This is used by the delete path, which must operate on a memory
+    /// regardless of its expiration state. Returns `None` if the document does
+    /// not exist.
+    fn get_blob_id_by_memory_id_point_lookup(
+        &self,
+        memory_id: &MemoryId,
+    ) -> anyhow::Result<Option<BlobId>> {
+        let get_result = self.icing_search_engine.get(
+            NAMESPACE_NAME.as_bytes(),
+            memory_id.as_bytes(),
+            &icing::GetResultSpecProto::default(),
+        )?;
+        let code = get_result
+            .status
+            .as_ref()
+            .context("get_blob_id_by_memory_id_point_lookup returned no status")?
+            .code;
+        if code == Some(icing::status_proto::Code::NotFound.into()) {
+            return Ok(None);
+        }
+        if code != Some(icing::status_proto::Code::Ok.into()) {
+            bail!("icing get failed for memory_id {}: {:?}", memory_id, get_result.status);
+        }
+        let doc = get_result.document.context("icing get returned ok status but no document")?;
+        Ok(Self::extract_blob_id_from_document(&doc))
     }
 
     fn extract_view_id_from_doc(
@@ -1580,7 +1614,7 @@ impl IcingMetaDatabase {
         for memory_id in memory_ids {
             // Resolve the blob ID before deleting the document, since the
             // mapping lives inside the Icing document itself.
-            match self.get_blob_id_by_memory_id(memory_id.clone())? {
+            match self.get_blob_id_by_memory_id_point_lookup(memory_id)? {
                 Some(blob_id) => {
                     self.delete_memory_documents(memory_id)?;
                     self.applied_operations

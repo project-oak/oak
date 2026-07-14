@@ -206,6 +206,18 @@ class IcingSearchEngine {
     return ProtoToVec(inner_->Delete(namespace_str, uri_str));
   }
 
+  // Point lookup of a single document by (namespace, uri). Unlike Search, this
+  // does not evaluate a query over the corpus, so it is O(1) in corpus size.
+  std::unique_ptr<std::vector<uint8_t>> get_impl(
+      rust::Slice<const uint8_t> ns, rust::Slice<const uint8_t> uri,
+      rust::Slice<const uint8_t> result_spec) const {
+    std::string namespace_str = RustSliceToString(ns);
+    std::string uri_str = RustSliceToString(uri);
+    icing::lib::GetResultSpecProto result_spec_proto;
+    result_spec_proto.ParseFromString(RustSliceToString(result_spec));
+    return ProtoToVec(inner_->Get(namespace_str, uri_str, result_spec_proto));
+  }
+
   // NOTE: There will be a new API that accepts a proto instead of a uint64_t,
   // but they are not available in the OSS yet.
   std::unique_ptr<std::vector<uint8_t>> get_next_page_impl(

@@ -109,6 +109,19 @@ rust_binary(
 )
 
 rust_binary(
+    name = "delete_benchmark",
+    srcs = ["delete_benchmark.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        "//database:oak_private_memory_database",
+        "//proto:sealed_memory_rust_proto",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:rand",
+    ],
+)
+
+rust_binary(
     name = "optimize_benchmark",
     srcs = ["optimize_benchmark.rs"],
     target_compatible_with = ["@platforms//os:linux"],

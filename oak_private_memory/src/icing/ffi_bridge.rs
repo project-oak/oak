@@ -45,6 +45,7 @@ mod ffi {
         fn set_schema_impl(&self, schema: &[u8]) -> UniquePtr<CxxVector<u8>>;
         fn put_impl(&self, document: &[u8]) -> UniquePtr<CxxVector<u8>>;
         fn delete_impl(&self, ns: &[u8], uri: &[u8]) -> UniquePtr<CxxVector<u8>>;
+        fn get_impl(&self, ns: &[u8], uri: &[u8], result_spec: &[u8]) -> UniquePtr<CxxVector<u8>>;
         fn get_next_page_impl(&self, next_page_token: u64) -> UniquePtr<CxxVector<u8>>;
         fn reset(&self) -> UniquePtr<CxxVector<u8>>;
         fn search_impl(
@@ -139,9 +140,10 @@ use cxx::UniquePtr;
 // Re-export all FFI functions and types
 pub use ffi::*;
 use icing_rust_proto::icing::lib::{
-    DeleteResultProto, DocumentProto, GetOptimizeInfoResultProto, InitializeResultProto,
-    OptimizeResultProto, PutResultProto, ResultSpecProto, SchemaProto, ScoringSpecProto,
-    SearchResultProto, SearchSpecProto, SetSchemaResultProto, property_proto::VectorProto,
+    DeleteResultProto, DocumentProto, GetOptimizeInfoResultProto, GetResultProto,
+    GetResultSpecProto, InitializeResultProto, OptimizeResultProto, PutResultProto,
+    ResultSpecProto, SchemaProto, ScoringSpecProto, SearchResultProto, SearchSpecProto,
+    SetSchemaResultProto, property_proto::VectorProto,
 };
 use prost::Message;
 
@@ -202,6 +204,21 @@ impl ffi::IcingSearchEngine {
     pub fn delete(&self, namespace: &[u8], uri: &[u8]) -> anyhow::Result<DeleteResultProto> {
         let result = self.delete_impl(namespace, uri);
         Ok(DeleteResultProto::decode(result.as_slice())?)
+    }
+
+    /// Point lookup of a single document by `(namespace, uri)`.
+    ///
+    /// Unlike [`search`](Self::search), this does not evaluate a query over the
+    /// corpus, so it is O(1) in corpus size. A missing document is reported via
+    /// the returned proto's status (`NOT_FOUND`), not an `Err`.
+    pub fn get(
+        &self,
+        namespace: &[u8],
+        uri: &[u8],
+        result_spec: &GetResultSpecProto,
+    ) -> anyhow::Result<GetResultProto> {
+        let result = self.get_impl(namespace, uri, &result_spec.encode_to_vec());
+        Ok(GetResultProto::decode(result.as_slice())?)
     }
 
     pub fn get_next_page(&self, next_page_token: u64) -> anyhow::Result<SearchResultProto> {
