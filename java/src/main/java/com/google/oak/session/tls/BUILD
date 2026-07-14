@@ -52,6 +52,7 @@ kt_android_library(
         "OakSessionTlsException.kt",
         "OakSessionTlsInitializer.kt",
     ],
+    manifest = "AndroidManifest.xml",
 )
 
 kt_android_library(
