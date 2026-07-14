@@ -65,4 +65,7 @@ rust_library(
 rust_test(
     name = "app_test",
     crate = ":app",
+    deps = [
+        "//:private_memory_test_database_server_lib",
+    ],
 )

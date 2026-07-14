@@ -536,17 +536,10 @@ impl SealedMemorySessionHandler {
             .into_internal_error("Failed to write blobs")?;
 
         info!("Successfully registered new user {}", uid);
-        // All errors from setup_user_session_context are infrastructure failures
-        // (DB fetch, decryption, import) outside the caller's control.
-        self.setup_user_session_context(
-            uid.clone(),
-            dek,
-            boot_strap_info.clone(),
-            db_client,
-            false,
-        )
-        .await
-        .into_internal_error("Failed to setup user session context")?;
+        // Registration deliberately does NOT establish a session context. The
+        // client must call `KeySync` (which unwraps the DEK from the stored
+        // blob) before issuing any memory operations. This keeps registration
+        // and session establishment as separate, explicit steps.
         Ok(UserRegistrationResponse {
             status: user_registration_response::Status::Success.into(),
             key_derivation_info: Some(boot_strap_info),
@@ -875,4 +868,249 @@ async fn get_or_create_db(
     };
     let db = IcingMetaDatabase::new(config).into_internal_error("failed to create database")?;
     Ok((db, String::new(), 0))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        net::{IpAddr, Ipv4Addr, SocketAddr},
+        sync::Arc,
+        time::{Duration, SystemTime},
+    };
+
+    use oak_private_memory_database::{
+        clock::{SystemClock, system_time_to_timestamp},
+        database::{MAX_DATABASE_SIZE, MAX_GRPC_DECODE_SIZE},
+    };
+    use sealed_memory_rust_proto::oak::private_memory::SessionConfig;
+    use tokio::{net::TcpListener, sync::mpsc};
+
+    use super::*;
+    use crate::{MAX_MEMORY_TTL_SECONDS, METADATA_BLANKET_TTL_SECONDS};
+
+    /// A valid 256-bit key encryption key shared across all requests in a test.
+    const TEST_KEK: &[u8; 32] = b"aaaabbbbccccddddeeeeffffgggghhhh";
+
+    /// Starts an in-process test database service and returns its address.
+    ///
+    /// The service persists blobs in memory for the lifetime of the test, so
+    /// multiple handlers ("connections") built against the same address share
+    /// the same underlying storage, mirroring the real deployment where the DB
+    /// is a separate long-lived service.
+    async fn start_test_db() -> SocketAddr {
+        let listener =
+            TcpListener::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0)).await.unwrap();
+        let db_addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            let _ = private_memory_test_database_server_lib::service::create(listener).await;
+        });
+        db_addr
+    }
+
+    /// Builds a handler ("connection") against an already-running test DB.
+    ///
+    /// The returned `mpsc::UnboundedReceiver` must be held for the duration of
+    /// the test: dropping it would close the persistence channel that the
+    /// handler sends to when a session is dropped.
+    fn connect_handler(
+        db_addr: SocketAddr,
+    ) -> (SealedMemorySessionHandler, mpsc::UnboundedReceiver<UserSessionContext>) {
+        let db_client = Arc::new(SharedDbClient::new(db_addr, MAX_GRPC_DECODE_SIZE));
+        let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
+        let handler = SealedMemorySessionHandler::new(
+            metrics::get_global_metrics(),
+            persistence_tx,
+            db_client,
+            Arc::new(SystemClock),
+            ErrorPropagationBehavior::PropagateInResponseProto,
+            MAX_DATABASE_SIZE,
+            METADATA_BLANKET_TTL_SECONDS,
+            MAX_MEMORY_TTL_SECONDS,
+            false,
+            vec![],
+        );
+        (handler, persistence_rx)
+    }
+
+    /// Wires up a handler backed by a freshly started in-process test database
+    /// service (a single "connection" against a private DB).
+    async fn setup_handler()
+    -> (SealedMemorySessionHandler, mpsc::UnboundedReceiver<UserSessionContext>) {
+        connect_handler(start_test_db().await)
+    }
+
+    fn boot_strap_info() -> KeyDerivationInfo {
+        KeyDerivationInfo { kek_salt: b"test_salt".to_vec(), kek_version: 1 }
+    }
+
+    fn registration_request(pm_uid: &str) -> UserRegistrationRequest {
+        UserRegistrationRequest {
+            pm_uid: pm_uid.to_string(),
+            key_encryption_key: TEST_KEK.to_vec(),
+            boot_strap_info: Some(boot_strap_info()),
+        }
+    }
+
+    fn key_sync_request(pm_uid: &str, session_config: Option<SessionConfig>) -> KeySyncRequest {
+        KeySyncRequest {
+            pm_uid: pm_uid.to_string(),
+            key_encryption_key: TEST_KEK.to_vec(),
+            session_config,
+        }
+    }
+
+    /// Registering the same `pm_uid` (with the same KEK) twice returns
+    /// `UserAlreadyExists` on the second call, echoing back the stored key
+    /// derivation info. Neither call establishes a session (key sync is
+    /// required for that).
+    #[tokio::test(flavor = "multi_thread")]
+    async fn user_registration_twice_returns_already_exists() {
+        let (handler, _persistence_rx) = setup_handler().await;
+        let pm_uid = "registration_twice_user";
+        let boot = boot_strap_info();
+
+        // First registration creates the user but does not establish a session.
+        let first = handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        assert_eq!(first.status(), user_registration_response::Status::Success);
+        assert_eq!(first.key_derivation_info, Some(boot.clone()));
+        assert!(handler.session_context().await.is_none());
+
+        // Second registration reports the user already exists and returns the
+        // previously stored key derivation info.
+        let second = handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        assert_eq!(second.status(), user_registration_response::Status::UserAlreadyExists);
+        assert_eq!(second.key_derivation_info, Some(boot));
+
+        // Still no session after the second (early-returning) call.
+        assert!(handler.session_context().await.is_none());
+    }
+
+    /// Two consecutive key syncs for a registered user (same `pm_uid` + KEK)
+    /// both succeed; each one rebuilds the session context and unwraps the same
+    /// stable DEK.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn key_sync_twice_succeeds() {
+        let (handler, _persistence_rx) = setup_handler().await;
+        let pm_uid = "key_sync_twice_user";
+
+        // A wrapped DEK must exist before key sync can succeed.
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+
+        let first = handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        assert_eq!(first.status(), key_sync_response::Status::Success);
+        let dek_after_first = handler.session_context().await.as_ref().unwrap().dek.clone();
+
+        let second = handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        assert_eq!(second.status(), key_sync_response::Status::Success);
+        let dek_after_second = handler.session_context().await.as_ref().unwrap().dek.clone();
+
+        // The unwrapped DEK is stable across repeated key syncs.
+        assert_eq!(dek_after_first, dek_after_second);
+    }
+
+    /// Calling key sync twice with different `SessionConfig`s both succeed, and
+    /// the most recent config wins: the session context reflects the config
+    /// supplied by the latest key sync.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn key_sync_twice_with_different_config_applies_latest() {
+        let (handler, _persistence_rx) = setup_handler().await;
+        let pm_uid = "key_sync_config_user";
+
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+
+        // First key sync keeps persistence-on-close enabled (the default).
+        let first = handler
+            .key_sync_handler(key_sync_request(
+                pm_uid,
+                Some(SessionConfig { disable_persistence_on_close: false }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(first.status(), key_sync_response::Status::Success);
+        assert!(!handler.session_context().await.as_ref().unwrap().disable_persistence_on_close);
+
+        // Second key sync flips the flag; the new config overrides the session.
+        let second = handler
+            .key_sync_handler(key_sync_request(
+                pm_uid,
+                Some(SessionConfig { disable_persistence_on_close: true }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(second.status(), key_sync_response::Status::Success);
+        assert!(handler.session_context().await.as_ref().unwrap().disable_persistence_on_close);
+    }
+
+    /// Registration no longer establishes a session, so `KeySync` is mandatory
+    /// before any memory operation. `add_memory` is rejected with
+    /// `FailedPrecondition` after registration alone, and only succeeds once an
+    /// explicit key sync has run.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn add_memory_requires_key_sync_after_registration() {
+        let (handler, _persistence_rx) = setup_handler().await;
+        let pm_uid = "add_memory_requires_key_sync_user";
+
+        let registration =
+            handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        assert_eq!(registration.status(), user_registration_response::Status::Success);
+
+        let memory = || Memory {
+            expiration_timestamp: Some(system_time_to_timestamp(
+                SystemTime::now() + Duration::from_secs(3600),
+            )),
+            ..Default::default()
+        };
+
+        // Registration alone leaves the session uninitialized: add_memory fails.
+        let error = handler
+            .add_memory_handler(AddMemoryRequest { memory: Some(memory()) })
+            .await
+            .unwrap_err();
+        assert_eq!(error.code(), tonic::Code::FailedPrecondition);
+
+        // After an explicit key sync, the session exists and add_memory succeeds.
+        let key_sync = handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        assert_eq!(key_sync.status(), key_sync_response::Status::Success);
+        let response =
+            handler.add_memory_handler(AddMemoryRequest { memory: Some(memory()) }).await.unwrap();
+        assert!(!response.id.is_empty());
+    }
+
+    /// The realistic flow after enforcing key sync: register on one connection,
+    /// disconnect (drop the handler), then reconnect with a *new* handler and
+    /// key sync. This must succeed even though registration never established a
+    /// session nor persisted a metadata database blob — `get_or_create_db`
+    /// creates a fresh empty database when no metadata blob exists yet.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn key_sync_on_new_connection_after_registration_succeeds() {
+        let db_addr = start_test_db().await;
+        let pm_uid = "reconnect_user";
+
+        // Connection 1: register, then drop the handler to simulate closing the
+        // connection. No session was created, so nothing beyond the wrapped-DEK
+        // blob is written to the DB.
+        {
+            let (handler, _persistence_rx) = connect_handler(db_addr);
+            let registration =
+                handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+            assert_eq!(registration.status(), user_registration_response::Status::Success);
+            assert!(handler.session_context().await.is_none());
+        }
+
+        // Connection 2: a brand-new handler against the same DB service.
+        let (handler, _persistence_rx) = connect_handler(db_addr);
+        let key_sync = handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        assert_eq!(key_sync.status(), key_sync_response::Status::Success);
+
+        // The re-established session is fully usable.
+        let memory = Memory {
+            expiration_timestamp: Some(system_time_to_timestamp(
+                SystemTime::now() + Duration::from_secs(3600),
+            )),
+            ..Default::default()
+        };
+        let response =
+            handler.add_memory_handler(AddMemoryRequest { memory: Some(memory) }).await.unwrap();
+        assert!(!response.id.is_empty());
+    }
 }
