@@ -28,7 +28,7 @@ use oak_restricted_kernel_interface::{
     syscalls::{MmapFlags, MmapProtection},
 };
 use x86_64::{
-    VirtAddr, align_up,
+    VirtAddr,
     structures::paging::{
         FrameAllocator, Page, PageSize, PageTableFlags, Size2MiB, mapper::Mapper,
     },
@@ -68,8 +68,10 @@ pub fn mmap(
     };
 
     // We only deal with 2 MiB pages, so round `size` up to the closest 2 MiB
-    // boundary as well.
-    let size = align_up(size as u64, Size2MiB::SIZE) as usize;
+    // boundary as well. Use a checked rounding so a huge `size` can't wrap to a
+    // small one.
+    let size =
+        (size as u64).checked_next_multiple_of(Size2MiB::SIZE).ok_or(Errno::EINVAL)? as usize;
     let count = size / Size2MiB::SIZE as usize;
 
     // Allocate enough physical frames to cover the request.
@@ -208,6 +210,15 @@ pub fn syscall_mmap(
         return Errno::EINVAL as isize;
     };
 
-    mmap(Some(VirtAddr::from_ptr(addr)), size, prot, flags)
-        .map_or_else(|err| err as isize, |ptr| ptr.as_ptr() as isize)
+    // `addr` is untrusted user input; a non-canonical value must not be allowed
+    // to panic the kernel (`VirtAddr::new`). Reject it with EINVAL instead.
+    let addr = match VirtAddr::try_new(addr as u64) {
+        Ok(addr) => addr,
+        Err(_) => {
+            log::warn!("mmap: non-canonical address passed to mmap");
+            return Errno::EINVAL as isize;
+        }
+    };
+
+    mmap(Some(addr), size, prot, flags).map_or_else(|err| err as isize, |ptr| ptr.as_ptr() as isize)
 }

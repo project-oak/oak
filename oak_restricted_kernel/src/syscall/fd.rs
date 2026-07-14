@@ -17,15 +17,16 @@
 use alloc::{
     boxed::Box,
     collections::{BTreeMap, btree_map::Entry},
-    slice,
 };
 use core::{
     cmp::min,
-    ffi::{c_int, c_size_t, c_ssize_t, c_void},
+    ffi::{c_int, c_size_t, c_ssize_t},
 };
 
 use oak_restricted_kernel_interface::Errno;
 use spinning_top::Spinlock;
+
+use crate::mm::UserSpacePtr;
 
 pub trait FileDescriptor: Send {
     fn read(&mut self, buf: &mut [u8]) -> Result<isize, Errno>;
@@ -76,11 +77,18 @@ pub fn unregister(fd: Fd) -> Option<Box<dyn FileDescriptor>> {
     FILE_DESCRIPTORS.lock().remove(&fd)
 }
 
-pub fn syscall_read(fd: c_int, buf: *mut c_void, count: c_size_t) -> c_ssize_t {
-    // Safety: we should validate that the pointer and count are valid, as these
-    // come from userspace and therefore are not to be trusted, but right now
-    // everything is in kernel space so there is nothing to check.
-    let data = unsafe { slice::from_raw_parts_mut(buf as *mut u8, count) };
+pub fn syscall_read(fd: c_int, buf: UserSpacePtr, count: c_size_t) -> c_ssize_t {
+    // A zero-length read touches no memory.
+    if count == 0 {
+        return 0;
+    }
+    // Safety: the range is validated inside `as_bytes_mut`; the borrow lives only
+    // for this call and the calling process is paused for the duration of the
+    // syscall, so the user range is neither remapped nor aliased.
+    let data = match unsafe { buf.as_bytes_mut(count) } {
+        Some(data) => data,
+        None => return Errno::EFAULT as isize,
+    };
 
     FILE_DESCRIPTORS
         .lock()
@@ -89,11 +97,16 @@ pub fn syscall_read(fd: c_int, buf: *mut c_void, count: c_size_t) -> c_ssize_t {
         .unwrap_or(Errno::EBADF as isize)
 }
 
-pub fn syscall_write(fd: c_int, buf: *const c_void, count: c_size_t) -> c_ssize_t {
-    // Safety: we should validate that the pointer and count are valid, as these
-    // come from userspace and therefore are not to be trusted, but right now
-    // everything is in kernel space so there is nothing to check.
-    let data = unsafe { slice::from_raw_parts(buf as *mut u8, count) };
+pub fn syscall_write(fd: c_int, buf: UserSpacePtr, count: c_size_t) -> c_ssize_t {
+    // A zero-length write touches no memory.
+    if count == 0 {
+        return 0;
+    }
+    // Safety: as in `syscall_read`, but an immutable borrow.
+    let data = match unsafe { buf.as_bytes(count) } {
+        Some(data) => data,
+        None => return Errno::EFAULT as isize,
+    };
 
     FILE_DESCRIPTORS
         .lock()

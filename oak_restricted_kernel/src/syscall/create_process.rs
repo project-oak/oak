@@ -14,20 +14,25 @@
 // limitations under the License.
 //
 
-use core::{
-    ffi::{c_size_t, c_ssize_t, c_void},
-    slice,
-};
+use core::ffi::{c_size_t, c_ssize_t};
 
 use oak_restricted_kernel_interface::Errno;
 
-use crate::processes::Process;
+use crate::{mm::UserSpacePtr, processes::Process};
 
-pub fn syscall_unstable_create_proccess(buf: *mut c_void, count: c_size_t) -> c_ssize_t {
-    // Safety: we should validate that the pointer and count are valid, as these
-    // come from userspace and therefore are not to be trusted, but right now
-    // everything is in kernel space so there is nothing to check.
-    let elf_binary_buffer = unsafe { slice::from_raw_parts(buf as *mut u8, count) };
+pub fn syscall_unstable_create_proccess(buf: UserSpacePtr, count: c_size_t) -> c_ssize_t {
+    // An empty buffer cannot be a valid ELF image.
+    if count == 0 {
+        return Errno::EINVAL as isize;
+    }
+    // `buf`/`count` are untrusted ring-3 input, and the kernel reads this range as
+    // an ELF image. Validation (whole range in user space, non-wrapping) happens
+    // centrally inside `as_bytes`.
+    // Safety: the borrow lives only for this call.
+    let elf_binary_buffer = match unsafe { buf.as_bytes(count) } {
+        Some(data) => data,
+        None => return Errno::EFAULT as isize,
+    };
     match unstable_create_proccess(elf_binary_buffer) {
         // Safety: [`unstable_create_proccess`] does not return if succesful.
         Ok(_) => unsafe {

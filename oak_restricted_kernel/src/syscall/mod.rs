@@ -86,15 +86,15 @@ extern "sysv64" fn syscall_handler(
     // SysV ABI: arguments are in RDI, RSI, RDX, RCX, R8, R9, top of stack; return
     // value in RAX (which matches SYSRET!)
     match Syscall::from_repr(syscall) {
-        Some(Syscall::Read) => syscall_read(arg1 as i32, arg2 as *mut c_void, arg3),
-        Some(Syscall::Write) => syscall_write(arg1 as i32, arg2 as *const c_void, arg3),
+        Some(Syscall::Read) => syscall_read(arg1 as i32, (arg2 as *mut c_void).into(), arg3),
+        Some(Syscall::Write) => syscall_write(arg1 as i32, (arg2 as *const c_void).into(), arg3),
         Some(Syscall::Exit) => syscall_exit(arg1 as i32),
         Some(Syscall::Mmap) => {
             syscall_mmap(arg1 as *const c_void, arg2, arg3, arg4, arg5 as i32, arg6)
         }
         Some(Syscall::Fsync) => syscall_fsync(arg1 as i32),
         Some(Syscall::UnstableCreateProcess) => {
-            syscall_unstable_create_proccess(arg1 as *mut c_void, arg2)
+            syscall_unstable_create_proccess((arg1 as *mut c_void).into(), arg2)
         }
         Some(Syscall::UnstableSwitchProcess) => syscall_unstable_switch_proccess(arg1),
         None => Errno::ENOSYS as isize,
