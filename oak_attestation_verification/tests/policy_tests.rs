@@ -259,6 +259,20 @@ verify_amd_failure! {
     load_fake
 }
 
+// A prover controls whether it sends event endorsements, so an empty
+// `endorsements.events` must not cause the event policies to be skipped. Here
+// the kernel reference value is manipulated to not match the evidence: with no
+// event endorsements present, verification must still fail rather than succeed.
+#[test]
+fn verify_amd_rejects_bad_measurement_without_event_endorsements() {
+    let mut d = AttestationData::load_milan_rk_release();
+    d.endorsements.events.clear();
+    let mut rvs = make_reference_values(&d.evidence);
+    let rv = get_kernel_rv(&mut rvs);
+    manipulate_kernel_image(rv);
+    assert_failure(verify_amd(d.make_valid_time(), &d.evidence, &d.endorsements, &rvs));
+}
+
 macro_rules! verify_amd_success_explicit_reference_values {
     ($($name:tt)*) => {
         mod verify_amd_success_explicit_reference_values {
