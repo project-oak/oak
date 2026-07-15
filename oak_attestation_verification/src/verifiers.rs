@@ -169,7 +169,7 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
         let mut event_attestation_results = Vec::new();
         event_attestation_results.push(platform_results);
         event_attestation_results.push(firmware_results);
-        if !endorsements.events.is_empty() {
+        if !self.event_policies.is_empty() {
             let results = verify_event_log(
                 verification_time,
                 event_log,
@@ -242,7 +242,7 @@ impl AttestationVerifier for AmdSevSnpTransparentDiceAttestationVerifier {
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("no event log"))?;
         let mut event_attestation_results = vec![platform_results, firmware_results];
-        if !endorsements.events.is_empty() {
+        if !self.event_policies.is_empty() {
             let results = verify_event_log(
                 verification_time,
                 transparent_event_log,
@@ -344,7 +344,7 @@ impl AttestationVerifier for IntelTdxAttestationVerifier {
         let mut event_attestation_results = Vec::new();
         event_attestation_results.push(platform_results);
         event_attestation_results.push(firmware_results);
-        if !endorsements.events.is_empty() {
+        if !self.event_policies.is_empty() {
             let results = verify_event_log(
                 verification_time,
                 event_log,
@@ -409,7 +409,7 @@ impl AttestationVerifier for InsecureAttestationVerifier {
             evidence.event_log.as_ref().ok_or_else(|| anyhow::anyhow!("no event log"))?;
         let mut event_attestation_results = Vec::new();
         event_attestation_results.push(insecure_results);
-        if !endorsements.events.is_empty() {
+        if !self.event_policies.is_empty() {
             let results = verify_event_log(
                 verification_time,
                 event_log,
