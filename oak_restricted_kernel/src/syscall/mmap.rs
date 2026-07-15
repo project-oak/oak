@@ -113,6 +113,17 @@ pub fn mmap(
             Errno::ENOMEM
         })?;
 
+        // Ensure the pages are in user space (lower half of virtual memory).
+        //
+        // Note that PageRange::end is exclusive, so we subtract one to get the last
+        // (inclusive) virtual address.
+        if pages.start.start_address().as_u64() & (1 << 63) != 0
+            || (pages.end.start_address().as_u64() - 1) & (1 << 63) != 0
+        {
+            log::warn!("mmap: requested pages not in user space: {:?}", pages);
+            return Err(Errno::EINVAL);
+        }
+
         // For each page we also need a physical frame to back it to create a mapping.
         for (page, frame) in pages.zip(frames) {
             // Safety: find_unallocated_pages returns, well, unallocated pages and we've
