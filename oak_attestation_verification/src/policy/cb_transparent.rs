@@ -99,9 +99,6 @@ impl TransparentLayer1Policy {
 }
 
 impl Policy<[u8]> for TransparentLayer1Policy {
-    // TODO: b/474580576 - stop verifying runtime_agent once we migrate to
-    // runtime_agent_binary and userspace measurements.
-    #[allow(deprecated)]
     fn verify(
         &self,
         verification_time: Instant,
@@ -114,23 +111,6 @@ impl Policy<[u8]> for TransparentLayer1Policy {
         )?;
         let endorsement: Option<CbLayer1TransparentEndorsement> =
             endorsement.try_into().map_err(anyhow::Error::msg)?;
-
-        // Verify runtime agent measurement
-        let runtime_agent_ref_value = self
-            .reference_values
-            .runtime_agent
-            .as_ref()
-            .context("no runtime agent reference value")?;
-        let runtime_agent_measurement =
-            RawDigest { sha2_256: event.runtime_agent_measurement.clone(), ..Default::default() };
-        let expected = acquire_expected_digests(
-            verification_time.into_unix_millis(),
-            endorsement.as_ref().and_then(|e| e.runtime_agent.as_ref()),
-            runtime_agent_ref_value,
-        )
-        .context("acquiring runtime agent expected values")?;
-        compare_measurement_digest(&runtime_agent_measurement, &expected)
-            .context("comparing runtime agent measurement")?;
 
         // Verify runtime agent binary measurement
         let runtime_agent_binary_ref_value = self
@@ -284,7 +264,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)]
     fn transparent_layer1_verify_skip_succeeds() {
         use oak_proto_rust::oak::attestation::v1::{
             BinaryReferenceValue, SkipVerification, binary_reference_value::Type as BrvType,
@@ -293,8 +272,8 @@ mod tests {
         let skip_ref = BinaryReferenceValue { r#type: Some(BrvType::Skip(SkipVerification {})) };
         let event = CbLayer1TransparentEvent {
             runtime_agent_binary_measurement: vec![0u8; 32],
-            runtime_agent_measurement: vec![0u8; 32],
             userspace_measurement: vec![0u8; 32],
+            ..Default::default()
         };
         let evidence = encode_event_proto(
             "type.googleapis.com/oak.attestation.v1.CbLayer1TransparentEvent",
@@ -302,8 +281,8 @@ mod tests {
         );
         let reference_values = CbLayer1TransparentReferenceValues {
             runtime_agent_binary: Some(skip_ref.clone()),
-            userspace: Some(skip_ref.clone()),
-            runtime_agent: Some(skip_ref),
+            userspace: Some(skip_ref),
+            ..Default::default()
         };
         let policy = TransparentLayer1Policy::new(&reference_values);
 
@@ -457,34 +436,25 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)]
     fn transparent_layer1_verify_with_signed_endorsement_succeeds() {
         let not_before = make_instant!("2025-09-01T00:00:00Z");
         let not_after = make_instant!("2025-12-01T00:00:00Z");
         let verify_time = make_instant!("2025-10-15T00:00:00Z");
         let (signing_key, public_key) = test_util::new_random_signing_keypair();
 
-        let runtime_agent_measurement = Sha256::from([10u8; 32]);
         let runtime_agent_binary_measurement = Sha256::from([11u8; 32]);
         let userspace_measurement = Sha256::from([12u8; 32]);
 
         let event = CbLayer1TransparentEvent {
-            runtime_agent_measurement: Vec::from(runtime_agent_measurement),
             runtime_agent_binary_measurement: Vec::from(runtime_agent_binary_measurement),
             userspace_measurement: Vec::from(userspace_measurement),
+            ..Default::default()
         };
         let evidence = encode_event_proto(
             "type.googleapis.com/oak.attestation.v1.CbLayer1TransparentEvent",
             &event,
         );
 
-        let runtime_agent_signed = test_util::make_signed_endorsement_for_digest(
-            &RawDigest { sha2_256: Vec::from(runtime_agent_measurement), ..Default::default() },
-            not_before,
-            not_after,
-            &signing_key,
-            vec![],
-        );
         let runtime_agent_binary_signed = test_util::make_signed_endorsement_for_digest(
             &RawDigest {
                 sha2_256: Vec::from(runtime_agent_binary_measurement),
@@ -504,17 +474,17 @@ mod tests {
         );
 
         let layer1_endorsement = CbLayer1TransparentEndorsement {
-            runtime_agent: Some(runtime_agent_signed),
             runtime_agent_binary: Some(runtime_agent_binary_signed),
             userspace: Some(userspace_signed),
+            ..Default::default()
         };
         let endorsement_variant: Variant = layer1_endorsement.into();
 
         let ref_value = test_util::binary_reference_value_for_endorser_pk(public_key);
         let reference_values = CbLayer1TransparentReferenceValues {
-            runtime_agent: Some(ref_value.clone()),
             runtime_agent_binary: Some(ref_value.clone()),
             userspace: Some(ref_value),
+            ..Default::default()
         };
         let policy = TransparentLayer1Policy::new(&reference_values);
 
@@ -524,15 +494,14 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)]
     fn transparent_layer1_verify_with_empty_endorsement_fails() {
         let verify_time = make_instant!("2025-10-15T00:00:00Z");
         let (_signing_key, public_key) = test_util::new_random_signing_keypair();
 
         let event = CbLayer1TransparentEvent {
-            runtime_agent_measurement: vec![10u8; 32],
             runtime_agent_binary_measurement: vec![11u8; 32],
             userspace_measurement: vec![12u8; 32],
+            ..Default::default()
         };
         let evidence = encode_event_proto(
             "type.googleapis.com/oak.attestation.v1.CbLayer1TransparentEvent",
@@ -541,9 +510,9 @@ mod tests {
 
         let ref_value = test_util::binary_reference_value_for_endorser_pk(public_key);
         let reference_values = CbLayer1TransparentReferenceValues {
-            runtime_agent: Some(ref_value.clone()),
             runtime_agent_binary: Some(ref_value.clone()),
             userspace: Some(ref_value),
+            ..Default::default()
         };
         let policy = TransparentLayer1Policy::new(&reference_values);
 

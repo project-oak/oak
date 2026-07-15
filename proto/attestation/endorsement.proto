@@ -222,7 +222,6 @@ message ContainerEndorsement {
 
 // Event endorsement for the layer matching `CbLayer1TransparentEvent`.
 message CbLayer1TransparentEndorsement {
-  // Endorsement of a serialized proto containing measurements for CB layer 1.
   SignedEndorsement runtime_agent = 1 [deprecated = true];
 
   // Endorsement of the runtime agent binary.

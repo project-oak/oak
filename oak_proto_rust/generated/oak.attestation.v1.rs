@@ -314,7 +314,6 @@ pub struct ContainerEndorsement {
 /// Event endorsement for the layer matching `CbLayer1TransparentEvent`.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CbLayer1TransparentEndorsement {
-    /// Endorsement of a serialized proto containing measurements for CB layer 1.
     #[deprecated]
     #[prost(message, optional, tag = "1")]
     pub runtime_agent: ::core::option::Option<SignedEndorsement>,
