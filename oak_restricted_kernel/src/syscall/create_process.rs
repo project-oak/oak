@@ -14,30 +14,25 @@
 // limitations under the License.
 //
 
-use core::{
-    ffi::{c_size_t, c_ssize_t, c_void},
-    slice,
-};
+use core::ffi::{c_size_t, c_ssize_t};
 
 use oak_restricted_kernel_interface::Errno;
 
-use crate::processes::Process;
+use crate::{mm::UserSpacePtr, processes::Process};
 
-pub fn syscall_unstable_create_proccess(buf: *mut c_void, count: c_size_t) -> c_ssize_t {
-    // An empty buffer cannot be a valid ELF image; reject it before building a
-    // slice (`from_raw_parts` requires a valid pointer even for length 0).
+pub fn syscall_unstable_create_proccess(buf: UserSpacePtr, count: c_size_t) -> c_ssize_t {
+    // An empty buffer cannot be a valid ELF image.
     if count == 0 {
         return Errno::EINVAL as isize;
     }
-    // `buf`/`count` are untrusted ring-3 input, and the kernel reads this range
-    // as an ELF image (an unchecked pointer is an arbitrary kernel-read / crash
-    // / process-image primitive). Require the whole range to be in user space.
-    if !crate::mm::is_user_range(buf as u64, count) {
-        return Errno::EFAULT as isize;
-    }
-    // Safety: `count > 0` and `is_user_range` verified `[buf, buf + count)` is a
-    // non-wrapping user-space range.
-    let elf_binary_buffer = unsafe { slice::from_raw_parts(buf as *mut u8, count) };
+    // `buf`/`count` are untrusted ring-3 input, and the kernel reads this range as
+    // an ELF image. Validation (whole range in user space, non-wrapping) happens
+    // centrally inside `as_bytes`.
+    // Safety: the borrow lives only for this call.
+    let elf_binary_buffer = match unsafe { buf.as_bytes(count) } {
+        Ok(data) => data,
+        Err(()) => return Errno::EFAULT as isize,
+    };
     match unstable_create_proccess(elf_binary_buffer) {
         // Safety: [`unstable_create_proccess`] does not return if succesful.
         Ok(_) => unsafe {

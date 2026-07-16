@@ -91,6 +91,77 @@ mod user_range_tests {
     }
 }
 
+/// A raw pointer supplied by user space (ring 3). It is *untrusted*: the wrapped
+/// address cannot be turned into a slice without going through one of the
+/// validating accessors below, which enforce that the requested byte range lies
+/// fully within user space and does not wrap. `repr(transparent)` guarantees it
+/// has the same ABI as the raw pointer, so it can be passed to the syscall entry
+/// points without changing the calling convention.
+#[repr(transparent)]
+#[derive(Clone, Copy)]
+pub struct UserSpacePtr(*const core::ffi::c_void);
+
+impl From<*const core::ffi::c_void> for UserSpacePtr {
+    fn from(ptr: *const core::ffi::c_void) -> Self {
+        UserSpacePtr(ptr)
+    }
+}
+
+impl From<*mut core::ffi::c_void> for UserSpacePtr {
+    fn from(ptr: *mut core::ffi::c_void) -> Self {
+        UserSpacePtr(ptr as *const core::ffi::c_void)
+    }
+}
+
+impl UserSpacePtr {
+    /// Validate that `[ptr, ptr + len)` lies fully in user space and return the
+    /// raw byte pointer. `Err(())` means the range is outside user space or wraps
+    /// (callers map this to `EFAULT`). Not called for `len == 0`; the accessors
+    /// handle the empty case first.
+    fn checked(self, len: usize) -> Result<*mut u8, ()> {
+        if is_user_range(self.0 as u64, len) {
+            Ok(self.0 as *mut u8)
+        } else {
+            Err(())
+        }
+    }
+
+    /// Borrow the user range `[ptr, ptr + len)` as an immutable byte slice.
+    /// Returns an empty slice for `len == 0` (no memory is touched). `Err(())` if
+    /// the range is not fully within user space.
+    ///
+    /// # Safety
+    /// The caller must ensure the user range stays mapped and is not aliased for
+    /// the lifetime `'a` of the returned slice.
+    pub unsafe fn as_bytes<'a>(self, len: usize) -> Result<&'a [u8], ()> {
+        if len == 0 {
+            return Ok(&[]);
+        }
+        let ptr = self.checked(len)?;
+        // Safety: `is_user_range` verified `[ptr, ptr + len)` is a non-wrapping
+        // user-space range; the caller upholds the mapping/aliasing invariant.
+        Ok(unsafe { core::slice::from_raw_parts(ptr as *const u8, len) })
+    }
+
+    /// Mutable counterpart of [`Self::as_bytes`].
+    ///
+    /// # Safety
+    /// As [`Self::as_bytes`], and the range must be uniquely borrowed for `'a`.
+    pub unsafe fn as_bytes_mut<'a>(self, len: usize) -> Result<&'a mut [u8], ()> {
+        if len == 0 {
+            // A mutable empty-slice literal borrows a temporary and won't satisfy
+            // `'a`; a dangling, aligned, non-null pointer is the sound way to build
+            // a zero-length mutable slice.
+            return Ok(unsafe {
+                core::slice::from_raw_parts_mut(core::ptr::NonNull::<u8>::dangling().as_ptr(), 0)
+            });
+        }
+        let ptr = self.checked(len)?;
+        // Safety: as above; the borrow is unique for `'a`.
+        Ok(unsafe { core::slice::from_raw_parts_mut(ptr, len) })
+    }
+}
+
 /// The offset used for the direct mapping of all physical memory.
 const DIRECT_MAPPING_OFFSET: VirtAddr = VirtAddr::new_truncate(0xFFFF_8800_0000_0000);
 

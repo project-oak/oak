@@ -17,15 +17,16 @@
 use alloc::{
     boxed::Box,
     collections::{BTreeMap, btree_map::Entry},
-    slice,
 };
 use core::{
     cmp::min,
-    ffi::{c_int, c_size_t, c_ssize_t, c_void},
+    ffi::{c_int, c_size_t, c_ssize_t},
 };
 
 use oak_restricted_kernel_interface::Errno;
 use spinning_top::Spinlock;
+
+use crate::mm::UserSpacePtr;
 
 pub trait FileDescriptor: Send {
     fn read(&mut self, buf: &mut [u8]) -> Result<isize, Errno>;
@@ -76,23 +77,18 @@ pub fn unregister(fd: Fd) -> Option<Box<dyn FileDescriptor>> {
     FILE_DESCRIPTORS.lock().remove(&fd)
 }
 
-pub fn syscall_read(fd: c_int, buf: *mut c_void, count: c_size_t) -> c_ssize_t {
-    // A zero-length read touches no memory; return early so we never call
-    // `from_raw_parts_mut`, which requires a valid (non-null, aligned) pointer
-    // even for length 0.
+pub fn syscall_read(fd: c_int, buf: UserSpacePtr, count: c_size_t) -> c_ssize_t {
+    // A zero-length read touches no memory.
     if count == 0 {
         return 0;
     }
-    // `buf`/`count` are untrusted ring-3 input. Require the whole range to be in
-    // user space (the lower half) so a process cannot make the kernel write to
-    // an arbitrary kernel address. (Being in the lower half does not prove the
-    // range is mapped; an unmapped user address still faults.)
-    if !crate::mm::is_user_range(buf as u64, count) {
-        return Errno::EFAULT as isize;
-    }
-    // Safety: `count > 0` and `is_user_range` verified `[buf, buf + count)` is a
-    // non-wrapping user-space range.
-    let data = unsafe { slice::from_raw_parts_mut(buf as *mut u8, count) };
+    // Safety: the range is validated inside `as_bytes_mut`; the borrow lives only
+    // for this call and the calling process is paused for the duration of the
+    // syscall, so the user range is neither remapped nor aliased.
+    let data = match unsafe { buf.as_bytes_mut(count) } {
+        Ok(data) => data,
+        Err(()) => return Errno::EFAULT as isize,
+    };
 
     FILE_DESCRIPTORS
         .lock()
@@ -101,23 +97,16 @@ pub fn syscall_read(fd: c_int, buf: *mut c_void, count: c_size_t) -> c_ssize_t {
         .unwrap_or(Errno::EBADF as isize)
 }
 
-pub fn syscall_write(fd: c_int, buf: *const c_void, count: c_size_t) -> c_ssize_t {
-    // A zero-length write touches no memory; return early so we never call
-    // `from_raw_parts`, which requires a valid (non-null, aligned) pointer even
-    // for length 0.
+pub fn syscall_write(fd: c_int, buf: UserSpacePtr, count: c_size_t) -> c_ssize_t {
+    // A zero-length write touches no memory.
     if count == 0 {
         return 0;
     }
-    // `buf`/`count` are untrusted ring-3 input. Require the whole range to be in
-    // user space (the lower half) so a process cannot make the kernel read (and
-    // leak) arbitrary kernel memory. (Being in the lower half does not prove the
-    // range is mapped; an unmapped user address still faults.)
-    if !crate::mm::is_user_range(buf as u64, count) {
-        return Errno::EFAULT as isize;
-    }
-    // Safety: `count > 0` and `is_user_range` verified `[buf, buf + count)` is a
-    // non-wrapping user-space range.
-    let data = unsafe { slice::from_raw_parts(buf as *mut u8, count) };
+    // Safety: as in `syscall_read`, but an immutable borrow.
+    let data = match unsafe { buf.as_bytes(count) } {
+        Ok(data) => data,
+        Err(()) => return Errno::EFAULT as isize,
+    };
 
     FILE_DESCRIPTORS
         .lock()
