@@ -20,7 +20,7 @@ machine state here, so we've had to resort to some assembly code and some
 
 ## Features
 
-We target the QEMU `microvm` machine (and compatible VMMs), and support:
+We target the QEMU `microvm` and `q35` machines (and compatible VMMs), and support:
 
 - [QEMU `fw_cfg`](https://www.qemu.org/docs/master/specs/fw_cfg.html) device
   (for obtaining memory information, ACPI tables etc)
@@ -57,6 +57,7 @@ qemu-system-x86_64 -cpu host -enable-kvm -machine "microvm,acpi=on" -m 1G \
   -nographic -nodefaults -no-reboot -serial stdio \
   -bios "artifacts/binaries/stage0_bin"
 ```
+The same Stage0 boot flow is also tested with `-machine q35`.
 
 ## Loading a kernel
 
