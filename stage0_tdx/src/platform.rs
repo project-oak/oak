@@ -160,9 +160,26 @@ fn accept_tdx_memory(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
             continue;
         }
 
-        let start_address = PhysAddr::new(entry.addr() as u64).align_up(Size4KiB::SIZE);
-        let limit_address =
-            PhysAddr::new((entry.addr() + entry.size()) as u64).align_down(Size4KiB::SIZE);
+        // addr and size come straight from the hypervisor-supplied E820 table, so
+        // the end of the range can overflow usize and either bound can exceed the
+        // valid physical address width. Reject such an entry here instead of
+        // panicking in the arithmetic below.
+        let Some(end) = entry.addr().checked_add(entry.size()) else {
+            log::error!(
+                "nonsensical entry in E820 table: [{:#x}, +{:#x})",
+                entry.addr(),
+                entry.size()
+            );
+            continue;
+        };
+        let (Ok(start), Ok(limit)) =
+            (PhysAddr::try_new(entry.addr() as u64), PhysAddr::try_new(end as u64))
+        else {
+            log::error!("nonsensical entry in E820 table: [{:#x}, {:#x})", entry.addr(), end);
+            continue;
+        };
+        let start_address = start.align_up(Size4KiB::SIZE);
+        let limit_address = limit.align_down(Size4KiB::SIZE);
 
         if start_address > limit_address {
             log::error!(
