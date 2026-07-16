@@ -251,6 +251,7 @@ fn generate_jwt_claims(now: Instant, nonce: String) -> Claims {
                 image_digest: "sha256:".to_owned() + IMAGE_DIGEST,
                 ..Default::default()
             },
+            ..Default::default()
         },
         // See 'dbgstat' in https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims#top-level_claims.
         debug_status: "disabled-since-boot".to_string(),

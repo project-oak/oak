@@ -602,6 +602,7 @@ mod tests {
                         image_digest: "sha256:".to_owned() + &workload_digest_hex,
                         ..Default::default()
                     },
+                    ..Default::default()
                 },
                 debug_status: "disabled-since-boot".to_string(),
                 software_name: "CONFIDENTIAL_SPACE".to_string(),
