@@ -53,6 +53,11 @@ pub trait ProxySession: Send + 'static {
     fn put_plaintext(&mut self, data: &[u8]) -> anyhow::Result<()>;
     /// Retrieves encrypted data (frames) meant for the remote peer.
     fn get_outgoing(&mut self) -> anyhow::Result<Option<Vec<u8>>>;
+    /// Returns the base64url-encoded JSON string representing the session's
+    /// attestation feedback header payload.
+    fn attestation_header_payload(&self) -> Option<String> {
+        None
+    }
 }
 
 impl<P: ProxySession + ?Sized> ProxySession for Box<P> {
@@ -70,6 +75,10 @@ impl<P: ProxySession + ?Sized> ProxySession for Box<P> {
 
     fn get_outgoing(&mut self) -> anyhow::Result<Option<Vec<u8>>> {
         (**self).get_outgoing()
+    }
+
+    fn attestation_header_payload(&self) -> Option<String> {
+        (**self).attestation_header_payload()
     }
 }
 
@@ -112,6 +121,140 @@ where
 
     fn get_outgoing(&mut self) -> anyhow::Result<Option<Vec<u8>>> {
         Ok(self.session.get_outgoing_message()?.map(|m| m.encode_to_vec()))
+    }
+
+    fn attestation_header_payload(&self) -> Option<String> {
+        use base64::Engine;
+        use oak_attestation_verification::decode_event_proto;
+        use oak_proto_rust::oak::attestation::v1::{
+            ConfidentialSpaceAssertion, ConfidentialSpaceEndorsement, SessionBindingPublicKeyData,
+        };
+        use prost::Message;
+
+        let evidence = self.session.get_peer_attestation_evidence().ok()?;
+        if evidence.evidence.is_empty() && evidence.assertions.is_empty() {
+            return None;
+        }
+        let handshake_handle = hex::encode(&evidence.handshake_hash);
+
+        let mut jwt_string = None;
+        for assertion in evidence.assertions.values() {
+            if let Ok(cs_assertion) =
+                ConfidentialSpaceAssertion::decode(assertion.content.as_slice())
+                && let Ok(jwt) = String::from_utf8(cs_assertion.jwt_token.clone())
+            {
+                jwt_string = Some(jwt);
+                break;
+            }
+        }
+        if jwt_string.is_none() {
+            for endorsed_evidence in evidence.evidence.values() {
+                if let Some(endorsements) = &endorsed_evidence.endorsements {
+                    for event in &endorsements.events {
+                        if let Ok(cs_endorsement) = ConfidentialSpaceEndorsement::try_from(event) {
+                            jwt_string = Some(cs_endorsement.jwt_token.clone());
+                            break;
+                        }
+                    }
+                }
+                if jwt_string.is_some() {
+                    break;
+                }
+            }
+        }
+
+        let mut custom_artifacts = std::collections::BTreeMap::new();
+        let mut root_layer = None;
+        let mut workload_layer = None;
+        if let Some(jwt) = jwt_string {
+            let parts: Vec<&str> = jwt.split('.').collect();
+            if parts.len() >= 2 {
+                let payload_b64 = parts[1];
+                if let Ok(decoded_bytes) =
+                    base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(payload_b64.as_bytes())
+                    && let Ok(claims) =
+                        serde_json::from_slice::<oak_attestation_gcp::jwt::Claims>(&decoded_bytes)
+                {
+                    root_layer = Some(crate::http::RootLayerFeedback {
+                        platform: "AMD_SEV_SNP".to_string(),
+                        allow_debug: claims.debug_status != "disabled-since-boot",
+                        ..Default::default()
+                    });
+                    workload_layer = Some(crate::http::WorkloadLayerFeedback {
+                        workload_type: "OAK_CONTAINERS".to_string(),
+                        container_image_digest: Some(claims.submods.container.image_digest.clone()),
+                        ..Default::default()
+                    });
+
+                    custom_artifacts
+                        .insert("gcp_software_name".to_string(), claims.software_name.clone());
+                    if let Some(hw) = claims.hardware_model.as_ref() {
+                        custom_artifacts.insert("gcp_hardware_model".to_string(), hw.clone());
+                    }
+                    if let Some(gce) = claims.submods.gce.as_ref() {
+                        if !gce.project_id.is_empty() {
+                            custom_artifacts
+                                .insert("gcp_project_id".to_string(), gce.project_id.clone());
+                        }
+                        if !gce.instance_name.is_empty() {
+                            custom_artifacts
+                                .insert("gcp_instance_name".to_string(), gce.instance_name.clone());
+                        }
+                        if !gce.zone.is_empty() {
+                            custom_artifacts.insert("gcp_zone".to_string(), gce.zone.clone());
+                        }
+                    }
+                    if !claims.submods.container.image_reference.is_empty() {
+                        custom_artifacts.insert(
+                            "gcp_container_image_reference".to_string(),
+                            claims.submods.container.image_reference.clone(),
+                        );
+                    }
+                }
+            }
+        }
+
+        let mut session_keys = None;
+        for endorsed_evidence in evidence.evidence.values() {
+            if let Some(evidence_inner) = &endorsed_evidence.evidence
+                && let Some(event_log) = &evidence_inner.event_log
+            {
+                for encoded_event in &event_log.encoded_events {
+                    if let Ok(key_data) = decode_event_proto::<SessionBindingPublicKeyData>(
+                        "type.googleapis.com/oak.attestation.v1.SessionBindingPublicKeyData",
+                        encoded_event,
+                    ) {
+                        session_keys = Some(crate::http::VerifiedSessionKeys {
+                            session_binding_public_key: format!(
+                                "hex:{}",
+                                hex::encode(key_data.session_binding_public_key)
+                            ),
+                            ..Default::default()
+                        });
+                        break;
+                    }
+                }
+            }
+            if session_keys.is_some() {
+                break;
+            }
+        }
+
+        let feedback = crate::http::OakAttestationFeedback {
+            status: "verified".to_string(),
+            handshake_handle,
+            verification_time: humantime_serde::re::humantime::format_rfc3339_seconds(
+                std::time::SystemTime::now(),
+            )
+            .to_string(),
+            root_layer: root_layer.unwrap_or_default(),
+            workload_layer: workload_layer.unwrap_or_default(),
+            session_keys: session_keys.unwrap_or_default(),
+            custom_artifacts,
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&feedback).ok()?;
+        Some(base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(json.as_bytes()))
     }
 }
 
@@ -166,6 +309,7 @@ pub async fn proxy<S: ProxySession>(
     plaintext_stream: TcpStream,
     encrypted_stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
     keep_alive_interval: Duration,
+    mode: crate::config::ProxyMode,
 ) -> anyhow::Result<()> {
     let (mut plaintext_reader, mut plaintext_writer) = tokio::io::split(plaintext_stream);
     let (mut encrypted_writer, mut encrypted_reader) = encrypted_stream.split();
@@ -182,6 +326,15 @@ pub async fn proxy<S: ProxySession>(
     let mut application_done = false;
     let mut peer_done = false;
 
+    // Cache computed attestation header for the session (M1).
+    let cached_attestation_header = if mode == crate::config::ProxyMode::Http {
+        session.attestation_header_payload()
+    } else {
+        None
+    };
+    // Reassembly buffer for HTTP headers split across TLS chunks (H2).
+    let mut http_header_buf = Vec::new();
+
     loop {
         if application_done && peer_done {
             encrypted_writer.send(tungstenite::Message::Close(None)).await?;
@@ -196,12 +349,31 @@ pub async fn proxy<S: ProxySession>(
                         if data.is_empty() {
                             peer_done = true;
                             log::debug!("[{role}] Peer half-closed, shutting down plaintext writer.");
+                            if !http_header_buf.is_empty() {
+                                plaintext_writer.write_all(&http_header_buf).await?;
+                                http_header_buf.clear();
+                            }
                             plaintext_writer.shutdown().await?;
                         } else {
                             log::debug!("[{role}] Peer sent more data.");
                             // let mut session = session.lock().await;
                             session.put_incoming(&data)?;
                             while let Some(plaintext) = session.get_plaintext()? {
+                                if let Some(header_val) = &cached_attestation_header {
+                                    if http_header_buf.is_empty() && !crate::http::is_http_start(&plaintext) {
+                                        plaintext_writer.write_all(&plaintext).await?;
+                                        continue;
+                                    }
+                                    http_header_buf.extend_from_slice(&plaintext);
+                                    if let Some(spliced) = crate::http::splice_attestation_header(&http_header_buf, header_val) {
+                                        plaintext_writer.write_all(&spliced).await?;
+                                        http_header_buf.clear();
+                                    } else if http_header_buf.len() > 65536 {
+                                        plaintext_writer.write_all(&http_header_buf).await?;
+                                        http_header_buf.clear();
+                                    }
+                                    continue;
+                                }
                                 plaintext_writer.write_all(&plaintext).await?;
                             }
                         }

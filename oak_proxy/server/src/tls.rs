@@ -102,8 +102,15 @@ async fn run_proxy(
         backend_stream.write_all(&initial_data).await?;
     }
 
-    proxy(PeerRole::Server, session, backend_stream, client_stream, config.keep_alive_interval)
-        .await
+    proxy(
+        PeerRole::Server,
+        session,
+        backend_stream,
+        client_stream,
+        config.keep_alive_interval,
+        config.mode,
+    )
+    .await
 }
 
 async fn establish_tls_session(

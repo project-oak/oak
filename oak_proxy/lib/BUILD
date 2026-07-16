@@ -37,6 +37,7 @@ rust_library(
         "//oak_time",
         "//oak_time:oak_time_std",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:base64",
         "@oak_crates_index//:bytes",
         "@oak_crates_index//:futures",
         "@oak_crates_index//:hex",
