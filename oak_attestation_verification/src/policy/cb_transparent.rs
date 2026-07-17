@@ -22,10 +22,12 @@ use oak_proto_rust::oak::{
         CbLayer1TransparentEndorsement, CbLayer1TransparentEvent,
         CbLayer1TransparentReferenceValues, CbLayer2TransparentEndorsement,
         CbLayer2TransparentEvent, CbLayer2TransparentReferenceValues, EventAttestationResults,
-        KernelEndorsement, KernelLayerReferenceValues, Stage0TransparentMeasurements,
+        KernelEndorsement, KernelLayerReferenceValues, MpmAttachment,
+        Stage0TransparentMeasurements,
     },
 };
 use oak_time::Instant;
+use prost::Message;
 
 use crate::{
     compare::{
@@ -152,8 +154,14 @@ impl Policy<[u8]> for TransparentLayer1Policy {
 /// Event policy for transparent layer 2.
 ///
 /// Decodes [`CbLayer2TransparentEvent`] from the evidence, and verifies that
-/// at least one package's serialized [`MpmAttachment`] digest matches the
-/// `binary_mpm` reference values and endorsements.
+/// each package's serialized [`MpmAttachment`] digest matches a corresponding
+/// entry in the `binary_mpms` reference values and endorsements. If
+/// `binary_mpms` is not specified, the policy falls back to the deprecated
+/// singular `binary_mpm` field in both the reference values and endorsements;
+/// `binary_mpms` takes precedence when present.
+///
+/// NOTE: The ordering of the `binary_mpms` must match the ordering of the
+/// packages in the [`CbLayer2TransparentEvent`].
 pub struct TransparentLayer2Policy {
     reference_values: CbLayer2TransparentReferenceValues,
 }
@@ -180,25 +188,65 @@ impl Policy<[u8]> for TransparentLayer2Policy {
 
         anyhow::ensure!(!event.packages.is_empty(), "no packages in layer 2 event");
 
-        // Acquire the expected text value from the binary_mpm reference value.
-        #[allow(deprecated)]
-        let binary_mpm_ref_value =
-            self.reference_values.binary_mpm.as_ref().context("no binary mpm reference value")?;
-        // Allow `binary_mpm` to be used as we migrate to `binary_mpms`.
-        #[allow(deprecated)]
-        let expected = acquire_mpm_expected_values(
-            verification_time.into_unix_millis(),
-            endorsement.as_ref().and_then(|e| e.binary_mpm.as_ref()),
-            binary_mpm_ref_value,
-        )
-        .context("acquiring binary mpm expected values")?;
+        let endorsement = endorsement.unwrap_or_default();
 
-        // Verify that all packages match the expected binary mpm value.
-        for package in &event.packages {
-            compare_text_value(&package.mpm_version_id, &expected)
-                .context("package did not match the binary mpm expected value")?;
+        // If binary_mpms is not specified in the reference values, fall back to the
+        // singular binary_mpm field in both the reference values and the endorsement.
+        #[allow(deprecated)]
+        let (ref_values, binary_mpms) = if self.reference_values.binary_mpms.is_empty() {
+            let ref_values = self
+                .reference_values
+                .binary_mpm
+                .as_ref()
+                .map(|rv| alloc::vec![rv.clone()])
+                .unwrap_or_default();
+            let binary_mpms = endorsement.binary_mpm.map(|e| alloc::vec![e]).unwrap_or_default();
+            (ref_values, binary_mpms)
+        } else {
+            (self.reference_values.binary_mpms.clone(), endorsement.binary_mpms)
+        };
+
+        anyhow::ensure!(
+            binary_mpms.len() == event.packages.len(),
+            "number of endorsements ({}) does not match number of packages ({})",
+            binary_mpms.len(),
+            event.packages.len()
+        );
+
+        for (i, package) in event.packages.iter().enumerate() {
+            // The ordering of the endorsements must match the order of the packages in the
+            // attestation evidence.
+            let matching_endorsement = &binary_mpms[i];
+
+            if let Some(ref e) = matching_endorsement.endorsement {
+                let mpm_attachment = MpmAttachment::decode(e.subject.as_slice())
+                    .context("couldn't parse signed endorsement subject as an MpmAttachment")?;
+                anyhow::ensure!(
+                    mpm_attachment.package_version == package.mpm_version_id,
+                    "Endorsement at index {} (version {}) does not match measurement {}",
+                    i,
+                    mpm_attachment.package_version,
+                    package.mpm_version_id
+                );
+            }
+
+            // Iterate over reference values to validate the evidence.
+            let mut verified = false;
+            for ref_val in &ref_values {
+                if let Ok(expected) = acquire_mpm_expected_values(
+                    verification_time.into_unix_millis(),
+                    Some(matching_endorsement),
+                    ref_val,
+                ) && compare_text_value(&package.mpm_version_id, &expected).is_ok()
+                {
+                    verified = true;
+                    break;
+                }
+            }
+            anyhow::ensure!(verified, "package {} could not be verified", package.mpm_version_id);
         }
 
+        // Attestation results are left empty.
         Ok(EventAttestationResults { ..Default::default() })
     }
 }
@@ -312,11 +360,44 @@ mod tests {
             "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
             &event,
         );
-        let reference_values =
-            CbLayer2TransparentReferenceValues { binary_mpm: Some(skip_ref), binary_mpms: vec![] };
+
+        let not_before = make_instant!("2025-09-01T00:00:00Z");
+        let not_after = make_instant!("2025-12-01T00:00:00Z");
+        let (signing_key, _) = test_util::new_random_signing_keypair();
+
+        use oak_proto_rust::oak::attestation::v1::MpmAttachment;
+        use prost::Message;
+        use verify_endorsement::MPM_CLAIM_TYPE;
+
+        let mpm_attachment_1 =
+            MpmAttachment { package_name: "other".into(), package_version: "other/2.0".into() };
+        let end1 = test_util::make_signed_endorsement_for_contents(
+            &mpm_attachment_1.encode_to_vec(),
+            not_before,
+            not_after,
+            &signing_key,
+            vec![MPM_CLAIM_TYPE],
+        );
+        let mpm_attachment_2 =
+            MpmAttachment { package_name: "test".into(), package_version: "test/1.0".into() };
+        let end2 = test_util::make_signed_endorsement_for_contents(
+            &mpm_attachment_2.encode_to_vec(),
+            not_before,
+            not_after,
+            &signing_key,
+            vec![MPM_CLAIM_TYPE],
+        );
+        let layer2_end =
+            CbLayer2TransparentEndorsement { binary_mpm: None, binary_mpms: vec![end1, end2] };
+        let endorsement_variant: Variant = layer2_end.into();
+
+        let reference_values = CbLayer2TransparentReferenceValues {
+            binary_mpm: None,
+            binary_mpms: vec![skip_ref.clone(), skip_ref],
+        };
         let policy = TransparentLayer2Policy::new(&reference_values);
 
-        let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
+        let result = policy.verify(TEST_TIME, &evidence, &endorsement_variant);
 
         assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
     }
@@ -550,12 +631,6 @@ mod tests {
             vec![MPM_CLAIM_TYPE],
         );
 
-        let layer2_endorsement = CbLayer2TransparentEndorsement {
-            binary_mpm: Some(binary_mpm_signed),
-            binary_mpms: vec![],
-        };
-        let endorsement_variant: Variant = layer2_endorsement.into();
-
         let event = CbLayer2TransparentEvent {
             packages: vec![
                 MpmPackage { mpm_version_id: "test/1.0".into() },
@@ -567,12 +642,19 @@ mod tests {
             &event,
         );
 
+        let layer2_endorsement = CbLayer2TransparentEndorsement {
+            binary_mpm: None,
+            binary_mpms: vec![binary_mpm_signed.clone(), binary_mpm_signed],
+        };
+        let endorsement_variant: Variant = layer2_endorsement.into();
+
         let endorsement_rv = test_util::endorsement_reference_value(public_key);
         let reference_values = CbLayer2TransparentReferenceValues {
-            binary_mpm: Some(MpmReferenceValue {
-                r#type: Some(MrvType::Endorsement(endorsement_rv)),
-            }),
-            binary_mpms: vec![],
+            binary_mpm: None,
+            binary_mpms: vec![
+                MpmReferenceValue { r#type: Some(MrvType::Endorsement(endorsement_rv.clone())) },
+                MpmReferenceValue { r#type: Some(MrvType::Endorsement(endorsement_rv)) },
+            ],
         };
         let policy = TransparentLayer2Policy::new(&reference_values);
 
@@ -655,12 +737,6 @@ mod tests {
             vec![MPM_CLAIM_TYPE],
         );
 
-        let layer2_endorsement = CbLayer2TransparentEndorsement {
-            binary_mpm: Some(binary_mpm_signed),
-            binary_mpms: vec![],
-        };
-        let endorsement_variant: Variant = layer2_endorsement.into();
-
         // One package matches the endorsement, but the other does not.
         let event = CbLayer2TransparentEvent {
             packages: vec![
@@ -673,12 +749,141 @@ mod tests {
             &event,
         );
 
+        let layer2_endorsement = CbLayer2TransparentEndorsement {
+            binary_mpm: None,
+            // The second endorsement is duplicate, so it won't match "unendorsed/2.0"
+            binary_mpms: vec![binary_mpm_signed.clone(), binary_mpm_signed],
+        };
+        let endorsement_variant: Variant = layer2_endorsement.into();
+
         let endorsement_rv = test_util::endorsement_reference_value(public_key);
         let reference_values = CbLayer2TransparentReferenceValues {
+            binary_mpm: None,
+            binary_mpms: vec![
+                MpmReferenceValue { r#type: Some(MrvType::Endorsement(endorsement_rv.clone())) },
+                MpmReferenceValue { r#type: Some(MrvType::Endorsement(endorsement_rv)) },
+            ],
+        };
+        let policy = TransparentLayer2Policy::new(&reference_values);
+
+        let result = policy.verify(verify_time, &evidence, &endorsement_variant);
+
+        assert!(result.is_err());
+    }
+
+    /// When `binary_mpms` is set in the reference values, it takes precedence
+    /// over `binary_mpm` for both the reference values and the endorsement.
+    /// Here the `binary_mpm` ref value requires an endorsement from a key that
+    /// is not provided, so it would fail on its own; the `binary_mpms` skip ref
+    /// value succeeds.
+    #[test]
+    #[allow(deprecated)]
+    fn transparent_layer2_binary_mpms_takes_precedence_over_binary_mpm_succeeds() {
+        use oak_proto_rust::oak::attestation::v1::{
+            MpmReferenceValue, SkipVerification, mpm_reference_value::Type as MrvType,
+        };
+
+        let not_before = make_instant!("2025-09-01T00:00:00Z");
+        let not_after = make_instant!("2025-12-01T00:00:00Z");
+        let verify_time = make_instant!("2025-10-15T00:00:00Z");
+        let (signing_key, _unused_key) = test_util::new_random_signing_keypair();
+        let (_other_key, other_public_key) = test_util::new_random_signing_keypair();
+
+        let mpm_attachment =
+            MpmAttachment { package_name: "test_pkg".into(), package_version: "test/1.0".into() };
+        let binary_mpm_signed = test_util::make_signed_endorsement_for_contents(
+            &mpm_attachment.encode_to_vec(),
+            not_before,
+            not_after,
+            &signing_key,
+            vec![MPM_CLAIM_TYPE],
+        );
+
+        let event = CbLayer2TransparentEvent {
+            packages: vec![MpmPackage { mpm_version_id: "test/1.0".into() }],
+        };
+        let evidence = encode_event_proto(
+            "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
+            &event,
+        );
+
+        // binary_mpms is set in the endorsement; binary_mpm is also set but will
+        // be ignored because binary_mpms takes precedence.
+        let layer2_endorsement = CbLayer2TransparentEndorsement {
+            binary_mpm: Some(binary_mpm_signed.clone()),
+            binary_mpms: vec![binary_mpm_signed],
+        };
+        let endorsement_variant: Variant = layer2_endorsement.into();
+
+        // binary_mpms ref value uses Skip (always passes); binary_mpm ref value
+        // requires endorsement from other_public_key which is not provided—it
+        // would fail if it were consulted.
+        let reference_values = CbLayer2TransparentReferenceValues {
             binary_mpm: Some(MpmReferenceValue {
-                r#type: Some(MrvType::Endorsement(endorsement_rv)),
+                r#type: Some(MrvType::Endorsement(test_util::endorsement_reference_value(
+                    other_public_key,
+                ))),
             }),
+            binary_mpms: vec![MpmReferenceValue {
+                r#type: Some(MrvType::Skip(SkipVerification {})),
+            }],
+        };
+        let policy = TransparentLayer2Policy::new(&reference_values);
+
+        let result = policy.verify(verify_time, &evidence, &endorsement_variant);
+
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+
+    /// When `binary_mpms` is set in the reference values, the endorsement's
+    /// `binary_mpm` field is ignored—only `binary_mpms` in the endorsement is
+    /// consulted. Here `endorsement.binary_mpms` is empty while
+    /// `endorsement.binary_mpm` is populated, causing a count mismatch.
+    #[test]
+    #[allow(deprecated)]
+    fn transparent_layer2_binary_mpms_in_ref_ignores_endorsement_binary_mpm_fails() {
+        use oak_proto_rust::oak::attestation::v1::{
+            MpmReferenceValue, SkipVerification, mpm_reference_value::Type as MrvType,
+        };
+
+        let not_before = make_instant!("2025-09-01T00:00:00Z");
+        let not_after = make_instant!("2025-12-01T00:00:00Z");
+        let verify_time = make_instant!("2025-10-15T00:00:00Z");
+        let (signing_key, _) = test_util::new_random_signing_keypair();
+
+        let mpm_attachment =
+            MpmAttachment { package_name: "test_pkg".into(), package_version: "test/1.0".into() };
+        let binary_mpm_signed = test_util::make_signed_endorsement_for_contents(
+            &mpm_attachment.encode_to_vec(),
+            not_before,
+            not_after,
+            &signing_key,
+            vec![MPM_CLAIM_TYPE],
+        );
+
+        let event = CbLayer2TransparentEvent {
+            packages: vec![MpmPackage { mpm_version_id: "test/1.0".into() }],
+        };
+        let evidence = encode_event_proto(
+            "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
+            &event,
+        );
+
+        // binary_mpm is populated but binary_mpms is empty—the policy must not
+        // fall back to binary_mpm because ref_values.binary_mpms is set.
+        let layer2_endorsement = CbLayer2TransparentEndorsement {
+            binary_mpm: Some(binary_mpm_signed),
             binary_mpms: vec![],
+        };
+        let endorsement_variant: Variant = layer2_endorsement.into();
+
+        // ref_values.binary_mpms has one entry, so the binary_mpms path is taken.
+        // The endorsement's binary_mpms is empty → count mismatch → error.
+        let reference_values = CbLayer2TransparentReferenceValues {
+            binary_mpm: None,
+            binary_mpms: vec![MpmReferenceValue {
+                r#type: Some(MrvType::Skip(SkipVerification {})),
+            }],
         };
         let policy = TransparentLayer2Policy::new(&reference_values);
 
