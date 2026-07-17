@@ -92,25 +92,17 @@ impl LogEntry {
         Ok(reparsed)
     }
 
-    /// Parses the base64-encoded log entry body into a struct.
+    /// Parses a base64-decoded log entry body into a struct.
     pub fn body(&self) -> anyhow::Result<Body> {
         let body_bytes: Vec<u8> = BASE64_STANDARD
             .decode(&self.body)
             .map_err(|_| anyhow::anyhow!("failed to decode log entry body"))?;
-        serde_json::from_slice(&body_bytes)
-            .map_err(|error| anyhow::anyhow!("couldn't parse log entry body: {error}"))
+        Body::parse(&body_bytes)
     }
 
     /// Returns the public key from the log entry.
     pub fn get_public_key(&self) -> anyhow::Result<Vec<u8>> {
-        let body = self.body()?;
-        let c = body.spec.signature.public_key.content;
-        let public_key_pem_vec: Vec<u8> = BASE64_STANDARD
-            .decode(c)
-            .map_err(|_| anyhow::anyhow!("failed to base64-decode public key"))?;
-        let public_key_pem = core::str::from_utf8(&public_key_pem_vec)
-            .map_err(|_| anyhow::anyhow!("failed to convert public key to string"))?;
-        convert_pem_to_raw(public_key_pem)
+        self.body()?.get_public_key()
     }
 
     /// Compares the given endorser key with the one in the log entry.
@@ -143,6 +135,56 @@ pub struct Body {
 
     /// Instance of the type following a JSON schema.
     pub spec: Spec,
+}
+
+impl Body {
+    /// Parses a HashedRekord JSON body.
+    pub fn parse(bytes: &[u8]) -> anyhow::Result<Self> {
+        serde_json::from_slice(bytes).context("parsing HashedRekord body")
+    }
+
+    /// Verifies the signature and artifact digest in a HashedRekord body.
+    pub fn verify(&self, artifact_bytes: &[u8]) -> anyhow::Result<()> {
+        // TODO: b/445876203 - Reject type "rekord" at some point in the future.
+        ensure!(
+            self.kind == "rekord" || self.kind == "hashedrekord",
+            "unsupported Rekor type: {}",
+            self.kind
+        );
+        ensure!(
+            self.spec.data.hash.algorithm == "sha256",
+            "unsupported hashing algorithm: {}",
+            self.spec.data.hash.algorithm
+        );
+        let artifact_hash = Sha256::from_contents(artifact_bytes).to_hex();
+        ensure!(
+            artifact_hash == self.spec.data.hash.value,
+            "hash of artifact ({:?}) does not match hash in Rekor log entry ({:?})",
+            artifact_hash,
+            self.spec.data.hash.value
+        );
+
+        let signature_bytes: Vec<u8> = BASE64_STANDARD
+            .decode(&self.spec.signature.content)
+            .map_err(|_| anyhow::anyhow!("failed to base64-decode signature"))?;
+        let public_key_raw = self.get_public_key()?;
+
+        verify_signature_ecdsa(&signature_bytes, artifact_bytes, &public_key_raw)
+            .context("verifying signature ecdsa")
+    }
+
+    /// Extracts the endorser public key from the HashedRekord body.
+    ///
+    /// The key is extracted from `spec.signature.publicKey.content`,
+    /// which is base64-encoded PEM. Returns the raw DER-encoded key.
+    pub fn get_public_key(&self) -> anyhow::Result<Vec<u8>> {
+        let public_key_pem_vec: Vec<u8> = BASE64_STANDARD
+            .decode(&self.spec.signature.public_key.content)
+            .map_err(|_| anyhow::anyhow!("failed to base64-decode public key"))?;
+        let public_key_pem = core::str::from_utf8(&public_key_pem_vec)
+            .map_err(|_| anyhow::anyhow!("failed to convert public key to string"))?;
+        convert_pem_to_raw(public_key_pem)
+    }
 }
 
 /// Represents the `spec` in the body of a Rekor log entry.
@@ -234,7 +276,7 @@ pub fn verify_rekor_log_entry(
     }
 
     let body = log_entry.body()?;
-    verify_rekor_body(&body, artifact_bytes).context("verifying Rekor body")?;
+    body.verify(artifact_bytes).context("verifying Rekor body")?;
     Ok(log_entry)
 }
 
@@ -268,48 +310,8 @@ pub fn verify_rekor_log_entry_ecdsa(
     verify_rekor_signature(&log_entry, rekor_public_key).context("verifying Rekor signature")?;
 
     let body = log_entry.body()?;
-    verify_rekor_body(&body, artifact_bytes).context("verifying Rekor body")?;
+    body.verify(artifact_bytes).context("verifying Rekor body")?;
     Ok(log_entry)
-}
-
-/// Verifies the signature in the log entry body.
-///
-/// # Arguments
-///
-/// * `body`: The log entry body.
-/// * `artifact_bytes` The underlying artifact or endorsement.
-fn verify_rekor_body(body: &Body, artifact_bytes: &[u8]) -> anyhow::Result<()> {
-    // TODO: b/445876203 - Reject type "rekord" at some point in the future.
-    ensure!(
-        body.kind == "rekord" || body.kind == "hashedrekord",
-        "unsupported Rekor type: {}",
-        body.kind
-    );
-    ensure!(
-        body.spec.data.hash.algorithm == "sha256",
-        "unsupported hashing algorithm: {}",
-        body.spec.data.hash.algorithm
-    );
-    let artfifact_hash = Sha256::from_contents(artifact_bytes).to_hex();
-    ensure!(
-        artfifact_hash == body.spec.data.hash.value,
-        "hash of artifact ({:?}) does not match hash in Rekor log entry ({:?})",
-        artfifact_hash,
-        body.spec.data.hash.value
-    );
-
-    let signature: Vec<u8> = BASE64_STANDARD
-        .decode(body.spec.signature.content.as_bytes())
-        .map_err(|_| anyhow::anyhow!("failed to base64-decode signature"))?;
-    let public_key_pem_vec: Vec<u8> = BASE64_STANDARD
-        .decode(body.spec.signature.public_key.content.as_bytes())
-        .map_err(|_| anyhow::anyhow!("failed to base64-decode public key"))?;
-    let public_key_pem = core::str::from_utf8(&public_key_pem_vec)
-        .map_err(|_| anyhow::anyhow!("failed to convert public key to string"))?;
-    let public_key = convert_pem_to_raw(public_key_pem)?;
-
-    verify_signature_ecdsa(&signature, artifact_bytes, &public_key)
-        .context("verifying endorsement signature")
 }
 
 /// Verifies Rekor's signature over the log entry.

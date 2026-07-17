@@ -35,7 +35,7 @@ use oak_proto_rust::oak::attestation::v1::{
     verifying_key_reference_value,
 };
 use oak_time::Instant;
-use rekor::log_entry::{LogEntry, verify_rekor_log_entry};
+use rekor::log_entry::{Body, LogEntry, verify_rekor_log_entry};
 
 /// No attempt will be made to decode the attachment of a firmware-type
 /// binary unless this claim is present in the endorsement.
@@ -261,8 +261,13 @@ fn verify_tlog(
                 compare_endorser_public_key(&log_entry, trusted_endorser_key)?;
             }
             if let Some(c2sp) = tlog.c2sp.as_ref() {
-                verify_c2sp_tlog_proof(&signed_endorsement.c2sp_tlog_proof, endorsement, c2sp)
-                    .context("verifying C2SP tlog proof")?;
+                verify_c2sp_tlog_proof(
+                    &signed_endorsement.c2sp_tlog_proof,
+                    endorsement,
+                    c2sp,
+                    trusted_endorser_key,
+                )
+                .context("verifying C2SP tlog proof")?;
             }
             if let Some(pes) = tlog.pes.as_ref() {
                 pes::verify_pes_confirmation(
@@ -295,8 +300,12 @@ fn verify_tlog(
                 }
             }
             if let Some(c2sp) = tlog.c2sp.as_ref() {
-                match verify_c2sp_tlog_proof(&signed_endorsement.c2sp_tlog_proof, endorsement, c2sp)
-                {
+                match verify_c2sp_tlog_proof(
+                    &signed_endorsement.c2sp_tlog_proof,
+                    endorsement,
+                    c2sp,
+                    trusted_endorser_key,
+                ) {
                     Ok(()) => return Ok(()),
                     Err(e) => errors.push(alloc::format!("verifying C2SP tlog proof: {e}")),
                 }
@@ -324,14 +333,44 @@ fn verify_tlog(
 
 /// Verifies a C2SP tlog-proof bundle against the given endorsement and
 /// reference value.
+///
+/// If the proof carries `extra_data` (the HashedRekord entry submitted to
+/// the tessera log), the function verifies Merkle inclusion of that entry,
+/// checks that its endorsement hash matches `endorsement.serialized`, and
+/// compares the public key embedded in the entry against
+/// `trusted_endorser_key`.
+///
+/// If `extra_data` is absent, the function falls back to verifying
+/// `endorsement.serialized` directly as the Merkle leaf (legacy behaviour).
 fn verify_c2sp_tlog_proof(
     c2sp_tlog_proof: &Vec<u8>,
     endorsement: &Endorsement,
     c2sp_ref: &C2sptLogProofReferenceValue,
+    trusted_endorser_key: &VerifyingKey,
 ) -> anyhow::Result<()> {
     let proof = TLogProof::try_from(c2sp_tlog_proof)?;
     let policy = Policy::try_from(c2sp_ref)?;
-    proof.verify(&policy, &endorsement.serialized)?;
+
+    if let Some(entry) = &proof.extra_data {
+        // The entry is a HashedRekord JSON containing the endorsement hash,
+        // signature, and endorser public key.
+        proof.verify(&policy, entry).map_err(anyhow::Error::from)?;
+
+        // Parse HashedRekord entry body and verify the endorsement hash matches.
+        let body = Body::parse(entry).context("parsing C2SP entry")?;
+        body.verify(&endorsement.serialized).context("verifying C2SP entry")?;
+
+        // Compare the endorser key in the entry to the trusted key.
+        let entry_public_key =
+            body.get_public_key().context("extracting public key from C2SP entry")?;
+        if !key_util::equal_keys(&entry_public_key, &trusted_endorser_key.raw)? {
+            anyhow::bail!("endorser public key mismatch in C2SP entry");
+        }
+    } else {
+        // Legacy path: no extra_data, verify endorsement directly.
+        proof.verify(&policy, &endorsement.serialized).map_err(anyhow::Error::from)?;
+    }
+
     Ok(())
 }
 
@@ -399,7 +438,7 @@ mod tests {
             signed_payload,
             signatures: vec![log_sig],
         };
-        let proof = TLogProof { index: 0, proof_hashes: vec![], checkpoint };
+        let proof = TLogProof { index: 0, proof_hashes: vec![], checkpoint, extra_data: None };
         let vkey = log_key.verifying_key().to_vkey_string();
         (proof.serialize(), vkey)
     }
@@ -407,6 +446,12 @@ mod tests {
     /// Builds a policy string with a log key and `quorum none`.
     fn make_log_policy(vkey: &str) -> String {
         alloc::format!("log {vkey}\nquorum none\n")
+    }
+
+    /// Returns a dummy [`VerifyingKey`] for tests exercising the legacy C2SP
+    /// path (no `extra_data`), where the endorser key is unused.
+    fn dummy_endorser_key() -> VerifyingKey {
+        VerifyingKey { r#type: KeyType::EcdsaP256Sha256.into(), ..Default::default() }
     }
 
     #[test]
@@ -424,7 +469,12 @@ mod tests {
         let endorsement = Endorsement { serialized: entry.to_vec(), ..Default::default() };
         let c2sp_ref = C2sptLogProofReferenceValue { policy: make_log_policy(&vkey) };
 
-        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
+        let result = verify_c2sp_tlog_proof(
+            &c2sp_tlog_proof,
+            &endorsement,
+            &c2sp_ref,
+            &dummy_endorser_key(),
+        );
         assert!(result.is_ok(), "expected success, got: {:?}", result.err());
     }
 
@@ -440,7 +490,12 @@ mod tests {
         let c2sp_tlog_proof = Vec::new();
         let endorsement = Endorsement::default();
 
-        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
+        let result = verify_c2sp_tlog_proof(
+            &c2sp_tlog_proof,
+            &endorsement,
+            &c2sp_ref,
+            &dummy_endorser_key(),
+        );
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("invalid proof header"), "unexpected error: {err}");
@@ -459,7 +514,12 @@ mod tests {
         let endorsement = Endorsement::default();
         let c2sp_ref = C2sptLogProofReferenceValue { policy: make_log_policy(&vkey) };
 
-        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
+        let result = verify_c2sp_tlog_proof(
+            &c2sp_tlog_proof,
+            &endorsement,
+            &c2sp_ref,
+            &dummy_endorser_key(),
+        );
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("invalid proof header"), "unexpected error: {err}");
@@ -483,7 +543,12 @@ mod tests {
         let endorsement = Endorsement { serialized: wrong_entry.to_vec(), ..Default::default() };
         let c2sp_ref = C2sptLogProofReferenceValue { policy: make_log_policy(&vkey) };
 
-        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
+        let result = verify_c2sp_tlog_proof(
+            &c2sp_tlog_proof,
+            &endorsement,
+            &c2sp_ref,
+            &dummy_endorser_key(),
+        );
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("root hash mismatch"), "unexpected error: {err}");
@@ -512,7 +577,12 @@ mod tests {
         let endorsement = Endorsement { serialized: entry.to_vec(), ..Default::default() };
         let c2sp_ref = C2sptLogProofReferenceValue { policy: make_log_policy(&wrong_vkey) };
 
-        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
+        let result = verify_c2sp_tlog_proof(
+            &c2sp_tlog_proof,
+            &endorsement,
+            &c2sp_ref,
+            &dummy_endorser_key(),
+        );
         assert!(result.is_err());
     }
 
@@ -546,7 +616,7 @@ mod tests {
             signed_payload,
             signatures: vec![log_sig, cosig],
         };
-        let proof = TLogProof { index: 0, proof_hashes: vec![], checkpoint };
+        let proof = TLogProof { index: 0, proof_hashes: vec![], checkpoint, extra_data: None };
         let proof_text = proof.serialize();
 
         // Build a policy requiring this witness, including the log key.
@@ -558,7 +628,12 @@ mod tests {
         let endorsement = Endorsement { serialized: entry.to_vec(), ..Default::default() };
         let c2sp_ref = C2sptLogProofReferenceValue { policy: policy_text };
 
-        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
+        let result = verify_c2sp_tlog_proof(
+            &c2sp_tlog_proof,
+            &endorsement,
+            &c2sp_ref,
+            &dummy_endorser_key(),
+        );
         assert!(result.is_ok(), "expected success, got: {:?}", result.err());
     }
 
@@ -587,7 +662,12 @@ mod tests {
         let endorsement = Endorsement { serialized: entry.to_vec(), ..Default::default() };
         let c2sp_ref = C2sptLogProofReferenceValue { policy: policy_text };
 
-        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
+        let result = verify_c2sp_tlog_proof(
+            &c2sp_tlog_proof,
+            &endorsement,
+            &c2sp_ref,
+            &dummy_endorser_key(),
+        );
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("witness quorum not satisfied"), "unexpected error: {err}");
@@ -935,7 +1015,12 @@ mod tests {
         let endorsement = Endorsement { serialized: entry.to_vec(), ..Default::default() };
         let c2sp_ref = C2sptLogProofReferenceValue { policy: make_log_policy(&vkey) };
 
-        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
+        let result = verify_c2sp_tlog_proof(
+            &c2sp_tlog_proof,
+            &endorsement,
+            &c2sp_ref,
+            &dummy_endorser_key(),
+        );
         assert!(result.is_ok(), "expected success, got: {:?}", result.err());
     }
 
@@ -966,7 +1051,7 @@ mod tests {
             signed_payload,
             signatures: vec![log_sig, cosig],
         };
-        let proof = TLogProof { index: 0, proof_hashes: vec![], checkpoint };
+        let proof = TLogProof { index: 0, proof_hashes: vec![], checkpoint, extra_data: None };
 
         let log_vkey = log_key.verifying_key().to_vkey_string();
         let witness_vkey = witness_key.verifying_key().to_vkey_string();
@@ -976,7 +1061,12 @@ mod tests {
         let endorsement = Endorsement { serialized: entry.to_vec(), ..Default::default() };
         let c2sp_ref = C2sptLogProofReferenceValue { policy: policy_text };
 
-        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
+        let result = verify_c2sp_tlog_proof(
+            &c2sp_tlog_proof,
+            &endorsement,
+            &c2sp_ref,
+            &dummy_endorser_key(),
+        );
         assert!(result.is_ok(), "expected success, got: {:?}", result.err());
     }
 
@@ -1007,7 +1097,7 @@ mod tests {
             signed_payload,
             signatures: vec![log_sig, cosig],
         };
-        let proof = TLogProof { index: 0, proof_hashes: vec![], checkpoint };
+        let proof = TLogProof { index: 0, proof_hashes: vec![], checkpoint, extra_data: None };
 
         let log_vkey = log_key.verifying_key().to_vkey_string();
         let witness_vkey = witness_key.verifying_key().to_vkey_string();
@@ -1017,7 +1107,12 @@ mod tests {
         let endorsement = Endorsement { serialized: entry.to_vec(), ..Default::default() };
         let c2sp_ref = C2sptLogProofReferenceValue { policy: policy_text };
 
-        let result = verify_c2sp_tlog_proof(&c2sp_tlog_proof, &endorsement, &c2sp_ref);
+        let result = verify_c2sp_tlog_proof(
+            &c2sp_tlog_proof,
+            &endorsement,
+            &c2sp_ref,
+            &dummy_endorser_key(),
+        );
         assert!(result.is_ok(), "expected success, got: {:?}", result.err());
     }
 
@@ -1210,6 +1305,161 @@ mod tests {
         assert!(
             result.is_err(),
             "Expected verification to fail because Rekor entry key does not match endorser key"
+        );
+    }
+
+    #[test]
+    fn verify_c2sp_tlog_proof_with_extra_data_succeeds() {
+        use oak_digest::{Sha2Digest as Digest, Sha256Hasher as Sha256};
+        use p256::ecdsa::signature::Signer;
+
+        let endorsement_bytes = b"test endorsement data".to_vec();
+        let (signing_key, pub_key_der) = create_key_pair(1);
+        let pub_key_pem = ::key_util::convert_raw_to_pem(&pub_key_der);
+
+        let signature: p256::ecdsa::Signature = signing_key.sign(&endorsement_bytes);
+        let signature_bytes = signature.to_der().to_bytes().to_vec();
+
+        let body_json = serde_json::json!({
+            "apiVersion": "0.0.1",
+            "kind": "hashedrekord",
+            "spec": {
+                "data": {
+                    "hash": {
+                        "algorithm": "sha256",
+                        "value": hex::encode(Sha256::digest(&endorsement_bytes))
+                    }
+                },
+                "signature": {
+                    "content": B64.encode(&signature_bytes),
+                    "publicKey": {
+                        "content": B64.encode(pub_key_pem.as_bytes())
+                    }
+                }
+            }
+        });
+        let body_bytes = serde_json::to_vec(&body_json).unwrap();
+
+        let origin = "test.log.example.com/log";
+        let log_key = NoteSigningKey::new(
+            origin,
+            SigningKey::Ed25519(ed25519_dalek::SigningKey::from_bytes(&[42u8; 32])),
+        );
+
+        let root_hash: [u8; 32] =
+            Sha256::new().chain_update([0x00]).chain_update(&body_bytes).finalize().into();
+        let root_hash = oak_digest::Sha256::from(root_hash);
+        let root_b64 = B64.encode(root_hash);
+        let signed_payload = alloc::format!("{origin}\n1\n{root_b64}\n");
+        let log_sig = log_key.sign(&signed_payload, Instant::UNIX_EPOCH).unwrap();
+        let checkpoint = Checkpoint {
+            origin: origin.into(),
+            tree_size: 1,
+            root_hash,
+            signed_payload,
+            signatures: vec![log_sig],
+        };
+        let proof =
+            TLogProof { index: 0, proof_hashes: vec![], checkpoint, extra_data: Some(body_bytes) };
+
+        let c2sp_tlog_proof = proof.serialize().into_bytes();
+        let endorsement = Endorsement { serialized: endorsement_bytes, ..Default::default() };
+        let vkey = log_key.verifying_key().to_vkey_string();
+        let c2sp_ref = C2sptLogProofReferenceValue { policy: make_log_policy(&vkey) };
+
+        let trusted_endorser_key = VerifyingKey {
+            r#type: KeyType::EcdsaP256Sha256.into(),
+            raw: pub_key_der,
+            ..Default::default()
+        };
+
+        let result = verify_c2sp_tlog_proof(
+            &c2sp_tlog_proof,
+            &endorsement,
+            &c2sp_ref,
+            &trusted_endorser_key,
+        );
+        assert!(result.is_ok(), "expected success, got: {:?}", result.err());
+    }
+
+    #[test]
+    fn verify_c2sp_tlog_proof_with_extra_data_fails_on_key_mismatch() {
+        use oak_digest::{Sha2Digest as Digest, Sha256Hasher as Sha256};
+        use p256::ecdsa::signature::Signer;
+
+        let endorsement_bytes = b"test endorsement data".to_vec();
+        let (signing_key_entry, pub_key_entry_der) = create_key_pair(1);
+        let (_signing_key_trusted, pub_key_trusted_der) = create_key_pair(2);
+
+        let pub_key_entry_pem = ::key_util::convert_raw_to_pem(&pub_key_entry_der);
+
+        let signature: p256::ecdsa::Signature = signing_key_entry.sign(&endorsement_bytes);
+        let signature_bytes = signature.to_der().to_bytes().to_vec();
+
+        let body_json = serde_json::json!({
+            "apiVersion": "0.0.1",
+            "kind": "hashedrekord",
+            "spec": {
+                "data": {
+                    "hash": {
+                        "algorithm": "sha256",
+                        "value": hex::encode(Sha256::digest(&endorsement_bytes))
+                    }
+                },
+                "signature": {
+                    "content": B64.encode(&signature_bytes),
+                    "publicKey": {
+                        "content": B64.encode(pub_key_entry_pem.as_bytes())
+                    }
+                }
+            }
+        });
+        let body_bytes = serde_json::to_vec(&body_json).unwrap();
+
+        let origin = "test.log.example.com/log";
+        let log_key = NoteSigningKey::new(
+            origin,
+            SigningKey::Ed25519(ed25519_dalek::SigningKey::from_bytes(&[42u8; 32])),
+        );
+
+        let root_hash: [u8; 32] =
+            Sha256::new().chain_update([0x00]).chain_update(&body_bytes).finalize().into();
+        let root_hash = oak_digest::Sha256::from(root_hash);
+        let root_b64 = B64.encode(root_hash);
+        let signed_payload = alloc::format!("{origin}\n1\n{root_b64}\n");
+        let log_sig = log_key.sign(&signed_payload, Instant::UNIX_EPOCH).unwrap();
+        let checkpoint = Checkpoint {
+            origin: origin.into(),
+            tree_size: 1,
+            root_hash,
+            signed_payload,
+            signatures: vec![log_sig],
+        };
+        let proof =
+            TLogProof { index: 0, proof_hashes: vec![], checkpoint, extra_data: Some(body_bytes) };
+
+        let c2sp_tlog_proof = proof.serialize().into_bytes();
+        let endorsement = Endorsement { serialized: endorsement_bytes, ..Default::default() };
+        let vkey = log_key.verifying_key().to_vkey_string();
+        let c2sp_ref = C2sptLogProofReferenceValue { policy: make_log_policy(&vkey) };
+
+        let trusted_endorser_key = VerifyingKey {
+            r#type: KeyType::EcdsaP256Sha256.into(),
+            raw: pub_key_trusted_der,
+            ..Default::default()
+        };
+
+        let result = verify_c2sp_tlog_proof(
+            &c2sp_tlog_proof,
+            &endorsement,
+            &c2sp_ref,
+            &trusted_endorser_key,
+        );
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("endorser public key mismatch in C2SP entry"),
+            "unexpected error: {err}"
         );
     }
 

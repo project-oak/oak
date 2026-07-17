@@ -180,6 +180,10 @@ pub struct TLogProof {
     pub index: u64,
     pub proof_hashes: Vec<Sha256>,
     pub checkpoint: Checkpoint,
+    /// Optional application-specific data embedded in the proof.
+    /// For tessera logs, this carries the HashedRekord entry that was
+    /// submitted to the log.
+    pub extra_data: Option<Vec<u8>>,
 }
 
 impl TLogProof {
@@ -192,11 +196,15 @@ impl TLogProof {
             return Err(TLogProofError::InvalidHeader);
         }
 
-        // Skip over optional extra data.
+        // Parse optional extra data.
         let mut line = lines.next().ok_or(TLogProofError::InvalidIndex)?;
-        if line.starts_with("extra ") {
+        let extra_data = if let Some(encoded) = line.strip_prefix("extra ") {
+            let data = B64.decode(encoded).map_err(|_| TLogProofError::MalformedProof)?;
             line = lines.next().ok_or(TLogProofError::InvalidIndex)?;
-        }
+            Some(data)
+        } else {
+            None
+        };
 
         // Parse the index number.
         let index: u64 = line
@@ -221,7 +229,7 @@ impl TLogProof {
         let checkpoint_str = lines.collect::<Vec<_>>().join("\n");
         let checkpoint = Checkpoint::parse(&checkpoint_str)?;
 
-        Ok(TLogProof { index, proof_hashes, checkpoint })
+        Ok(TLogProof { index, proof_hashes, checkpoint, extra_data })
     }
 
     /// Serialises this proof to the
@@ -229,6 +237,9 @@ impl TLogProof {
     pub fn serialize(&self) -> String {
         let mut s = String::new();
         s.push_str("c2sp.org/tlog-proof@v1\n");
+        if let Some(data) = &self.extra_data {
+            s.push_str(&format!("extra {}\n", B64.encode(data)));
+        }
         s.push_str(&format!("index {}\n", self.index));
         for hash in &self.proof_hashes {
             s.push_str(&B64.encode(hash));
@@ -330,7 +341,7 @@ impl Hasher for C2spHasher {
 
     fn hash(data: &[u8]) -> Self::Hash {
         // Leaf hash: SHA256(0x00 || data)
-        let mut buf = alloc::vec::Vec::with_capacity(1 + data.len());
+        let mut buf = Vec::with_capacity(1 + data.len());
         buf.push(0x00);
         buf.extend_from_slice(data);
         Sha256::from_contents(&buf)
@@ -685,6 +696,29 @@ mod tests {
     }
 
     #[test]
+    fn test_serialize_roundtrip_with_extra_data() {
+        let identity = TestIdentity::fake_ed25519();
+        let entry = b"roundtrip-entry-with-extra";
+        let test_tree = TestTree::new(4, 2, entry);
+        let checkpoint = make_checkpoint(&identity, 4, &test_tree.root());
+
+        let proof = TLogProof {
+            index: 2,
+            proof_hashes: test_tree.proof(2),
+            checkpoint,
+            extra_data: Some(b"custom extra data payload 12345".to_vec()),
+        };
+
+        let serialized = proof.serialize();
+        assert!(serialized.contains("extra Y3VzdG9tIGV4dHJhIGRhdGEgcGF5bG9hZCAxMjM0NQ==\n"));
+
+        let reparsed =
+            TLogProof::parse(&serialized).expect("re-parsing serialized proof with extra_data");
+        assert_eq!(reparsed, proof);
+        assert_eq!(reparsed.extra_data, Some(b"custom extra data payload 12345".to_vec()));
+    }
+
+    #[test]
     fn test_serialize_roundtrip_with_cosignature() {
         let log = TestIdentity::fake_ed25519();
         let witness = TestIdentity::fake_cosignature_v1();
@@ -705,7 +739,8 @@ mod tests {
             signatures: vec![log_sig, witness_sig],
         };
 
-        let proof = TLogProof { index: 1, proof_hashes: test_tree.proof(1), checkpoint };
+        let proof =
+            TLogProof { index: 1, proof_hashes: test_tree.proof(1), checkpoint, extra_data: None };
         let displayed = proof.serialize();
         let reparsed = TLogProof::parse(&displayed).expect("re-parsing displayed proof");
 
@@ -718,7 +753,7 @@ mod tests {
         let witness_vkey = NoteVerifyingKey::parse(TEST_WITNESS_VKEY).unwrap();
         let proof = TLogProof::parse(TEST_TLOG_PROOF).unwrap();
 
-        let policy_str = alloc::format!(
+        let policy_str = format!(
             concat!("log {}\n", "witness w1 {}\n", "quorum w1\n"),
             identity.verifying_key.to_vkey_string(),
             witness_vkey.to_vkey_string()
@@ -788,7 +823,7 @@ mod tests {
         let proof_str = make_tlog_proof(1, &test_tree.proof(1), &checkpoint);
         let proof = TLogProof::parse(&proof_str).unwrap();
 
-        let policy_str = alloc::format!(
+        let policy_str = format!(
             concat!("log {}\n", "witness w1 {}\n", "quorum w1\n"),
             log.verifying_key.to_vkey_string(),
             witness.verifying_key.to_vkey_string()
@@ -1148,7 +1183,7 @@ mod tests {
         let proof_str = make_tlog_proof(1, &test_tree.proof(1), &checkpoint);
         let proof = TLogProof::parse(&proof_str).unwrap();
 
-        let policy_str = alloc::format!(
+        let policy_str = format!(
             concat!("log {}\n", "witness w1 {}\n", "quorum w1\n"),
             log.verifying_key.to_vkey_string(),
             witness.verifying_key.to_vkey_string()
@@ -1179,7 +1214,8 @@ mod tests {
             signatures: vec![log_sig, witness_sig],
         };
 
-        let proof = TLogProof { index: 1, proof_hashes: test_tree.proof(1), checkpoint };
+        let proof =
+            TLogProof { index: 1, proof_hashes: test_tree.proof(1), checkpoint, extra_data: None };
         let displayed = proof.serialize();
         let reparsed = TLogProof::parse(&displayed).unwrap();
 
@@ -1210,7 +1246,7 @@ mod tests {
         let proof_str = make_tlog_proof(2, &test_tree.proof(2), &checkpoint);
         let proof = TLogProof::parse(&proof_str).unwrap();
 
-        let policy_str = alloc::format!(
+        let policy_str = format!(
             concat!("log {}\n", "witness w1 {}\n", "quorum w1\n"),
             log.verifying_key.to_vkey_string(),
             witness.verifying_key.to_vkey_string()
@@ -1244,7 +1280,7 @@ mod tests {
         let proof_str = make_tlog_proof(3, &test_tree.proof(3), &checkpoint);
         let proof = TLogProof::parse(&proof_str).unwrap();
 
-        let policy_str = alloc::format!(
+        let policy_str = format!(
             concat!("log {}\n", "witness w1 {}\n", "quorum w1\n"),
             log.verifying_key.to_vkey_string(),
             witness.verifying_key.to_vkey_string()
@@ -1278,7 +1314,7 @@ mod tests {
         let proof_str = make_tlog_proof(0, &test_tree.proof(0), &checkpoint);
         let proof = TLogProof::parse(&proof_str).unwrap();
 
-        let policy_str = alloc::format!(
+        let policy_str = format!(
             concat!("log {}\n", "witness w1 {}\n", "quorum w1\n"),
             log.verifying_key.to_vkey_string(),
             witness.verifying_key.to_vkey_string()
