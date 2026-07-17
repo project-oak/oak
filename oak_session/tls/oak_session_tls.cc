@@ -360,7 +360,7 @@ OakSessionTlsInitializer::CreateClient(
 
   // Initiate the handshake.
   int ret = SSL_do_handshake((*initializer)->ssl_.get());
-  if (ret < 0) {
+  if (ret <= 0) {
     int err = SSL_get_error((*initializer)->ssl_.get(), ret);
     if (err != SSL_ERROR_WANT_READ) {
       return absl::FailedPreconditionError(
@@ -405,7 +405,7 @@ absl::Status OakSessionTlsInitializer::PutTLSFrame(absl::string_view tlsFrame) {
   // bio_write_.
 
   int ret = SSL_do_handshake(ssl_.get());
-  if (ret < 0) {
+  if (ret <= 0) {
     int err = SSL_get_error(ssl_.get(), ret);
     // SSL_ERROR_WANT_READ and SSL_ERROR_WANT_WRITE are not fatal errors:
     // these mean that the state machine accepted the frame, and now needs
