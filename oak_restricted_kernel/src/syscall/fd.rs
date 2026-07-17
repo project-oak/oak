@@ -86,8 +86,8 @@ pub fn syscall_read(fd: c_int, buf: UserSpacePtr, count: c_size_t) -> c_ssize_t 
     // for this call and the calling process is paused for the duration of the
     // syscall, so the user range is neither remapped nor aliased.
     let data = match unsafe { buf.as_bytes_mut(count) } {
-        Ok(data) => data,
-        Err(()) => return Errno::EFAULT as isize,
+        Some(data) => data,
+        None => return Errno::EFAULT as isize,
     };
 
     FILE_DESCRIPTORS
@@ -104,8 +104,8 @@ pub fn syscall_write(fd: c_int, buf: UserSpacePtr, count: c_size_t) -> c_ssize_t
     }
     // Safety: as in `syscall_read`, but an immutable borrow.
     let data = match unsafe { buf.as_bytes(count) } {
-        Ok(data) => data,
-        Err(()) => return Errno::EFAULT as isize,
+        Some(data) => data,
+        None => return Errno::EFAULT as isize,
     };
 
     FILE_DESCRIPTORS

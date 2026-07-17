@@ -115,50 +115,50 @@ impl From<*mut core::ffi::c_void> for UserSpacePtr {
 
 impl UserSpacePtr {
     /// Validate that `[ptr, ptr + len)` lies fully in user space and return the
-    /// raw byte pointer. `Err(())` means the range is outside user space or wraps
+    /// raw byte pointer. `None` means the range is outside user space or wraps
     /// (callers map this to `EFAULT`). Not called for `len == 0`; the accessors
     /// handle the empty case first.
-    fn checked(self, len: usize) -> Result<*mut u8, ()> {
+    fn checked(self, len: usize) -> Option<*mut u8> {
         if is_user_range(self.0 as u64, len) {
-            Ok(self.0 as *mut u8)
+            Some(self.0 as *mut u8)
         } else {
-            Err(())
+            None
         }
     }
 
     /// Borrow the user range `[ptr, ptr + len)` as an immutable byte slice.
-    /// Returns an empty slice for `len == 0` (no memory is touched). `Err(())` if
+    /// Returns an empty slice for `len == 0` (no memory is touched). `None` if
     /// the range is not fully within user space.
     ///
     /// # Safety
     /// The caller must ensure the user range stays mapped and is not aliased for
     /// the lifetime `'a` of the returned slice.
-    pub unsafe fn as_bytes<'a>(self, len: usize) -> Result<&'a [u8], ()> {
+    pub unsafe fn as_bytes<'a>(self, len: usize) -> Option<&'a [u8]> {
         if len == 0 {
-            return Ok(&[]);
+            return Some(&[]);
         }
         let ptr = self.checked(len)?;
         // Safety: `is_user_range` verified `[ptr, ptr + len)` is a non-wrapping
         // user-space range; the caller upholds the mapping/aliasing invariant.
-        Ok(unsafe { core::slice::from_raw_parts(ptr as *const u8, len) })
+        Some(unsafe { core::slice::from_raw_parts(ptr as *const u8, len) })
     }
 
     /// Mutable counterpart of [`Self::as_bytes`].
     ///
     /// # Safety
     /// As [`Self::as_bytes`], and the range must be uniquely borrowed for `'a`.
-    pub unsafe fn as_bytes_mut<'a>(self, len: usize) -> Result<&'a mut [u8], ()> {
+    pub unsafe fn as_bytes_mut<'a>(self, len: usize) -> Option<&'a mut [u8]> {
         if len == 0 {
             // A mutable empty-slice literal borrows a temporary and won't satisfy
             // `'a`; a dangling, aligned, non-null pointer is the sound way to build
             // a zero-length mutable slice.
-            return Ok(unsafe {
+            return Some(unsafe {
                 core::slice::from_raw_parts_mut(core::ptr::NonNull::<u8>::dangling().as_ptr(), 0)
             });
         }
         let ptr = self.checked(len)?;
         // Safety: as above; the borrow is unique for `'a`.
-        Ok(unsafe { core::slice::from_raw_parts_mut(ptr, len) })
+        Some(unsafe { core::slice::from_raw_parts_mut(ptr, len) })
     }
 }
 

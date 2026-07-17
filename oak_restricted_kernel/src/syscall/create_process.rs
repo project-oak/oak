@@ -30,8 +30,8 @@ pub fn syscall_unstable_create_proccess(buf: UserSpacePtr, count: c_size_t) -> c
     // centrally inside `as_bytes`.
     // Safety: the borrow lives only for this call.
     let elf_binary_buffer = match unsafe { buf.as_bytes(count) } {
-        Ok(data) => data,
-        Err(()) => return Errno::EFAULT as isize,
+        Some(data) => data,
+        None => return Errno::EFAULT as isize,
     };
     match unstable_create_proccess(elf_binary_buffer) {
         // Safety: [`unstable_create_proccess`] does not return if succesful.
