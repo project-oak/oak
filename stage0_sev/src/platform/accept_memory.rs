@@ -343,21 +343,40 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
             continue;
         }
 
+        // addr and size come straight from the hypervisor-supplied E820 table, so
+        // the end of the range can overflow usize and either bound can exceed the
+        // valid physical address width. Reject such an entry here instead of
+        // panicking in the arithmetic below, mirroring the checked_add already used
+        // for the host-supplied length in the TD HOB walk.
+        let Some(end) = entry.addr().checked_add(entry.size()) else {
+            log::error!(
+                "nonsensical entry in E820 table: [{:#x}, +{:#x})",
+                entry.addr(),
+                entry.size()
+            );
+            continue;
+        };
+
         // Defense-in-depth: refuse to accept memory that overlaps the firmware ROM
         // window. The CF=1 panic above is the primary mitigation; this check makes
         // the attack fail before any PSC is even issued.
-        if entry.addr() < ROM_GUARD_END && entry.end() > ROM_GUARD_START {
+        if entry.addr() < ROM_GUARD_END && end > ROM_GUARD_START {
             panic!(
                 "hypervisor-supplied E820 RAM entry [{:#x}, {:#x}) overlaps firmware ROM \
                  window; refusing to PVALIDATE",
                 entry.addr(),
-                entry.end()
+                end
             );
         }
 
-        let start_address = PhysAddr::new(entry.addr() as u64).align_up(Size4KiB::SIZE);
-        let limit_address =
-            PhysAddr::new((entry.addr() + entry.size()) as u64).align_down(Size4KiB::SIZE);
+        let (Ok(start), Ok(limit)) =
+            (PhysAddr::try_new(entry.addr() as u64), PhysAddr::try_new(end as u64))
+        else {
+            log::error!("nonsensical entry in E820 table: [{:#x}, {:#x})", entry.addr(), end);
+            continue;
+        };
+        let start_address = start.align_up(Size4KiB::SIZE);
+        let limit_address = limit.align_down(Size4KiB::SIZE);
 
         if start_address > limit_address {
             log::error!(
