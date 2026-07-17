@@ -186,8 +186,6 @@ impl Policy<[u8]> for TransparentLayer2Policy {
         let endorsement: Option<CbLayer2TransparentEndorsement> =
             endorsement.try_into().map_err(anyhow::Error::msg)?;
 
-        anyhow::ensure!(!event.packages.is_empty(), "no packages in layer 2 event");
-
         let endorsement = endorsement.unwrap_or_default();
 
         // If binary_mpms is not specified in the reference values, fall back to the
@@ -404,7 +402,7 @@ mod tests {
 
     #[test]
     #[allow(deprecated)]
-    fn transparent_layer2_verify_no_packages_fails() {
+    fn transparent_layer2_verify_no_packages_succeeds() {
         use oak_proto_rust::oak::attestation::v1::{
             MpmReferenceValue, SkipVerification, mpm_reference_value::Type as MrvType,
         };
@@ -421,7 +419,7 @@ mod tests {
 
         let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
 
-        assert!(result.is_err());
+        assert!(result.is_ok(), "{}", result.unwrap_err());
     }
 
     #[test]
