@@ -27,7 +27,6 @@ syntax = "proto3";
 
 package oak.crypto.v1;
 
-import "google/protobuf/timestamp.proto";
 import "proto/validity.proto";
 
 option go_package = "proto/oak/crypto/v1";
