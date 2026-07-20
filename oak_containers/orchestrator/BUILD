@@ -43,7 +43,6 @@ rust_library(
     deps = [
         "//oak_attestation",
         "//oak_attestation_types",
-        "//oak_attestation_verification",
         "//oak_containers/agent",
         "//oak_containers/attestation:oak_containers_attestation",
         "//oak_containers/channel",
@@ -100,7 +99,6 @@ rust_library(
     deps = [
         "//oak_attestation",
         "//oak_attestation_types",
-        "//oak_attestation_verification",
         "//oak_containers/agent",
         "//oak_containers/attestation:oak_containers_attestation",
         "//oak_containers/channel",
