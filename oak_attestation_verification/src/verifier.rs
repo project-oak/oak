@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Provides verification based on evidence, endorsements and reference values.
+//! Provides verification using evidence, endorsements, and reference values.
 
 use alloc::{format, string::ToString, sync::Arc, vec};
 

@@ -71,11 +71,9 @@ pub use verifiers::{
 
 /// Verifies a signed endorsement against a reference value.
 ///
-/// `now_utc_millis`: The current time in milliseconds UTC since Unix Epoch.
-/// `signed_endorsement`: The endorsement along with signature and (optional)
-///     Rekor log entry.
-/// `ref_value`: A reference value containing e.g. the public keys needed
-///     for the verification.
+/// `now_utc_millis`: Current time in milliseconds UTC since Unix epoch.
+/// `signed_endorsement`: The endorsement, its signature, and optional Rekor log
+/// entry. `ref_value`: Reference value containing public keys for verification.
 pub fn verify_endorsement(
     now_utc_millis: i64,
     signed_endorsement: &SignedEndorsement,
