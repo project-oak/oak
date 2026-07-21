@@ -121,6 +121,7 @@ SECTIONS {
      * https://github.com/tianocore/edk2/blob/f98662c5e35b6ab60f46ee4350fa0e6eab0497cf/OvmfPkg/Include/Fdf/MemFd.fdf.inc#L89-L93
      */
     .snp_hash_table 0x10c00 (NOLOAD) : {
+       *(.snp_hash_table)
        . += 0x400; /* 1k */
     } > ram_low : snp_hash_table
 
