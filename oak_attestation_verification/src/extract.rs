@@ -462,7 +462,10 @@ fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerData> 
         Some(value_to_raw_digest(extract_value(values, SETUP_DATA_MEASUREMENT_ID)?)?);
     let kernel_raw_cmd_line = extract_value(values, KERNEL_COMMANDLINE_ID)
         .ok()
-        .map(|v| String::from(v.as_text().expect("kernel_raw_cmd_line found but is not a string")));
+        .map(|v| {
+            v.as_text().map(String::from).context("kernel command line value is not a text string")
+        })
+        .transpose()?;
     let init_ram_fs = Some(value_to_raw_digest(extract_value(values, INITRD_MEASUREMENT_ID)?)?);
     let memory_map = Some(value_to_raw_digest(extract_value(values, MEMORY_MAP_MEASUREMENT_ID)?)?);
     let acpi = Some(value_to_raw_digest(extract_value(values, ACPI_MEASUREMENT_ID)?)?);
@@ -671,4 +674,48 @@ pub(crate) fn claims_set_from_serialized_cert(slice: &[u8]) -> anyhow::Result<Cl
     let payload = cert.payload.ok_or_else(|| anyhow::anyhow!("no signing cert payload"))?;
     ClaimsSet::from_slice(&payload)
         .map_err(|_cose_err| anyhow::anyhow!("could not parse claims set"))
+}
+
+#[cfg(test)]
+mod tests {
+    use alloc::{string::String, vec};
+
+    use coset::cwt::ClaimsSetBuilder;
+
+    use super::*;
+
+    fn digest_value() -> Value {
+        Value::Map(vec![(Value::Integer(SHA2_256_ID.into()), Value::Bytes(vec![0u8; 32]))])
+    }
+
+    fn kernel_claims(command_line: Value) -> ClaimsSet {
+        ClaimsSetBuilder::new()
+            .private_claim(
+                KERNEL_LAYER_ID,
+                Value::Map(vec![
+                    (Value::Integer(KERNEL_MEASUREMENT_ID.into()), digest_value()),
+                    (Value::Integer(SETUP_DATA_MEASUREMENT_ID.into()), digest_value()),
+                    (Value::Integer(KERNEL_COMMANDLINE_ID.into()), command_line),
+                    (Value::Integer(INITRD_MEASUREMENT_ID.into()), digest_value()),
+                    (Value::Integer(MEMORY_MAP_MEASUREMENT_ID.into()), digest_value()),
+                    (Value::Integer(ACPI_MEASUREMENT_ID.into()), digest_value()),
+                ]),
+            )
+            .build()
+    }
+
+    // A kernel layer whose command line claim is not a text string is rejected
+    // with an error rather than panicking.
+    #[test]
+    fn extract_kernel_values_rejects_non_text_command_line() {
+        let claims = kernel_claims(Value::Integer(0i64.into()));
+        assert!(extract_kernel_values(&claims).is_err());
+    }
+
+    #[test]
+    fn extract_kernel_values_accepts_text_command_line() {
+        let claims = kernel_claims(Value::Text(String::from("console=ttyS0")));
+        let kernel = extract_kernel_values(&claims).expect("valid kernel layer");
+        assert_eq!(kernel.kernel_raw_cmd_line.as_deref(), Some("console=ttyS0"));
+    }
 }
