@@ -22,7 +22,7 @@ use oak_proto_rust::oak::{
         CbLayer1TransparentEndorsement, CbLayer1TransparentEvent,
         CbLayer1TransparentReferenceValues, CbLayer2TransparentEndorsement,
         CbLayer2TransparentEvent, CbLayer2TransparentReferenceValues, EventAttestationResults,
-        KernelEndorsement, KernelLayerReferenceValues, MpmAttachment,
+        KernelEndorsement, KernelLayerReferenceValues, MpmAttachment, SignedEndorsement,
         Stage0TransparentMeasurements,
     },
 };
@@ -160,6 +160,11 @@ impl Policy<[u8]> for TransparentLayer1Policy {
 /// singular `binary_mpm` field in both the reference values and endorsements;
 /// `binary_mpms` takes precedence when present.
 ///
+/// If fewer endorsements are provided than there are packages in the event the
+/// endorsement list is padded with empty [`SignedEndorsement`] defaults so that
+/// each package has a corresponding (possibly empty) endorsement. This may be
+/// useful in the event that the reference values include a 'Skip' entry.
+///
 /// NOTE: The ordering of the `binary_mpms` must match the ordering of the
 /// packages in the [`CbLayer2TransparentEvent`].
 pub struct TransparentLayer2Policy {
@@ -205,11 +210,19 @@ impl Policy<[u8]> for TransparentLayer2Policy {
         };
 
         anyhow::ensure!(
-            binary_mpms.len() == event.packages.len(),
-            "number of endorsements ({}) does not match number of packages ({})",
+            binary_mpms.len() <= event.packages.len(),
+            "number of endorsements ({}) exceeds number of packages ({})",
             binary_mpms.len(),
             event.packages.len()
         );
+
+        // If fewer endorsements were provided than there are packages (e.g. because
+        // reference values include a Skip and the caller omitted endorsements), pad
+        // the list with empty SignedEndorsement defaults.
+        let mut binary_mpms = binary_mpms;
+        if binary_mpms.len() < event.packages.len() {
+            binary_mpms.resize_with(event.packages.len(), SignedEndorsement::default);
+        }
 
         for (i, package) in event.packages.iter().enumerate() {
             // The ordering of the endorsements must match the order of the packages in the
@@ -836,10 +849,12 @@ mod tests {
     /// When `binary_mpms` is set in the reference values, the endorsement's
     /// `binary_mpm` field is ignored—only `binary_mpms` in the endorsement is
     /// consulted. Here `endorsement.binary_mpms` is empty while
-    /// `endorsement.binary_mpm` is populated, causing a count mismatch.
+    /// `endorsement.binary_mpm` is populated. Because the ref value uses Skip,
+    /// the missing endorsement is padded with a default and verification
+    /// succeeds.
     #[test]
     #[allow(deprecated)]
-    fn transparent_layer2_binary_mpms_in_ref_ignores_endorsement_binary_mpm_fails() {
+    fn transparent_layer2_binary_mpms_in_ref_ignores_endorsement_binary_mpm_succeeds() {
         use oak_proto_rust::oak::attestation::v1::{
             MpmReferenceValue, SkipVerification, mpm_reference_value::Type as MrvType,
         };
@@ -875,8 +890,10 @@ mod tests {
         };
         let endorsement_variant: Variant = layer2_endorsement.into();
 
-        // ref_values.binary_mpms has one entry, so the binary_mpms path is taken.
-        // The endorsement's binary_mpms is empty → count mismatch → error.
+        // ref_values.binary_mpms has one entry (Skip), so the binary_mpms path is
+        // taken. The endorsement's binary_mpms is empty, but because the ref value
+        // is Skip the missing endorsement is padded with a default and verification
+        // succeeds—the binary_mpm endorsement field is still ignored.
         let reference_values = CbLayer2TransparentReferenceValues {
             binary_mpm: None,
             binary_mpms: vec![MpmReferenceValue {
@@ -887,6 +904,41 @@ mod tests {
 
         let result = policy.verify(verify_time, &evidence, &endorsement_variant);
 
-        assert!(result.is_err());
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+
+    /// When a Skip reference value is used for every entry in `binary_mpms` and
+    /// no endorsements are provided at all, verification should succeed: the
+    /// policy pads the (empty) endorsement list with defaults and Skip never
+    /// inspects them.
+    #[test]
+    #[allow(deprecated)]
+    fn transparent_layer2_skip_ref_values_with_no_endorsements_succeeds() {
+        use oak_proto_rust::oak::attestation::v1::{
+            MpmReferenceValue, SkipVerification, mpm_reference_value::Type as MrvType,
+        };
+
+        let skip_ref = MpmReferenceValue { r#type: Some(MrvType::Skip(SkipVerification {})) };
+        let event = CbLayer2TransparentEvent {
+            packages: vec![
+                MpmPackage { mpm_version_id: "pkg_a/1.0".into() },
+                MpmPackage { mpm_version_id: "pkg_b/2.0".into() },
+            ],
+        };
+        let evidence = encode_event_proto(
+            "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
+            &event,
+        );
+
+        // No endorsements provided at all—the caller relies entirely on Skip.
+        let reference_values = CbLayer2TransparentReferenceValues {
+            binary_mpm: None,
+            binary_mpms: vec![skip_ref.clone(), skip_ref],
+        };
+        let policy = TransparentLayer2Policy::new(&reference_values);
+
+        let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
+
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
     }
 }
