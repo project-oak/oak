@@ -1,0 +1,178 @@
+//
+// Copyright 2026 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.crypto_test;
+
+import "proto/micro_rpc/options.proto";
+
+// This file defines a single `Crypto` service that bundles every cryptographic
+// operation the enclave apps expose over micro_rpc. Keeping all operations in
+// one service means a single generated `*Server` dispatches every method id, so
+// the enclave apps do not need to multiplex several services onto one channel.
+
+// ---------------------------------------------------------------------------
+// AEAD messages
+// ---------------------------------------------------------------------------
+
+// Request to encrypt plaintext using an AEAD cipher.
+message AeadEncryptRequest {
+  // The encryption key (raw bytes).
+  bytes key = 1;
+  // The nonce / initialization vector (raw bytes).
+  bytes nonce = 2;
+  // The plaintext to encrypt.
+  bytes plaintext = 3;
+  // Additional authenticated data.
+  bytes aad = 4;
+}
+
+// Response containing the encrypted ciphertext and authentication tag.
+message AeadEncryptResponse {
+  // The ciphertext (without the tag).
+  bytes ciphertext = 1;
+  // The authentication tag.
+  bytes tag = 2;
+}
+
+// Request to decrypt ciphertext using an AEAD cipher.
+message AeadDecryptRequest {
+  // The decryption key (raw bytes).
+  bytes key = 1;
+  // The nonce / initialization vector (raw bytes).
+  bytes nonce = 2;
+  // The ciphertext to decrypt (without the tag).
+  bytes ciphertext = 3;
+  // Additional authenticated data.
+  bytes aad = 4;
+  // The authentication tag.
+  bytes tag = 5;
+}
+
+// Response containing the decrypted plaintext.
+message AeadDecryptResponse {
+  // The decrypted plaintext.
+  bytes plaintext = 1;
+}
+
+// ---------------------------------------------------------------------------
+// ML-KEM (FIPS 203) messages
+// ---------------------------------------------------------------------------
+
+// The ML-KEM operations mirror FIPS 203
+// (https://csrc.nist.gov/pubs/fips/203/final). Field names follow the naming
+// used by the Wycheproof ML-KEM test vectors documented at
+// <https://github.com/google/wycheproof/blob/master/doc/files.md>:
+//
+// - `ek`: the encapsulation (public) key.
+// - `dk`: the decapsulation (private) key.
+// - `seed`: the 64-byte key-generation seed (d || z) from which a key pair is
+//   deterministically derived.
+// - `c`: the ciphertext.
+// - shared secret `K`: the encapsulated key.
+
+// The ML-KEM parameter set is carried on each request as a plain integer field
+// (the numeric security parameter, e.g. 768) rather than an enum, so that both
+// sides can map it unambiguously to and from the Wycheproof `parameterSet`
+// string ("ML-KEM-512" -> 512, etc.) without depending on generated enum names.
+
+// Request to deterministically generate a key pair from a seed.
+message MlKemKeyGenRequest {
+  // The ML-KEM parameter set (512, 768, or 1024).
+  uint32 parameter_set = 1;
+  // The 64-byte key-generation seed (d || z).
+  bytes seed = 2;
+}
+
+// Response containing the generated key pair.
+message MlKemKeyGenResponse {
+  // The serialized encapsulation (public) key.
+  bytes ek = 1;
+  // The serialized decapsulation (private) key.
+  //
+  // May be empty if the implementation is able to derive the encapsulation key
+  // but cannot serialize the decapsulation key (e.g. BoringSSL's public ML-KEM
+  // API). Callers must treat an empty `dk` as "not provided" and skip checking
+  // it rather than as an empty key.
+  bytes dk = 2;
+}
+
+// Request to decapsulate a shared secret from a ciphertext, with the
+// decapsulation key regenerated from a seed.
+//
+// The key is materialized from a seed because some crypto libraries (e.g.
+// BoringSSL's public API) can only derive a private key from a seed, and cannot
+// parse a serialized decapsulation key.
+message MlKemDecapsulateFromSeedRequest {
+  // The ML-KEM parameter set (512, 768, or 1024).
+  uint32 parameter_set = 1;
+  // The 64-byte key-generation seed (d || z).
+  bytes seed = 2;
+  // The ciphertext to decapsulate.
+  bytes ciphertext = 3;
+}
+
+// Response containing the decapsulated shared secret.
+message MlKemDecapsulateResponse {
+  // The decapsulated shared secret `K`.
+  bytes shared_secret = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Service
+// ---------------------------------------------------------------------------
+
+// Service that exposes every cryptographic operation exercised by the crypto
+// integration test: AEAD (AES-GCM) plus ML-KEM key encapsulation.
+//
+// Enclave apps implement this service so that different crypto libraries can be
+// validated against the same Wycheproof test vectors. Operations that a given
+// implementation does not support must return a `micro_rpc` `Unimplemented`
+// error; the test then records the vector as "unsupported" (skipped) rather
+// than as a failure.
+service Crypto {
+  // method_id: 2001
+  // Encrypts the given plaintext using the specified key and nonce.
+  rpc Encrypt(AeadEncryptRequest) returns (AeadEncryptResponse) {
+    option (.oak.micro_rpc.method_id) = 2001;
+  }
+
+  // method_id: 2002
+  // Decrypts the given ciphertext using the specified key, nonce, and tag.
+  //
+  // Returns a micro_rpc error if decryption fails (e.g. due to an invalid tag
+  // or tampered ciphertext).
+  rpc Decrypt(AeadDecryptRequest) returns (AeadDecryptResponse) {
+    option (.oak.micro_rpc.method_id) = 2002;
+  }
+
+  // method_id: 2003
+  // Deterministically generates an ML-KEM key pair from the given seed.
+  rpc KeyGen(MlKemKeyGenRequest) returns (MlKemKeyGenResponse) {
+    option (.oak.micro_rpc.method_id) = 2003;
+  }
+
+  // method_id: 2004
+  // Decapsulates a shared secret from a ciphertext, regenerating the ML-KEM
+  // private key from the given seed.
+  //
+  // Returns a `micro_rpc` error if the seed or ciphertext is malformed.
+  rpc DecapsulateFromSeed(MlKemDecapsulateFromSeedRequest)
+      returns (MlKemDecapsulateResponse) {
+    option (.oak.micro_rpc.method_id) = 2004;
+  }
+}

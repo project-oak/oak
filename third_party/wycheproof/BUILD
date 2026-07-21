@@ -26,3 +26,13 @@ filegroup(
     name = "aead_test_vectors",
     srcs = ["testvectors_v1/aes_gcm_test.json"],
 )
+
+filegroup(
+    name = "mlkem_test_vectors",
+    srcs = [
+        "testvectors_v1/mlkem_1024_keygen_seed_test.json",
+        "testvectors_v1/mlkem_1024_test.json",
+        "testvectors_v1/mlkem_768_keygen_seed_test.json",
+        "testvectors_v1/mlkem_768_test.json",
+    ],
+)

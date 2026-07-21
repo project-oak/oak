@@ -22,6 +22,7 @@ package(
 )
 
 _TEST_SRCS = [
+    "src/mlkem_wycheproof.rs",
     "src/tests.rs",
     "src/wycheproof.rs",
 ]
@@ -31,6 +32,7 @@ _COMMON_DATA = [
     "//oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin",
     "//stage0_bin",
     "//third_party/wycheproof:aead_test_vectors",
+    "//third_party/wycheproof:mlkem_test_vectors",
 ]
 
 _TEST_DEPS = [
@@ -51,6 +53,7 @@ _TEST_DEPS = [
 rust_test(
     name = "tests",
     srcs = _TEST_SRCS,
+    crate_root = "src/tests.rs",
     data = _COMMON_DATA + [
         "//oak_restricted_kernel_crypto_test/enclave_app",
     ],

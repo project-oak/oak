@@ -8,7 +8,9 @@ package(
 
 proto_library(
     name = "proto",
-    srcs = ["aead.proto"],
+    srcs = [
+        "crypto.proto",
+    ],
     deps = [
         "//proto/micro_rpc:options_proto",
         "@com_google_protobuf//:descriptor_proto",

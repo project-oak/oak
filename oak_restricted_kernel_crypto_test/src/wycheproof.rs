@@ -16,6 +16,11 @@
 
 //! Deserialization types for the Wycheproof AEAD test vector JSON format.
 //!
+//! This module also hosts the family-agnostic building blocks shared by every
+//! Wycheproof suite: the generic [`TestFile`] wrapper and the [`TestResult`]
+//! outcome enum. Family-specific group and vector types live alongside them
+//! (for AEAD) or in sibling modules (e.g. `mlkem_wycheproof` for ML-KEM).
+//!
 //! These types correspond to the schema defined in
 //! `aead_test_schema_v1.json`, documented at
 //! <https://github.com/google/wycheproof/blob/master/doc/files.md>.
@@ -25,20 +30,31 @@
 
 use serde::Deserialize;
 
-/// Top-level test file.
+/// A Wycheproof test file: a set of test groups sharing an algorithm.
+///
+/// Generic over the group type `G` so that every Wycheproof vector family
+/// (AEAD, ML-KEM, …) reuses the same top-level wrapper; only the group and
+/// vector payloads differ between families.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[allow(dead_code)]
-pub struct AeadTestFile {
-    /// The algorithm being tested (e.g. `"AES-GCM"`).
+pub struct TestFile<G> {
+    /// The algorithm being tested (e.g. `"AES-GCM"` or `"ML-KEM"`). Absent from
+    /// some files, so it defaults to the empty string.
+    #[serde(default)]
     pub algorithm: String,
 
-    /// Total number of test vectors across all groups.
+    /// Total number of test vectors across all groups. Absent from some files,
+    /// so it defaults to zero.
+    #[serde(default)]
     pub number_of_tests: u32,
 
-    /// Groups of test vectors sharing the same key/IV/tag sizes.
-    pub test_groups: Vec<AeadTestGroup>,
+    /// Groups of test vectors sharing common parameters.
+    pub test_groups: Vec<G>,
 }
+
+/// A Wycheproof AEAD test file.
+pub type AeadTestFile = TestFile<AeadTestGroup>;
 
 /// A group of test vectors with common parameters.
 #[derive(Debug, Deserialize)]

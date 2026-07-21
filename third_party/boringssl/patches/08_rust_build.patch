@@ -2,7 +2,7 @@ diff --git a/rust/BUILD.bazel b/rust/BUILD.bazel
 new file mode 100644
 --- /dev/null
 +++ b/rust/BUILD.bazel
-@@ -0,0 +1,113 @@
+@@ -0,0 +1,115 @@
 +# Copyright 2026 The BoringSSL Authors
 +#
 +# Licensed under the Apache License, Version 2.0 (the "License");
@@ -113,6 +113,8 @@ new file mode 100644
 +    srcs = glob(["bssl-crypto/src/**/*.rs"]),
 +    crate_name = "bssl_crypto",
 +    crate_root = "bssl-crypto/src/lib.rs",
++    # Enables the ML-KEM and ML-DSA modules (post-quantum algorithms).
++    crate_features = ["mlalgs"],
 +    edition = "2021",
 +    deps = [":bssl_sys"],
 +)
