@@ -504,10 +504,20 @@ pub fn revalidate_page(page: Page<Size4KiB>) -> Result<(), &'static str> {
     if sev_status().contains(SevStatus::SEV_ENABLED) {
         let counter = AtomicUsize::new(0);
         match page.pvalidate(&counter) {
-            Err(err) if err != InstructionError::ValidationStatusNotUpdated => {
-                return Err("shared page revalidation failed");
+            Ok(()) => {}
+            Err(InstructionError::ValidationStatusNotUpdated) => {
+                // SECURITY: CF=1 on re-validation means the hypervisor did not
+                // honour the Private->Shared->Private round-trip and the RMP
+                // entry is still Validated=1 - a double-validation /
+                // page-aliasing attack signal. Must be fatal, matching the
+                // first-touch policy at lines 207-218 above.
+                panic!(
+                    "PVALIDATE CF=1 (double-validation) on unshare at GPA {:#x}; \
+                     possible hypervisor page-aliasing attack",
+                    page.start_address().as_u64()
+                );
             }
-            _ => {}
+            Err(_) => return Err("shared page revalidation failed"),
         }
     }
     Ok(())
