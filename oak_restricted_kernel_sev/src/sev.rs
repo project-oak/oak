@@ -23,6 +23,7 @@ use oak_core::sync::OnceCell;
 use oak_hal::{PageAssignment, Platform, PortFactory};
 use oak_restricted_kernel::{PAGE_TABLES, Translator, shutdown};
 use oak_sev_guest::{
+    instructions::{PageSize as SevPageSize, Validation, pvalidate},
     interrupts::{MutableInterruptStackFrame, mutable_interrupt_handler_with_error_code},
     msr::{
         SevStatus, TerminationReason, TerminationRequest, get_cpuid_for_vc_exception,
@@ -137,6 +138,26 @@ impl Platform for Sev {
 
     fn revalidate_page(_page: Page<Size4KiB>) {
         todo!();
+    }
+
+    fn invalidate_frame(frame: PhysFrame<Size4KiB>) {
+        if sev_status().contains(SevStatus::SNP_ACTIVE) {
+            let page = PAGE_TABLES
+                .lock()
+                .get()
+                .unwrap()
+                .translate_physical_frame(frame)
+                .expect("failed to translate physical frame");
+            // Safety: pvalidate is safe to call here as we are invalidating a frame
+            // that we own and are about to share.
+            if let Err(err) = pvalidate(
+                page.start_address().as_u64() as usize,
+                SevPageSize::Page4KiB,
+                Validation::Unvalidated,
+            ) {
+                panic!("failed to invalidate frame: {:?}", err);
+            }
+        }
     }
 
     fn wbvind() {

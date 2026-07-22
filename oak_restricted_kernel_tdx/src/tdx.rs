@@ -123,6 +123,10 @@ impl Platform for Tdx {
         oak_tdx_guest::tdcall::accept_memory(frame).expect("failed to accept memory");
     }
 
+    fn invalidate_frame(_frame: PhysFrame<Size4KiB>) {
+        // Frame invalidation is not needed on TDX.
+    }
+
     fn wbvind() {
         oak_tdx_guest::vmcall::tdvmcall_wbinvd().expect("failed to execute WBINVD");
     }

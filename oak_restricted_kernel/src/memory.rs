@@ -224,6 +224,7 @@ pub fn init_guest_host_heap<P: Platform>() {
         PhysFrame::<Size4KiB>::from_start_address(guest_host_frames.end.start_address())
             .expect("unaligned frame address");
     for frame in PhysFrame::<Size4KiB>::range(guest_host_frames_start, guest_host_frames_end) {
+        P::invalidate_frame(frame);
         P::change_frame_state(frame, PageAssignment::Shared);
     }
 

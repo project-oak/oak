@@ -299,6 +299,8 @@ impl Platform for Tdx {
         // TODO: b/360488924 - impl revalidate_page
     }
 
+    fn invalidate_frame(_: PhysFrame<Size4KiB>) {}
+
     fn wbvind() {
         tdvmcall_wbinvd().unwrap()
     }

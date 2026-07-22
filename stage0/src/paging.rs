@@ -373,6 +373,7 @@ pub fn share_page<P: Platform>(page: Page<Size4KiB>) {
     // In stage0 we use identity mapping, so the page's virtual start address
     // corresponds directly to a physical frame at the same address.
     let frame = PhysFrame::<Size4KiB>::from_start_address(PhysAddr::new(page_start)).unwrap();
+    P::invalidate_frame(frame);
     P::change_frame_state(frame, PageAssignment::Shared);
 }
 

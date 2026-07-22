@@ -77,6 +77,8 @@ impl crate::Platform for Base {
 
     fn revalidate_page(_page: Page<Size4KiB>) {}
 
+    fn invalidate_frame(_frame: PhysFrame<Size4KiB>) {}
+
     fn wbvind() {
         // Safety: this shouldn't have any (visible) effects that affect Rust safety.
         unsafe {

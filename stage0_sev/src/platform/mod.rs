@@ -225,6 +225,12 @@ impl Platform for Sev {
         accept_memory::revalidate_page(page).expect("failed to revalidate memory");
     }
 
+    fn invalidate_frame(
+        frame: x86_64::structures::paging::PhysFrame<x86_64::structures::paging::Size4KiB>,
+    ) {
+        accept_memory::invalidate_frame(frame).expect("failed to invalidate memory");
+    }
+
     fn wbvind() {
         Base::wbvind()
     }

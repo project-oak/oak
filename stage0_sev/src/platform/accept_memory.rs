@@ -522,3 +522,21 @@ pub fn revalidate_page(page: Page<Size4KiB>) -> Result<(), &'static str> {
     }
     Ok(())
 }
+
+pub fn invalidate_frame(frame: PhysFrame<Size4KiB>) -> Result<(), &'static str> {
+    if sev_status().contains(SevStatus::SNP_ACTIVE)
+        && let Err(err) = pvalidate(
+            frame.start_address().as_u64() as usize,
+            SevPageSize::Page4KiB,
+            Validation::Unvalidated,
+        )
+    {
+        log::error!(
+            "failed to invalidate frame {:#018x}: {:?}",
+            frame.start_address().as_u64(),
+            err
+        );
+        return Err("frame invalidation failed");
+    }
+    Ok(())
+}
