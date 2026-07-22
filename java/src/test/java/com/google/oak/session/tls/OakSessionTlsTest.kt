@@ -521,7 +521,8 @@ class OakSessionTlsTest {
     val serverCtx =
       OakSessionTlsContext.create(OakSessionServerTlsContext.Config.builder(serverProvider).build())
 
-    val trustAnchor = OakSessionTlsContext.createStaticTrustAnchorProvider(identity.certChainDer[0])
+    val trustAnchor =
+      OakSessionTlsContext.createStaticTrustAnchorsProvider(listOf(identity.certChainDer[0]))
     val clientCtx =
       OakSessionTlsContext.create(
         OakSessionClientTlsContext.Config.builder()
@@ -543,7 +544,8 @@ class OakSessionTlsTest {
     val serverCtx =
       OakSessionTlsContext.create(OakSessionServerTlsContext.Config.builder(serverProvider).build())
 
-    val trustAnchor = OakSessionTlsContext.createStaticTrustAnchorProvider(identity.certChainDer[0])
+    val trustAnchor =
+      OakSessionTlsContext.createStaticTrustAnchorsProvider(listOf(identity.certChainDer[0]))
     val clientCtx =
       OakSessionTlsContext.create(
         OakSessionClientTlsContext.Config.builder()

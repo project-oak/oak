@@ -18,6 +18,7 @@
 
 #include "absl/base/call_once.h"
 #include "absl/status/status.h"
+#include "absl/types/span.h"
 #include "openssl/base.h"
 #include "openssl/bio.h"
 #include "openssl/err.h"
@@ -173,26 +174,24 @@ OakSessionTlsContext::NewSession() {
     identity_ptr = &*identity;
   }
 
-  std::optional<std::string> trust_anchor;
-  const std::string* trust_anchor_ptr = nullptr;
+  std::vector<std::string> trust_anchors;
   if (trust_anchor_provider_ != nullptr) {
-    auto anchor_or = trust_anchor_provider_->GetTrustAnchor();
-    if (!anchor_or.ok()) {
-      return anchor_or.status();
+    auto anchors_or = trust_anchor_provider_->GetTrustAnchors();
+    if (!anchors_or.ok()) {
+      return anchors_or.status();
     }
-    trust_anchor = std::move(*anchor_or);
-    trust_anchor_ptr = &*trust_anchor;
+    trust_anchors = std::move(*anchors_or);
   }
 
   switch (mode_) {
     case OakSessionTlsMode::kClient:
       return OakSessionTlsInitializer::CreateClient(
-          ssl_ctx_.get(), expected_server_name_, identity_ptr, trust_anchor_ptr,
+          ssl_ctx_.get(), expected_server_name_, identity_ptr, trust_anchors,
           custom_cert_verifier_.has_value() ? &*custom_cert_verifier_
                                             : nullptr);
     case OakSessionTlsMode::kServer:
       return OakSessionTlsInitializer::CreateServer(
-          ssl_ctx_.get(), identity_ptr, trust_anchor_ptr,
+          ssl_ctx_.get(), identity_ptr, trust_anchors,
           custom_cert_verifier_.has_value() ? &*custom_cert_verifier_
                                             : nullptr);
   }
@@ -259,7 +258,7 @@ absl::StatusOr<InitializedSession> OakSessionTlsContext::NewInitializedSession(
 absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>>
 OakSessionTlsInitializer::Create(
     SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity,
-    const std::string* trust_anchor,
+    absl::Span<const std::string> trust_anchors,
     const CustomCertVerifier* custom_cert_verifier) {
   auto ssl = bssl::UniquePtr<SSL>(SSL_new(ssl_ctx));
   if (!ssl) {
@@ -274,23 +273,26 @@ OakSessionTlsInitializer::Create(
     }
   }
 
-  if (trust_anchor != nullptr) {
-    const uint8_t* ptr = reinterpret_cast<const uint8_t*>(trust_anchor->data());
-    X509* cert = d2i_X509(nullptr, &ptr, trust_anchor->size());
-    if (cert == nullptr) {
-      return absl::InternalError("failed to parse trust anchor certificate");
-    }
+  if (!trust_anchors.empty()) {
     X509_STORE* store = X509_STORE_new();
     if (store == nullptr) {
-      X509_free(cert);
       return absl::InternalError("failed to create certificate store");
     }
-    if (X509_STORE_add_cert(store, cert) != 1) {
+    for (const std::string& trust_anchor : trust_anchors) {
+      const uint8_t* ptr =
+          reinterpret_cast<const uint8_t*>(trust_anchor.data());
+      X509* cert = d2i_X509(nullptr, &ptr, trust_anchor.size());
+      if (cert == nullptr) {
+        X509_STORE_free(store);
+        return absl::InternalError("failed to parse trust anchor certificate");
+      }
+      if (X509_STORE_add_cert(store, cert) != 1) {
+        X509_free(cert);
+        X509_STORE_free(store);
+        return absl::InternalError("failed to add certificate to store");
+      }
       X509_free(cert);
-      X509_STORE_free(store);
-      return absl::InternalError("failed to add certificate to store");
     }
-    X509_free(cert);
     SSL_set1_verify_cert_store(ssl.get(), store);
     X509_STORE_free(store);
   }
@@ -330,10 +332,11 @@ OakSessionTlsInitializer::Create(
 absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>>
 OakSessionTlsInitializer::CreateClient(
     SSL_CTX* ssl_ctx, const std::string& expected_server_name,
-    const TlsIdentity* tls_identity, const std::string* trust_anchor,
+    const TlsIdentity* tls_identity,
+    absl::Span<const std::string> trust_anchors,
     const CustomCertVerifier* custom_cert_verifier) {
   absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> initializer =
-      OakSessionTlsInitializer::Create(ssl_ctx, tls_identity, trust_anchor,
+      OakSessionTlsInitializer::Create(ssl_ctx, tls_identity, trust_anchors,
                                        custom_cert_verifier);
   if (!initializer.ok()) {
     return initializer.status();
@@ -374,10 +377,10 @@ OakSessionTlsInitializer::CreateClient(
 absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>>
 OakSessionTlsInitializer::CreateServer(
     SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity,
-    const std::string* trust_anchor,
+    absl::Span<const std::string> trust_anchors,
     const CustomCertVerifier* custom_cert_verifier) {
   absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> initializer =
-      OakSessionTlsInitializer::Create(ssl_ctx, tls_identity, trust_anchor,
+      OakSessionTlsInitializer::Create(ssl_ctx, tls_identity, trust_anchors,
                                        custom_cert_verifier);
   if (!initializer.ok()) {
     return initializer.status();

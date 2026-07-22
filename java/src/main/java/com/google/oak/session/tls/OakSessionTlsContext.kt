@@ -208,10 +208,14 @@ interface OakSessionTlsContext {
       return TlsIdentityProvider { identity }
     }
 
-    /** Creates a [TrustAnchorProvider] that always returns the provided static certificate. */
+    /**
+     * Creates a [TrustAnchorProvider] that always returns the provided static certificates.
+     *
+     * Provide one or more to trust multiple roots simultaneously (e.g. during CA key rotation).
+     */
     @JvmStatic
-    fun createStaticTrustAnchorProvider(certDer: ByteArray): TrustAnchorProvider {
-      return TrustAnchorProvider { certDer }
+    fun createStaticTrustAnchorsProvider(certsDer: List<ByteArray>): TrustAnchorProvider {
+      return TrustAnchorProvider { certsDer }
     }
 
     /** Creates a [TrustAnchorProvider] that loads a PEM certificate from a file path. */
@@ -219,7 +223,7 @@ interface OakSessionTlsContext {
     @Throws(OakSessionTlsException::class)
     fun createTrustAnchorProviderFromFile(path: String): TrustAnchorProvider {
       val certDer = loadCertificateFromFile(path)
-      return TrustAnchorProvider { certDer }
+      return TrustAnchorProvider { listOf(certDer) }
     }
   }
 }
@@ -324,7 +328,7 @@ class OakSessionClientTlsContext(private val config: Config) : OakSessionTlsCont
 
       val trustManagers =
         buildTrustManagers(
-          config.serverTrustAnchorProvider?.getTrustAnchor(),
+          config.serverTrustAnchorProvider?.getTrustAnchors(),
           config.customCertVerifier,
           config.keyStoreType,
         )
@@ -443,7 +447,7 @@ class OakSessionServerTlsContext(private val config: Config) : OakSessionTlsCont
 
       val trustManagers =
         buildTrustManagers(
-          config.clientTrustAnchorProvider?.getTrustAnchor(),
+          config.clientTrustAnchorProvider?.getTrustAnchors(),
           config.customCertVerifier,
           config.keyStoreType,
         )
@@ -601,24 +605,28 @@ private class OakTrustManager(
  * which standard JDK trust managers don't recognize.
  */
 private fun buildTrustManagers(
-  trustAnchorDer: ByteArray?,
+  trustAnchorsDer: List<ByteArray>?,
   customVerifier: CustomCertVerifier?,
   keyStoreType: String,
 ): Array<TrustManager>? {
-  if (trustAnchorDer == null && customVerifier == null) return null
+  if (trustAnchorsDer == null && customVerifier == null) return null
 
-  val baseTrustManager = trustAnchorDer?.let { loadTrustManager(it, keyStoreType) }
+  val baseTrustManager = trustAnchorsDer?.let { loadTrustManager(it, keyStoreType) }
   return arrayOf(OakTrustManager(baseTrustManager, customVerifier))
 }
 
-/** Loads a trust manager from a DER-encoded certificate. */
-private fun loadTrustManager(certDer: ByteArray, keyStoreType: String): X509TrustManager {
+/** Loads a trust manager from one or more DER-encoded certificates. */
+private fun loadTrustManager(certsDer: List<ByteArray>, keyStoreType: String): X509TrustManager {
   val cf = CertificateFactory.getInstance("X.509")
   val trustStore = KeyStore.getInstance(keyStoreType)
   trustStore.load(null, null)
 
-  cf.generateCertificates(ByteArrayInputStream(certDer)).forEachIndexed { index, cert ->
-    trustStore.setCertificateEntry("trust-anchor-$index", cert)
+  var index = 0
+  certsDer.forEach { certDer ->
+    cf.generateCertificates(ByteArrayInputStream(certDer)).forEach { cert ->
+      trustStore.setCertificateEntry("trust-anchor-$index", cert)
+      index++
+    }
   }
 
   val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
@@ -679,11 +687,14 @@ fun interface TlsIdentityProvider {
  */
 fun interface TrustAnchorProvider {
   /**
-   * Returns the DER-encoded trust anchor certificate.
+   * Returns the DER-encoded trust anchor certificates.
    *
-   * @throws OakSessionTlsException if the trust anchor cannot be retrieved
+   * Must return at least one; return several to trust multiple roots simultaneously (e.g. during CA
+   * key rotation).
+   *
+   * @throws OakSessionTlsException if the trust anchors cannot be retrieved
    */
-  @Throws(OakSessionTlsException::class) fun getTrustAnchor(): ByteArray
+  @Throws(OakSessionTlsException::class) fun getTrustAnchors(): List<ByteArray>
 }
 
 /**

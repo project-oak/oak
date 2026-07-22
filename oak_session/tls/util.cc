@@ -264,13 +264,18 @@ absl::StatusOr<std::unique_ptr<TlsIdentityProvider>> CreateSelfSigned(
 
 class StaticTrustAnchorProvider : public TrustAnchorProvider {
  public:
-  StaticTrustAnchorProvider(std::string cert_der)
-      : cert_der_(std::move(cert_der)) {}
+  explicit StaticTrustAnchorProvider(std::vector<std::string> certs_der)
+      : certs_der_(std::move(certs_der)) {}
 
-  absl::StatusOr<std::string> GetTrustAnchor() override { return cert_der_; }
+  absl::StatusOr<std::vector<std::string>> GetTrustAnchors() override {
+    if (certs_der_.empty()) {
+      return absl::FailedPreconditionError("no trust anchors configured");
+    }
+    return certs_der_;
+  }
 
  private:
-  std::string cert_der_;
+  std::vector<std::string> certs_der_;
 };
 
 absl::StatusOr<std::unique_ptr<TrustAnchorProvider>> CreateTrustAnchorFromFile(
@@ -279,12 +284,19 @@ absl::StatusOr<std::unique_ptr<TrustAnchorProvider>> CreateTrustAnchorFromFile(
   if (!cert_der.ok()) {
     return cert_der.status();
   }
-  return std::make_unique<StaticTrustAnchorProvider>(std::move(*cert_der));
+  return std::make_unique<StaticTrustAnchorProvider>(
+      std::vector<std::string>{std::move(*cert_der)});
+}
+
+std::unique_ptr<TrustAnchorProvider> CreateStaticTrustAnchors(
+    std::vector<std::string> certs_der) {
+  return std::make_unique<StaticTrustAnchorProvider>(std::move(certs_der));
 }
 
 std::unique_ptr<TrustAnchorProvider> CreateStaticTrustAnchor(
     std::string cert_der) {
-  return std::make_unique<StaticTrustAnchorProvider>(std::move(cert_der));
+  return CreateStaticTrustAnchors(
+      std::vector<std::string>{std::move(cert_der)});
 }
 
 }  // namespace oak::session::tls::util

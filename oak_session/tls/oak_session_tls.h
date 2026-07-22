@@ -25,6 +25,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 #include "openssl/base.h"
 #include "openssl/ssl.h"
 
@@ -115,7 +116,10 @@ class TlsIdentityProvider {
 class TrustAnchorProvider {
  public:
   virtual ~TrustAnchorProvider() = default;
-  virtual absl::StatusOr<std::string> GetTrustAnchor() = 0;
+  // Returns all DER-encoded trust anchors to install. Implementations must
+  // return at least one anchor; return several to trust multiple roots
+  // simultaneously (e.g. during CA key rotation).
+  virtual absl::StatusOr<std::vector<std::string>> GetTrustAnchors() = 0;
 };
 
 
@@ -272,13 +276,13 @@ class OakSessionTlsInitializer {
  public:
   static absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> CreateServer(
       SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity = nullptr,
-      const std::string* trust_anchor = nullptr,
+      absl::Span<const std::string> trust_anchors = {},
       const CustomCertVerifier* custom_cert_verifier = nullptr);
 
   static absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> CreateClient(
       SSL_CTX* ssl_ctx, const std::string& expected_server_name,
       const TlsIdentity* tls_identity = nullptr,
-      const std::string* trust_anchor = nullptr,
+      absl::Span<const std::string> trust_anchors = {},
       const CustomCertVerifier* custom_cert_verifier = nullptr);
 
   // Returns true if the handshake is complete.
@@ -322,7 +326,7 @@ class OakSessionTlsInitializer {
  private:
   static absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> Create(
       SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity = nullptr,
-      const std::string* trust_anchor = nullptr,
+      absl::Span<const std::string> trust_anchors = {},
       const CustomCertVerifier* custom_cert_verifier = nullptr);
   OakSessionTlsInitializer(bssl::UniquePtr<SSL> ssl, BIO* bio_read,
                            BIO* bio_write,
