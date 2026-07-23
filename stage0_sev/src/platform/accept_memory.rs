@@ -501,7 +501,7 @@ pub fn change_frame_state(
 }
 
 pub fn revalidate_page(page: Page<Size4KiB>) -> Result<(), &'static str> {
-    if sev_status().contains(SevStatus::SEV_ENABLED) {
+    if sev_status().contains(SevStatus::SNP_ACTIVE) {
         let counter = AtomicUsize::new(0);
         match page.pvalidate(&counter) {
             Ok(()) => {}
