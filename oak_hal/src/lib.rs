@@ -152,12 +152,6 @@ pub trait Platform: MsrAccess {
     /// PRIVATE state.
     fn revalidate_page(page: Page<Size4KiB>);
 
-    /// Invalidate one frame of memory.
-    ///
-    /// This operation is required for SEV-SNP before going from a PRIVATE state
-    /// to a SHARED state.
-    fn invalidate_frame(frame: PhysFrame<Size4KiB>);
-
     /// Write Back and Invalidate Cache
     ///
     /// Writes back all modified cache lines in the processor’s internal cache
