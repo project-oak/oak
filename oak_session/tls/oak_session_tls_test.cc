@@ -32,6 +32,7 @@ namespace {
 using ::absl_testing::IsOk;
 using ::absl_testing::StatusIs;
 using ::testing::Eq;
+using ::testing::HasSubstr;
 
 constexpr char kTestServerKeyPath[] = "oak_session/tls/testing/test_server.key";
 constexpr char kTestServerCertPath[] =
@@ -204,7 +205,10 @@ TEST(OakSessionTlsTest, UntrustedCertificateRejected) {
 
   // Client should reject the untrusted certificate
   auto result = (*client_initializer)->PutTLSFrame(*server_hello);
-  EXPECT_THAT(result, StatusIs(absl::StatusCode::kFailedPrecondition));
+  EXPECT_THAT(result, StatusIs(absl::StatusCode::kFailedPrecondition,
+                               HasSubstr("self signed certificate")));
+  EXPECT_THAT(result, StatusIs(absl::StatusCode::kFailedPrecondition,
+                               HasSubstr("SSL_ERROR_SSL")));
 }
 
 TEST(OakSessionTlsTest, DefaultClientConfigHandshakeFails) {
@@ -242,7 +246,8 @@ TEST(OakSessionTlsTest, DefaultClientConfigHandshakeFails) {
   // certificate verification is required but not configured (or fails default
   // verification).
   auto result = (*client_initializer)->PutTLSFrame(*server_hello);
-  EXPECT_THAT(result, StatusIs(absl::StatusCode::kFailedPrecondition));
+  EXPECT_THAT(result, StatusIs(absl::StatusCode::kFailedPrecondition,
+                               HasSubstr("SSL_ERROR_SSL")));
 }
 
 TEST(OakSessionTlsTest, CustomCertVerifierSuccess) {

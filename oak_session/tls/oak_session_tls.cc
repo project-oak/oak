@@ -16,8 +16,13 @@
 
 #include "oak_session/tls/oak_session_tls.h"
 
+#include <cerrno>
+#include <cstring>
+
 #include "absl/base/call_once.h"
 #include "absl/status/status.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 #include "absl/types/span.h"
 #include "openssl/base.h"
 #include "openssl/bio.h"
@@ -90,6 +95,38 @@ int VerifyCallback(X509_STORE_CTX* ctx, void* arg) {
   }
 
   return 1;
+}
+
+std::string GetSslErrorDetails(int ssl_error, SSL* ssl = nullptr) {
+  std::string err_str;
+  const char* ssl_err_desc = SSL_error_description(ssl_error);
+  if (ssl_err_desc != nullptr) {
+    err_str = absl::StrFormat("SSL error: SSL_ERROR_%s (%d)", ssl_err_desc,
+                              ssl_error);
+  } else {
+    err_str = absl::StrFormat("SSL error: %d", ssl_error);
+  }
+
+  if (ssl_error == SSL_ERROR_SYSCALL) {
+    if (errno != 0) {
+      absl::StrAppend(&err_str, "; System error: ", strerror(errno));
+    }
+  }
+
+  uint32_t err;
+  while ((err = ERR_get_error()) != 0) {
+    char buf[256];
+    ERR_error_string_n(err, buf, sizeof(buf));
+    absl::StrAppend(&err_str, "; OpenSSL error: ", buf);
+  }
+  if (ssl != nullptr) {
+    long verify_result = SSL_get_verify_result(ssl);
+    if (verify_result != X509_V_OK) {
+      absl::StrAppend(&err_str, "; Verification error: ",
+                      X509_verify_cert_error_string(verify_result));
+    }
+  }
+  return err_str;
 }
 
 }  // namespace
@@ -367,7 +404,8 @@ OakSessionTlsInitializer::CreateClient(
     int err = SSL_get_error((*initializer)->ssl_.get(), ret);
     if (err != SSL_ERROR_WANT_READ) {
       return absl::FailedPreconditionError(
-          absl::StrFormat("TLS handshake init failed: %d", err));
+          absl::StrFormat("TLS handshake init failed. Details: %s",
+                          GetSslErrorDetails(err, (*initializer)->ssl_.get())));
     }
   }
 
@@ -415,7 +453,8 @@ absl::Status OakSessionTlsInitializer::PutTLSFrame(absl::string_view tlsFrame) {
     // further information from the sender to continue.
     if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE) {
       return absl::FailedPreconditionError(
-          absl::StrFormat("TLS handshake failed: %d", err));
+          absl::StrFormat("TLS handshake failed. Details: %s",
+                          GetSslErrorDetails(err, ssl_.get())));
     }
   }
 
@@ -473,7 +512,8 @@ absl::StatusOr<std::string> OakSessionTls::Encrypt(
   if (write_result <= 0) {
     int err = SSL_get_error(ssl_.get(), write_result);
     return absl::InternalError(
-        absl::StrFormat("Failed to write plaintext message to SSL: %d", err));
+        absl::StrFormat("Failed to write plaintext message to SSL. Details: %s",
+                        GetSslErrorDetails(err, ssl_.get())));
   }
 
   return BioReadAll(bio_write_);
@@ -538,7 +578,8 @@ absl::StatusOr<std::string> SslReadAll(SSL* ssl) {
       }
 
       return absl::InternalError(absl::StrFormat(
-          "Failed to read plaintext message from SSL: %d", err));
+          "Failed to read plaintext message from SSL. Details: %s",
+          GetSslErrorDetails(err, ssl)));
     }
 
     result.append(buf, read_result);
