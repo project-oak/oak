@@ -183,8 +183,16 @@ _protected_mode_start:
     and $0b111111, %ebx       # zero out all but EBX[5:0], which the C-bit location
     mov %ebx, %edi            # save the full C-bit location value for later to pass into the Rust
                               # entry point (RDI contains the first argument according to sysv ABI)
-    cmp $32, %ebx             # is the C-bit less (or equal) to 32?
-    jg 1f                     # if it's greater, proceed; otherwise, crash
+    # SECURITY: Under SEV-ES/SNP the CPUID above is serviced by the #VC handler
+    # via the GHCB MSR protocol, i.e. the value comes from the *untrusted*
+    # hypervisor. Accepting an arbitrary bit in 33..63 lets a hostile VMM force
+    # the leaf PDEs below to leave the real C-bit clear (shared) and instead set
+    # a GPA bit, redirecting the first post-paging instruction fetch to
+    # hypervisor-controlled memory. Until a proper cross-check against the
+    # PSP-validated SEV_CPUID page (or a sev_verify_cbit-style self-test) is
+    # implemented, pin the value to the only one used by shipping SEV-SNP parts.
+    cmp $51, %ebx             # Milan / Genoa / Bergamo all use bit 51
+    je 1f                     # if it matches, proceed; otherwise, crash
     xor %edx, %edx            # EDX = 0x0
     mov $0x100, %eax          # EAX = 0x100 - Termination Request
     mov $0xC0010130, %ecx     # ECX = 0xC001_0130 -- GHCB MSR
