@@ -130,6 +130,16 @@ _tdx_64bit_start:
     jmp rust64_start
 
 _park_ap_64bit:
+    # SECURITY: The firmware-mailbox page (TD_MAILBOX_START) is a TEMP_MEM
+    # TDVF section with Attributes=0, so its initial contents are supplied by
+    # the untrusted VMM via TDH.MEM.PAGE.ADD and are NOT covered by MRTD.
+    # Zero the two fields we consume before polling so a hostile VMM cannot
+    # pre-seed (is_address_set, os_mailbox_address) and steer the jmp *%rax
+    # below. (BSP writes the legitimate values much later in setup_mailbox();
+    # a VMM that races BSP-write against this clear can at worst cause a
+    # spin -- DoS is already in the VMM's power.)
+    movq $0, (TD_MAILBOX_START)          # is_address_set := 0
+    movq $0, (TD_MAILBOX_START + 8)      # os_mailbox_address := 0
     leaq (AP_IN_64BIT_COUNT), %rcx       # Load address of AP_IN_64BIT_COUNT onto rcx
     lock incl (%rcx)                     # Atomically increment AP_IN_64BIT_COUNT
 
