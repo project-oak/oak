@@ -59,6 +59,8 @@ printf "%05d\n" $(shuf --input-range=0-99999 --head-count=1)
   [MPM Version](https://github.com/project-oak/oak/blob/main/docs/tr/claim/31545.md)
 - `19224`
   [OCI container image](https://github.com/project-oak/oak/blob/main/docs/tr/claim/19224.md)
+- `13420`
+  [Confidential Space container image](https://github.com/project-oak/oak/blob/main/docs/tr/claim/13420.md)
 - `39284`
   [Private AI Compute](https://github.com/project-oak/oak/blob/main/docs/tr/claim/39284.md)
 - `52637`

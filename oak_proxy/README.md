@@ -245,11 +245,45 @@ backend_address = "127.0.0.1:8080"
 [[attestation_generators]]
 type = "confidential_space"
 
-# Verify the client's Confidential Space attestation.
+# Verify the client's Confidential Space attestation against a static digest allowlist.
 [[attestation_verifiers]]
 type = "confidential_space"
 root_certificate_pem_path = "/path/to/gcp_root.pem"
+authorized_image_digests = [
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "f40c611488c03e1e2d7e174eb8f0dfc83693fb1f71a069df919cfbf697a2245b"
+]
 ```
+
+### Container Image Digest & Policy Verification
+
+> [!NOTE] Currently, container image digest and operator signed endorsement
+> verification (`authorized_workload_endorsement`) is implemented and supported
+> specifically for Google Cloud Confidential Space
+> (`[attestation_verifiers.confidential_space]`).
+
+To verify the exact sha256 digest (`@sha256:...`) of a peer container workload,
+you can specify a static list of hex-encoded digests via
+`authorized_image_digests`.
+
+**Mutual Exclusion Rules:**
+
+- Specifying `container_reference_prefix` alongside `authorized_image_digests`
+  (or `authorized_endorsement_path`) returns a configuration error. Choose
+  either prefix verification or exact digest authorization.
+
+#### Advanced: Dynamic Operator Signed Endorsements (`endorsement/v1`)
+
+For bidirectional or circular deployments where container digests cannot be
+hardcoded into static TOML configuration files inside the image, `oak_proxy`
+supports dynamically loading and verifying detached **in-toto Statements**
+(`endorsement/v1`) from disk using `authorized_endorsement_path`,
+`authorized_endorsement_signature_path`, and
+`authorized_endorsement_verifying_key_pem_path`.
+
+For an advanced guide on delegating endorsement signing, breaking bidirectional
+circular build dependencies, and dynamic runtime fetching, see
+[Workload Authorization & Operator Signed Endorsements](../docs/workload-authorization-endorsement.md).
 
 **`client.toml`**
 
@@ -264,7 +298,8 @@ type = "confidential_space"
 # Verify the server's Confidential Space attestation.
 [[attestation_verifiers]]
 type = "confidential_space"
-root_certificate_pem_path = "/path/to/gcp_root.pem"
+# Download from https://confidentialcomputing.googleapis.com/.well-known/confidential_space_root.crt
+root_certificate_pem_path = "/path/to/confidential_space_root.crt"
 ```
 
 ## Extending Attestation

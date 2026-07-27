@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+pub mod authorized_endorsement;
 pub mod confidential_space;
 
 use std::{net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};

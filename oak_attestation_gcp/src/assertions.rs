@@ -25,7 +25,7 @@ use oak_attestation_verification_types::assertion_verifier::{
 use oak_digest::Sha256;
 use oak_proto_rust::oak::attestation::v1::{
     Assertion, BinaryReferenceValue, ConfidentialSpaceAssertion, ConfidentialSpaceEndorsement,
-    ConfidentialSpaceReferenceValues, SignedEndorsement, binary_reference_value,
+    ConfidentialSpaceReferenceValues, binary_reference_value,
     confidential_space_reference_values::ContainerImage,
 };
 use oak_time::Instant;
@@ -84,13 +84,9 @@ impl GcpAssertionVerifier {
         binary_reference_value: &BinaryReferenceValue,
         endorsement: &Option<ConfidentialSpaceEndorsement>,
     ) -> Result<(), AssertionVerifierError> {
-        let signed_endorsement = match endorsement {
-            Some(ci_endorsement) => match &ci_endorsement.workload_endorsement {
-                Some(signed_endorsement) => signed_endorsement,
-                None => return Err(anyhow!("missing workload endorsement").into()),
-            },
-            None => &SignedEndorsement::default(),
-        };
+        let signed_endorsement = endorsement
+            .as_ref()
+            .and_then(|ci_endorsement| ci_endorsement.workload_endorsement.as_ref());
         verify_endorsement_wrapper(
             verification_time,
             image_reference,

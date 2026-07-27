@@ -23,7 +23,10 @@ package(
 
 rust_library(
     name = "oak_proxy_lib",
-    srcs = glob(["src/**/*.rs"]),
+    srcs = glob(
+        ["src/**/*.rs"],
+        exclude = ["src/tests.rs"],
+    ),
     deps = [
         "//oak_attestation",
         "//oak_attestation_gcp",
@@ -43,6 +46,7 @@ rust_library(
         "@oak_crates_index//:prost",
         "@oak_crates_index//:rand",
         "@oak_crates_index//:serde",
+        "@oak_crates_index//:serde_json",
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-tungstenite",
@@ -62,5 +66,14 @@ rust_test(
     deps = [
         ":oak_proxy_lib",
         "@oak_crates_index//:toml",
+    ],
+)
+
+rust_test(
+    name = "oak_proxy_lib_unit_tests",
+    crate = ":oak_proxy_lib",
+    deps = [
+        "@oak_crates_index//:rand",
+        "@oak_crates_index//:tempfile",
     ],
 )

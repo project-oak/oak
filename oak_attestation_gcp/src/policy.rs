@@ -108,7 +108,7 @@ pub enum ConfidentialSpaceVerificationError {
 pub(crate) fn verify_endorsement_wrapper(
     verification_time: Instant,
     image_reference: &OciReference,
-    signed_endorsement: &SignedEndorsement,
+    signed_endorsement: Option<&SignedEndorsement>,
     ref_value: &BinaryReferenceValue,
 ) -> Result<(), ConfidentialSpaceVerificationError> {
     use ConfidentialSpaceVerificationError::{
@@ -123,6 +123,8 @@ pub(crate) fn verify_endorsement_wrapper(
 
     match ref_value.r#type.as_ref() {
         Some(binary_reference_value::Type::Endorsement(val)) => {
+            let signed_endorsement = signed_endorsement
+                .ok_or(ConfidentialSpaceVerificationError::MissingWorkloadEndorsementError)?;
             let statement =
                 verify_endorsement(verification_time.into_unix_millis(), signed_endorsement, val)
                     .map_err(|err| EVError(format!("{err:#}")))?;
@@ -203,19 +205,12 @@ impl ConfidentialSpacePolicy {
         let image_reference = token.claims().effective_reference()?;
         let workload_endorsement_verification =
             self.workload_reference_values.as_ref().map(|ref_value| match ref_value {
-                WorkloadReferenceValues::ImageReferenceValue(ref_value) => {
-                    match &endorsement.workload_endorsement {
-                        Some(workload_endorsement) => verify_endorsement_wrapper(
-                            verification_time,
-                            &image_reference,
-                            workload_endorsement,
-                            ref_value,
-                        ),
-                        None => {
-                            Err(ConfidentialSpaceVerificationError::MissingWorkloadEndorsementError)
-                        }
-                    }
-                }
+                WorkloadReferenceValues::ImageReferenceValue(ref_value) => verify_endorsement_wrapper(
+                    verification_time,
+                    &image_reference,
+                    endorsement.workload_endorsement.as_ref(),
+                    ref_value,
+                ),
                 WorkloadReferenceValues::ContainerImageReferencePrefix(container_image_reference_prefix) => {
                     if image_reference.whole().starts_with(container_image_reference_prefix) {
                       Ok(())
@@ -340,7 +335,7 @@ mod tests {
         let result = verify_endorsement_wrapper(
             verification_time,
             &image_reference,
-            &signed_endorsement,
+            Some(&signed_endorsement),
             &ref_value,
         );
 
@@ -361,7 +356,7 @@ mod tests {
         let result = verify_endorsement_wrapper(
             verification_time,
             &image_reference,
-            &signed_endorsement,
+            Some(&signed_endorsement),
             &ref_value,
         );
 
@@ -386,13 +381,8 @@ mod tests {
             )),
         };
 
-        let result = verify_endorsement_wrapper(
-            verification_time,
-            &image_reference,
-            // The endorsement is ignored when verifying against digests.
-            &SignedEndorsement::default(),
-            &ref_value,
-        );
+        let result =
+            verify_endorsement_wrapper(verification_time, &image_reference, None, &ref_value);
 
         assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
     }
@@ -419,13 +409,8 @@ mod tests {
             )),
         };
 
-        let result = verify_endorsement_wrapper(
-            verification_time,
-            &image_reference,
-            // The endorsement is ignored when verifying against digests.
-            &SignedEndorsement::default(),
-            &ref_value,
-        );
+        let result =
+            verify_endorsement_wrapper(verification_time, &image_reference, None, &ref_value);
 
         assert!(result.is_err(), "Expected failure but got success");
     }

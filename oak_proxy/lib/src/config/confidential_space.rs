@@ -24,18 +24,24 @@ use oak_attestation_gcp::{
 use oak_attestation_verification::EventLogVerifier;
 use oak_proto_rust::{
     attestation::CONFIDENTIAL_SPACE_ATTESTATION_ID,
-    oak::attestation::v1::{
-        ConfidentialSpaceEndorsement, ConfidentialSpaceReferenceValues,
-        confidential_space_reference_values,
+    oak::{
+        RawDigest as CommonRawDigest,
+        attestation::v1::{
+            BinaryReferenceValue, ConfidentialSpaceEndorsement, ConfidentialSpaceReferenceValues,
+            Digests, binary_reference_value, confidential_space_reference_values,
+        },
     },
 };
 use oak_session::{
     config::SessionConfigBuilder, key_extractor::DefaultBindingKeyExtractor,
     session_binding::SignatureBinder,
 };
+use oak_time::Clock;
 use p256::ecdsa::{SigningKey, VerifyingKey, signature::rand_core::OsRng};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
+
+use super::authorized_endorsement::AuthorizedWorkloadEndorsementParams;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ConfidentialSpaceGeneratorParams {}
@@ -78,6 +84,8 @@ impl ConfidentialSpaceGeneratorParams {
 pub struct ConfidentialSpaceVerifierParams {
     pub root_certificate_pem_path: String,
     pub container_reference_prefix: Option<String>,
+    #[serde(flatten)]
+    pub authorized_workload_endorsement: AuthorizedWorkloadEndorsementParams,
 }
 
 impl ConfidentialSpaceVerifierParams {
@@ -85,17 +93,46 @@ impl ConfidentialSpaceVerifierParams {
         let root_pem = std::fs::read_to_string(&self.root_certificate_pem_path)
             .expect("could not read root certificate");
 
-        let reference_values = ConfidentialSpaceReferenceValues {
-            root_certificate_pem: root_pem,
-            r#container_image: self.container_reference_prefix.clone().map(
+        let clock = Arc::new(oak_time_std::clock::SystemTimeClock);
+        let verification_time = clock.get_time();
+        let allowed_digests =
+            self.authorized_workload_endorsement.get_authorized_digests(verification_time)?;
+
+        if self.container_reference_prefix.is_some() && !allowed_digests.is_empty() {
+            anyhow::bail!(
+                "cannot specify both container_reference_prefix and authorized_image_digests / authorized_endorsement_path: choose either prefix verification or exact digest authorization"
+            );
+        }
+
+        let container_image = if !allowed_digests.is_empty() {
+            let raw_digests: Vec<CommonRawDigest> = allowed_digests
+                .into_iter()
+                .map(|digest| CommonRawDigest { sha2_256: digest, ..Default::default() })
+                .collect();
+
+            let digests = Digests {
+                #[allow(deprecated)]
+                digests: raw_digests,
+            };
+            let binary_reference_value = BinaryReferenceValue {
+                r#type: Some(binary_reference_value::Type::Digests(digests)),
+            };
+            Some(confidential_space_reference_values::ContainerImage::ImageReferenceValue(
+                binary_reference_value,
+            ))
+        } else {
+            self.container_reference_prefix.clone().map(
                 confidential_space_reference_values::ContainerImage::ContainerImageReferencePrefix,
-            ),
+            )
         };
+
+        let reference_values =
+            ConfidentialSpaceReferenceValues { root_certificate_pem: root_pem, container_image };
         let policy = confidential_space_policy_from_reference_values(&reference_values)?;
         let attestation_verifier = EventLogVerifier::new(
             vec![Box::new(policy)],
             // Use the current time for verifying endorsements.
-            Arc::new(oak_time_std::clock::SystemTimeClock),
+            clock,
         );
 
         Ok(builder.add_peer_verifier_with_key_extractor(
@@ -105,3 +142,7 @@ impl ConfidentialSpaceVerifierParams {
         ))
     }
 }
+
+#[cfg(test)]
+#[path = "confidential_space_tests.rs"]
+mod tests;
