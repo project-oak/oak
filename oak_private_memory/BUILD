@@ -327,9 +327,13 @@ rust_test(
     name = "server_e2e_test_containers",
     crate = ":server_e2e_test_lib",
     env = {"OAK_E2E_BACKEND": "container"},
+    # Disabled for now as it is blocking CI
     # Tracking: b/5034099
     flaky = True,
-    tags = ["requires-kvm"],
+    tags = [
+        "manual",
+        "requires-kvm",
+    ],
     target_compatible_with = ["@platforms//os:linux"],
 )
 

@@ -105,6 +105,34 @@ enum RequestMetricNameInner {
 #[derive(Clone, Debug)]
 pub struct RequestMetricName(RequestMetricNameInner);
 
+// Explicit bucket boundaries for the `db_size` histogram, in bytes.
+//
+// Without these, OpenTelemetry uses its default boundaries, whose largest
+// finite bucket is 10,000. Databases are tens of MB, so every sample would
+// otherwise land in the overflow bucket, making the recorded distribution
+// unusable. See the OpenTelemetry spec for the default boundaries:
+// https://opentelemetry.io/docs/specs/otel/metrics/sdk/#explicit-bucket-histogram-aggregation
+//
+// Values are binary megabytes (1 MB = 1_048_576 bytes), matching the `MB`
+// constant used by `bucket_db_size` below.
+const DB_SIZE_BYTES_BOUNDARIES: &[f64] = &[
+    0.,           // 0 MB
+    1_048_576.,   // 1 MB
+    5_242_880.,   // 5 MB
+    10_485_760.,  // 10 MB
+    20_971_520.,  // 20 MB
+    31_457_280.,  // 30 MB
+    41_943_040.,  // 40 MB
+    52_428_800.,  // 50 MB
+    78_643_200.,  // 75 MB
+    104_857_600., // 100 MB
+    157_286_400., // 150 MB
+    209_715_200., // 200 MB
+    314_572_800., // 300 MB
+    419_430_400., // 400 MB
+    524_288_000., // 500 MB
+];
+
 impl Metrics {
     pub fn new(observer: &mut OakObserver) -> Self {
         let rpc_count = observer
@@ -130,6 +158,7 @@ impl Metrics {
             .u64_histogram("db_size")
             .with_description("Size of the database in bytes.")
             .with_unit("By")
+            .with_boundaries(DB_SIZE_BYTES_BOUNDARIES.to_vec())
             .build();
         let db_init_latency = observer
             .meter
