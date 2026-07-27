@@ -133,6 +133,40 @@ const DB_SIZE_BYTES_BOUNDARIES: &[f64] = &[
     524_288_000., // 500 MB
 ];
 
+// The following histograms previously relied on OpenTelemetry's default bucket
+// boundaries, whose largest finite bucket is 10,000. Each constant below keeps
+// those default boundaries and just adds more, so existing buckets keep their
+// meaning while the extended range becomes visible. See the spec:
+// https://opentelemetry.io/docs/specs/otel/metrics/sdk/#explicit-bucket-histogram-aggregation
+
+/// Millisecond-latency boundaries: the OpenTelemetry defaults plus a slow tail
+/// extended to 2 minutes, so latencies beyond 10 s no longer fall into
+/// overflow.
+const LATENCY_MS_BOUNDARIES: &[f64] = &[
+    // OpenTelemetry defaults.
+    0., 5., 10., 25., 50., 75., 100., 250., 500., 750., 1_000., 2_500., 5_000., 7_500., 10_000.,
+    // Added slow tail.
+    20_000., 30_000., 60_000., 120_000.,
+];
+
+/// Count boundaries: the OpenTelemetry defaults plus finer low-end buckets for
+/// the small counts these histograms usually record.
+const COUNT_BOUNDARIES: &[f64] = &[
+    // Added low-end resolution.
+    0., 1., 2., 3., //
+    // OpenTelemetry defaults.
+    5., 10., 25., 50., 75., 100., 250., 500., 750., 1_000., 2_500., 5_000., 7_500., 10_000.,
+];
+
+/// Transfer-speed boundaries in KB/ms (equivalently MB/s): the OpenTelemetry
+/// defaults plus finer low-end buckets for slow transfers.
+const SPEED_KB_PER_MS_BOUNDARIES: &[f64] = &[
+    // Added low-end resolution.
+    0., 1., 2., 3., //
+    // OpenTelemetry defaults.
+    5., 10., 25., 50., 75., 100., 250., 500., 750., 1_000., 2_500., 5_000., 7_500., 10_000.,
+];
+
 impl Metrics {
     pub fn new(observer: &mut OakObserver) -> Self {
         let rpc_count = observer
@@ -150,8 +184,7 @@ impl Metrics {
             .u64_histogram("rpc_latency")
             .with_description("Latency in ms of each RPC.")
             .with_unit("ms")
-            // Update the version of opentelemetry to support custom buckets.
-            //.with_boundaries(vec![0, 100, 200, 300, 400, 500, 1000, 2000, 5000, 50000])
+            .with_boundaries(LATENCY_MS_BOUNDARIES.to_vec())
             .build();
         let db_size = observer
             .meter
@@ -165,34 +198,40 @@ impl Metrics {
             .u64_histogram("db_init_latency")
             .with_description("Latency of Icing database initialization.")
             .with_unit("ms")
+            .with_boundaries(LATENCY_MS_BOUNDARIES.to_vec())
             .build();
         let db_cleanup_latency = observer
             .meter
             .u64_histogram("db_cleanup_latency")
             .with_description("Latency of expired memories cleanup operation.")
             .with_unit("ms")
+            .with_boundaries(LATENCY_MS_BOUNDARIES.to_vec())
             .build();
         let db_cleanup_count = observer
             .meter
             .u64_histogram("db_cleanup_count")
             .with_description("Number of expired memories cleaned up during cleanup operation.")
+            .with_boundaries(COUNT_BOUNDARIES.to_vec())
             .build();
         let db_persist_latency = observer
             .meter
             .u64_histogram("db_persist_latency")
             .with_description("Latency of persisting the database.")
             .with_unit("ms")
+            .with_boundaries(LATENCY_MS_BOUNDARIES.to_vec())
             .build();
         let db_persist_latency_with_retries = observer
             .meter
             .u64_histogram("db_persist_latency_with_retries")
             .with_description("Latency of persisting the database including all retry attempts.")
             .with_unit("ms")
+            .with_boundaries(LATENCY_MS_BOUNDARIES.to_vec())
             .build();
         let db_persist_attempts = observer
             .meter
             .u64_histogram("db_persist_attempts")
             .with_description("Number of attempts before metadata persist succeeds.")
+            .with_boundaries(COUNT_BOUNDARIES.to_vec())
             .build();
         let db_connect_retries = observer
             .meter
@@ -235,30 +274,35 @@ impl Metrics {
             .u64_histogram("db_optimize_latency")
             .with_description("Latency of optimizing the database.")
             .with_unit("ms")
+            .with_boundaries(LATENCY_MS_BOUNDARIES.to_vec())
             .build();
         let db_save_speed = observer
             .meter
             .u64_histogram("db_save_speed")
             .with_description("Speed of saving the database.")
             .with_unit("KB/ms")
+            .with_boundaries(SPEED_KB_PER_MS_BOUNDARIES.to_vec())
             .build();
         let db_load_speed = observer
             .meter
             .u64_histogram("db_load_speed")
             .with_description("Speed of loading the database.")
             .with_unit("KB/ms")
+            .with_boundaries(SPEED_KB_PER_MS_BOUNDARIES.to_vec())
             .build();
         let key_sync_db_fetch_latency = observer
             .meter
             .u64_histogram("key_sync_db_fetch_latency")
             .with_description("Latency of fetching metadata blob from external DB.")
             .with_unit("ms")
+            .with_boundaries(LATENCY_MS_BOUNDARIES.to_vec())
             .build();
         let key_sync_decrypt_latency = observer
             .meter
             .u64_histogram("key_sync_decrypt_latency")
             .with_description("Latency of decrypting the database.")
             .with_unit("ms")
+            .with_boundaries(LATENCY_MS_BOUNDARIES.to_vec())
             .build();
 
         let db_rebase_operation_failures = observer
