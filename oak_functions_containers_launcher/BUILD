@@ -97,6 +97,7 @@ rust_test(
     # Tracking: b/5034099
     flaky = True,
     shard_count = 5,
+    tags = ["manual"],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_client",
