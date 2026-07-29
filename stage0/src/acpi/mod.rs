@@ -100,8 +100,11 @@ pub fn setup_high_allocator(zero_page: &mut ZeroPage) -> Result<(), &'static str
                     && entry.size() >= HIGH_MEM_SIZE
             })
             .ok_or("could not find memory for ACPI tables")?;
-        let mem_end = core::cmp::min(0x4000_0000, entry.addr() + entry.size());
-        mem_end - HIGH_MEM_SIZE
+        let mem_end = core::cmp::min(0x4000_0000, entry.end());
+        let Some(mem_start) = mem_end.checked_sub(HIGH_MEM_SIZE) else {
+            return Err("ACPI memory region too small to reserve HIGH_MEM_SIZE");
+        };
+        mem_start
     };
     // reserve the memory for ACPI tables
     zero_page.insert_e820_entry(BootE820Entry::new(mem_start, HIGH_MEM_SIZE, E820EntryType::ACPI));

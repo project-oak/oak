@@ -570,7 +570,11 @@ impl BootE820Entry {
     }
 
     pub fn end(&self) -> usize {
-        self.addr + self.size
+        // addr and size may come directly from a hypervisor-supplied E820
+        // table; use saturating arithmetic so a malicious/malformed entry
+        // clamps to usize::MAX instead of wrapping to a small value that
+        // looks like a valid (but wrong) address to every caller.
+        self.addr.saturating_add(self.size)
     }
 }
 
