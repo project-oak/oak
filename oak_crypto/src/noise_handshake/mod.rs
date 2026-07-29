@@ -256,23 +256,26 @@ impl UnorderedCrypter {
         if nonce_value < lowest_acceptable_nonce {
             return Err(Error::InvalidNonce);
         }
-        // Nonce is within the window, check for replayed nonces.
-        else if nonce_value >= lowest_acceptable_nonce && nonce_value <= self.furthest_read_nonce
-        {
-            if self.buffered_read_nonces.contains(&nonce_value) {
-                return Err(Error::ReplayedNonce);
-            }
-            self.buffered_read_nonces.insert(nonce_value);
+        // Nonce is within the window and was already used, reject it. Nonces
+        // above `furthest_read_nonce` are never buffered, so this covers the
+        // whole window.
+        if self.buffered_read_nonces.contains(&nonce_value) {
+            return Err(Error::ReplayedNonce);
         }
+        // The nonce travels next to the ciphertext and is not covered by the
+        // AEAD tag, so the window is only moved once the message is known to be
+        // authentic. Recording it earlier would let anyone who can put a packet
+        // on the wire mark a nonce as used or ratchet the window forward.
+        let plaintext = aes_gcm_256_decrypt(&self.read_key, nonce, ciphertext)?;
         // Nonce is greater than the furthest seen so far.
-        else {
+        if nonce_value > self.furthest_read_nonce {
             self.furthest_read_nonce = nonce_value;
             // Retain only buffered nonces in the new window span.
             let new_lowest_acceptable_nonce = self.get_lowest_acceptable_read_nonce();
             self.buffered_read_nonces.retain(|&n| n >= new_lowest_acceptable_nonce);
-            self.buffered_read_nonces.insert(nonce_value);
         }
-        aes_gcm_256_decrypt(&self.read_key, nonce, ciphertext)
+        self.buffered_read_nonces.insert(nonce_value);
+        Ok(plaintext)
     }
 }
 
