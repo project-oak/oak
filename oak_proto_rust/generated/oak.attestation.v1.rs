@@ -1995,6 +1995,18 @@ pub struct EventAttestationResults {
         ::prost::alloc::string::String,
         ::prost::alloc::vec::Vec<u8>,
     >,
+    /// Validity window bounding how long this event's result can be relied upon,
+    /// derived from the endorsement(s) appraised by the policy that produced it.
+    /// When a policy verifies multiple endorsements, this is the intersection of
+    /// their validity windows: `not_before` is the latest of the endorsements'
+    /// `not_before` and `not_after` is the earliest of their `not_after`. The
+    /// result must not be relied upon after `valid.not_after`.
+    ///
+    /// This field is optional: it is up to each policy whether to populate it. It
+    /// may be absent when no endorsement-derived validity applies (e.g. all
+    /// reference values were Skip or raw digests).
+    #[prost(message, optional, tag = "2")]
+    pub valid: ::core::option::Option<super::super::Validity>,
 }
 /// Details about the endorsement statement which can be passed across FFI
 /// boundaries.

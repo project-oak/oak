@@ -137,6 +137,7 @@ mod tests {
                     ]
                     .into_iter()
                     .collect::<BTreeMap<String, Vec<u8>>>(),
+                    ..Default::default()
                 },
                 EventAttestationResults {
                     artifacts: [
@@ -145,11 +146,13 @@ mod tests {
                     ]
                     .into_iter()
                     .collect::<BTreeMap<String, Vec<u8>>>(),
+                    ..Default::default()
                 },
                 EventAttestationResults {
                     artifacts: [("id_5".to_string(), b"artifact_5".to_vec())]
                         .into_iter()
                         .collect::<BTreeMap<String, Vec<u8>>>(),
+                    ..Default::default()
                 },
             ],
             ..Default::default()

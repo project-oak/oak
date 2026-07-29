@@ -76,6 +76,18 @@ message EventAttestationResults {
   // An example of an artifact could be a encryption public key recorded in the
   // event and signed by the evidence.
   map<string, bytes> artifacts = 1;
+
+  // Validity window bounding how long this event's result can be relied upon,
+  // derived from the endorsement(s) appraised by the policy that produced it.
+  // When a policy verifies multiple endorsements, this is the intersection of
+  // their validity windows: `not_before` is the latest of the endorsements'
+  // `not_before` and `not_after` is the earliest of their `not_after`. The
+  // result must not be relied upon after `valid.not_after`.
+  //
+  // This field is optional: it is up to each policy whether to populate it. It
+  // may be absent when no endorsement-derived validity applies (e.g. all
+  // reference values were Skip or raw digests).
+  oak.Validity valid = 2;
 }
 
 // Details about the endorsement statement which can be passed across FFI
