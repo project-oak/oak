@@ -17,7 +17,10 @@ use alloc::{boxed::Box, vec};
 
 use crate::{
     identity_key::{IdentityKey, IdentityKeyHandle},
-    noise_handshake::{client::HandshakeInitiator, respond_kk, respond_nk, respond_nn},
+    noise_handshake::{
+        NONCE_LEN, SYMMETRIC_KEY_LEN, UnorderedCrypter, client::HandshakeInitiator, error::Error,
+        respond_kk, respond_nk, respond_nn,
+    },
 };
 
 #[test]
@@ -208,5 +211,63 @@ fn process_nn_handshake() {
         let ciphertext = enclave_crypter.encrypt(message).unwrap();
         let plaintext = client_crypter.decrypt(&ciphertext).unwrap();
         assert_eq!(message, &plaintext);
+    }
+}
+
+/// Regression test: `UnorderedCrypter` must not update its replay state from
+/// a message it has not authenticated.
+///
+/// The nonce is carried next to the ciphertext and is not covered by the AEAD
+/// tag, so anyone able to put a packet on the wire chooses it. Before the fix
+/// the window was advanced and the nonce recorded as used before
+/// `aes_gcm_256_decrypt` ran, so a forged packet reserved a nonce: the genuine
+/// message that later arrived with that nonce was rejected as a replay.
+#[test]
+fn unordered_crypter_forged_message_does_not_consume_nonce() {
+    let key_1 = &[42u8; SYMMETRIC_KEY_LEN];
+    let key_2 = &[52u8; SYMMETRIC_KEY_LEN];
+    let mut sender = UnorderedCrypter::new(key_2, key_1, 8);
+    let mut receiver = UnorderedCrypter::new(key_1, key_2, 8);
+
+    let (ciphertext, nonce) = sender.encrypt(b"genuine payload").unwrap();
+    let nonce: [u8; NONCE_LEN] = nonce.try_into().expect("unexpected nonce length");
+
+    // Same nonce, ciphertext that does not authenticate.
+    let forged = vec![0u8; ciphertext.len()];
+    assert!(matches!(receiver.decrypt(&nonce, &forged), Err(Error::DecryptFailed)));
+
+    // The genuine message must still be accepted.
+    let plaintext = receiver
+        .decrypt(&nonce, &ciphertext)
+        .expect("genuine message rejected after a forged message reused its nonce");
+    assert_eq!(plaintext, b"genuine payload");
+}
+
+/// Regression test: a forged message with a far-future nonce must not ratchet
+/// the replay window past the messages that are still in flight.
+#[test]
+fn unordered_crypter_forged_message_does_not_advance_window() {
+    let key_1 = &[42u8; SYMMETRIC_KEY_LEN];
+    let key_2 = &[52u8; SYMMETRIC_KEY_LEN];
+    let mut sender = UnorderedCrypter::new(key_2, key_1, 8);
+    let mut receiver = UnorderedCrypter::new(key_1, key_2, 8);
+
+    let mut in_flight = vec![];
+    for message in [b"one".as_slice(), b"two".as_slice(), b"three".as_slice()] {
+        let (ciphertext, nonce) = sender.encrypt(message).unwrap();
+        let nonce: [u8; NONCE_LEN] = nonce.try_into().expect("unexpected nonce length");
+        in_flight.push((message, ciphertext, nonce));
+    }
+
+    // A single unauthenticated packet claiming a nonce far ahead of the sender.
+    let mut far_ahead = [0u8; NONCE_LEN];
+    far_ahead[NONCE_LEN - 4..].copy_from_slice(&1_000_000u32.to_be_bytes());
+    assert!(matches!(receiver.decrypt(&far_ahead, &[0u8; 48]), Err(Error::DecryptFailed)));
+
+    for (message, ciphertext, nonce) in &in_flight {
+        let plaintext = receiver
+            .decrypt(nonce, ciphertext)
+            .expect("genuine message dropped after a forged message moved the window");
+        assert_eq!(&plaintext, message);
     }
 }
