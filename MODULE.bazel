@@ -896,9 +896,21 @@ crate.spec(
         "elf32",
         "elf64",
         "endian_fd",
+        "std",
     ],
     package = "goblin",
-    repositories = ALL_REPOSITORIES,
+    repositories = ALL_STD,
+    version = "0.8.2",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "elf32",
+        "elf64",
+        "endian_fd",
+    ],
+    package = "goblin",
+    repositories = ALL_NO_STD,
     version = "0.8.2",
 )
 crate.spec(
