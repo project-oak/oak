@@ -244,7 +244,9 @@ impl Policy<[u8]> for TransparentLayer2Policy {
             // Iterate over reference values to validate the evidence.
             let mut verified = false;
             for ref_val in &ref_values {
-                if let Ok(expected) = acquire_mpm_expected_values(
+                // TODO: b/526968864 - use the validity window returned here in the attestation
+                // results.
+                if let Ok((expected, _validity)) = acquire_mpm_expected_values(
                     verification_time.into_unix_millis(),
                     Some(matching_endorsement),
                     ref_val,

@@ -939,11 +939,19 @@ fn acquire_kernel_expected_values(
     }
 }
 
+// Verifies an MPM ("Multi-Package Manifest") endorsement and returns the
+// parsed attachment together with the endorsement's validity window, if
+// present.
+//
+// The validity is read from the verified in-toto statement
+// (`statement.predicate.validity`) and converted into the proto
+// [`oak.Validity`](oak_proto_rust::oak::Validity) It is `None` when the
+// endorsement carries no validity.
 fn acquire_verified_mpm_attachment(
     now_utc_millis: i64,
     signed_endorsement: &SignedEndorsement,
     ref_value: &EndorsementReferenceValue,
-) -> anyhow::Result<MpmAttachment> {
+) -> anyhow::Result<(MpmAttachment, Option<oak_proto_rust::oak::Validity>)> {
     let statement = verify_endorsement(now_utc_millis, signed_endorsement, ref_value)
         .context("verifying mpm endorsement")?;
     if !is_mpm_type(&statement) {
@@ -958,37 +966,53 @@ fn acquire_verified_mpm_attachment(
     statement.validate_subject(&endorsement.subject)?;
     let decoded = MpmAttachment::decode(&*endorsement.subject)
         .map_err(|_| anyhow::anyhow!("couldn't parse mpm attachment"))?;
-    Ok(decoded)
+    let validity = statement.predicate.validity.as_ref().map(|v| v.into());
+    Ok((decoded, validity))
 }
 
+// Appraises an MPM reference value and returns the expected version(s) along
+// with the validity window derived from the endorsement, if any.
+//
+// Only the endorsement-backed variant carries a validity window; `Skip` and
+// inline `Versions` reference values contribute no validity (`None`), and
+// therefore impose no constraint on the aggregate validity of the result.
 pub(crate) fn acquire_mpm_expected_values(
     now_utc_millis: i64,
     signed_endorsement: Option<&SignedEndorsement>,
     reference_value: &MpmReferenceValue,
-) -> anyhow::Result<TextExpectedValue> {
+) -> anyhow::Result<(TextExpectedValue, Option<oak_proto_rust::oak::Validity>)> {
     match reference_value.r#type.as_ref() {
-        Some(mpm_reference_value::Type::Skip(_)) => Ok(TextExpectedValue {
-            r#type: Some(text_expected_value::Type::Skipped(VerificationSkipped {})),
-        }),
+        Some(mpm_reference_value::Type::Skip(_)) => Ok((
+            TextExpectedValue {
+                r#type: Some(text_expected_value::Type::Skipped(VerificationSkipped {})),
+            },
+            None,
+        )),
         Some(mpm_reference_value::Type::Endorsement(ref_value)) => {
-            let mpm_attachment = acquire_verified_mpm_attachment(
+            let (mpm_attachment, validity) = acquire_verified_mpm_attachment(
                 now_utc_millis,
                 signed_endorsement.context("endorsement not found")?,
                 ref_value,
             )
             .context("getting verified mpm attachment")?;
 
-            Ok(TextExpectedValue {
-                r#type: Some(text_expected_value::Type::StringLiterals(ExpectedStringLiterals {
-                    value: vec![mpm_attachment.package_version],
-                })),
-            })
+            Ok((
+                TextExpectedValue {
+                    r#type: Some(text_expected_value::Type::StringLiterals(
+                        ExpectedStringLiterals { value: vec![mpm_attachment.package_version] },
+                    )),
+                },
+                validity,
+            ))
         }
-        Some(mpm_reference_value::Type::Versions(version_ids)) => Ok(TextExpectedValue {
-            r#type: Some(text_expected_value::Type::StringLiterals(ExpectedStringLiterals {
-                value: version_ids.versions.clone(),
-            })),
-        }),
+        Some(mpm_reference_value::Type::Versions(version_ids)) => Ok((
+            TextExpectedValue {
+                r#type: Some(text_expected_value::Type::StringLiterals(ExpectedStringLiterals {
+                    value: version_ids.versions.clone(),
+                })),
+            },
+            None,
+        )),
         None => Err(anyhow::anyhow!("empty mpm reference value")),
     }
 }
@@ -1081,6 +1105,24 @@ fn to_expected_digests(source: &[RawDigest], claim_validity: Option<&Validity>) 
             digests: source.to_vec(),
             valid: claim_validity.map(|cv| cv.into()),
         })),
+    }
+}
+
+// Extracts the endorsement-derived validity window carried by an
+// [`ExpectedDigests`], if any.
+//
+// For skipped verification or raw digests without an associated endorsement
+// this returns `None`, meaning the digests impose no constraint on the
+// aggregate validity window of the policy's result.
+// TODO: b/526968864 - remove `allow(dead_code)` once the transparent policies
+// consume this in a subsequent step of the endorsement-validity work.
+#[allow(dead_code)]
+pub(crate) fn expected_digests_validity(
+    digests: &ExpectedDigests,
+) -> Option<&oak_proto_rust::oak::Validity> {
+    match digests.r#type.as_ref() {
+        Some(expected_digests::Type::Digests(raw)) => raw.valid.as_ref(),
+        _ => None,
     }
 }
 
