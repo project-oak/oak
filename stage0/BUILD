@@ -64,6 +64,50 @@ rust_library(
     ],
 )
 
+# Test-only variant of `stage0` that links the fixed-key `stage0_dice`.
+# Never use in production.
+rust_library(
+    name = "stage0_fixed_key",
+    testonly = True,
+    srcs = glob(["src/**"]),
+    crate_name = "oak_stage0",
+    target_compatible_with = any_platform([
+        "//:x86_64-none-setting",
+        "//:x86_64-none-no_avx-setting",
+        "@platforms//os:linux",  # Needed for unit testing.
+    ]),
+    deps = [
+        "//oak_attestation",
+        "//oak_attestation_types",
+        "//oak_core",
+        "//oak_dice",
+        "//oak_hal",
+        "//oak_linux_boot_params",
+        "//oak_proto_rust",
+        "//sev_serial",
+        "//stage0_dice:stage0_dice_fixed_key",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:bitflags",
+        "@oak_crates_index//:coset",
+        "@oak_crates_index//:elf",
+        "@oak_crates_index//:hex",
+        "@oak_crates_index//:hkdf",
+        "@oak_crates_index//:linked_list_allocator",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:p256",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:rand_core",
+        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:spinning_top",
+        "@oak_crates_index//:static_assertions",
+        "@oak_crates_index//:strum",
+        "@oak_crates_index//:x86_64",
+        "@oak_crates_index//:zerocopy",
+        "@oak_crates_index//:zeroize",
+    ],
+)
+
 rust_library(
     name = "stage0_for_test",
     srcs = glob(["src/**"]),

@@ -32,6 +32,7 @@ use p256::{
 };
 use rand_core::OsRng;
 use sha2::Sha256;
+use zeroize::Zeroize;
 
 /// Length of the unique ID for ECDSA keys generated.
 pub const KEY_ID_LENGTH: usize = 20;
@@ -121,9 +122,25 @@ pub fn derive_kem_public_key_id(public_key_bytes: &[u8]) -> [u8; KEY_ID_LENGTH] 
     result
 }
 
-/// Generates private/public ECDSA key pair.
+/// Generates a random private/public ECDSA key pair.
 pub fn generate_ecdsa_key_pair() -> (SigningKey, VerifyingKey) {
     let private_key = SigningKey::random(&mut OsRng);
+    let public_key = VerifyingKey::from(&private_key);
+    (private_key, public_key)
+}
+
+/// Constructs an ECDSA key pair from the raw 32-byte private scalar `bytes`.
+///
+/// This is intended for deterministically deriving a *fixed*, known key for
+/// testing.
+///
+/// Production code that needs a fresh key must use [`generate_ecdsa_key_pair`]
+/// instead.
+pub fn ecdsa_key_pair_from_bytes(mut bytes: [u8; 32]) -> (SigningKey, VerifyingKey) {
+    let field_bytes = FieldBytes::from(bytes);
+    let private_key = SigningKey::from_bytes(&field_bytes).expect("invalid ECDSA private scalar");
+    // Erase the transient copy of the raw key bytes from the stack.
+    bytes.zeroize();
     let public_key = VerifyingKey::from(&private_key);
     (private_key, public_key)
 }

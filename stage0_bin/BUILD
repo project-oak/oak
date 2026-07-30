@@ -58,6 +58,42 @@ objcopy(
     target_compatible_with = ["@platforms//cpu:x86_64"],
 )
 
+# Test-only variant built with the fixed-key stage0 chain.
+# Never use in production.
+rust_binary(
+    name = "insecure_stage0_bin_elf_fixed_key",
+    testonly = True,
+    srcs = glob(["src/**/*.rs"]),
+    compile_data = [
+        "src/asm/boot.s",
+        "src/asm/ap_boot.s",
+        "src/asm/reset_vector.s",
+    ],
+    linker_script = ":layout.ld",
+    platform = "//:x86_64-firmware",
+    rustc_flags = [
+        "--codegen=opt-level=z",
+        "--codegen=lto=fat",
+        "--codegen=link-arg=-Wl,--defsym=BIOS_SIZE=512K",
+        "--codegen=relocation-model=static",
+        "--codegen=link-arg=-static",
+        "--codegen=link-arg=-Wl,-static",
+    ],
+    tags = ["no-clippy"],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    deps = [
+        "//stage0:stage0_fixed_key",
+        "//stage0_sev:stage0_sev_fixed_key",
+    ],
+)
+
+objcopy(
+    name = "insecure_stage0_bin_fixed_key",
+    testonly = True,
+    src = ":insecure_stage0_bin_elf_fixed_key",
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+)
+
 genrule(
     name = "subjects",
     srcs = [

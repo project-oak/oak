@@ -46,3 +46,30 @@ rust_library(
         "@oak_crates_index//:zeroize",
     ],
 )
+
+# Test-only variant that uses a fixed key.
+# Never use in production.
+rust_library(
+    name = "stage0_sev_fixed_key",
+    testonly = True,
+    srcs = glob(["src/**/*.rs"]),
+    crate_name = "oak_stage0_sev",
+    deps = [
+        "//oak_attestation",
+        "//oak_core",
+        "//oak_dice",
+        "//oak_hal",
+        "//oak_linux_boot_params",
+        "//oak_sev_guest",
+        "//oak_sev_snp_attestation_report",
+        "//stage0:stage0_fixed_key",
+        "//stage0_dice:stage0_dice_fixed_key",
+        "@oak_crates_index//:hex",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:spinning_top",
+        "@oak_crates_index//:x86_64",
+        "@oak_crates_index//:zerocopy",
+        "@oak_crates_index//:zeroize",
+    ],
+)

@@ -20,7 +20,7 @@
 //! pulling in the global allocator and attestation hardware attestation
 //! retrieval logic of the stage0 crate.
 
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
 extern crate alloc;
 
@@ -32,13 +32,14 @@ use alloc::{
 use coset::CborSerializable;
 use hkdf::Hkdf;
 use oak_dice::{
-    cert::{generate_ecdsa_key_pair, verifying_key_to_cose_key},
+    cert::verifying_key_to_cose_key,
     evidence::{STAGE0_MAGIC, Stage0DiceData, TeePlatform},
 };
 use oak_proto_rust::oak::attestation::v1::{
     CertificateAuthority, DiceData, Evidence, RootLayerEvidence,
 };
 use oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
+use p256::ecdsa::{SigningKey, VerifyingKey};
 use prost::Message;
 use sha2::{Digest, Sha256};
 use zerocopy::{FromZeros, IntoBytes};
@@ -78,6 +79,33 @@ pub fn dice_data_proto_to_stage0_dice_data(
             .copy_from_slice(eca_private_key);
     }
     Ok(result)
+}
+
+#[cfg(not(feature = "fixed_root_key"))]
+fn generate_ecdsa_key_pair() -> (SigningKey, VerifyingKey) {
+    oak_dice::cert::generate_ecdsa_key_pair()
+}
+
+/// Derives the raw 32-byte scalar of the fixed stage0 root ECA signing key.
+///
+/// # Security
+///
+/// This returns a **fixed, well-known** private key and is therefore only
+/// suitable for testing.
+#[cfg(feature = "fixed_root_key")]
+fn generate_ecdsa_key_pair() -> (SigningKey, VerifyingKey) {
+    use zeroize::Zeroize;
+
+    // Seed hashed to derive the fixed stage0 root ECA key. Changing this value
+    // changes the key, and any test that searches memory for it must be updated.
+    const STAGE0_ROOT_ECA_KEY_SEED: &[u8] = b"oak stage0 root eca fixed test signing key seed v1";
+    let mut hasher = Sha256::new();
+    hasher.update(STAGE0_ROOT_ECA_KEY_SEED);
+    let mut bytes = [0u8; 32];
+    hasher.finalize_into((&mut bytes).into());
+    let key_pair = oak_dice::cert::ecdsa_key_pair_from_bytes(bytes);
+    bytes.zeroize();
+    key_pair
 }
 
 /// Generates the initial DICE data that can be used as the starting state for a
@@ -211,4 +239,26 @@ pub fn encode_stage0_transparent_event(
         STAGE0_TRANSPARENT_TAG,
         "type.googleapis.com/oak.attestation.v1.Stage0TransparentMeasurements",
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use googletest::prelude::*;
+    use sha2::{Digest, Sha256};
+
+    use super::*;
+
+    #[googletest::test]
+    #[cfg(feature = "fixed_root_key")]
+    fn generate_ecdsa_key_pair_returns_fixed_key() -> Result<()> {
+        // Independently recompute the expected fixed private-key scalar from the
+        // same seed used by `generate_ecdsa_key_pair`.
+        let mut hasher = Sha256::new();
+        hasher.update(b"oak stage0 root eca fixed test signing key seed v1");
+        let expected = hasher.finalize();
+
+        let (signing_key, _verifying_key) = generate_ecdsa_key_pair();
+
+        verify_that!(signing_key.to_bytes().as_slice(), eq(expected.as_slice()))
+    }
 }
