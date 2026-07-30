@@ -14,6 +14,19 @@
 // limitations under the License.
 //
 
+//! A minimal test kernel used by the stage0 integration tests.
+//!
+//! After booting it prints a `boot successful` marker on the serial port. Its
+//! subsequent behaviour depends on the `keep_alive` crate feature:
+//!
+//! * without `keep_alive` (the default): it triple-faults immediately, causing
+//!   QEMU to exit. This is convenient for smoke tests that just capture the
+//!   serial output and wait for the process to terminate.
+//! * with `keep_alive`: it halts forever, keeping the guest alive so a test
+//!   harness has a stable window to inspect guest memory (for example via the
+//!   QEMU monitor `dump-guest-memory` command) once stage0 has handed control
+//!   to the kernel. The harness is expected to terminate the VM when done.
+
 #![no_std]
 #![no_main]
 
@@ -22,7 +35,9 @@ use core::{cell::OnceCell, fmt::Write, panic::PanicInfo};
 use oak_linux_boot_params::BootParams;
 use spinning_top::Spinlock;
 use uart_16550::SerialPort;
-use x86_64::instructions::{hlt, interrupts::int3};
+use x86_64::instructions::hlt;
+#[cfg(not(feature = "keep_alive"))]
+use x86_64::instructions::interrupts::int3;
 
 // Base I/O port for the first serial port in the system
 static SERIAL_BASE: u16 = 0x3f8;
@@ -40,21 +55,37 @@ pub extern "C" fn rust64_start(_rdi: u64, _rsi: &BootParams) -> ! {
         })
         .unwrap();
 
+    // Signal that stage0 has finished and handed control to the kernel. A test
+    // harness may wait for this marker before inspecting the guest.
     writeln!(serial.get_mut().unwrap(), "boot successful").unwrap();
-    abort();
+    drop(serial);
+
+    exit();
 }
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     log::error!("{}", info);
-    abort();
+    exit();
 }
 
-fn abort() -> ! {
-    // Trigger a breakpoint exception. As we don't have a #BP handler, this will
-    // triple fault and terminate the program.
+/// Terminates the guest by triple-faulting.
+///
+/// Triggers a breakpoint exception; as there is no `#BP` handler this escalates
+/// to a triple fault, which terminates the program and makes QEMU exit.
+#[cfg(not(feature = "keep_alive"))]
+fn exit() -> ! {
     int3();
 
+    loop {
+        hlt();
+    }
+}
+
+/// Keeps the guest alive by halting forever, so its memory can be inspected by
+/// a test harness. The harness is expected to terminate the VM when done.
+#[cfg(feature = "keep_alive")]
+fn exit() -> ! {
     loop {
         hlt();
     }

@@ -62,3 +62,10 @@ kernel_bzimage_and_measurements(
     target_compatible_with = ["@platforms//cpu:x86_64"],
     visibility = ["//stage0:__subpackages__"],
 )
+
+kernel_bzimage_and_measurements(
+    name = "stage0_dump_test_kernel",
+    payload = "//stage0/testing:dump_test_kernel",
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    visibility = ["//stage0:__subpackages__"],
+)

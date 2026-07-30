@@ -40,6 +40,26 @@ rust_binary(
     ],
 )
 
+rust_binary(
+    name = "dump_test_kernel",
+    srcs = [
+        "test_kernel.rs",
+    ],
+    crate_features = ["keep_alive"],
+    linker_script = "//oak_restricted_kernel:layout.ld",
+    # Use `firmware` instead of `unknown-none` as we don't set up SSE/AVX.
+    platform = "//:x86_64-firmware",
+    tags = ["no-clippy"],
+    deps = [
+        "//oak_linux_boot_params",
+        "//oak_restricted_kernel:bootstrap",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:spinning_top",
+        "@oak_crates_index//:uart_16550",
+        "@oak_crates_index//:x86_64",
+    ],
+)
+
 rust_test(
     name = "stage0_kernel_test",
     srcs = [
