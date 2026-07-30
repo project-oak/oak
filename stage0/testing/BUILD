@@ -76,3 +76,23 @@ rust_test(
         "@oak_crates_index//:which",
     ],
 )
+
+rust_test(
+    name = "stage0_key_handling_test",
+    srcs = [
+        "key_handling_test.rs",
+    ],
+    data = [
+        "//oak_restricted_kernel_wrapper:stage0_dump_test_kernel_bin",
+        "//stage0_bin:insecure_stage0_bin_fixed_key",
+    ],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    deps = [
+        "//oak_dice",
+        "//oak_file_utils",
+        "@oak_crates_index//:goblin",
+        "@oak_crates_index//:googletest",
+        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:which",
+    ],
+)
