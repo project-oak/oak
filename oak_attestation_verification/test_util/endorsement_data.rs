@@ -131,7 +131,7 @@ impl EndorsementData {
                     keys: [endorser_key].to_vec(),
                     ..Default::default()
                 }),
-                required_claims: Some(ClaimReferenceValue { claim_types: vec![] }),
+                required_claims: Some(ClaimReferenceValue { claims: vec![], ..Default::default() }),
                 tlog: Some(TLogReferenceValues {
                     strategy: Some(
                         oak_proto_rust::oak::attestation::v1::t_log_reference_values::Strategy::All(
@@ -306,7 +306,7 @@ impl EndorsementData {
                     keys: [endorser_verifying_key].to_vec(),
                     ..Default::default()
                 }),
-                required_claims: Some(ClaimReferenceValue { claim_types: vec![] }),
+                required_claims: Some(ClaimReferenceValue { claims: vec![], ..Default::default() }),
                 tlog: Some(TLogReferenceValues {
                     strategy: Some(
                         oak_proto_rust::oak::attestation::v1::t_log_reference_values::Strategy::All(

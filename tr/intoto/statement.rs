@@ -31,7 +31,10 @@ use oak_digest::{
     DigestSet, hex_to_raw_digest, hex_to_set_digest, is_hex_digest_match, raw_digest_from_contents,
     raw_to_hex_digest, set_to_hex_digest,
 };
-use oak_proto_rust::oak::{HexDigest, attestation::v1::EndorsementDetails};
+use oak_proto_rust::oak::{
+    HexDigest,
+    attestation::v1::{ClaimReferenceValue, EndorsementDetails},
+};
 use oak_time::Instant;
 use serde::{Deserialize, Serialize};
 
@@ -86,10 +89,13 @@ impl TryFrom<&oak_proto_rust::oak::Validity> for Validity {
 }
 
 // A single claim about the endorsement subject.
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize, Default, Clone)]
 pub struct Claim {
     /// The type of the claim as URI.
     pub r#type: String,
+
+    #[serde(default, skip_serializing_if = "alloc::collections::BTreeMap::is_empty")]
+    pub annotations: alloc::collections::BTreeMap<String, String>,
 }
 
 /// The predicate part of an endorsement subject.
@@ -155,7 +161,10 @@ pub fn make_statement(
         predicate: DefaultPredicate {
             issued_on,
             validity: Some(Validity { not_before, not_after }),
-            claims: claim_types.iter().map(|x| Claim { r#type: x.to_string() }).collect(),
+            claims: claim_types
+                .iter()
+                .map(|x| Claim { r#type: x.to_string(), annotations: Default::default() })
+                .collect(),
         },
     }
 }
@@ -189,7 +198,7 @@ impl DefaultStatement {
         &self,
         digest: Option<HexDigest>,
         verification_time: Instant,
-        required_claims: &[&str],
+        required_claims: &ClaimReferenceValue,
     ) -> anyhow::Result<()> {
         self.validate_header()?;
         if let Some(d) = digest {
@@ -215,7 +224,12 @@ impl DefaultStatement {
 /// Checks that the endorsement predicate is valid, based on timestamp and
 /// required claims.
 impl DefaultPredicate {
-    pub fn validate(&self, current_time: Instant, required_claims: &[&str]) -> anyhow::Result<()> {
+    #[allow(deprecated)]
+    pub fn validate(
+        &self,
+        current_time: Instant,
+        required_claims: &ClaimReferenceValue,
+    ) -> anyhow::Result<()> {
         match &self.validity {
             Some(validity) => {
                 if current_time < validity.not_before {
@@ -228,11 +242,26 @@ impl DefaultPredicate {
             None => anyhow::bail!("the validity field is not set"),
         }
 
-        for claim_type in required_claims {
-            self.claims
-                .iter()
-                .find(|k| &k.r#type == claim_type)
-                .context("required claim type not found")?;
+        if !required_claims.claims.is_empty() {
+            for req_claim in &required_claims.claims {
+                let matched = self.claims.iter().any(|claim| {
+                    claim.r#type == req_claim.r#type
+                        && req_claim
+                            .annotations
+                            .iter()
+                            .all(|(k, v)| claim.annotations.get(k) == Some(v))
+                });
+                ensure!(matched, "required claim not found: {:?}", req_claim);
+            }
+        } else {
+            // TODO: b/549066505 - Remove fallback to deprecated `claim_types` once clients
+            // have transitioned to `claims`.
+            for claim_type in &required_claims.claim_types {
+                self.claims
+                    .iter()
+                    .find(|k| &k.r#type == claim_type)
+                    .context("required claim type not found")?;
+            }
         }
 
         Ok(())

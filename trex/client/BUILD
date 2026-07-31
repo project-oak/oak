@@ -32,6 +32,7 @@ rust_library(
         "//tr/endorscope",
         "//tr/intoto",
         "//tr/rekor",
+        "//tr/verify_endorsement",
         "//trex/cosign_util",
         "//util/digest:oak_digest",
         "@oak_crates_index//:anyhow",

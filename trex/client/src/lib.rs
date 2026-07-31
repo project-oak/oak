@@ -56,6 +56,7 @@ use async_trait::async_trait;
 use intoto::statement::DefaultStatement;
 use oak_digest::Digest;
 use oak_time::Instant;
+use verify_endorsement::create_claim_reference_value;
 
 pub mod cosign;
 pub mod fs;
@@ -287,13 +288,13 @@ impl EndorsementVerifier {
         let statement: DefaultStatement = intoto::statement::parse_statement(endorsement_bytes)
             .context("parsing endorsement statement")?;
 
-        let claim_refs: Vec<&str> = required_claims.iter().map(|s| s.as_str()).collect();
+        let claim_reqs = create_claim_reference_value(required_claims);
 
         // Validate the statement (subject match, validity period, claims).
         // Statement::validate expects `digest: Option<HexDigest>`, so we
         // convert via the From<Digest> for HexDigest impl.
         statement
-            .validate(Some(subject_digest.clone().into()), valid_at, &claim_refs)
+            .validate(Some(subject_digest.clone().into()), valid_at, &claim_reqs)
             .context("validating endorsement statement")?;
 
         Ok(statement)

@@ -157,11 +157,31 @@ message TLogReferenceValues {
   PesReferenceValue pes = 7;
 }
 
-// Specifies a list of claim types. Claims are assertions about artifacts made
-// by the endorsing entity. An overview of the claims maintained by Oak can be
-// found at: https://github.com/project-oak/oak/tree/main/docs/tr/claim
+// Represents an endorsement claim, specifying its type and optional
+// annotations.
+message Claim {
+  // The string identifying the claim type (typically a URI).
+  string type = 1;
+
+  // Key-value pairs containing metadata annotations associated with the claim.
+  map<string, string> annotations = 2;
+}
+
+// Specifies reference values for verifying required claims.
+// For each required claim, verification asserts that there exists at least one
+// claim in the endorsement statement matching the claim type and all specified
+// key-value annotations. Claims are assertions about artifacts made by the
+// endorsing entity. An overview of the claims maintained by Oak can be found
+// at: https://github.com/project-oak/oak/tree/main/docs/tr/claim
 message ClaimReferenceValue {
-  repeated string claim_types = 1;
+  // Deprecated: Use claims instead.
+  // TODO: b/549066505 - Remove deprecated `claim_types` field once clients have
+  // transitioned to `claims`.
+  repeated string claim_types = 1 [deprecated = true];
+
+  // Claims (including types and optional annotations) required to be present in
+  // the endorsement statement.
+  repeated Claim claims = 2;
 }
 
 // Verifies the transparency log entry, including signatures and the digest.

@@ -29,10 +29,10 @@ use intoto::statement::{DefaultStatement, parse_statement};
 use key_util::{convert_pem_to_raw, verify_signature};
 use oak_digest::{raw_digest_from_contents, raw_to_hex_digest};
 use oak_proto_rust::oak::attestation::v1::{
-    C2sptLogProofReferenceValue, ClaimReferenceValue, Endorsement, EndorsementReferenceValue,
-    KeyType, Signature, SignedEndorsement, SkipVerification, TLogReferenceValues, VerifyingKey,
-    VerifyingKeyReferenceValue, VerifyingKeySet, endorsement::Format, t_log_reference_values,
-    verifying_key_reference_value,
+    C2sptLogProofReferenceValue, Claim, ClaimReferenceValue, Endorsement,
+    EndorsementReferenceValue, KeyType, Signature, SignedEndorsement, SkipVerification,
+    TLogReferenceValues, VerifyingKey, VerifyingKeyReferenceValue, VerifyingKeySet,
+    endorsement::Format, t_log_reference_values, verifying_key_reference_value,
 };
 use oak_time::Instant;
 use rekor::log_entry::{Body, LogEntry, verify_rekor_log_entry};
@@ -81,6 +81,20 @@ pub fn create_signed_endorsement(
     }
 }
 
+/// Creates a `ClaimReferenceValue` from a collection of claim type strings.
+pub fn create_claim_reference_value<T: AsRef<str>>(
+    claim_types: impl IntoIterator<Item = T>,
+) -> ClaimReferenceValue {
+    let claims = claim_types
+        .into_iter()
+        .map(|claim_type| Claim {
+            r#type: claim_type.as_ref().into(),
+            annotations: Default::default(),
+        })
+        .collect();
+    ClaimReferenceValue { claims, ..Default::default() }
+}
+
 /// Creates an `EndorsementReferenceValue` from ingredients.
 pub fn create_endorsement_reference_value(
     endorser_key: VerifyingKey,
@@ -89,7 +103,7 @@ pub fn create_endorsement_reference_value(
 ) -> EndorsementReferenceValue {
     EndorsementReferenceValue {
         endorser: Some(VerifyingKeySet { keys: [endorser_key].to_vec(), ..Default::default() }),
-        required_claims: Some(ClaimReferenceValue { claim_types }),
+        required_claims: Some(create_claim_reference_value(claim_types)),
         tlog: Some(tlog),
         ..Default::default()
     }
@@ -187,14 +201,13 @@ pub fn verify_endorsement(
     let statement =
         parse_statement(&endorsement.serialized).context("parsing endorsement statement")?;
     let current_time = Instant::from_unix_millis(now_utc_millis);
-    let claims: Vec<&str> = required_claims.claim_types.iter().map(|x| &**x).collect();
     let subject_digest = if endorsement.subject.is_empty() {
         None
     } else {
         Some(raw_to_hex_digest(&raw_digest_from_contents(&endorsement.subject)))
     };
     statement
-        .validate(subject_digest, current_time, &claims)
+        .validate(subject_digest, current_time, required_claims)
         .context("validating endorsement statement")?;
 
     if let Some(tlog) = ref_value.tlog.as_ref() {
@@ -1283,7 +1296,7 @@ mod tests {
 
         let ref_value = EndorsementReferenceValue {
             endorser: Some(VerifyingKeySet { keys: vec![endorser_key], ..Default::default() }),
-            required_claims: Some(ClaimReferenceValue { claim_types: vec![] }),
+            required_claims: Some(create_claim_reference_value(Vec::<String>::new())),
             tlog: Some(TLogReferenceValues {
                 strategy: Some(t_log_reference_values::Strategy::All(())),
                 rekor: Some(VerifyingKeySet { keys: vec![rekor_key], ..Default::default() }),
@@ -1472,5 +1485,16 @@ mod tests {
         let verifying_key = p256::ecdsa::VerifyingKey::from(&signing_key);
         let public_key_der = verifying_key.to_public_key_der().unwrap().to_vec();
         (signing_key, public_key_der)
+    }
+
+    #[test]
+    fn test_create_claim_reference_value() {
+        let claim_types = vec!["claim_type_1".to_string(), "claim_type_2".to_string()];
+        let ref_value = create_claim_reference_value(&claim_types);
+        assert_eq!(ref_value.claims.len(), 2);
+        assert_eq!(ref_value.claims[0].r#type, "claim_type_1");
+        assert!(ref_value.claims[0].annotations.is_empty());
+        assert_eq!(ref_value.claims[1].r#type, "claim_type_2");
+        assert!(ref_value.claims[1].annotations.is_empty());
     }
 }

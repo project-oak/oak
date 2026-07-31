@@ -30,6 +30,7 @@ use oak_digest::Digest;
 use oak_time_std::instant::now;
 use oci_client::{Client, client::ClientConfig, secrets::RegistryAuth};
 use oci_spec::distribution::Reference;
+use verify_endorsement::create_claim_reference_value;
 
 use crate::flags::{Claims, read_pem_file};
 
@@ -75,9 +76,9 @@ impl VerifyCommand {
         let typed_hash = self.image.digest().context("missing digest in OCI reference")?;
         let digest = Digest::from_typed_hash(typed_hash)?;
 
-        let claims: Vec<&str> = claims_vec.iter().map(|s| s.as_str()).collect();
+        let claim_reference_value = create_claim_reference_value(&claims_vec);
         statement
-            .validate(Some(digest.into()), now(), &claims)
+            .validate(Some(digest.into()), now(), &claim_reference_value)
             .context("validating endorsement statement")?;
 
         println!("Endorsement verified successfully for image {}", self.image);

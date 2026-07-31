@@ -1098,13 +1098,38 @@ pub mod t_log_reference_values {
         Any(()),
     }
 }
-/// Specifies a list of claim types. Claims are assertions about artifacts made
-/// by the endorsing entity. An overview of the claims maintained by Oak can be
-/// found at: <https://github.com/project-oak/oak/tree/main/docs/tr/claim>
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+/// Represents an endorsement claim, specifying its type and optional
+/// annotations.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Claim {
+    /// The string identifying the claim type (typically a URI).
+    #[prost(string, tag = "1")]
+    pub r#type: ::prost::alloc::string::String,
+    /// Key-value pairs containing metadata annotations associated with the claim.
+    #[prost(btree_map = "string, string", tag = "2")]
+    pub annotations: ::prost::alloc::collections::BTreeMap<
+        ::prost::alloc::string::String,
+        ::prost::alloc::string::String,
+    >,
+}
+/// Specifies reference values for verifying required claims.
+/// For each required claim, verification asserts that there exists at least one
+/// claim in the endorsement statement matching the claim type and all specified
+/// key-value annotations. Claims are assertions about artifacts made by the
+/// endorsing entity. An overview of the claims maintained by Oak can be found
+/// at: <https://github.com/project-oak/oak/tree/main/docs/tr/claim>
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ClaimReferenceValue {
+    /// Deprecated: Use claims instead.
+    /// TODO: b/549066505 - Remove deprecated `claim_types` field once clients have
+    /// transitioned to `claims`.
+    #[deprecated]
     #[prost(string, repeated, tag = "1")]
     pub claim_types: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// Claims (including types and optional annotations) required to be present in
+    /// the endorsement statement.
+    #[prost(message, repeated, tag = "2")]
+    pub claims: ::prost::alloc::vec::Vec<Claim>,
 }
 /// Verifies the transparency log entry, including signatures and the digest.
 /// NEXT_ID: 7

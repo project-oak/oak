@@ -548,13 +548,24 @@ fn serialize_tlog_reference_values(instance: &TLogReferenceValues) -> serde_json
     result
 }
 
+fn serialize_claim(instance: &Claim) -> serde_json::Value {
+    let Claim { r#type, annotations } = instance;
+    json!({
+        "type": r#type,
+        "annotations": annotations,
+    })
+}
+
 fn serialize_claim_reference_value(instance: &ClaimReferenceValue) -> serde_json::Value {
     // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
     // all fields. If a new field is added to the struct, this code won't
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
+    #[allow(deprecated)]
+    let ClaimReferenceValue { claim_types, claims } = instance;
     json!({
-       "claim_types": instance.claim_types
+       "claim_types": claim_types,
+       "claims": claims.iter().map(serialize_claim).collect::<Vec<_>>(),
     })
 }
 

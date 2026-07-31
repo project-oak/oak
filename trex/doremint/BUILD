@@ -28,6 +28,7 @@ rust_binary(
         "//oak_time",
         "//oak_time:oak_time_std",
         "//tr/intoto",
+        "//tr/verify_endorsement",
         "//trex/client",
         "//trex/cosign_util",
         "//util/digest:oak_digest",
