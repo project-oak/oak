@@ -17,10 +17,11 @@
 use oak_private_memory_database::database::Database;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use tonic::transport::Channel;
+use zeroize::Zeroizing;
 
 /// The state for each client connection.
 pub struct UserSessionContext {
-    pub dek: Vec<u8>,
+    pub dek: Zeroizing<Vec<u8>>,
     pub uid: String,
 
     pub database: Database,

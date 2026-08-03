@@ -36,6 +36,7 @@ use sealed_memory_rust_proto::{
     prelude::v1::*,
 };
 use tonic::transport::Channel;
+use zeroize::Zeroize;
 
 #[async_trait]
 pub trait Transport {
@@ -274,27 +275,31 @@ pub trait PrivateMemoryAppClient {
         pm_uid: &str,
         kek: &[u8],
     ) -> Result<user_registration_response::Status> {
-        let request = UserRegistrationRequest {
+        let mut request = UserRegistrationRequest {
             pm_uid: pm_uid.to_string(),
             key_encryption_key: kek.to_vec(),
             boot_strap_info: Some(KeyDerivationInfo::default()),
         };
-        let response =
-            self.invoke(sealed_memory_request::Request::UserRegistrationRequest(request)).await?;
-        match response {
+        let response = self
+            .invoke(sealed_memory_request::Request::UserRegistrationRequest(request.clone()))
+            .await;
+        request.key_encryption_key.zeroize();
+        match response? {
             sealed_memory_response::Response::UserRegistrationResponse(resp) => Ok(resp.status()),
             _ => Err(anyhow!("unexpected response type for user registration")),
         }
     }
 
     async fn key_sync(&mut self, pm_uid: &str, kek: &[u8]) -> Result<key_sync_response::Status> {
-        let request = KeySyncRequest {
+        let mut request = KeySyncRequest {
             pm_uid: pm_uid.to_string(),
             key_encryption_key: kek.to_vec(),
             session_config: None,
         };
-        let response = self.invoke(sealed_memory_request::Request::KeySyncRequest(request)).await?;
-        match response {
+        let response =
+            self.invoke(sealed_memory_request::Request::KeySyncRequest(request.clone())).await;
+        request.key_encryption_key.zeroize();
+        match response? {
             sealed_memory_response::Response::KeySyncResponse(resp) => Ok(resp.status()),
             _ => Err(anyhow!("unexpected response type for key sync")),
         }
@@ -498,27 +503,31 @@ impl AsyncPrivateMemoryClient {
         pm_uid: &str,
         kek: &[u8],
     ) -> Result<user_registration_response::Status> {
-        let request = UserRegistrationRequest {
+        let mut request = UserRegistrationRequest {
             pm_uid: pm_uid.to_string(),
             key_encryption_key: kek.to_vec(),
             boot_strap_info: Some(KeyDerivationInfo::default()),
         };
-        let response =
-            self.invoke(sealed_memory_request::Request::UserRegistrationRequest(request)).await?;
-        match response {
+        let response = self
+            .invoke(sealed_memory_request::Request::UserRegistrationRequest(request.clone()))
+            .await;
+        request.key_encryption_key.zeroize();
+        match response? {
             sealed_memory_response::Response::UserRegistrationResponse(resp) => Ok(resp.status()),
             _ => Err(anyhow!("unexpected response type for user registration")),
         }
     }
 
     async fn key_sync(&mut self, pm_uid: &str, kek: &[u8]) -> Result<key_sync_response::Status> {
-        let request = KeySyncRequest {
+        let mut request = KeySyncRequest {
             pm_uid: pm_uid.to_string(),
             key_encryption_key: kek.to_vec(),
             session_config: None,
         };
-        let response = self.invoke(sealed_memory_request::Request::KeySyncRequest(request)).await?;
-        match response {
+        let response =
+            self.invoke(sealed_memory_request::Request::KeySyncRequest(request.clone())).await;
+        request.key_encryption_key.zeroize();
+        match response? {
             sealed_memory_response::Response::KeySyncResponse(resp) => Ok(resp.status()),
             _ => Err(anyhow!("unexpected response type for key sync")),
         }

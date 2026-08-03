@@ -205,6 +205,7 @@ rust_library(
         "@oak_crates_index//:futures",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:tonic",
+        "@oak_crates_index//:zeroize",
     ],
 )
 

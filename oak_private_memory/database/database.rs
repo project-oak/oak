@@ -22,6 +22,7 @@ use prost::Message;
 use prost_types::Timestamp;
 use rand::Rng;
 use sealed_memory_rust_proto::prelude::v1::*;
+use zeroize::Zeroizing;
 
 use crate::{
     IcingTempDir, MemoryId,
@@ -52,7 +53,7 @@ pub struct Database {
 impl Database {
     pub fn new(
         database: IcingMetaDatabase,
-        dek: Vec<u8>,
+        dek: Zeroizing<Vec<u8>>,
         db_client: ExternalDbClient,
         key_derivation_info: KeyDerivationInfo,
         initial_size: usize,

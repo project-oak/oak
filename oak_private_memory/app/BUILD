@@ -58,6 +58,7 @@ rust_library(
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",
+        "@oak_crates_index//:zeroize",
         "@pm_crates//:rand",
     ],
 )

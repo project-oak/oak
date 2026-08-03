@@ -35,6 +35,7 @@ use tokio::{
     time::Instant,
 };
 use tonic::transport::Channel;
+use zeroize::Zeroizing;
 
 use crate::{
     IntoTonicResult, context::UserSessionContext, db_client::SharedDbClient,
@@ -417,7 +418,7 @@ impl SealedMemorySessionHandler {
     async fn setup_user_session_context(
         &self,
         uid: String,
-        dek: Vec<u8>,
+        dek: Zeroizing<Vec<u8>>,
         key_derivation_info: KeyDerivationInfo,
         mut db_client: SealedMemoryDatabaseServiceClient<Channel>,
         disable_persistence_on_close: bool,
@@ -473,7 +474,7 @@ impl SealedMemorySessionHandler {
             "boot_strap_info (KeyDerivationInfo) not set in UserRegistrationRequest",
         )?;
 
-        let key = request.key_encryption_key;
+        let key = Zeroizing::new(request.key_encryption_key);
         let uid = request.pm_uid;
 
         if !Self::is_valid_key(&key) {
@@ -512,9 +513,8 @@ impl SealedMemorySessionHandler {
         info!("Registering new user: {}", uid);
 
         // Generate a 256-bit key for the user.
-        let mut dek = [0u8; 32];
-        rand::rng().fill(&mut dek);
-        let dek: Vec<u8> = dek.into();
+        let mut dek = Zeroizing::new(vec![0u8; 32]);
+        rand::rng().fill(dek.as_mut_slice());
         let nonce = generate_nonce();
         let wrapped_key = EncryptedDataBlob {
             data: encrypt(&key, &nonce, &dek, b"")
@@ -553,7 +553,7 @@ impl SealedMemorySessionHandler {
         if request.key_encryption_key.is_empty() || request.pm_uid.is_empty() {
             return Ok(KeySyncResponse { status: key_sync_response::Status::InvalidPmUid.into() });
         }
-        let key = request.key_encryption_key;
+        let key = Zeroizing::new(request.key_encryption_key);
         let uid = request.pm_uid;
         if !Self::is_valid_key(&key) {
             return Ok(KeySyncResponse { status: key_sync_response::Status::InvalidKey.into() });
@@ -568,7 +568,7 @@ impl SealedMemorySessionHandler {
             .await
             .into_internal_error("Failed to get DB client for key sync")?;
         let key_derivation_info;
-        let dek: Vec<u8>;
+        let dek: Zeroizing<Vec<u8>>;
 
         if let Some(data_blob) = db_client
             .get_unencrypted_blob(&uid, true)
@@ -590,7 +590,7 @@ impl SealedMemorySessionHandler {
                 .clone()
                 .into_internal_error("Empty wrapped dek")?;
             dek = if let Ok(dek) = decrypt(&key, &wrapped_dek.nonce, &wrapped_dek.data, b"") {
-                dek
+                Zeroizing::new(dek)
             } else {
                 self.metrics.inc_decrypt_dek_failures();
                 return Ok(KeySyncResponse {

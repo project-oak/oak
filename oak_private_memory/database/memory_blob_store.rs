@@ -20,17 +20,18 @@ use log::warn;
 use prost::Message;
 use prost_types::Timestamp;
 use sealed_memory_rust_proto::prelude::v1::*;
+use zeroize::Zeroizing;
 
 /// Handles encrypting, decrypting, and storing Memory objects in the external
 /// database. Each memory is serialized, encrypted with AES-GCM using the
 /// session DEK, and stored as a blob.
 pub(crate) struct MemoryBlobStore {
     db_client: ExternalDbClient,
-    dek: Vec<u8>,
+    dek: Zeroizing<Vec<u8>>,
 }
 
 impl MemoryBlobStore {
-    pub fn new(db_client: ExternalDbClient, dek: Vec<u8>) -> Self {
+    pub fn new(db_client: ExternalDbClient, dek: Zeroizing<Vec<u8>>) -> Self {
         Self { db_client, dek }
     }
 
