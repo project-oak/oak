@@ -23,6 +23,9 @@ use x86_64::{PhysAddr, VirtAddr};
 use crate::{Measured, fw_cfg::FwCfg};
 
 unsafe extern "C" {
+    #[link_name = "stack_end"]
+    unsafe static STACK_END_POINTER: c_void;
+
     #[link_name = "stack_start"]
     static BOOT_STACK_POINTER: c_void;
 }
@@ -136,15 +139,35 @@ impl Kernel {
     ) -> ! {
         unsafe {
             core::arch::asm!(
-                // Boot stack pointer
-                "mov {1}, %rsp",
-                // Zero page address
-                "mov {2}, %rsi",
+                // Disable interrupts: we are about to wipe the very stack we run
+                // on, so an interrupt firing mid-wipe (pushing onto a stack being
+                // zeroed) would corrupt its own frame.
+                "cli",
+                "xor %eax, %eax",
+                // Zero the short-term heap
+                "mov %r10, %rdi", // start of heap
+                "mov %r11, %rcx", // end of heap
+                "sub %r10, %rcx", // size = end - start
+                "rep stosb",
+                // Zero the boot stack
+                "mov %r12, %rdi", // end of stack (stack grows down)
+                "mov %r13, %rcx", // start of stack
+                "sub %r12, %rcx", // size = start - end
+                "rep stosb",
+                // Reset the stack pointer.
+                "mov %r13, %rsp",
+                // Zero page address.
+                "mov %r9, %rsi",
                 // ...and away we go!
-                "jmp *{0}",
-                in(reg) self.entry().as_u64(),
-                in(reg) &BOOT_STACK_POINTER as *const _ as u64,
-                in(reg) Box::leak(zero_page),
+                "jmp *%r8",
+                // Pin every input to a fixed register so that `%rdi`, `%rcx` and
+                // `%rax` stay free as scratch for `rep stosb`.
+                in("r8") self.entry().as_u64(),
+                in("r9") Box::leak(zero_page),
+                in("r10") crate::allocator::HEAP_START.as_u64(),
+                in("r11") crate::allocator::HEAP_END.as_u64(),
+                in("r12") &STACK_END_POINTER as *const _ as u64,
+                in("r13") &BOOT_STACK_POINTER as *const _ as u64,
                 options(noreturn, att_syntax)
             );
         }

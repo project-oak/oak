@@ -36,6 +36,12 @@ use crate::{
     paging::{share_page, unshare_page},
 };
 
+/// Start of the short-term heap, just after TDX mailbox.
+pub const HEAP_START: VirtAddr = VirtAddr::new(0x10_3000);
+
+/// End of heap: size is 1 MiB - 3 * 4KiB pages.
+pub const HEAP_END: VirtAddr = VirtAddr::new(0x20_0000);
+
 struct Inner<const N: usize> {
     index: AtomicUsize,
     storage: MaybeUninit<[u8; N]>,
@@ -220,17 +226,11 @@ impl<T, A: Allocator, P: Platform> AsMut<T> for Shared<T, A, P> {
 }
 
 pub fn init_global_allocator(e820_table: &[BootE820Entry]) {
-    // Create the heap after the Mailbox
-    let start = VirtAddr::new(0x103000);
-    // stage0 stays below 2MiB. The heap size is 1MiB - 3 pages
-    let size = (0x10_0000 - 0x3000) as usize;
-    let end = start + size as u64;
-
     // Check that this range is backed by physical memory.
     if !e820_table.iter().any(|entry| {
         entry.entry_type() == Some(E820EntryType::RAM)
-            && entry.addr() as u64 <= start.as_u64()
-            && (entry.addr() + entry.size()) as u64 >= end.as_u64()
+            && entry.addr() as u64 <= HEAP_START.as_u64()
+            && (entry.addr() + entry.size()) as u64 >= HEAP_END.as_u64()
     }) {
         panic!("heap is not backed by physical memory");
     }
@@ -238,7 +238,9 @@ pub fn init_global_allocator(e820_table: &[BootE820Entry]) {
     // Safety: The memory between 1MiB and 2MiB is not used for anything else, and
     // we have checked that this range is backed by physical memory.
     unsafe {
-        crate::SHORT_TERM_ALLOC.lock().init(start.as_mut_ptr(), size);
+        crate::SHORT_TERM_ALLOC
+            .lock()
+            .init(HEAP_START.as_mut_ptr(), (HEAP_END - HEAP_START) as usize);
     }
 }
 

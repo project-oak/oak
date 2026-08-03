@@ -170,7 +170,8 @@ SECTIONS {
 
     /* Put the stack just below the EBDA, at the end of 512K. */
     .stack (0x80000 - STACK_SIZE) (NOLOAD) : {
-        . += STACK_SIZE;
+        stack_end = .;
+         . += STACK_SIZE;
         stack_start = .;
     } > ram_low : stack
 
