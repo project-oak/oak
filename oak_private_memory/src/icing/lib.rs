@@ -196,11 +196,26 @@ fn extract_directory_snapshot(target_dir: &Path, snapshot: &[u8]) -> Result<()> 
     archive.unpack(target_dir).context("unpacking directory snapshot")
 }
 
+/// The maximum length, in bytes, of a single indexed term.
+///
+/// Icing uses this as the normalizer's `max_term_byte_size` (see
+/// `icing-search-engine.cc`, where the normalizer is constructed), which
+/// truncates terms on both the indexing and the query side. Its default is 30
+/// bytes, which is far too small for the identifiers stored in
+/// `Plain`-tokenized properties (`memoryId`, `viewId`): two distinct ids
+/// sharing a 30-byte prefix would collapse to the same term and a lookup for
+/// one could return the other.
+///
+/// This is deliberately well below `int32::MAX`; very large values can exhaust
+/// Icing's lexicon and make indexing fail with `OUT_OF_SPACE`.
+const MAX_TOKEN_LENGTH: i32 = 4096;
+
 pub fn get_default_icing_options(base_dir: &str) -> IcingSearchEngineOptions {
     IcingSearchEngineOptions {
         enable_scorable_properties: Some(true),
         build_property_existence_metadata_hits: Some(true),
         base_dir: Some(base_dir.to_string()),
+        max_token_length: Some(MAX_TOKEN_LENGTH),
         ..Default::default()
     }
 }

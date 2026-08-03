@@ -48,3 +48,45 @@ The code always defines the latest schema in `create_schema()`. On import,
 automatically migrates the old data (adding new fields, re-indexing, etc.).
 Incompatible changes (renaming/removing fields, changing data types) cause
 `set_schema` to fail, which the `ensure!()` in `import()` catches.
+
+## Invariant: a query must match its property's tokenizer
+
+Indexed string properties do not all use the same tokenizer, and a query has to
+be written to match the one its property uses:
+
+| Property                         | Tokenizer  | Query form             |
+| -------------------------------- | ---------- | ---------------------- |
+| `name`, `tag`                    | `Verbatim` | quoted: `name:"foo"`   |
+| `memoryId`, `viewId`, `viewType` | `Plain`    | unquoted: `memoryId:x` |
+
+`Verbatim` terms are indexed **as-is**, skipping Icing's normalizer. `Plain`
+terms are put through it, which lower-cases them, splits them on separators and
+truncates them to `max_token_length`. The query side is normalized by the same
+normalizer, and quoting a value (with `VERBATIM_SEARCH` enabled) is what
+suppresses that.
+
+So the two sides have to agree, and **a mismatch fails silently** — the lookup
+returns "not found" rather than an error:
+
+- A `Verbatim` property queried unquoted has its query term normalized while the
+  index term was not, so a name longer than `max_token_length`, or one
+  containing a space or an upper-case letter, can never match. That is what
+  broke `GetMemoryByName` for the 31-byte `auris.explicit_deletion_tracker` in
+  <https://b/543257785>.
+- A `Plain` property queried quoted has the inverse problem.
+
+Do not hand-roll a property-equality query string. Use
+`build_property_equals_clause()`, passing the `Tokenizer` that matches
+`create_schema()`, and take `enabled_features` from `query_features()`.
+
+### `max_token_length`
+
+`MAX_TOKEN_LENGTH` in [`src/icing/lib.rs`](../src/icing/lib.rs) raises the
+normalizer's term limit from Icing's 30-byte default. It only affects `Plain`
+properties, and it is a correctness fix rather than a tuning knob: at 30 bytes,
+two ids sharing a 30-byte prefix normalize to the same term, so a lookup for one
+resolves to the other and returns the **wrong** memory's blob.
+
+Note that changing this value does not re-index existing data — it is an
+`IcingSearchEngineOptions` field, not part of the schema — so terms written
+before a change keep their old truncation.

@@ -338,6 +338,7 @@ pub fn calculate_memory_icing_size(memory: &Memory) -> anyhow::Result<usize> {
 
 #[derive(Debug, Default, PartialEq)]
 pub struct SearchResultId {
+    pub memory_id: MemoryId,
     pub blob_id: BlobId,
     pub view_ids: Vec<ViewId>,
     pub score: f32,
@@ -704,16 +705,12 @@ impl IcingMetaDatabase {
             bail!("Invalid page token provided");
         }
 
-        let query_str = build_non_expired_query_str(TAG_NAME, tag);
+        let query_str = build_non_expired_query_str(TAG_NAME, tag, Tokenizer::Verbatim);
         let search_spec = icing::SearchSpecProto {
             query: Some(query_str),
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
             schema_type_filters: vec![SCHEMA_NAME.to_string()],
-            enabled_features: vec![
-                "NUMERIC_SEARCH".to_string(),
-                icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
-                icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string(),
-            ],
+            enabled_features: query_features(),
             ..Default::default()
         };
         let scoring_spec = icing::ScoringSpecProto {
@@ -738,55 +735,44 @@ impl IcingMetaDatabase {
         Ok((blob_ids, next_page_token))
     }
 
+    /// Resolves a memory's `(memory_id, blob_id)` from its unique name.
+    ///
+    /// Implemented on top of the Search API v2 (`search_memories`) so that name
+    /// lookups and client-issued searches share one query-construction path;
+    /// the v1 hand-rolled queries are on their way out.
+    ///
+    /// Unlike the v1 lookups, v2 has no "not expired" predicate, so an expired
+    /// memory whose document is still resident is returned here. Expired
+    /// memories are deleted by `clean_expired_memories()` at key sync, so this
+    /// only differs from the old behaviour when that sweep failed, or when the
+    /// memory expired part way through a session.
     pub fn get_memory_metadata_by_name(
         &self,
         name: &str,
     ) -> anyhow::Result<Option<(MemoryId, BlobId)>> {
-        let query_str = build_non_expired_query_str(NAME_NAME, name);
-
-        let search_spec = icing::SearchSpecProto {
-            query: Some(query_str),
-            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
-            schema_type_filters: vec![SCHEMA_NAME.to_string()],
-            enabled_features: vec![
-                "NUMERIC_SEARCH".to_string(),
-                icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
-                icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string(),
-            ],
+        let request = SearchMemoriesRequest {
+            filter: Some(SearchMemoriesFilter {
+                value: Some(search_memories_filter::Value::NameFilter(StringFilter {
+                    value: name.to_string(),
+                })),
+            }),
+            // Names are unique, so ask for two: a second hit means the
+            // invariant has been violated and we want to report it rather than
+            // silently pick one.
+            page_size: 2,
             ..Default::default()
         };
 
-        let result_spec = icing::ResultSpecProto {
-            num_per_page: Some(2),
-            type_property_masks: vec![Self::create_memory_and_blob_id_projection(SCHEMA_NAME)],
-            ..Default::default()
-        };
+        let (results, _) = self.search_memories(&request)?;
 
-        let search_result: icing::SearchResultProto = self.icing_search_engine.search(
-            &search_spec,
-            &icing::get_default_scoring_spec(),
-            &result_spec,
-        )?;
-
-        if search_result
-            .status
-            .clone()
-            .context("get_memory_metadata_by_name search returned no status")?
-            .code
-            != Some(icing::status_proto::Code::Ok.into())
-        {
-            bail!("Icing search failed: {:?}", search_result.status);
+        if results.items.len() > 1 {
+            bail!(
+                "Two memories with the same name found: {:?}",
+                results.items.iter().map(|item| &item.memory_id).collect::<Vec<_>>()
+            )
         }
 
-        if search_result.results.is_empty() {
-            return Ok(None);
-        }
-
-        if search_result.results.len() > 1 {
-            bail!("Two memories with the same name found: {:?}", search_result.results)
-        }
-
-        Ok(search_result.results.first().and_then(Self::extract_metadata_from_doc))
+        Ok(results.items.into_iter().next().map(|item| (item.memory_id, item.blob_id)))
     }
 
     pub fn get_memory_by_name(&self, name: &str) -> anyhow::Result<Option<BlobId>> {
@@ -794,17 +780,13 @@ impl IcingMetaDatabase {
     }
 
     pub fn get_blob_id_by_memory_id(&self, memory_id: MemoryId) -> anyhow::Result<Option<BlobId>> {
-        let query_str = build_non_expired_query_str(MEMORY_ID_NAME, &memory_id);
+        let query_str = build_non_expired_query_str(MEMORY_ID_NAME, &memory_id, Tokenizer::Plain);
 
         let search_spec = icing::SearchSpecProto {
             query: Some(query_str),
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
             schema_type_filters: vec![SCHEMA_NAME.to_string()],
-            enabled_features: vec![
-                "NUMERIC_SEARCH".to_string(),
-                icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
-                icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string(),
-            ],
+            enabled_features: query_features(),
             ..Default::default()
         };
 
@@ -862,9 +844,10 @@ impl IcingMetaDatabase {
 
     fn get_view_ids_by_memory_id(&self, memory_id: MemoryId) -> anyhow::Result<Vec<ViewId>> {
         let search_spec = icing::SearchSpecProto {
-            query: Some(memory_id.clone()),
+            query: Some(build_property_equals_clause(MEMORY_ID_NAME, &memory_id, Tokenizer::Plain)),
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
             schema_type_filters: vec![LLM_VIEW_SCHEMA_NAME.to_string()],
+            enabled_features: query_features(),
             type_property_filters: vec![Self::create_search_filter(
                 LLM_VIEW_SCHEMA_NAME,
                 MEMORY_ID_NAME,
@@ -1191,10 +1174,7 @@ impl IcingMetaDatabase {
         let page_token = PageToken::try_from(request.page_token.clone())
             .map_err(|e| anyhow::anyhow!("invalid page token: {}", e))?;
 
-        let projection = icing::TypePropertyMask {
-            schema_type: Some(SCHEMA_NAME.to_string()),
-            paths: vec![BLOB_ID_NAME.to_string()],
-        };
+        let projection = Self::create_memory_and_blob_id_projection(SCHEMA_NAME);
 
         let limit = if request.limit > 0 { Some(request.limit) } else { None };
 
@@ -1211,9 +1191,10 @@ impl IcingMetaDatabase {
 
         let mut search_result_ids = SearchResultIds::default();
         for result in &search_result.results {
-            if let Some(blob_id) = Self::extract_blob_id_from_doc(result) {
+            if let Some((memory_id, blob_id)) = Self::extract_metadata_from_doc(result) {
                 let score = result.score.map(|s| s as f32).unwrap_or(0.0);
                 search_result_ids.items.push(SearchResultId {
+                    memory_id,
                     blob_id,
                     score,
                     view_ids: Vec::new(),
@@ -1304,7 +1285,11 @@ impl IcingMetaDatabase {
 
         let mut query_string = "semanticSearch(getEmbeddingParameter(0))".to_string();
         if !sort.view_type.is_empty() {
-            query_string = format!("({}:{}) AND {}", VIEW_TYPE_NAME, sort.view_type, query_string);
+            query_string = format!(
+                "{} AND {}",
+                build_property_equals_clause(VIEW_TYPE_NAME, &sort.view_type, Tokenizer::Plain),
+                query_string
+            );
         }
 
         search_spec.join_spec = Some(Box::new(icing::JoinSpecProto {
@@ -1322,7 +1307,9 @@ impl IcingMetaDatabase {
                         embedding.model_signature.as_str(),
                         &embedding.values,
                     )],
-                    enabled_features: vec![icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string()],
+                    enabled_features: vec![
+                icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
+            ],
                     ..Default::default()
                 })),
                 scoring_spec: Some(icing::ScoringSpecProto {
@@ -1431,9 +1418,15 @@ impl IcingMetaDatabase {
             }
         };
         match value {
-            Value::IdFilter(f) => self.build_string_filter_spec(MEMORY_ID_NAME, &f.value),
-            Value::NameFilter(f) => self.build_string_filter_spec(NAME_NAME, &f.value),
-            Value::TagsFilter(f) => self.build_string_filter_spec(TAG_NAME, &f.value),
+            Value::IdFilter(f) => {
+                self.build_string_filter_spec(MEMORY_ID_NAME, &f.value, Tokenizer::Plain)
+            }
+            Value::NameFilter(f) => {
+                self.build_string_filter_spec(NAME_NAME, &f.value, Tokenizer::Verbatim)
+            }
+            Value::TagsFilter(f) => {
+                self.build_string_filter_spec(TAG_NAME, &f.value, Tokenizer::Verbatim)
+            }
             Value::CreatedTimestampFilter(f) => {
                 self.build_time_filter_spec(CREATED_TIMESTAMP_NAME, f)
             }
@@ -1511,20 +1504,19 @@ impl IcingMetaDatabase {
 
     /// Build an Icing `SearchSpecProto` for an exact-match string property
     /// filter.
+    ///
+    /// `tokenizer` must match how `field_name` is indexed; see
+    /// [`build_property_equals_clause`].
     fn build_string_filter_spec(
         &self,
         field_name: &str,
         value: &str,
+        tokenizer: Tokenizer,
     ) -> anyhow::Result<icing::SearchSpecProto> {
-        let escaped_value = value.replace('"', "\\\"");
-        let query_string = format!("({field_name}:\"{escaped_value}\")");
+        let query_string = build_property_equals_clause(field_name, value, tokenizer);
         let search_spec = icing::SearchSpecProto {
             query: Some(query_string),
-            enabled_features: vec![
-                "NUMERIC_SEARCH".to_string(),
-                "VERBATIM_SEARCH".to_string(),
-                icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
-            ],
+            enabled_features: query_features(),
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
             schema_type_filters: vec![SCHEMA_NAME.to_string()],
             ..Default::default()
@@ -1547,7 +1539,11 @@ impl IcingMetaDatabase {
         let mut query_string =
             format!("semanticSearch(getEmbeddingParameter(0), {minimum_score}, 1)");
         if !view_type.is_empty() {
-            query_string = format!("({}:{}) AND {}", VIEW_TYPE_NAME, view_type, query_string);
+            query_string = format!(
+                "{} AND {}",
+                build_property_equals_clause(VIEW_TYPE_NAME, view_type, Tokenizer::Plain),
+                query_string
+            );
         }
 
         let search_spec = icing::SearchSpecProto {
@@ -1813,7 +1809,96 @@ impl IcingMetaDatabase {
     }
 }
 
-fn build_non_expired_query_str(property_name: &str, property_val: &str) -> String {
+/// How an indexed string property is tokenized by Icing.
+///
+/// This mirrors the `tokenizer_type` passed to `set_data_type_string` in
+/// [`IcingMetaDatabase::create_schema`] and **must** be kept in sync with it:
+/// the tokenizer decides how a query over the property has to be written, and
+/// a query that disagrees with the schema fails *silently*, returning "not
+/// found" rather than an error.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Tokenizer {
+    /// Indexed as-is, skipping the normalizer entirely (`name`, `tag`).
+    ///
+    /// Query values must be quoted, and the search must enable
+    /// `VERBATIM_SEARCH`, so that the query term is left equally untouched.
+    Verbatim,
+    /// Indexed through the plain-text normalizer, which lower-cases the value,
+    /// splits it on separators and truncates it to `max_token_length`
+    /// (`memoryId`, `viewId`, `viewType`).
+    ///
+    /// Query values must be left unquoted so that the query side is normalized
+    /// identically to the index side.
+    Plain,
+}
+
+/// Escapes a value for use inside a quoted Icing query string.
+///
+/// Inside a string literal Icing's lexer treats `\` as an escape character:
+/// it consumes the following character whatever it is, so an unescaped `"` in
+/// the value would close the literal early and the remainder would be parsed
+/// as query syntax. See `Lexer::ConsumeStringLiteral` in
+/// `icing/query/advanced_query_parser/lexer.cc`.
+///
+/// Both `\` and `"` therefore have to be escaped, and `\` must be escaped
+/// **first** — otherwise the backslash this function inserts in front of a `"`
+/// would itself get escaped, re-opening the same hole. Escaping only `"`
+/// leaves a value such as `foo\"bar` producing a syntax error, and makes any
+/// value containing a `\` fail to match.
+fn escape_query_value(value: &str) -> String {
+    value.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
+/// Builds an exact-equality clause for an indexed string property.
+///
+/// `tokenizer` must match how `property_name` is indexed in
+/// [`IcingMetaDatabase::create_schema`]. Getting it wrong does not raise an
+/// error, it just stops matching: a `Verbatim` property queried unquoted has
+/// its query term lower-cased, split on separators and truncated to 30 bytes,
+/// so it can never equal the untouched index term. That is what broke
+/// `GetMemoryByName` for the 31-byte name `auris.explicit_deletion_tracker` in
+/// <https://b/543257785>.
+///
+/// Searches containing a [`Tokenizer::Verbatim`] clause must also list
+/// `VERBATIM_SEARCH` in their `enabled_features`; use [`query_features`].
+fn build_property_equals_clause(
+    property_name: &str,
+    property_val: &str,
+    tokenizer: Tokenizer,
+) -> String {
+    match tokenizer {
+        Tokenizer::Verbatim => {
+            format!("({}:\"{}\")", property_name, escape_query_value(property_val))
+        }
+        Tokenizer::Plain => format!("({}:{})", property_name, property_val),
+    }
+}
+
+/// The `enabled_features` required by queries built with
+/// [`build_property_equals_clause`] and [`build_non_expired_query_str`].
+///
+/// `VERBATIM_SEARCH` is always enabled: it only changes how *quoted* terms are
+/// interpreted, so it is a no-op for [`Tokenizer::Plain`] clauses and there is
+/// no benefit to omitting it.
+fn query_features() -> Vec<String> {
+    vec![
+        "NUMERIC_SEARCH".to_string(),
+        "VERBATIM_SEARCH".to_string(),
+        icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
+        icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string(),
+    ]
+}
+
+/// Builds a query matching documents whose `property_name` equals
+/// `property_val` and which have not expired. An empty `property_val` matches
+/// every non-expired document.
+///
+/// `tokenizer` must match the schema; see [`build_property_equals_clause`].
+fn build_non_expired_query_str(
+    property_name: &str,
+    property_val: &str,
+    tokenizer: Tokenizer,
+) -> String {
     let now_ts = timestamp_to_i64(&system_time_to_timestamp(SystemTime::now()));
 
     // A memory is considered not expired if its expiration timestamp is in the
@@ -1827,7 +1912,11 @@ fn build_non_expired_query_str(property_name: &str, property_val: &str) -> Strin
         // If no property value specified, filter just for non expired memories.
         expiration_clause
     } else {
-        format!("({}:{}) AND ({})", property_name, property_val, expiration_clause)
+        format!(
+            "{} AND ({})",
+            build_property_equals_clause(property_name, property_val, tokenizer),
+            expiration_clause
+        )
     }
 }
 
@@ -2407,6 +2496,208 @@ mod tests {
 
         expect_that!(db.get_memory_by_name("memory_name")?, eq(&Some("blob_id".to_string())));
         expect_that!(db.get_memory_by_name("memory_name_wrong")?, eq(&None));
+        Ok(())
+    }
+
+    #[gtest]
+    fn escape_query_value_escapes_quotes_and_backslashes_test() {
+        expect_that!(escape_query_value("plain"), eq("plain"));
+        expect_that!(escape_query_value(r#"say "hi""#), eq(r#"say \"hi\""#));
+        expect_that!(escape_query_value(r"back\slash"), eq(r"back\\slash"));
+        // The backslash must be escaped before the quote, otherwise the
+        // backslash inserted in front of the quote would itself be escaped.
+        expect_that!(escape_query_value(r#"\""#), eq(r#"\\\""#));
+    }
+
+    /// Regression test for b/543257785: memory names that the plain tokenizer
+    /// splits or truncates (names longer than Icing's default 30-byte
+    /// `max_token_length`, or names containing separators such as spaces) were
+    /// silently not found, because the `name` property is indexed with the
+    /// `Verbatim` tokenizer but the lookup query did not quote the value nor
+    /// enable `VERBATIM_SEARCH`.
+    #[gtest]
+    fn icing_get_memory_by_name_non_tokenizable_names_test() -> anyhow::Result<()> {
+        let names = [
+            // 31 bytes: one over Icing's default `max_token_length` of 30.
+            "auris.explicit_deletion_tracker".to_string(),
+            "a".repeat(31),
+            "auris-explicit-deletion-tracker".to_string(),
+            "name with spaces".to_string(),
+        ];
+
+        for name in &names {
+            let mut db = IcingMetaDatabase::new(test_config())?;
+            db.add_memory(
+                &Memory { id: "id1".into(), name: name.clone(), ..Default::default() },
+                "blob1".into(),
+            )?;
+
+            expect_that!(
+                db.get_memory_by_name(name)?,
+                eq(&Some("blob1".to_string())),
+                "name: {name}"
+            );
+
+            // The name must also survive an export/import round trip, which is
+            // what happens between two requests hitting different sessions.
+            let exported = db.export()?.encode_to_vec();
+            drop(db);
+            let imported = IcingMetaDatabase::import(exported.as_slice(), test_config())?;
+            expect_that!(
+                imported.get_memory_by_name(name)?,
+                eq(&Some("blob1".to_string())),
+                "name after import: {name}"
+            );
+        }
+
+        // Two distinct names sharing their first 30 bytes must not collide.
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        let long_a = format!("{}_aaa", "x".repeat(28));
+        let long_b = format!("{}_bbb", "x".repeat(28));
+        db.add_memory(
+            &Memory { id: "ida".into(), name: long_a.clone(), ..Default::default() },
+            "bloba".into(),
+        )?;
+        db.add_memory(
+            &Memory { id: "idb".into(), name: long_b.clone(), ..Default::default() },
+            "blobb".into(),
+        )?;
+        expect_that!(db.get_memory_by_name(&long_a)?, eq(&Some("bloba".to_string())));
+        expect_that!(db.get_memory_by_name(&long_b)?, eq(&Some("blobb".to_string())));
+
+        Ok(())
+    }
+
+    /// Regression test for `MAX_TOKEN_LENGTH`: `memoryId` is `Plain`-tokenized,
+    /// so it is normalized by Icing's normalizer, which truncates every term to
+    /// `max_token_length` bytes. At the 30-byte default, two client-supplied
+    /// ids sharing a 30-byte prefix collapse to the same index term and a
+    /// lookup for one can resolve to the other — silently returning the wrong
+    /// memory. Both ids below share a 31-byte prefix.
+    #[gtest]
+    fn icing_get_blob_id_by_colliding_memory_id_prefix_test() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        // 31 bytes, so anything past it is lost at the 30-byte default. Dots
+        // and underscores do not split the token, so this stays a single term.
+        let shared_prefix = "memory.id.common.prefix.padding";
+        assert!(shared_prefix.len() > 30);
+        let id_a = format!("{shared_prefix}_a");
+        let id_b = format!("{shared_prefix}_b");
+
+        db.add_memory(
+            &mem_with_view(&id_a, &["tag"], "view_a", &[1.0, 0.0, 0.0]),
+            "blob_a".into(),
+        )?;
+        db.add_memory(
+            &mem_with_view(&id_b, &["tag"], "view_b", &[0.0, 1.0, 0.0]),
+            "blob_b".into(),
+        )?;
+
+        expect_that!(db.get_blob_id_by_memory_id(id_a.clone())?, eq(&Some("blob_a".to_string())));
+        expect_that!(db.get_blob_id_by_memory_id(id_b.clone())?, eq(&Some("blob_b".to_string())));
+
+        // Deleting one resolves its views by memoryId and must not take the
+        // other with it.
+        expect_that!(db.delete_memories(std::slice::from_ref(&id_a))?, len(eq(0)));
+        expect_that!(db.get_blob_id_by_memory_id(id_a)?, eq(&None));
+        expect_that!(db.get_blob_id_by_memory_id(id_b)?, eq(&Some("blob_b".to_string())));
+        Ok(())
+    }
+
+    /// `get_memory_by_name` is implemented on the Search API v2 path, which has
+    /// no "not expired" predicate, so an expired memory is still resolvable by
+    /// name until `clean_expired_memories()` sweeps it at key sync. This test
+    /// pins that accepted behaviour difference; contrast with
+    /// `icing_get_memories_by_tag_with_expiration_test`, which still uses a v1
+    /// query and does filter.
+    #[gtest]
+    fn icing_get_memory_by_name_returns_expired_memory_test() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        let past = SystemTime::now() - std::time::Duration::from_secs(3600);
+        db.add_memory(
+            &Memory {
+                id: "expired_id".into(),
+                name: "expired.memory".into(),
+                expiration_timestamp: Some(system_time_to_timestamp(past)),
+                ..Default::default()
+            },
+            "expired_blob".into(),
+        )?;
+
+        expect_that!(
+            db.get_memory_by_name("expired.memory")?,
+            eq(&Some("expired_blob".to_string()))
+        );
+        Ok(())
+    }
+
+    /// Names are client-supplied, so they can contain the two characters that
+    /// are significant inside an Icing string literal: `"` and `\`. Both must
+    /// survive a round trip through the quoted verbatim query.
+    #[gtest]
+    fn icing_get_memory_by_name_with_query_metacharacters_test() -> anyhow::Result<()> {
+        let names = [
+            r#"say "hi""#.to_string(),
+            r"back\slash".to_string(),
+            r#"trailing\"#.to_string(),
+            r#"quote"and\backslash"#.to_string(),
+            "paren(s) AND OR".to_string(),
+            "colon:separated".to_string(),
+        ];
+
+        for name in &names {
+            let mut db = IcingMetaDatabase::new(test_config())?;
+            db.add_memory(
+                &Memory { id: "id1".into(), name: name.clone(), ..Default::default() },
+                "blob1".into(),
+            )?;
+            expect_that!(
+                db.get_memory_by_name(name)?,
+                eq(&Some("blob1".to_string())),
+                "name: {name:?}"
+            );
+        }
+        Ok(())
+    }
+
+    /// A name must never be able to break out of its string literal and act as
+    /// query syntax: looking up a crafted name must not resolve to some other
+    /// memory.
+    #[gtest]
+    fn icing_get_memory_by_name_does_not_allow_query_injection_test() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        db.add_memory(
+            &Memory { id: "victim".into(), name: "secret".into(), ..Default::default() },
+            "secret_blob".into(),
+        )?;
+
+        // The third case defeats escaping that handles `"` but not `\`: the
+        // backslash escapes the backslash that was inserted in front of the
+        // quote, so the quote closes the literal and the rest becomes syntax.
+        for injection in [
+            r#"x" OR name:"secret"#,
+            r#"" OR name:"secret"#,
+            r#"x\" OR name:"secret"#,
+            "secret OR x",
+        ] {
+            expect_that!(db.get_memory_by_name(injection)?, eq(&None), "injection: {injection:?}");
+        }
+        Ok(())
+    }
+
+    /// Regression test for b/543257785: the same tokenization problem applies
+    /// to tags, which are also indexed with the `Verbatim` tokenizer.
+    #[gtest]
+    fn icing_get_memories_by_long_tag_test() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        let tag = "auris.some.very_long_tag_name.object1".to_string();
+        db.add_memory(
+            &Memory { id: "id1".into(), tags: vec![tag.clone()], ..Default::default() },
+            "blob1".into(),
+        )?;
+
+        let (blob_ids, _) = db.get_memories_by_tag(&tag, 10, PageToken::Start)?;
+        expect_that!(blob_ids, unordered_elements_are![eq(&"blob1".to_string())]);
         Ok(())
     }
 
