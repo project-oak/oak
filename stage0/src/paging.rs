@@ -16,6 +16,7 @@
 
 use alloc::boxed::Box;
 use core::{
+    ffi::c_void,
     marker::PhantomData,
     ops::{Index, IndexMut},
     pin::Pin,
@@ -34,6 +35,11 @@ use x86_64::{
 };
 
 use crate::{BOOT_ALLOC, BootAllocator, Platform, hal::PageAssignment};
+
+unsafe extern "C" {
+    #[link_name = "stack_guard_start"]
+    static STACK_GUARD_START: c_void;
+}
 
 /// The root page-map level 4 table coverting virtual memory ranges 0..128TiB
 /// and (16EiB-128TiB)..16EiB.
@@ -292,10 +298,17 @@ pub fn init_page_table_refs<P: Platform>() {
     // hypervisor as needed. We are using an identity mapping between virtual
     // and physical addresses.
     let mut pt_0 = Box::pin_in(PageTable::new(), &BOOT_ALLOC);
+    // Index of the 4KiB stack guard page within the first 2MiB.
+    let stack_guard_index =
+        (core::ptr::addr_of!(STACK_GUARD_START) as u64 / Size4KiB::SIZE) as usize;
     // Let entry 1 map to 4KiB, entry 2 to 8KiB, ... , entry 511 to 2MiB-4KiB:
     // We leave [0,4K) unmapped to make sure null pointer dereferences crash
-    // with a page fault.
+    // with a page fault, and the stack guard page unmapped to catch stack
+    // overflows.
     pt_0.iter_mut().enumerate().skip(1).for_each(|(i, entry)| {
+        if i == stack_guard_index {
+            return;
+        }
         entry.set_address::<P>(
             PhysAddr::new((i as u64) * Size4KiB::SIZE),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,

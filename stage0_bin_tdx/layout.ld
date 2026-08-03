@@ -51,6 +51,9 @@ HIDDEN(PAGE_PRESENT = 1 << 0);
 HIDDEN(PAGE_WRITABLE = 1 << 1);
 HIDDEN(PAGE_SIZE = 1 << 7);
 
+/* Size of the boot stack. */
+HIDDEN(STACK_SIZE = 128K);
+
 /* Gate descriptor flags */
 HIDDEN(DESCRIPTOR_PRESENT = 1 << 47);
 
@@ -313,9 +316,15 @@ SECTIONS {
     } > ram_low : data
     data_size = SIZEOF(.data);
 
+    /* Unmapped guard page directly below the stack. */
+    .stack_guard (0x80000 - STACK_SIZE - 4K) (NOLOAD) : {
+        stack_guard_start = .;
+        . += 4K;
+    } > ram_low : stack
+
     /* Put the stack just below the EBDA, at the end of 512K. */
-    .stack (0x80000 - 32K) (NOLOAD) : {
-        . += 32K;
+    .stack (0x80000 - STACK_SIZE) (NOLOAD) : {
+        . += STACK_SIZE;
         stack_start = .;
     } > ram_low : stack
 
