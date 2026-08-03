@@ -447,7 +447,7 @@ http_file(
     url = "https://storage.googleapis.com/oak-bins/binary/{}/stage0_bin_tdx/binary".format(STAGE0_BIN_TDX_COMMIT),
 )
 
-BASE_IMAGE_SHA256 = "989bd12b5bb7241f1e30c6d63f176291ae1b236bf650cf30cad8b3f33358ae41"
+BASE_IMAGE_SHA256 = "6339fb588264ab16dea217bb65f3a8acb319c7caff57e660d3aabc1cd30816d7"
 
 http_file(
     name = "oak_containers_system_image_base",
@@ -456,7 +456,7 @@ http_file(
     url = "https://storage.googleapis.com/oak-bins/base-image/{}.tar.xz".format(BASE_IMAGE_SHA256),
 )
 
-NVIDIA_BASE_IMAGE_SHA256 = "a08714eca57900c86dea992641210c7a18103b92c06b6c4d27b14da04029af2c"
+NVIDIA_BASE_IMAGE_SHA256 = "baaa58e6f8596be0ee59d709a252af424530c7928263287f1bda5ffb7270008b"
 
 http_file(
     name = "oak_containers_nvidia_system_image_base",

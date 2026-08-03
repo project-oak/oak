@@ -478,7 +478,7 @@
         "bzlTransitiveDigest": "IIspOFb2zj/H+Hcij9i5MHLFU9VOavZTaA+///L/76w=",
         "usagesDigest": "ffrD7viG/EiFoE/Z900CCeB39GTRKrpPHl2eqqG/Ynk=",
         "recordedFileInputs": {
-          "@@//MODULE.bazel": "d873adf9cd84a3292c4cfec7fcac283029eae4dcc174743bad74ac27a150747a"
+          "@@//MODULE.bazel": "96782e6b4550768829b722d33531208df2e5837ad0b316fe7b3c2d794338ebbb"
         },
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -1580,7 +1580,7 @@
     },
     "//oak_containers/kernel/internal:extensions.bzl%nix_kernels": {
       "general": {
-        "bzlTransitiveDigest": "YWKV1AYKNrXZGcZ3qtIZBsXzsRn60yT2AWb+6ducK2k=",
+        "bzlTransitiveDigest": "NlYK2w2nzKLe2V0adZ4FfERJtffPSykQionDfU5lzsA=",
         "usagesDigest": "vtyzP29/gt0xWJgt5Wv51vzEYbtKGEQ60+z3Po2JkKs=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -1604,7 +1604,7 @@
               "nix_file_deps": {
                 "@@//oak_containers/kernel:kernel-common.nix": "//oak_containers/kernel:kernel-common.nix",
                 "@@//oak_containers/kernel:kernel_version.txt": "//oak_containers/kernel:kernel_version.txt",
-                "@@//oak_containers/kernel/configs/6.12.95:minimal.config": "//oak_containers/kernel/configs/6.12.95:minimal.config"
+                "@@//oak_containers/kernel/configs/6.12.101:minimal.config": "//oak_containers/kernel/configs/6.12.101:minimal.config"
               },
               "nix_file_content": "",
               "repository": "@@+nix_kernels+nixpkgs//:nixpkgs",
@@ -1624,7 +1624,7 @@
               "nix_file_deps": {
                 "@@//oak_containers/kernel:kernel-common.nix": "//oak_containers/kernel:kernel-common.nix",
                 "@@//oak_containers/kernel:kernel_version.txt": "//oak_containers/kernel:kernel_version.txt",
-                "@@//oak_containers/kernel/configs/6.12.95:minimal.config": "//oak_containers/kernel/configs/6.12.95:minimal.config",
+                "@@//oak_containers/kernel/configs/6.12.101:minimal.config": "//oak_containers/kernel/configs/6.12.101:minimal.config",
                 "@@//oak_containers/kernel/patches:virtio-dma.patch": "//oak_containers/kernel/patches:virtio-dma.patch",
                 "@@//oak_containers/kernel/patches:tdx-probe-roms.patch": "//oak_containers/kernel/patches:tdx-probe-roms.patch",
                 "@@//oak_containers/kernel/patches:rtmr-enable.patch": "//oak_containers/kernel/patches:rtmr-enable.patch"
