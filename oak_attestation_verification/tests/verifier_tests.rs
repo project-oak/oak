@@ -1192,3 +1192,43 @@ fn forged_rk_application_event_is_detected() {
     let result = verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &d.reference_values);
     assert!(result.is_err(), "forged RK application event should be detected and rejected",);
 }
+
+// A peer that replaces the application key certificates with ones the DICE chain did not sign must
+// be rejected. The claims in these certificates are load-bearing: the Restricted Kernel
+// application-layer event digest is read out of the encryption certificate, and both application
+// public keys are read out of them, so accepting an unsigned certificate would let the peer choose
+// the attested application measurement and the keys the caller then binds its session to.
+#[test]
+fn verify_dice_chain_rejects_unsigned_application_key_certificates() {
+    use coset::{CborSerializable, CoseSign1};
+    use oak_attestation_verification::verifier::{EventLogType, verify_dice_chain};
+
+    let d = AttestationData::load_milan_rk_release();
+
+    // Baseline: the genuine evidence still verifies.
+    verify_dice_chain(&d.evidence, EventLogType::OriginalEventLog)
+        .expect("genuine evidence should verify");
+
+    for tamper_encryption_certificate in [true, false] {
+        let mut evidence = d.evidence.clone();
+        {
+            let application_keys =
+                evidence.application_keys.as_mut().expect("no application keys in evidence");
+            let certificate = if tamper_encryption_certificate {
+                &mut application_keys.encryption_public_key_certificate
+            } else {
+                &mut application_keys.signing_public_key_certificate
+            };
+            let mut parsed = CoseSign1::from_slice(certificate).expect("could not parse");
+            parsed.signature = vec![0u8; parsed.signature.len()];
+            *certificate = parsed.to_vec().expect("could not reserialize");
+        }
+
+        let result = verify_dice_chain(&evidence, EventLogType::OriginalEventLog);
+        assert!(
+            result.is_err(),
+            "application key certificate with an invalid signature should be rejected \
+             (tamper_encryption_certificate = {tamper_encryption_certificate})"
+        );
+    }
+}

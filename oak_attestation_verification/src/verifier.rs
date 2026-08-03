@@ -280,6 +280,44 @@ pub enum EventLogType {
 
 /// Verifies signatures of the certificates in the DICE chain and returns last
 /// layer's Certificate Authority key if the verification is successful.
+/// Verifies that both application key certificates are signed by `verifying_key`, which is the
+/// certificate authority key of the last DICE layer.
+///
+/// The claims inside these certificates are load-bearing: the application-layer event digest for
+/// the Restricted Kernel shape is read out of the encryption certificate by
+/// [`validate_events_and_layers`], and both application public keys are read out of them by
+/// `extract_evidence`. They must therefore be authenticated before any of their claims are used.
+fn verify_application_keys(
+    application_keys: &ApplicationKeys,
+    verifying_key: &VerifyingKey,
+) -> anyhow::Result<()> {
+    // Verify encryption certificate.
+    let encryption_cert =
+        coset::CoseSign1::from_slice(&application_keys.encryption_public_key_certificate)
+            .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption certificate"))?;
+    encryption_cert
+        .verify_signature(ADDITIONAL_DATA, |signature, contents| {
+            let sig = Signature::from_slice(signature)?;
+            verifying_key.verify(contents, &sig)
+        })
+        .map_err(|error| anyhow::anyhow!(error))
+        .context("verifying encryption certificate CWT signature")?;
+
+    // Verify signing certificate.
+    let signing_cert =
+        coset::CoseSign1::from_slice(&application_keys.signing_public_key_certificate)
+            .map_err(|_cose_err| anyhow::anyhow!("could not parse signing certificate"))?;
+    signing_cert
+        .verify_signature(ADDITIONAL_DATA, |signature, contents| {
+            let sig = Signature::from_slice(signature)?;
+            verifying_key.verify(contents, &sig)
+        })
+        .map_err(|error| anyhow::anyhow!(error))
+        .context("verifying signing certificate CWT signature")?;
+
+    Ok(())
+}
+
 pub fn verify_dice_chain(
     evidence: &Evidence,
     event_log_type: EventLogType,
@@ -321,6 +359,16 @@ pub fn verify_dice_chain(
                 .context("converting COSE key")
         })
         .context("verifying DICE chain")?;
+
+    // Verify the application key certificates against the last layer's key before any of their
+    // claims are used. `validate_events_and_layers` reads the application-layer event digest out
+    // of the encryption certificate for the Restricted Kernel shape, and `extract_evidence` reads
+    // both public keys out of these certificates, so an unauthenticated certificate here would let
+    // a peer choose the attested application measurement and the application keys.
+    if let Some(appl_keys) = evidence.application_keys.as_ref() {
+        verify_application_keys(appl_keys, &last_layer_verifying_key)
+            .context("verifying application keys")?;
+    }
 
     match event_log_type {
         EventLogType::OriginalEventLog => {
@@ -407,28 +455,7 @@ pub fn verify_dice_chain_and_extract_evidence(
             .application_keys
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("no application keys in evidence"))?;
-
-        // Verify encryption certificate.
-        let encryption_cert =
-            coset::CoseSign1::from_slice(&appl_keys.encryption_public_key_certificate)
-                .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption certificate"))?;
-        encryption_cert
-            .verify_signature(ADDITIONAL_DATA, |signature, contents| {
-                let sig = Signature::from_slice(signature)?;
-                last_layer_verifying_key.verify(contents, &sig)
-            })
-            .map_err(|error| anyhow::anyhow!(error))
-            .context("verifying CWT signature")?;
-
-        // Verify signing certificate.
-        let signing_cert = coset::CoseSign1::from_slice(&appl_keys.signing_public_key_certificate)
-            .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption certificate"))?;
-        signing_cert
-            .verify_signature(ADDITIONAL_DATA, |signature, contents| {
-                let sig = Signature::from_slice(signature)?;
-                last_layer_verifying_key.verify(contents, &sig)
-            })
-            .map_err(|error| anyhow::anyhow!(error))?;
+        verify_application_keys(appl_keys, &last_layer_verifying_key)?;
     }
 
     // Verify the event log claim for this layer if it exists. This is done for all
