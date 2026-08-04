@@ -470,9 +470,9 @@ impl<'a> AcpiTables<'a> {
 
         if let Some(rsdt) = self.rsdt()? {
             for entry in rsdt.iter_mut() {
-                let entry_addr = VirtAddr::new(*entry as u64);
+                let entry_addr: VirtAddr = entry.into();
                 if entry_addr == old_addr {
-                    *entry = new_addr.as_u64() as u32;
+                    *entry = new_addr.try_into()?;
                 }
             }
             rsdt.update_checksum();
@@ -493,7 +493,7 @@ mod tests {
     #[test]
     pub fn test_rsdt() {
         let mut rsdt = Rsdt::new_with_size(1);
-        rsdt[0] = 0x12345678;
+        rsdt[0] = 0x12345678.into();
         rsdt.update_checksum();
         let rsdt = rsdt.as_bytes().to_vec();
 

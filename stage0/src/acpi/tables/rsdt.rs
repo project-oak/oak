@@ -22,9 +22,59 @@ use core::{
 };
 
 use x86_64::VirtAddr;
-use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
 use crate::acpi::tables::{AcpiTable, Checksum, DescriptionHeader, Result, signature};
+
+/// A wrapper for entry addresses in the RSDT table.
+///
+/// An entry address in the RSDT has 4 bytes, but the table itself is not
+/// guaranteed to be 4-byte aligned, so neither are the entries. This wrapper
+/// handles the unaligned access.
+#[repr(transparent)]
+#[derive(
+    Copy, Clone, Debug, Default, Eq, FromBytes, Immutable, IntoBytes, KnownLayout, PartialEq,
+)]
+pub struct RsdtEntryPtr {
+    addr: [u8; 4],
+}
+
+impl From<RsdtEntryPtr> for u32 {
+    fn from(value: RsdtEntryPtr) -> Self {
+        // As per Section 5.2 in the ACPI specification 6.5,
+        // Address is little endian.
+        u32::from_le_bytes(value.addr)
+    }
+}
+
+impl From<u32> for RsdtEntryPtr {
+    fn from(value: u32) -> Self {
+        Self { addr: value.to_le_bytes() }
+    }
+}
+
+impl From<&RsdtEntryPtr> for VirtAddr {
+    fn from(value: &RsdtEntryPtr) -> Self {
+        VirtAddr::new(u32::from(*value) as u64)
+    }
+}
+
+impl From<&mut RsdtEntryPtr> for VirtAddr {
+    fn from(value: &mut RsdtEntryPtr) -> Self {
+        VirtAddr::new(u32::from(*value) as u64)
+    }
+}
+
+impl TryFrom<VirtAddr> for RsdtEntryPtr {
+    type Error = &'static str;
+
+    /// RSDT entries are 32-bit addresses, so the address has to fit in a `u32`.
+    fn try_from(value: VirtAddr) -> Result<Self> {
+        let addr: u32 =
+            value.as_u64().try_into().map_err(|_| "address does not fit in a RSDT entry")?;
+        Ok(addr.into())
+    }
+}
 
 #[allow(dead_code)]
 #[derive(Copy, Clone, Debug, Default, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
@@ -37,11 +87,11 @@ static_assertions::assert_eq_size!(DescriptionHeader<Signature>, [u8; 36usize]);
 /// This is a "slice DST" type as it contains a (unknown) amount of entries.
 ///
 /// See Section 5.2.7 in the ACPI specification for more details.
-#[derive(Debug, Immutable, IntoBytes, KnownLayout, TryFromBytes)]
-#[repr(C, align(4))]
+#[derive(Immutable, IntoBytes, KnownLayout, TryFromBytes)]
+#[repr(C, packed)]
 pub struct Rsdt {
     pub header: DescriptionHeader<Signature>,
-    entries: [u32],
+    entries: [RsdtEntryPtr],
 }
 
 impl AcpiTable for Rsdt {
@@ -55,8 +105,8 @@ impl AcpiTable for Rsdt {
         if (header.length as usize) < size_of::<DescriptionHeader<Signature>>() {
             return Err("invalid RSDT");
         }
-        let entries =
-            (header.length as usize - size_of::<DescriptionHeader<Signature>>()) / size_of::<u32>();
+        let entries = (header.length as usize - size_of::<DescriptionHeader<Signature>>())
+            / size_of::<RsdtEntryPtr>();
 
         let (rsdt, tail) = Rsdt::try_ref_from_prefix_with_elems(buf, entries)
             .map_err(|_| "invalid RSDT elements")?;
@@ -74,8 +124,8 @@ impl AcpiTable for Rsdt {
         if (header.length as usize) < size_of::<DescriptionHeader<Signature>>() {
             return Err("invalid RSDT");
         }
-        let entries =
-            (header.length as usize - size_of::<DescriptionHeader<Signature>>()) / size_of::<u32>();
+        let entries = (header.length as usize - size_of::<DescriptionHeader<Signature>>())
+            / size_of::<RsdtEntryPtr>();
 
         let (rsdt, tail) = Rsdt::try_mut_from_prefix_with_elems(buf, entries)
             .map_err(|_| "invalid RSDT elements")?;
@@ -99,7 +149,7 @@ impl AcpiTable for Rsdt {
         }
 
         if !(self.header.length as usize - size_of::<DescriptionHeader<[u8; 4]>>())
-            .is_multiple_of(size_of::<u32>())
+            .is_multiple_of(size_of::<RsdtEntryPtr>())
         {
             return Err("RSDT invalid: entries size not a multiple of pointer size");
         }
@@ -112,7 +162,8 @@ impl Rsdt {
     pub fn new_with_size(num: usize) -> Box<Rsdt> {
         let mut header = DescriptionHeader::<Signature> {
             signature: Signature::default(),
-            length: (size_of::<DescriptionHeader<Signature>>() + num * size_of::<u32>()) as u32,
+            length: (size_of::<DescriptionHeader<Signature>>() + num * size_of::<RsdtEntryPtr>())
+                as u32,
             revision: 0,
             checksum: 0,
             oem_id: [0; 6],
@@ -129,9 +180,10 @@ impl Rsdt {
             .checksum
             .wrapping_sub(header.as_bytes().iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs)));
 
-        // Use u32 instead of u8, as that guarantees the alignment is correct.
+        // `Rsdt` is byte-aligned, so a byte buffer matches the layout (and thus the
+        // deallocation layout of the `Box` we hand out) exactly.
         let mut buf =
-            vec![0u32; size_of::<DescriptionHeader<Signature>>() / size_of::<u32>() + num]
+            vec![0u8; size_of::<DescriptionHeader<Signature>>() + num * size_of::<RsdtEntryPtr>()]
                 .into_boxed_slice();
         header.write_to_prefix(buf.as_mut_bytes()).unwrap();
 
@@ -154,16 +206,16 @@ impl Rsdt {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = VirtAddr> {
-        self.entries.iter().map(|&entry| VirtAddr::new(entry as u64))
+        self.entries.iter().map(Into::into)
     }
 
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut u32> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut RsdtEntryPtr> {
         self.entries.iter_mut()
     }
 }
 
 impl Index<usize> for Rsdt {
-    type Output = u32;
+    type Output = RsdtEntryPtr;
 
     fn index(&self, index: usize) -> &Self::Output {
         &self.entries[index]
@@ -176,8 +228,16 @@ impl IndexMut<usize> for Rsdt {
     }
 }
 
-// Slice DSTs confuse googletest ([u32] is not `Sized`), so we have to do some
-// things by hand.
+// We can't derive `Debug` because of alignment issues.
+impl core::fmt::Debug for Rsdt {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::result::Result<(), core::fmt::Error> {
+        let holder = self.entries.to_vec();
+        f.debug_struct("Rsdt").field("header", &self.header).field("entries", &holder).finish()
+    }
+}
+
+// Slice DSTs confuse googletest ([RsdtEntryPtr] is not `Sized`), so we have to
+// do some things by hand.
 #[cfg(test)]
 mod tests {
     use std::vec::Vec;
@@ -201,16 +261,30 @@ mod tests {
         let mut buf = Vec::from(b"RSDT\x2C\x00\x00\x00\x01\xA5OEMOEMAAAAAAAABBBBCCCCDDDD\x01\x00\x00\x00\x02\x00\x00\x00");
 
         let (rsdt, _) = Rsdt::try_from_bytes_mut(&mut buf[..]).unwrap();
-        assert_that!(rsdt.entries, unordered_elements_are!(eq(&1), eq(&2)));
+        assert_that!(rsdt.entries, unordered_elements_are!(eq(&1.into()), eq(&2.into())));
         let (rsdt, _) = Rsdt::try_from_bytes(&buf[..]).unwrap();
-        assert_that!(rsdt.entries, unordered_elements_are!(eq(&1), eq(&2)));
+        assert_that!(rsdt.entries, unordered_elements_are!(eq(&1.into()), eq(&2.into())));
+    }
+
+    /// The RSDT is not guaranteed to be 4-byte aligned, so parsing must work
+    /// even if the table starts at an odd address.
+    #[test]
+    pub fn test_unaligned_entries() {
+        // Prefix the table with one byte so that the table itself can't be 4-byte
+        // aligned, no matter where the buffer itself was allocated.
+        let mut buf = Vec::from(b"\x00RSDT\x2C\x00\x00\x00\x01\xA5OEMOEMAAAAAAAABBBBCCCCDDDD\x01\x00\x00\x00\x02\x00\x00\x00");
+
+        let (rsdt, _) = Rsdt::try_from_bytes_mut(&mut buf[1..]).unwrap();
+        assert_that!(rsdt.entries, unordered_elements_are!(eq(&1.into()), eq(&2.into())));
+        let (rsdt, _) = Rsdt::try_from_bytes(&buf[1..]).unwrap();
+        assert_that!(rsdt.entries, unordered_elements_are!(eq(&1.into()), eq(&2.into())));
     }
 
     #[test]
     pub fn test_new_rsdt() {
         let mut rsdt = Rsdt::new_with_size(1);
         let old_checksum = rsdt.header.checksum;
-        rsdt.entries[0] = 0x01020304;
+        rsdt[0] = 0x01020304.into();
         rsdt.update_checksum();
 
         assert_that!(old_checksum, not(eq(rsdt.header.checksum)));
