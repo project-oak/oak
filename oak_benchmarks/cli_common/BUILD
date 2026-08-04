@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -34,4 +34,10 @@ rust_library(
         "//oak_benchmarks/proto:oak_benchmark_proto_rust",
         "@oak_crates_index//:clap",
     ],
+)
+
+rust_test(
+    name = "cli_common_test",
+    crate = ":cli_common",
+    target_compatible_with = ["@platforms//os:linux"],
 )
