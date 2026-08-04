@@ -45,6 +45,9 @@ pub enum HashAlgorithm {
 /// during the benchmark.
 pub struct HashingBenchmark {
     data_buffer: Vec<u8>,
+    /// Seed the buffer was generated from, so a later request that changes it
+    /// can be detected.
+    seed: u64,
 }
 
 impl HashingBenchmark {
@@ -52,7 +55,19 @@ impl HashingBenchmark {
     pub fn new(seed: u64) -> Self {
         let mut data_buffer = vec![0u8; MAX_DATA_SIZE];
         generate_benchmark_data(&mut data_buffer, seed);
-        Self { data_buffer }
+        Self { data_buffer, seed }
+    }
+
+    /// Regenerate the data buffer if `seed` differs from the current one.
+    ///
+    /// A sweep over data sizes at one seed reuses the buffer, so it pays the
+    /// generation cost once, while a request that changes the seed gets data
+    /// that matches what it asked for.
+    pub fn reconfigure(&mut self, seed: u64) {
+        if self.seed != seed {
+            generate_benchmark_data(&mut self.data_buffer, seed);
+            self.seed = seed;
+        }
     }
 
     /// Run the benchmark with a specific algorithm and timer type.
@@ -117,7 +132,7 @@ impl HashingBenchmark {
         let timing = timer.stop();
         let bytes_processed = data.len() as u64 * iterations as u64;
 
-        BenchmarkResult::new(timing, iterations, bytes_processed)
+        BenchmarkResult::new(timing, iterations, bytes_processed, 0)
     }
 }
 

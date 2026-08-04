@@ -29,8 +29,8 @@ use std::{
 use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use cli_common::{
-    BenchmarkMetrics, BenchmarkResult, CpuFeatures, DisplayBenchmarkType, OutputFormat,
-    check_status, format_result, parse_benchmark_type,
+    BenchmarkMetrics, BenchmarkResult, CpuFeatures, DEFAULT_BENCHMARK_SEED, DisplayBenchmarkType,
+    OutputFormat, check_status, format_result, parse_benchmark_type,
 };
 use oak_benchmark_grpc::oak::benchmark::benchmark_client::BenchmarkClient;
 use oak_benchmark_proto_rust::oak::benchmark::{
@@ -83,6 +83,17 @@ struct Args {
     /// Warmup helps the CPU's branch predictor and caches reach steady-state.
     #[arg(long, default_value = "1000")]
     warmup_iterations: u32,
+
+    /// Seed for deterministic benchmark data.
+    ///
+    /// Must match the value used for the enclave run, otherwise the two are
+    /// not processing the same data.
+    #[arg(long, default_value_t = DEFAULT_BENCHMARK_SEED)]
+    seed: u64,
+
+    /// Working set size in bytes for the memory benchmarks (0 = guest default).
+    #[arg(long, default_value = "0")]
+    working_set_size: u64,
 
     /// Output format.
     #[arg(long, value_enum, default_value = "human")]
@@ -174,8 +185,8 @@ async fn main() -> Result<()> {
         data_size: args.data_size,
         iterations: args.iterations,
         warmup_iterations: args.warmup_iterations,
-        seed: None,
-        working_set_size: 0,
+        seed: Some(args.seed),
+        working_set_size: args.working_set_size,
     };
     let addr = format!("127.0.0.1:{}", args.port);
     let timeout = Duration::from_secs(args.boot_timeout);
@@ -209,13 +220,16 @@ async fn main() -> Result<()> {
         elapsed_ns: metrics.elapsed_ns,
         bytes_processed: response.bytes_processed,
         status: response.status,
+        working_set_size: response.working_set_size,
+        checksum: response.checksum,
+        cpu_features: response.cpu_features,
     };
     print!("{}", format_result(&result, &metrics, args.output));
-    println!("Guest CPU features: {}", CpuFeatures::from_wire(response.cpu_features));
 
     // Print host timing for Human format.
     if matches!(args.output, OutputFormat::Human) {
-        println!("Host timing (wall clock):");
+        println!("Guest CPU features: {}", CpuFeatures::from_wire(response.cpu_features));
+        println!("Host timing (wall clock, includes VM RPC round trip):");
         println!("  Elapsed time:  {:.3} ms", host_elapsed.as_secs_f64() * 1000.0);
     }
 

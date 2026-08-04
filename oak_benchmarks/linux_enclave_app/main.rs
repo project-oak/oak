@@ -14,21 +14,21 @@
 // limitations under the License.
 //
 
-//! Linux benchmark runner.
+//! Linux benchmark runner, the baseline for enclave execution.
 //!
-//! This binary runs benchmarks natively on Linux as a baseline for comparison
-//! with enclave execution.
+//! Standalone mode runs a benchmark locally and prints the result. Server mode
+//! starts a gRPC server for `linux_cli`, so the benchmark can run in a VM with
+//! SEV-SNP enabled.
 //!
-//! Two modes:
-//!   - **Standalone**: runs a benchmark locally and prints results to stdout.
-//!   - **Server**: starts a gRPC server so that `linux_cli` can send benchmark
-//!     requests remotely (e.g. to a VM with SEV-SNP enabled).
+//! To compare a result here with one from `oak_cli`, both sides need the same
+//! `--seed`, sizes and iteration counts, and must report the same `checksum`
+//! and `cpu_features`. The defaults already satisfy this.
 
 use benchmark::{BenchmarkService, DEFAULT_BENCHMARK_SEED, NativeTimer};
 use clap::Parser;
 use cli_common::{
-    BenchmarkMetrics, BenchmarkResult, DisplayBenchmarkType, OutputFormat, format_result,
-    parse_benchmark_type,
+    BenchmarkMetrics, BenchmarkResult, CpuFeatures, DisplayBenchmarkType, OutputFormat,
+    check_status, format_result, parse_benchmark_type,
 };
 use oak_benchmark_proto_rust::oak::benchmark::{BenchmarkType, RunBenchmarkRequest};
 
@@ -56,6 +56,10 @@ struct Args {
     /// Number of warmup iterations to run before measurement (not timed).
     #[arg(long, default_value = "1000")]
     warmup_iterations: u32,
+
+    /// Working set size in bytes for the memory benchmarks (0 = default).
+    #[arg(long, default_value = "0")]
+    working_set_size: u64,
 
     /// Output format (standalone mode only).
     #[arg(long, value_enum, default_value = "human")]
@@ -100,7 +104,7 @@ mod grpc_server {
             let response = self
                 .service
                 .lock()
-                .map_err(|e| Status::internal(format!("Lock error: {}", e)))?
+                .map_err(|e| Status::internal(format!("acquiring service lock: {}", e)))?
                 .handle_request(req);
             Ok(Response::new(response))
         }
@@ -116,8 +120,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         run_server(port, args.seed).await
     } else {
         // Standalone mode.
-        run_standalone(&args);
-        Ok(())
+        run_standalone(&args)
     }
 }
 
@@ -127,7 +130,7 @@ async fn run_server(port: u16, seed: u64) -> Result<(), Box<dyn std::error::Erro
     let addr = format!("0.0.0.0:{}", port).parse()?;
     let service = grpc_server::BenchmarkGrpcService::new(seed);
 
-    eprintln!("Benchmark gRPC server listening on {}", addr);
+    eprintln!("benchmark gRPC server listening on {}", addr);
 
     tonic::transport::Server::builder()
         .add_service(BenchmarkServer::new(service))
@@ -138,7 +141,7 @@ async fn run_server(port: u16, seed: u64) -> Result<(), Box<dyn std::error::Erro
 }
 
 /// Run the benchmark locally and print results.
-fn run_standalone(args: &Args) {
+fn run_standalone(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
     let mut service = BenchmarkService::<NativeTimer>::new(args.seed);
 
     let request = RunBenchmarkRequest {
@@ -146,11 +149,15 @@ fn run_standalone(args: &Args) {
         data_size: args.data_size,
         iterations: args.iterations,
         warmup_iterations: args.warmup_iterations,
-        seed: None,
-        working_set_size: 0,
+        seed: Some(args.seed),
+        working_set_size: args.working_set_size,
     };
 
     let response = service.handle_request(request);
+
+    // A failed benchmark returns an all-zero response. Report the error rather
+    // than formatting the zeros as if they were a measurement.
+    check_status(response.status)?;
 
     // Use cli_common for metrics calculation and formatting.
     let metrics = BenchmarkMetrics::calculate(
@@ -158,7 +165,9 @@ fn run_standalone(args: &Args) {
         response.elapsed_ns,
         response.iterations_completed,
         response.bytes_processed,
-        0, // tsc_freq — not used on Linux
+        // Not needed: the native runner has a real clock and reports
+        // `elapsed_ns` directly, which takes precedence over TSC conversion.
+        0,
     );
     let result = BenchmarkResult {
         benchmark_name: DisplayBenchmarkType(args.benchmark).to_string(),
@@ -168,6 +177,15 @@ fn run_standalone(args: &Args) {
         elapsed_ns: response.elapsed_ns,
         bytes_processed: response.bytes_processed,
         status: response.status,
+        working_set_size: response.working_set_size,
+        checksum: response.checksum,
+        cpu_features: response.cpu_features,
     };
     print!("{}", format_result(&result, &metrics, args.output));
+
+    if matches!(args.output, OutputFormat::Human) {
+        println!("Native CPU features: {}", CpuFeatures::from_wire(response.cpu_features));
+    }
+
+    Ok(())
 }

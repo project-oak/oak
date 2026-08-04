@@ -86,7 +86,7 @@ message RunBenchmarkResponse {
   uint32 iterations_completed = 3;
   // Total bytes processed.
   uint64 bytes_processed = 4;
-  // Status code (0 = success).
+  // Status code (0 = success, see BenchmarkError).
   uint32 status = 5;
   // Actual working set size used, in bytes. Lets the host report what was
   // really measured rather than what was requested.

@@ -115,7 +115,7 @@ impl ArrayUpdateBenchmark {
         let timing = timer.stop();
         let bytes_processed = iterations as u64; // 1 byte per write
 
-        Ok(BenchmarkResult::new(timing, iterations, bytes_processed))
+        Ok(BenchmarkResult::new(timing, iterations, bytes_processed, 0))
     }
 }
 

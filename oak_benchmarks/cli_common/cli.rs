@@ -18,6 +18,7 @@
 
 use std::fmt;
 
+pub use benchmark::DEFAULT_BENCHMARK_SEED;
 use clap::ValueEnum;
 use oak_benchmark_proto_rust::oak::benchmark::BenchmarkType;
 

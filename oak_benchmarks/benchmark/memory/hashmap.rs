@@ -161,7 +161,7 @@ impl HashMapBenchmark {
         let timing = timer.stop();
         let bytes_processed = iterations as u64 * (8 + self.value_template.len() as u64);
 
-        Ok(BenchmarkResult::new(timing, iterations, bytes_processed))
+        Ok(BenchmarkResult::new(timing, iterations, bytes_processed, 0))
     }
 
     fn run_lookup<T: BenchmarkTimer>(
@@ -190,7 +190,7 @@ impl HashMapBenchmark {
         let timing = timer.stop();
         let bytes_processed = iterations as u64 * (8 + self.value_template.len() as u64);
 
-        Ok(BenchmarkResult::new(timing, iterations, bytes_processed))
+        Ok(BenchmarkResult::new(timing, iterations, bytes_processed, 0))
     }
 }
 

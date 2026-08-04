@@ -25,7 +25,10 @@ pub mod results;
 pub mod tsc;
 
 // Re-export commonly used items at crate root.
-pub use cli::{BENCHMARK_TYPE_NAMES, DisplayBenchmarkType, OutputFormat, parse_benchmark_type};
+pub use cli::{
+    BENCHMARK_TYPE_NAMES, DEFAULT_BENCHMARK_SEED, DisplayBenchmarkType, OutputFormat,
+    parse_benchmark_type,
+};
 pub use results::{
     BenchmarkMetrics, BenchmarkResult, CpuFeatures, check_status, describe_status, format_result,
 };

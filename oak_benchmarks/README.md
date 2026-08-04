@@ -93,6 +93,23 @@ sizes and iterations.
 Available benchmarks: `sha256`, `sha512`, `sha3-256`, `sha3-512`,
 `array-update`, `memory-insert`, `memory-lookup`, `alloc-churn`, `debug`.
 
+## Reproducing a Comparison
+
+A comparison between the enclave and the Linux baseline only means something if
+both sides did the same work, so the parameters that decide it travel in the
+request.
+
+| Flag                 | Effect                                                        |
+| -------------------- | ------------------------------------------------------------- |
+| `--seed`             | Fixes the pseudo-random input; both sides need the same value |
+| `--working-set-size` | Working set in bytes for the memory benchmarks (0 = default)  |
+
+Results carry a `checksum` over each benchmark's output and the `cpu_features`
+the guest was built with and found at runtime. Treat a comparison as invalid
+unless both sides report the same checksum, and read a difference in
+`cpu_features` as the two sides having run different instruction sets rather
+than as a difference between the kernels.
+
 ## Manual Building
 
 For development, you can build the binaries directly without invoking

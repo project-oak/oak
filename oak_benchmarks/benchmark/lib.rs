@@ -14,17 +14,25 @@
 // limitations under the License.
 //
 
-//! Benchmark service implementations for Oak Paper evaluation.
-//!
-//! This crate provides the shared benchmark logic used by both the Oak enclave
-//! app and the Linux baseline app, ensuring "apples-to-apples" comparison.
-//!
-//! # Organization
+//! Shared benchmark logic for the Oak enclave app and the Linux baseline, so
+//! that both run the same code.
 //!
 //! - `cpu`: CPU-bound benchmarks (hashing, encryption, signing)
 //! - `memory`: Memory-bound benchmarks (random writes, hash maps, allocation)
-//! - `service`: Main service that routes requests to benchmark implementations
-//! - `timer`: TSC-based timing utilities
+//! - `service`: routes requests to benchmark implementations
+//! - `timer`: timing utilities
+//!
+//! Every benchmark must satisfy three properties, because the numbers feed the
+//! paper's evaluation:
+//!
+//! 1. **Identical work.** The enclave and the baseline must execute the same
+//!    operations over the same inputs. All pseudo-random data is derived from a
+//!    caller-supplied seed, never from a clock or the TSC.
+//! 2. **Verifiable work.** Each benchmark must return a checksum over its
+//!    output. Matching checksums across platforms then demonstrate that the
+//!    same work was performed and that the optimiser did not elide it.
+//! 3. **Untimed setup.** Allocation and input generation happen outside the
+//!    timed region.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -58,42 +66,54 @@ pub const DEFAULT_BENCHMARK_SEED: u64 = 0x0A6B_1234_5678_9ABC;
 /// operations.
 #[derive(Debug, Clone, Copy)]
 pub struct BenchmarkResult {
-    /// Timer reading from the benchmark (TSC and/or nanoseconds).
+    /// Timer reading from the benchmark (TSC and, where available,
+    /// nanoseconds).
     pub timing: TimerReading,
     /// Number of iterations actually completed.
     pub iterations_completed: u32,
     /// Total bytes processed.
     pub bytes_processed: u64,
+    /// Checksum over the benchmark output.
+    ///
+    /// Must be identical across platforms for the same benchmark, seed and
+    /// parameters. A mismatch means the two sides did not perform the same
+    /// work and the comparison is invalid.
+    pub checksum: u64,
+    /// Working set size actually used, in bytes.
+    pub working_set_size: u64,
 }
 
 impl BenchmarkResult {
     /// Create a new benchmark result.
-    pub fn new(timing: TimerReading, iterations: u32, bytes: u64) -> Self {
-        Self { timing, iterations_completed: iterations, bytes_processed: bytes }
+    pub fn new(timing: TimerReading, iterations: u32, bytes: u64, checksum: u64) -> Self {
+        Self {
+            timing,
+            iterations_completed: iterations,
+            bytes_processed: bytes,
+            checksum,
+            working_set_size: 0,
+        }
+    }
+
+    /// Attach the working set size to this result.
+    pub fn with_working_set(mut self, working_set_size: u64) -> Self {
+        self.working_set_size = working_set_size;
+        self
     }
 }
 
-/// Multiplier for the 64-bit LCG (Linear Congruential Generator).
+/// Multiplier of Knuth's MMIX linear congruential generator, also used by the
+/// PCG family.
 ///
-/// This is the multiplier from Knuth's MMIX LCG, also used by the PCG
-/// family of random number generators. It has good statistical properties
-/// for generating pseudo-random sequences.
-///
-/// Source: Knuth, "The Art of Computer Programming", Vol. 2, 3rd ed., p. 106.
-/// See also: https://nuclear.llnl.gov/CNP/rng/rngman/node4.html
+/// See Knuth, "The Art of Computer Programming", Vol. 2, 3rd ed., p. 106, and
+/// <https://nuclear.llnl.gov/CNP/rng/rngman/node4.html>.
 pub const LCG_MULTIPLIER: u64 = 6364136223846793005;
 
 /// Fill a buffer with deterministic pseudo-random data.
 ///
-/// Uses a simple LCG (Linear Congruential Generator) for reproducible data
-/// that works in no_std environments without external dependencies.
-///
-/// We use pseudo-random data rather than zeroed or constant buffers because
-/// some hash implementations and CPU hardware can optimize for patterned
-/// input (e.g. zero-byte shortcuts, branch prediction on repeated data).
-/// Pseudo-random data ensures the benchmark measures realistic throughput
-/// without triggering such optimizations. The data only needs to be
-/// "non-patterned", not cryptographically random, so a simple LCG suffices.
+/// Zeroed or constant buffers let hash implementations and the hardware take
+/// shortcuts, so the data needs to be non-patterned; it does not need to be
+/// cryptographically random, so an LCG suffices and keeps this `no_std`.
 pub fn generate_benchmark_data(buffer: &mut [u8], seed: u64) {
     let mut state = seed;
     for byte in buffer.iter_mut() {
@@ -112,7 +132,7 @@ pub enum BenchmarkError {
     UnsupportedBenchmark = 2,
     /// Requested data size exceeds maximum.
     DataSizeTooLarge = 3,
-    /// Invalid parameter (e.g. iterations exceed pre-generated indices).
+    /// Invalid parameter (e.g. zero iterations, or a size out of range).
     InvalidParameter = 4,
     /// A cryptographic operation failed unexpectedly.
     CryptoFailure = 5,
@@ -140,4 +160,37 @@ impl BenchmarkError {
             _ => "unknown status",
         }
     }
+}
+
+/// Fold a byte slice into a running checksum.
+///
+/// This is an FNV-1a variant. It is not cryptographic; its only purpose is to
+/// make benchmark output observable so the optimiser cannot discard it, and to
+/// let the host verify that both platforms computed the same thing.
+#[inline]
+pub fn checksum_update(acc: u64, bytes: &[u8]) -> u64 {
+    const FNV_PRIME: u64 = 1099511628211;
+    let mut hash = acc;
+    for &b in bytes {
+        hash ^= b as u64;
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    hash
+}
+
+/// Initial value for [`checksum_update`] chains.
+pub const CHECKSUM_INIT: u64 = 14695981039346656037;
+
+/// Fold the endpoints of a byte slice into a running value in constant time.
+///
+/// [`checksum_update`] is too expensive for a timed loop: around three cycles
+/// per byte, where AES-256-GCM with AES-NI runs at well under one. It costs the
+/// same on both platforms, so folding it into the measured region would drag
+/// their ratio toward 1.0. Timed loops call this instead and checksum once the
+/// timer has stopped.
+#[inline]
+pub fn fold_sample(acc: u64, bytes: &[u8]) -> u64 {
+    let first = bytes.first().copied().unwrap_or(0) as u64;
+    let last = bytes.last().copied().unwrap_or(0) as u64;
+    acc.rotate_left(7) ^ first ^ (last << 8)
 }

@@ -24,21 +24,23 @@ use crate::{cli::OutputFormat, tsc::tsc_to_nanos};
 #[derive(Debug, Clone, Copy)]
 pub struct BenchmarkMetrics {
     /// Elapsed time in nanoseconds.
+    ///
+    /// Taken directly from the guest where a clock exists, otherwise derived
+    /// from `elapsed_tsc` using the calibrated frequency.
     pub elapsed_ns: u64,
     /// Throughput in bytes per second (base unit).
     pub throughput_bps: f64,
-    /// Operations (hashes) per second.
+    /// Operations (hashes, signatures, lookups, ...) per second.
     pub ops_per_sec: f64,
 }
 
 impl BenchmarkMetrics {
     /// Calculate metrics from raw benchmark data.
     ///
-    /// Supports hybrid timing:
-    /// - Oak enclave: provides `elapsed_tsc`, `elapsed_ns` is 0
-    /// - Linux runner: provides `elapsed_ns`, `elapsed_tsc` is 0
-    ///
-    /// When both are provided, `elapsed_ns` takes precedence.
+    /// Both platforms now report `elapsed_tsc`. `elapsed_ns` is additionally
+    /// reported by the Linux baseline, which has a real clock; when present it
+    /// is preferred over converting from ticks, since it involves no
+    /// calibration at all.
     pub fn calculate(
         elapsed_tsc: u64,
         elapsed_ns: u64,
@@ -82,6 +84,17 @@ pub struct BenchmarkResult {
     pub elapsed_ns: u64,
     pub bytes_processed: u64,
     pub status: u32,
+    /// Actual working set size used by the guest, in bytes.
+    pub working_set_size: u64,
+    /// Checksum over the benchmark output.
+    ///
+    /// Must match between the enclave and the baseline for the same benchmark,
+    /// seed and parameters. A mismatch means the two sides did different work
+    /// and the comparison is invalid.
+    pub checksum: u64,
+    /// Packed [`CpuFeatures`]: compile-time features, `CPUID` features and the
+    /// runtime-dispatch flag. Layout is defined by `CpuFeatures::to_wire`.
+    pub cpu_features: u32,
 }
 
 /// Human-readable description of a guest status code.
@@ -113,47 +126,38 @@ pub fn format_result(
 ) -> String {
     match format {
         OutputFormat::Human => {
-            // Show whichever timing source is available.
-            let timing_label =
-                if result.elapsed_tsc > 0 { "Guest elapsed (TSC)" } else { "Guest elapsed" };
             format!(
                 "\n=== Benchmark Results ===\n\
                  Benchmark:           {}\n\
                  Data size:           {} bytes\n\
                  Iterations:          {}\n\
-                 {}:  {:.3} ms\n\
+                 Working set:         {} bytes\n\
+                 Guest elapsed (TSC): {} ticks\n\
+                 Guest elapsed:       {:.3} ms\n\
                  Bytes processed:     {}\n\
                  Throughput:          {:.2} MB/s\n\
                  Operations/sec:      {:.0}\n\
+                 Checksum:            0x{:016x}\n\
+                 CPU features:        {:#}\n\
                  Status:              {}\n",
                 result.benchmark_name,
                 result.data_size,
                 result.iterations_completed,
-                timing_label,
+                result.working_set_size,
+                result.elapsed_tsc,
                 metrics.elapsed_ns as f64 / 1_000_000.0,
                 result.bytes_processed,
                 metrics.throughput_mbps(),
                 metrics.ops_per_sec,
+                result.checksum,
+                CpuFeatures::from_wire(result.cpu_features),
                 if result.status == 0 { "OK" } else { "ERROR" },
             )
         }
         OutputFormat::Csv => {
-            // Use base units (bytes/s) in machine-readable formats
+            // Use base units (bytes/s) in machine-readable formats.
             format!(
-                "{},{},{},{},{:.0},{:.0},{}\n",
-                result.benchmark_name,
-                result.data_size,
-                result.iterations_completed,
-                result.elapsed_tsc,
-                metrics.throughput_bps,
-                metrics.ops_per_sec,
-                result.status,
-            )
-        }
-        OutputFormat::Json => {
-            // Use base units (bytes/s) in machine-readable formats
-            format!(
-                r#"{{"benchmark":"{}","data_size":{},"iterations":{},"elapsed_tsc":{},"elapsed_ns":{},"bytes_processed":{},"throughput_bps":{:.0},"ops_per_sec":{:.0},"status":{}}}"#,
+                "{},{},{},{},{},{},{:.0},{:.0},{},{},{},{}\n",
                 result.benchmark_name,
                 result.data_size,
                 result.iterations_completed,
@@ -162,8 +166,50 @@ pub fn format_result(
                 result.bytes_processed,
                 metrics.throughput_bps,
                 metrics.ops_per_sec,
+                result.working_set_size,
+                result.checksum,
+                result.cpu_features,
                 result.status,
             )
         }
+        OutputFormat::Json => {
+            // Use base units (bytes/s) in machine-readable formats.
+            format!(
+                r#"{{"benchmark":"{}","data_size":{},"iterations":{},"elapsed_tsc":{},"elapsed_ns":{},"bytes_processed":{},"throughput_bps":{:.0},"ops_per_sec":{:.0},"working_set_size":{},"checksum":{},"cpu_features":{},"status":{}}}"#,
+                result.benchmark_name,
+                result.data_size,
+                result.iterations_completed,
+                result.elapsed_tsc,
+                metrics.elapsed_ns,
+                result.bytes_processed,
+                metrics.throughput_bps,
+                metrics.ops_per_sec,
+                result.working_set_size,
+                result.checksum,
+                result.cpu_features,
+                result.status,
+            )
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn elapsed_ns_is_preferred_over_conversion() {
+        // A deliberately wrong frequency must not affect the reported time
+        // when the guest supplied real nanoseconds.
+        let m = BenchmarkMetrics::calculate(999_999_999, 2_000_000, 10, 0, 1);
+        assert_eq!(m.elapsed_ns, 2_000_000);
+    }
+
+    #[test]
+    fn zero_everything_does_not_panic_or_divide_by_zero() {
+        let m = BenchmarkMetrics::calculate(0, 0, 0, 0, 0);
+        assert_eq!(m.elapsed_ns, 0);
+        assert_eq!(m.throughput_bps, 0.0);
+        assert_eq!(m.ops_per_sec, 0.0);
     }
 }

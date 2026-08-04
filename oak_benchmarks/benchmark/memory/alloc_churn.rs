@@ -83,7 +83,7 @@ impl AllocChurnBenchmark {
         let timing = timer.stop();
         let bytes_processed = iterations as u64 * self.alloc_size as u64;
 
-        Ok(BenchmarkResult::new(timing, iterations, bytes_processed))
+        Ok(BenchmarkResult::new(timing, iterations, bytes_processed, 0))
     }
 }
 

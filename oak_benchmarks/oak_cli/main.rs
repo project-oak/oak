@@ -24,8 +24,8 @@ use std::time::Instant;
 use anyhow::{Context, Result};
 use clap::Parser;
 use cli_common::{
-    BenchmarkMetrics, CpuFeatures, DisplayBenchmarkType, OutputFormat, check_status,
-    detect_tsc_freq, format_result, parse_benchmark_type,
+    BenchmarkMetrics, CpuFeatures, DEFAULT_BENCHMARK_SEED, DisplayBenchmarkType, OutputFormat,
+    check_status, detect_tsc_freq, format_result, parse_benchmark_type,
 };
 use oak_benchmark_proto_rust::oak::benchmark::{BenchmarkType, RunBenchmarkRequest};
 use oak_launcher_utils::launcher;
@@ -56,8 +56,20 @@ struct Args {
     #[arg(long, default_value = "1000")]
     warmup_iterations: u32,
 
+    /// Seed for deterministic benchmark data.
+    ///
+    /// Must match the value used for the Linux baseline, otherwise the two
+    /// runs process different data and are not comparable. Defaults to a
+    /// fixed constant shared by both CLIs.
+    #[arg(long, default_value_t = DEFAULT_BENCHMARK_SEED)]
+    seed: u64,
+
+    /// Working set size in bytes for the memory benchmarks (0 = guest default).
+    #[arg(long, default_value = "0")]
+    working_set_size: u64,
+
     /// TSC frequency in Hz (for converting TSC ticks to time).
-    /// If not specified, auto-detects from the system.
+    /// If not specified, it is measured against the monotonic clock.
     #[arg(long)]
     tsc_freq: Option<u64>,
 
@@ -94,8 +106,8 @@ async fn main() -> Result<()> {
         data_size: args.data_size,
         iterations: args.iterations,
         warmup_iterations: args.warmup_iterations,
-        seed: None,
-        working_set_size: 0,
+        seed: Some(args.seed),
+        working_set_size: args.working_set_size,
     };
 
     log::info!("Sending benchmark request...");
@@ -110,19 +122,6 @@ async fn main() -> Result<()> {
 
     let host_elapsed = host_start.elapsed();
 
-    // Calculate metrics using shared cli_common utilities.
-    let tsc_freq = args.tsc_freq.unwrap_or_else(|| {
-        let detected = detect_tsc_freq();
-        log::info!(
-            "Detected TSC frequency: {} Hz (source: {})",
-            detected.hz(),
-            detected.source_description()
-        );
-        if detected.is_default() {
-            log::warn!("Using default TSC frequency - timing may be inaccurate");
-        }
-        detected.hz()
-    });
     // Abort before formatting: a failed benchmark returns an all-zero
     // response, which would otherwise be printed as a plausible-looking row of
     // zeros. Tear the enclave down first so we do not leak a QEMU process.
@@ -131,6 +130,23 @@ async fn main() -> Result<()> {
         anyhow::bail!(message);
     }
 
+    // Calculate metrics using shared cli_common utilities.
+    let tsc_freq = args.tsc_freq.unwrap_or_else(|| {
+        let detected = detect_tsc_freq();
+        log::info!(
+            "detected TSC frequency: {} Hz (source: {})",
+            detected.hz(),
+            detected.source_description()
+        );
+        if !detected.is_trustworthy() {
+            log::warn!(
+                "TSC frequency was not measured directly ({}); nanosecond and MB/s figures may \
+                 be scaled incorrectly",
+                detected.source_description()
+            );
+        }
+        detected.hz()
+    });
     let metrics = BenchmarkMetrics::calculate(
         response.elapsed_tsc,
         response.elapsed_ns,
@@ -138,6 +154,8 @@ async fn main() -> Result<()> {
         response.bytes_processed,
         tsc_freq,
     );
+
+    log::info!("guest CPU features: {}", CpuFeatures::from_wire(response.cpu_features));
 
     // Output results using cli_common formatter.
     let result = cli_common::BenchmarkResult {
@@ -148,19 +166,21 @@ async fn main() -> Result<()> {
         elapsed_ns: metrics.elapsed_ns,
         bytes_processed: response.bytes_processed,
         status: response.status,
+        working_set_size: response.working_set_size,
+        checksum: response.checksum,
+        cpu_features: response.cpu_features,
     };
-    log::info!("guest CPU features: {}", CpuFeatures::from_wire(response.cpu_features));
     let output = format_result(&result, &metrics, args.output);
     print!("{}", output);
 
     // Print host timing for Human format.
     if matches!(args.output, OutputFormat::Human) {
-        println!("Host timing (wall clock):");
+        println!("Host timing (wall clock, includes enclave RPC round trip):");
         println!("  Elapsed time:  {:.3} ms", host_elapsed.as_secs_f64() * 1000.0);
     }
 
     // Clean up.
-    log::info!("Terminating enclave...");
+    log::info!("terminating enclave");
     guest_instance.kill().await?;
 
     Ok(())
