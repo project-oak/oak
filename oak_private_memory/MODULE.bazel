@@ -147,6 +147,12 @@ crate.spec(
     package = "rand",
     version = "0.9.1",
 )
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "procfs",
+    version = "0.16.0",
+)
 crate.from_specs(
     name = "pm_crates",
 )

@@ -87,6 +87,8 @@ pub struct Metrics {
     // Number of blobs that should have been soft-deleted but were not
     // (due to flush failures after persist).
     orphaned_blob_deletes: Counter<u64>,
+    // Number of sessions rejected due to low memory.
+    session_rejected_low_memory: Counter<u64>,
 }
 
 /// The possible metrics request types.
@@ -367,6 +369,12 @@ impl Metrics {
             .with_description("Number of blobs that should have been soft-deleted but were not.")
             .build();
         orphaned_blob_deletes.add(0, &[]);
+        let session_rejected_low_memory = observer
+            .meter
+            .u64_counter("session_rejected_low_memory")
+            .with_description("Number of sessions rejected due to low memory.")
+            .build();
+        session_rejected_low_memory.add(0, &[]);
         observer.register_metric(rpc_count.clone());
         observer.register_metric(rpc_failure_count.clone());
         observer.register_metric(rpc_latency.clone());
@@ -392,6 +400,7 @@ impl Metrics {
         observer.register_metric(tls_receive_failures.clone());
         observer.register_metric(persistence_enqueue_failures.clone());
         observer.register_metric(orphaned_blob_deletes.clone());
+        observer.register_metric(session_rejected_low_memory.clone());
         Self {
             rpc_count,
             rpc_failure_count,
@@ -420,6 +429,7 @@ impl Metrics {
             tls_receive_failures,
             persistence_enqueue_failures,
             orphaned_blob_deletes,
+            session_rejected_low_memory,
         }
     }
 
@@ -553,6 +563,10 @@ impl Metrics {
 
     pub fn inc_orphaned_blob_deletes(&self, count: u64) {
         self.orphaned_blob_deletes.add(count, &[]);
+    }
+
+    pub fn inc_session_rejected_low_memory(&self) {
+        self.session_rejected_low_memory.add(1, &[]);
     }
 }
 

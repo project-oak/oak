@@ -63,6 +63,14 @@ impl SealedMemoryServiceImplementation {
         tls_server_context: Option<Arc<OakSessionTlsServerContext>>,
         clock: Arc<dyn Clock>,
     ) -> Self {
+        // Panic on misconfiguration to surface the error early rather than silently
+        // disabling
+        let threshold = application_config.min_available_memory_ratio;
+        assert!(
+            (0.0..1.0).contains(&threshold),
+            "Misconfigured min_available_memory_ratio! Must be between 0.0 and 1.0 (exclusive at upper bound). 0.0 disables the check."
+        );
+
         Self {
             metrics,
             persistence_tx,
@@ -78,6 +86,7 @@ impl SealedMemoryServiceImplementation {
     }
 
     fn new_oak_session_handler(&self) -> tonic::Result<OakSessionHandler> {
+        self.check_memory_availability()?;
         OakSessionHandler::new(
             &self.metrics,
             &self.persistence_tx,
@@ -90,6 +99,41 @@ impl SealedMemoryServiceImplementation {
             self.application_config.enable_int8_embedding,
             self.application_config.allowed_memory_sources.clone(),
         )
+    }
+
+    /// Checks system available memory against `min_available_memory_ratio`.
+    /// Rejects new sessions with `RESOURCE_EXHAUSTED` if available memory is
+    /// below threshold.
+    fn check_memory_availability(&self) -> tonic::Result<()> {
+        let threshold = self.application_config.min_available_memory_ratio;
+        if threshold == 0.0 {
+            return Ok(());
+        }
+
+        match crate::meminfo::read_system_meminfo() {
+            Ok(meminfo) => {
+                if meminfo.is_below_threshold(threshold) {
+                    self.metrics.inc_session_rejected_low_memory();
+
+                    log::warn!(
+                        "Rejecting new session: available memory ({:.1}%) is below minimum threshold ({:.1}%)",
+                        meminfo.available_ratio() * 100.0,
+                        threshold * 100.0
+                    );
+                    return Err(tonic::Status::resource_exhausted(format!(
+                        "server memory is critically low: {:.1}% available (threshold: {:.1}%)",
+                        meminfo.available_ratio() * 100.0,
+                        threshold * 100.0
+                    )));
+                }
+            }
+            Err(e) => {
+                // Log warning when meminfo cannot be read (e.g. non-Linux or test env), fail
+                // open.
+                log::warn!("Could not read /proc/meminfo: {e}");
+            }
+        }
+        Ok(())
     }
 }
 
@@ -367,6 +411,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         &self,
         request: tonic::Request<tonic::Streaming<TlsSessionFrame>>,
     ) -> Result<tonic::Response<Self::StartTlsSessionStream>, tonic::Status> {
+        self.check_memory_availability()?;
         let tls_ctx = self
             .tls_server_context
             .as_ref()

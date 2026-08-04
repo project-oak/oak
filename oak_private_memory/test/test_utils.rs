@@ -144,6 +144,7 @@ pub fn default_test_application_config(db_addr: SocketAddr) -> ApplicationConfig
         max_memory_ttl_seconds: MAX_MEMORY_TTL_SECONDS,
         enable_int8_embedding: false,
         allowed_memory_sources: vec![],
+        min_available_memory_ratio: app::meminfo::DEFAULT_MIN_AVAILABLE_MEMORY_RATIO,
     }
 }
 
@@ -176,6 +177,7 @@ pub async fn start_server_with_tls(
         max_memory_ttl_seconds: MAX_MEMORY_TTL_SECONDS,
         enable_int8_embedding: false,
         allowed_memory_sources: vec![],
+        min_available_memory_ratio: app::meminfo::DEFAULT_MIN_AVAILABLE_MEMORY_RATIO,
     };
 
     let metrics = private_memory_server_lib::metrics::get_global_metrics();
@@ -226,6 +228,7 @@ pub async fn start_container_server() -> Result<(
         max_memory_ttl_seconds: MAX_MEMORY_TTL_SECONDS,
         enable_int8_embedding: false,
         allowed_memory_sources: vec![],
+        min_available_memory_ratio: app::meminfo::DEFAULT_MIN_AVAILABLE_MEMORY_RATIO,
     };
     let application_config_bytes = serde_json::to_vec(&application_config)?;
 

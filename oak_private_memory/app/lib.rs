@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 mod context;
 mod db_client;
 mod handler;
+pub mod meminfo;
 mod packing;
 mod persistence_worker;
 pub mod service;
@@ -69,14 +70,25 @@ pub struct ApplicationConfig {
     /// source_id are rejected with `InvalidArgument`.
     #[serde(default)]
     pub allowed_memory_sources: Vec<String>,
+
+    /// Minimum available memory ratio required to initialize new sessions
+    /// (`MemAvailable` / `MemTotal`). Rejects incoming new session
+    /// handshakes with `RESOURCE_EXHAUSTED` when available RAM drops below this
+    /// ratio threshold. Default: 0.05 (5%).
+    #[serde(default = "default_min_available_memory_ratio")]
+    pub min_available_memory_ratio: f64,
+}
+
+fn default_min_available_memory_ratio() -> f64 {
+    crate::meminfo::DEFAULT_MIN_AVAILABLE_MEMORY_RATIO
 }
 
 fn default_max_database_size_bytes() -> usize {
-    250 * 1024 * 1024
+    oak_private_memory_database::database::MAX_DATABASE_SIZE
 }
 
 fn default_max_grpc_decode_size_bytes() -> usize {
-    100 * 1024 * 1024
+    oak_private_memory_database::database::MAX_GRPC_DECODE_SIZE
 }
 
 pub use oak_private_memory_database::clock::{
@@ -150,5 +162,24 @@ mod tests {
             err.contains("not_a_real_field"),
             "error should mention the unknown field, got: {err}"
         );
+    }
+
+    #[test]
+    fn application_config_default_and_custom_memory_threshold() {
+        let default_json = r#"{
+            "database_service_host": "127.0.0.1:8080"
+        }"#;
+        let config = serde_json::from_str::<ApplicationConfig>(default_json).unwrap();
+        assert_eq!(
+            config.min_available_memory_ratio,
+            crate::meminfo::DEFAULT_MIN_AVAILABLE_MEMORY_RATIO
+        );
+
+        let custom_json = r#"{
+            "database_service_host": "127.0.0.1:8080",
+            "min_available_memory_ratio": 0.10
+        }"#;
+        let config = serde_json::from_str::<ApplicationConfig>(custom_json).unwrap();
+        assert_eq!(config.min_available_memory_ratio, 0.10);
     }
 }

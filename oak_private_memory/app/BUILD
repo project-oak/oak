@@ -28,6 +28,7 @@ rust_library(
         "db_client.rs",
         "handler.rs",
         "lib.rs",
+        "meminfo.rs",
         "packing.rs",
         "persistence_worker.rs",
         "service.rs",
@@ -59,6 +60,7 @@ rust_library(
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",
         "@oak_crates_index//:zeroize",
+        "@pm_crates//:procfs",
         "@pm_crates//:rand",
     ],
 )

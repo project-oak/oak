@@ -246,6 +246,7 @@ rust_library(
         ":attestation_testing",
         ":private_memory_server_lib",
         ":private_memory_test_database_server_lib",
+        "//app",
         "//database",
         "@oak//oak_containers/launcher:lib",
         "@oak//oak_session/tls/rust:oak_session_tls",
