@@ -33,9 +33,12 @@ use x86_64::{
 use crate::{FRAME_ALLOCATOR, PAGE_TABLES, VMA_ALLOCATOR};
 
 mod bitmap_frame_allocator;
+pub mod bump_allocator;
 pub mod frame_allocator;
 pub mod page_tables;
 pub mod virtual_address_allocator;
+
+pub use bump_allocator::BumpAllocator;
 
 /// The start of kernel memory.
 pub const KERNEL_OFFSET: u64 = 0xFFFF_FFFF_8000_0000;

@@ -73,10 +73,9 @@ use core::{
 };
 
 use goblin::elf64::program_header::ProgramHeader;
-use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use mm::{
-    frame_allocator::PhysicalMemoryAllocator, page_tables::CurrentRootPageTable,
+    BumpAllocator, frame_allocator::PhysicalMemoryAllocator, page_tables::CurrentRootPageTable,
     virtual_address_allocator::VirtualAddressAllocator,
 };
 use oak_channel::Channel;
@@ -99,7 +98,7 @@ pub static FRAME_ALLOCATOR: Spinlock<PhysicalMemoryAllocator<4096>> =
 
 /// The allocator for allocating space in the memory area that is shared with
 /// the hypervisor.
-pub static GUEST_HOST_HEAP: OnceCell<LockedHeap> = OnceCell::new();
+pub static GUEST_HOST_HEAP: OnceCell<BumpAllocator> = OnceCell::new();
 
 /// Active page tables.
 pub static PAGE_TABLES: Spinlock<CurrentRootPageTable> =

@@ -21,7 +21,7 @@ use core::{
     ptr::NonNull,
 };
 
-use linked_list_allocator::{Heap, LockedHeap};
+use linked_list_allocator::Heap;
 use log::info;
 use oak_hal::{PageAssignment, Platform};
 use spinning_top::Spinlock;
@@ -38,7 +38,7 @@ use zeroize::Zeroize;
 
 use crate::{
     FRAME_ALLOCATOR, PAGE_TABLES,
-    mm::{Translator, encryption_aware_page_table_flags},
+    mm::{BumpAllocator, Translator, encryption_aware_page_table_flags},
 };
 
 #[cfg(not(test))]
@@ -253,7 +253,7 @@ pub fn init_guest_host_heap<P: Platform>() {
 unsafe fn init_guest_host_allocator<S: PageSize, M: Mapper<S>>(
     pages: PageRange<S>,
     mapper: &mut M,
-) -> Result<LockedHeap, FlagUpdateError> {
+) -> Result<BumpAllocator, FlagUpdateError> {
     for page in pages {
         unsafe {
             mapper
@@ -277,8 +277,14 @@ unsafe fn init_guest_host_allocator<S: PageSize, M: Mapper<S>>(
         pages.end.start_address().as_u64()
     );
 
+    // Safety: the caller guarantees that the page range is valid, mapped, and not
+    // in use, so the memory backing this allocator is safe to allocate from
+    // without conflicting references.
     Ok(unsafe {
-        LockedHeap::new(pages.start.start_address().as_mut_ptr(), pages.count() * S::SIZE as usize)
+        BumpAllocator::new(
+            pages.start.start_address().as_mut_ptr(),
+            pages.count() * S::SIZE as usize,
+        )
     })
 }
 
