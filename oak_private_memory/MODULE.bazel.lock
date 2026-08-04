@@ -818,7 +818,7 @@
     },
     "@@oak+//bazel/rust:extensions.bzl%rust_toolchains": {
       "general": {
-        "bzlTransitiveDigest": "8u5lxmxzsTFSjldQxaaj107gjpjoDpDM5atJBePpiJw=",
+        "bzlTransitiveDigest": "QyUoch4EhiuMfgXDqClHCArIu0XYwc1yYH7/bD2mEVQ=",
         "usagesDigest": "uNiaPp88A8jrL954jEEsWczSFPET6LjmeKGCGh8x/pM=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -1384,7 +1384,7 @@
               "extra_rustc_flags": [
                 "--codegen=linker-flavor=gcc",
                 "--codegen=relocation-model=static",
-                "--codegen=target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float",
+                "--codegen=target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,+sha,+aes,+pclmulqdq,-soft-float",
                 "--codegen=target-cpu=x86-64-v3",
                 "--codegen=link-arg=-Wl,-zmax-page-size=0x200000"
               ],
@@ -1516,7 +1516,7 @@
               "dev_components": false,
               "extra_rustc_flags": [
                 "--codegen=relocation-model=static",
-                "--codegen=target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float",
+                "--codegen=target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,+sha,+aes,+pclmulqdq,-soft-float",
                 "--codegen=target-cpu=x86-64-v3"
               ],
               "extra_exec_rustc_flags": [],
