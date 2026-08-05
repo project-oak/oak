@@ -64,17 +64,17 @@ the `platform`, `initial` (firmware) and the `events` fields of the
 Verification policy is represented as a `Policy` trait:
 
 ```rust
-pub trait Policy<T> {
+pub trait Policy<V: ?Sized> {
     fn verify(
         &self,
-        event: &T,
+        verification_time: Instant,
+        evidence: &V,
         endorsement: &Variant,
-        now_utc_millis: i64,
     ) -> anyhow::Result<EventAttestationResults>;
 }
 ```
 
-Additional argument that is provided to policies is `now_utc_millis`, which
+Additional argument that is provided to policies is `verification_time`, which
 corresponds to the current time and is used to check certificate validity (e.g.
 for [Transparent Release](../docs/tr/README.md)).
 
@@ -102,20 +102,22 @@ This example shows how to perform attestation verification for
 [Oak Containers](../oak_containers/README.md):
 
 ```rust
+use std::sync::Arc;
 use anyhow::Context;
 use oak_attestation_verification::{
     policy::{
         container::ContainerPolicy, firmware::FirmwarePolicy, kernel::KernelPolicy,
         platform::AmdSevSnpPolicy, system::SystemPolicy,
     },
-    verifier::AmdSevSnpDiceAttestationVerifier,
+    AmdSevSnpDiceAttestationVerifier,
 };
 use oak_attestation_verification_types::{
-    policy::Policy, util::Clock, verifier::AttestationVerifier,
+    policy::EventPolicy, verifier::AttestationVerifier,
 };
 use oak_proto_rust::oak::attestation::v1::{
     AttestationResults, Endorsements, Evidence, OakContainersReferenceValues,
 };
+use oak_time::{Clock, FixedClock, Instant};
 
 fn verify(
     evidence: &Evidence,
@@ -143,16 +145,16 @@ fn verify(
         ref_vals.container_layer.as_ref().context("no container reference value provided")?;
     let container_policy = ContainerPolicy::new(container_ref_vals);
 
-    let event_policies: Vec<Box<dyn Policy<[u8]>>> =
+    let event_policies: Vec<Box<dyn EventPolicy>> =
         vec![Box::new(kernel_policy), Box::new(system_policy), Box::new(container_policy)];
 
     // Create verifier.
+    let clock = FixedClock::at_instant(Instant::from_unix_millis(1234567890));
     let verifier = AmdSevSnpDiceAttestationVerifier::new(
         platform_policy,
         Box::new(firmware_policy),
         event_policies,
-        // Clock should implement the `Clock` trait: `oak_attestation_types::util::Clock`.
-        Arc::new(SystemClock {}),
+        Arc::new(clock),
     );
 
     // Perform attestation verification.
