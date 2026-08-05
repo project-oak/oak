@@ -89,7 +89,6 @@ rust_test_suite(
     ],
     # Tracking: b/5034099
     flaky = True,
-    tags = ["manual"],
     # Linux-only: integration test that requires QEMU, kernel, system image.
     target_compatible_with = ["@platforms//os:linux"],
     deps = [

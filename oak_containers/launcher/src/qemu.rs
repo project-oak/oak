@@ -190,7 +190,9 @@ impl Qemu {
         cmd.arg("-enable-kvm");
         // Needed to expose advanced CPU features. Specifically RDRAND which is required
         // for remote attestation.
-        cmd.args(["-cpu", "host"]);
+        // We also cap the physical address bits to 46 to avoid issues with newer
+        // machines that may use 5-level paging.
+        cmd.args(["-cpu", "host,host-phys-bits-limit=46"]);
         // Set memory size if given.
         if let Some(ref memory_size) = params.memory_size {
             cmd.args(["-m", memory_size]);
