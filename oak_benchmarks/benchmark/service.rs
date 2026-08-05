@@ -36,7 +36,9 @@ use crate::{
     BenchmarkError, BenchmarkResult,
     cpu::{
         CpuFeatures,
+        aead::{AeadBenchmark, AeadMode},
         hashing::{HashAlgorithm, HashingBenchmark},
+        signing::{SigningBenchmark, SigningMode},
     },
     memory::{
         AllocChurnBenchmark, AllocSizeMode, ArrayUpdateBenchmark,
@@ -64,6 +66,8 @@ const DEFAULT_HASHMAP_ENTRIES: u32 = 100_000;
 pub struct BenchmarkService<T: BenchmarkTimer> {
     seed: u64,
     hashing: Option<Box<HashingBenchmark>>,
+    signing: Option<Box<SigningBenchmark>>,
+    aead: Option<Box<AeadBenchmark>>,
     array_update: Option<Box<ArrayUpdateBenchmark>>,
     hashmap: Option<Box<HashMapBenchmark>>,
     alloc_churn: AllocChurnBenchmark,
@@ -79,6 +83,8 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
         Self {
             seed,
             hashing: None,
+            signing: None,
+            aead: None,
             array_update: None,
             hashmap: None,
             alloc_churn: AllocChurnBenchmark::with_defaults(),
@@ -132,7 +138,28 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
             ),
 
             // ── Public key ──
-            BenchmarkType::P256Sign => Err(BenchmarkError::UnsupportedBenchmark),
+            BenchmarkType::P256Sign => {
+                let b = self.signing_bench(seed)?;
+                b.run::<T>(SigningMode::Sign, iterations, warmup)
+            }
+            BenchmarkType::P256Verify => {
+                let b = self.signing_bench(seed)?;
+                b.run::<T>(SigningMode::Verify, iterations, warmup)
+            }
+
+            // ── AEAD ──
+            BenchmarkType::Aes256GcmSeal => self.aead_bench(seed).run::<T>(
+                AeadMode::Seal,
+                request.data_size as usize,
+                iterations,
+                warmup,
+            ),
+            BenchmarkType::Aes256GcmOpen => self.aead_bench(seed).run::<T>(
+                AeadMode::Open,
+                request.data_size as usize,
+                iterations,
+                warmup,
+            ),
 
             // ── Memory ──
             BenchmarkType::ArrayUpdate => {
@@ -199,6 +226,20 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
             }
         }
         self.hashing.as_mut().unwrap()
+    }
+
+    fn signing_bench(&mut self, seed: u64) -> Result<&mut SigningBenchmark, BenchmarkError> {
+        if self.signing.is_none() {
+            self.signing = Some(Box::new(SigningBenchmark::new(seed)?));
+        }
+        Ok(self.signing.as_mut().unwrap())
+    }
+
+    fn aead_bench(&mut self, seed: u64) -> &mut AeadBenchmark {
+        if self.aead.is_none() {
+            self.aead = Some(Box::new(AeadBenchmark::new(seed)));
+        }
+        self.aead.as_mut().unwrap()
     }
 
     fn array_update_bench(

@@ -75,6 +75,10 @@ fn test_service_supports_all_benchmark_types() {
         BenchmarkType::MemoryInsert,
         BenchmarkType::MemoryLookup,
         BenchmarkType::AllocChurn,
+        BenchmarkType::P256Sign,
+        BenchmarkType::P256Verify,
+        BenchmarkType::Aes256GcmSeal,
+        BenchmarkType::Aes256GcmOpen,
     ];
 
     for benchmark_type in types {
@@ -97,7 +101,12 @@ fn test_service_supports_all_benchmark_types() {
 /// comparisons are meaningless.
 #[test]
 fn test_service_is_deterministic_across_runs() {
-    let types = [BenchmarkType::Sha256, BenchmarkType::ArrayUpdate, BenchmarkType::MemoryInsert];
+    let types = [
+        BenchmarkType::Sha256,
+        BenchmarkType::ArrayUpdate,
+        BenchmarkType::P256Verify,
+        BenchmarkType::Aes256GcmSeal,
+    ];
 
     for benchmark_type in types {
         let mut request = request_for(benchmark_type);

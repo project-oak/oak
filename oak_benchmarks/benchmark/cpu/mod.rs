@@ -20,7 +20,9 @@ use core::fmt;
 
 use bitflags::bitflags;
 
+pub mod aead;
 pub mod hashing;
+pub mod signing;
 
 /// Common interface for CPU-bound benchmarks.
 ///

@@ -24,8 +24,10 @@ package(
 rust_library(
     name = "benchmark",
     srcs = [
+        "cpu/aead.rs",
         "cpu/hashing.rs",
         "cpu/mod.rs",
+        "cpu/signing.rs",
         "lib.rs",
         "memory/alloc_churn.rs",
         "memory/array_update.rs",
@@ -39,9 +41,11 @@ rust_library(
     deps = [
         "//oak_benchmarks/proto:oak_benchmark_proto_rust",
         "//oak_benchmarks/proto:service",
+        "@oak_crates_index//:aes-gcm",
         "@oak_crates_index//:ahash",
         "@oak_crates_index//:bitflags",
         "@oak_crates_index//:hashbrown",
+        "@oak_crates_index//:p256",
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:sha3",
     ],
@@ -50,8 +54,10 @@ rust_library(
 rust_library(
     name = "benchmark_std",
     srcs = [
+        "cpu/aead.rs",
         "cpu/hashing.rs",
         "cpu/mod.rs",
+        "cpu/signing.rs",
         "lib.rs",
         "memory/alloc_churn.rs",
         "memory/array_update.rs",
@@ -70,9 +76,11 @@ rust_library(
     deps = [
         "//oak_benchmarks/proto:oak_benchmark_proto_rust",
         "//oak_benchmarks/proto:service",
+        "@oak_crates_index//:aes-gcm",
         "@oak_crates_index//:ahash",
         "@oak_crates_index//:bitflags",
         "@oak_crates_index//:hashbrown",
+        "@oak_crates_index//:p256",
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:sha3",
     ],

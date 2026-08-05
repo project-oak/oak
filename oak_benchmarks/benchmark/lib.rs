@@ -17,7 +17,7 @@
 //! Shared benchmark logic for the Oak enclave app and the Linux baseline, so
 //! that both run the same code.
 //!
-//! - `cpu`: CPU-bound benchmarks (hashing, encryption, signing)
+//! - `cpu`: CPU-bound benchmarks (hashing, AEAD, signing, integer compute)
 //! - `memory`: Memory-bound benchmarks (random writes, hash maps, allocation)
 //! - `service`: routes requests to benchmark implementations
 //! - `timer`: timing utilities
