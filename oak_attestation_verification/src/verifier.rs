@@ -278,15 +278,15 @@ pub enum EventLogType {
     TransparentEventLog,
 }
 
-/// Verifies signatures of the certificates in the DICE chain and returns last
-/// layer's Certificate Authority key if the verification is successful.
-/// Verifies that both application key certificates are signed by `verifying_key`, which is the
-/// certificate authority key of the last DICE layer.
+/// Verifies that both application key certificates are signed by
+/// `verifying_key`, which is the certificate authority key of the last DICE
+/// layer.
 ///
-/// The claims inside these certificates are load-bearing: the application-layer event digest for
-/// the Restricted Kernel shape is read out of the encryption certificate by
-/// [`validate_events_and_layers`], and both application public keys are read out of them by
-/// `extract_evidence`. They must therefore be authenticated before any of their claims are used.
+/// The claims inside these certificates are load-bearing: the application-layer
+/// event digest for the Restricted Kernel shape is read out of the encryption
+/// certificate by [`validate_events_and_layers`], and both application public
+/// keys are read out of them by `extract_evidence`. They must therefore be
+/// authenticated before any of their claims are used.
 fn verify_application_keys(
     application_keys: &ApplicationKeys,
     verifying_key: &VerifyingKey,
@@ -318,6 +318,8 @@ fn verify_application_keys(
     Ok(())
 }
 
+/// Verifies signatures of the certificates in the DICE chain and returns last
+/// layer's Certificate Authority key if the verification is successful.
 pub fn verify_dice_chain(
     evidence: &Evidence,
     event_log_type: EventLogType,
@@ -360,10 +362,11 @@ pub fn verify_dice_chain(
         })
         .context("verifying DICE chain")?;
 
-    // Verify the application key certificates against the last layer's key before any of their
-    // claims are used. `validate_events_and_layers` reads the application-layer event digest out
-    // of the encryption certificate for the Restricted Kernel shape, and `extract_evidence` reads
-    // both public keys out of these certificates, so an unauthenticated certificate here would let
+    // Verify the application key certificates against the last layer's key before
+    // any of their claims are used. `validate_events_and_layers` reads the
+    // application-layer event digest out of the encryption certificate for the
+    // Restricted Kernel shape, and `extract_evidence` reads both public keys
+    // out of these certificates, so an unauthenticated certificate here would let
     // a peer choose the attested application measurement and the application keys.
     if let Some(appl_keys) = evidence.application_keys.as_ref() {
         verify_application_keys(appl_keys, &last_layer_verifying_key)

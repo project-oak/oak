@@ -1193,11 +1193,13 @@ fn forged_rk_application_event_is_detected() {
     assert!(result.is_err(), "forged RK application event should be detected and rejected",);
 }
 
-// A peer that replaces the application key certificates with ones the DICE chain did not sign must
-// be rejected. The claims in these certificates are load-bearing: the Restricted Kernel
-// application-layer event digest is read out of the encryption certificate, and both application
-// public keys are read out of them, so accepting an unsigned certificate would let the peer choose
-// the attested application measurement and the keys the caller then binds its session to.
+// A peer that replaces the application key certificates with ones the DICE
+// chain did not sign must be rejected. The claims in these certificates are
+// load-bearing: the Restricted Kernel application-layer event digest is read
+// out of the encryption certificate, and both application public keys are read
+// out of them, so accepting an unsigned certificate would let the peer choose
+// the attested application measurement and the keys the caller then binds its
+// session to.
 #[test]
 fn verify_dice_chain_rejects_unsigned_application_key_certificates() {
     use coset::{CborSerializable, CoseSign1};
