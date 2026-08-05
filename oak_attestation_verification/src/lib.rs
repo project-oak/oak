@@ -29,6 +29,7 @@ pub mod results {
     pub use oak_attestation_verification_results::*;
 }
 mod util;
+mod validity;
 pub mod verifier;
 mod verifiers;
 mod x509;
