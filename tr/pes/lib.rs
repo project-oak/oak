@@ -23,18 +23,28 @@ mod pae;
 #[cfg(test)]
 mod tests;
 
-use alloc::vec::Vec;
+use alloc::{string::ToString, vec::Vec};
 
 use anyhow::Context;
-use oak_digest::Sha256;
+use intoto::statement::{DefaultStatement, parse_statement};
+use oak_digest::{Sha256, raw_digest_from_contents, raw_to_hex_digest};
 use oak_proto_rust::{
     google::pes::v1::{
         PublicEndorsement, VerificationMaterial as ProtoVerificationMaterial,
         verification_material::VerificationMaterial,
     },
-    oak::attestation::v1::{KeyType, VerifyingKey, VerifyingKeySet},
+    oak::attestation::v1::{
+        Claim, Endorsement, KeyType, PesEndorsementReferenceValue, VerifyingKey, VerifyingKeySet,
+    },
 };
+use oak_time::Instant;
 use x509_cert::der::{Decode, Encode};
+
+/// Claim type URI for PES publisher identity claim.
+///
+/// Authoritative source:
+/// <https://github.com/private-compute-infra-toolkit/public-endorsement-service/blob/main/docs/claims/publisher.md>
+const PUBLISHER_CLAIM_TYPE: &str = "https://github.com/private-compute-infra-toolkit/public-endorsement-service/blob/main/docs/claims/publisher.md";
 
 /// Verifies a PES confirmation (serialized PublicEndorsement) against a PES
 /// public key set.
@@ -46,6 +56,10 @@ use x509_cert::der::{Decode, Encode};
 /// * `pes_key_set`: The trusted public keys for verifying the PES signature.
 /// * `expected_endorsement_bytes`: The expected serialized endorsement that
 ///   should match the one in the confirmation.
+/// * `trusted_endorser_key`: An optional trusted endorser key. When `Some`, the
+///   endorser key in the PES confirmation is verified to match this key. When
+///   `None`, endorser key matching is skipped (trust is established via PES
+///   signature and publisher ID).
 ///
 /// # Returns
 ///
@@ -54,7 +68,7 @@ pub fn verify_pes_confirmation(
     pes_confirmation_bytes: &[u8],
     pes_key_set: &VerifyingKeySet,
     expected_endorsement_bytes: &[u8],
-    trusted_endorser_key: &VerifyingKey,
+    trusted_endorser_key: Option<&VerifyingKey>,
 ) -> anyhow::Result<()> {
     let public_endorsement = parse_pes_confirmation(pes_confirmation_bytes)?;
 
@@ -84,14 +98,16 @@ pub fn verify_pes_confirmation(
     let endorser_raw_vm_bytes = extract_raw_vm_bytes(endorser_vm)?;
 
     // Verify that the endorser key in the confirmation matches the trusted endorser
-    // key.
-    let endorser_public_key_der =
-        extract_public_key_der(endorser_vm).context("extracting endorser public key DER")?;
-    anyhow::ensure!(
-        key_util::equal_keys(&endorser_public_key_der, &trusted_endorser_key.raw)
-            .context("comparing endorser keys")?,
-        "endorser public key in PES confirmation does not match trusted endorser key"
-    );
+    // key, if one is provided.
+    if let Some(key) = trusted_endorser_key {
+        let endorser_public_key_der =
+            extract_public_key_der(endorser_vm).context("extracting endorser public key DER")?;
+        anyhow::ensure!(
+            key_util::equal_keys(&endorser_public_key_der, &key.raw)
+                .context("comparing endorser keys")?,
+            "endorser public key in PES confirmation does not match trusted endorser key"
+        );
+    }
 
     // Construct the Pre-Authentication Encoding (PAE) canonical byte string.
     let pae_bytes = pae::calculate(
@@ -163,6 +179,78 @@ pub fn verify_pes_confirmation(
     );
 
     Ok(())
+}
+
+/// Verifies a PES signed endorsement against a reference value.
+///
+/// Validates the PES confirmation signature, publisher ID, required claims,
+/// validity period, and subject digest.
+///
+/// # Arguments
+///
+/// * `current_time`: Current UTC time as an [`Instant`].
+/// * `endorsement`: Endorsement containing the serialized in-toto statement.
+/// * `pes_confirmation`: Serialized `PublicEndorsement` proto from PES.
+/// * `ref_value`: Trusted PES key set, publisher ID, and additional required
+///   claims.
+pub fn verify_pes_endorsement(
+    current_time: Instant,
+    endorsement: &Endorsement,
+    pes_confirmation: &[u8],
+    ref_value: &PesEndorsementReferenceValue,
+) -> anyhow::Result<DefaultStatement> {
+    // 1. Validate inputs on ref_value first to fail fast before doing cryptographic
+    //    operations.
+    let key_set = ref_value.key_set.as_ref().context("missing PES key set")?;
+
+    anyhow::ensure!(
+        !ref_value.publisher_id.is_empty(),
+        "publisher_id in reference value must not be empty"
+    );
+
+    if let Some(ref add_claims) = ref_value.additional_required_claims
+        && add_claims.claims.iter().any(|c| c.r#type == PUBLISHER_CLAIM_TYPE)
+    {
+        anyhow::bail!(
+            "invalid argument: additional_required_claims must not contain the publisher_id claim"
+        );
+    }
+
+    // 2. Verify PES signature exactly as it is done for TLog.
+    verify_pes_confirmation(
+        pes_confirmation,
+        key_set,
+        &endorsement.serialized,
+        None, // No trusted_endorser_key provided, we rely on PES signature and publisher_id.
+    )
+    .context("verifying PES confirmation")?;
+
+    // 3. Build the required claims for validation, including the Publisher ID
+    //    claim.
+    let mut combined_required_claims =
+        ref_value.additional_required_claims.clone().unwrap_or_default();
+    let mut publisher_annotations = alloc::collections::BTreeMap::new();
+    publisher_annotations.insert("publisher_id".to_string(), ref_value.publisher_id.clone());
+    combined_required_claims.claims.push(Claim {
+        r#type: PUBLISHER_CLAIM_TYPE.to_string(),
+        annotations: publisher_annotations,
+    });
+
+    // 4. Parse and validate the statement using Statement::validate from
+    //    statement.rs.
+    let statement =
+        parse_statement(&endorsement.serialized).context("parsing endorsement statement")?;
+
+    let subject_digest = if endorsement.subject.is_empty() {
+        None
+    } else {
+        Some(raw_to_hex_digest(&raw_digest_from_contents(&endorsement.subject)))
+    };
+    statement
+        .validate(subject_digest, current_time, &combined_required_claims)
+        .context("validating endorsement statement")?;
+
+    Ok(statement)
 }
 
 fn extract_raw_vm_bytes(vm: &ProtoVerificationMaterial) -> anyhow::Result<&[u8]> {

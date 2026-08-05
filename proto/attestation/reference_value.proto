@@ -214,6 +214,27 @@ message EndorsementReferenceValue {
   TLogReferenceValues tlog = 6;
 }
 
+message PesEndorsementReferenceValue {
+  // Verifying key set containing the public keys used to verify Public
+  // Endorsement Service (PES) confirmation signatures.
+  VerifyingKeySet key_set = 1;
+
+  // Verifies publisher_id annotation on
+  // "https://github.com/private-compute-infra-toolkit/public-endorsement-service/blob/main/docs/claims/publisher.md"
+  // claim. Since publisher_id claim is required for PES this field is also
+  // required.
+  string publisher_id = 2;
+
+  // Additional claims other than the publisher_id that are required to be
+  // present in the endorsement.
+  //
+  // MUST NOT contain the `publisher_id` claim matching
+  // https://github.com/private-compute-infra-toolkit/public-endorsement-service/blob/main/docs/claims/publisher.md.
+  // If `publisher_id` is included in this field, the request will be rejected
+  // with an INVALID_ARGUMENT error.
+  ClaimReferenceValue additional_required_claims = 3;
+}
+
 message BinaryReferenceValue {
   oneof type {
     // Deliberately skips a verification step, rather than failing. For example:

@@ -1161,6 +1161,28 @@ pub struct EndorsementReferenceValue {
     pub tlog: ::core::option::Option<TLogReferenceValues>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct PesEndorsementReferenceValue {
+    /// Verifying key set containing the public keys used to verify Public
+    /// Endorsement Service (PES) confirmation signatures.
+    #[prost(message, optional, tag = "1")]
+    pub key_set: ::core::option::Option<VerifyingKeySet>,
+    /// Verifies publisher_id annotation on
+    /// "<https://github.com/private-compute-infra-toolkit/public-endorsement-service/blob/main/docs/claims/publisher.md">
+    /// claim. Since publisher_id claim is required for PES this field is also
+    /// required.
+    #[prost(string, tag = "2")]
+    pub publisher_id: ::prost::alloc::string::String,
+    /// Additional claims other than the publisher_id that are required to be
+    /// present in the endorsement.
+    ///
+    /// MUST NOT contain the `publisher_id` claim matching
+    /// <https://github.com/private-compute-infra-toolkit/public-endorsement-service/blob/main/docs/claims/publisher.md.>
+    /// If `publisher_id` is included in this field, the request will be rejected
+    /// with an INVALID_ARGUMENT error.
+    #[prost(message, optional, tag = "3")]
+    pub additional_required_claims: ::core::option::Option<ClaimReferenceValue>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct BinaryReferenceValue {
     #[prost(oneof = "binary_reference_value::Type", tags = "1, 2, 3")]
     pub r#type: ::core::option::Option<binary_reference_value::Type>,

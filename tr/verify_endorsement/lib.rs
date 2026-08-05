@@ -287,7 +287,7 @@ fn verify_tlog(
                     &signed_endorsement.pes_confirmation,
                     pes.key_set.as_ref().context("missing PES key set")?,
                     &endorsement.serialized,
-                    trusted_endorser_key,
+                    Some(trusted_endorser_key),
                 )
                 .context("verifying PES confirmation")?;
             }
@@ -328,7 +328,7 @@ fn verify_tlog(
                     &signed_endorsement.pes_confirmation,
                     pes.key_set.as_ref().context("missing PES key set")?,
                     &endorsement.serialized,
-                    trusted_endorser_key,
+                    Some(trusted_endorser_key),
                 ) {
                     Ok(()) => return Ok(()),
                     Err(e) => errors.push(alloc::format!("verifying PES confirmation: {e}")),

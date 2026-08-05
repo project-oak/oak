@@ -26,6 +26,8 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "//oak_proto_rust",
+        "//oak_time",
+        "//tr/intoto",
         "//tr/key_util",
         "//util/digest:oak_digest",
         "@oak_crates_index//:anyhow",
@@ -43,7 +45,6 @@ rust_test(
     crate = ":pes",
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
-        "//tr/key_util",
         "@oak_crates_index//:base64",
         "@oak_crates_index//:rsa",
         "@oak_crates_index//:serde_json",

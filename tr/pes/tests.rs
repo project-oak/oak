@@ -22,14 +22,22 @@ use oak_proto_rust::{
         VerificationMaterial, X509Der, statement::Format as StatementFormat,
         verification_material::VerificationMaterial as VmOneof,
     },
-    oak::attestation::v1::{KeyType, VerifyingKey, VerifyingKeySet},
+    oak::{
+        HexDigest,
+        attestation::v1::{
+            Claim, ClaimReferenceValue, Endorsement, KeyType, PesEndorsementReferenceValue,
+            VerifyingKey, VerifyingKeySet, endorsement::Format as EndorsementFormat,
+        },
+    },
 };
+use oak_time::Instant;
 use rsa::{Pkcs1v15Sign, RsaPrivateKey, pkcs8::EncodePublicKey};
 
 use super::*;
 
-#[test]
-fn test_verify_pes_confirmation_success() {
+fn create_test_pes_confirmation_bytes(
+    endorsement_bytes: &[u8],
+) -> (Vec<u8>, VerifyingKeySet, VerifyingKey) {
     use base64::Engine;
     use rsa::pkcs8::DecodePrivateKey;
     let dummy_endorser_key_hex = "3059301306072a8648ce3d020106082a8648ce3d030107034200048b159e54b0cda5de273bf535ae7cd5946680dbfb87b6cc1348373b78de32806a7f26bb00459ba16edce02221acd1c4a0a45c9e627784dd4590f3bb29c98637f8";
@@ -85,7 +93,6 @@ A1edf0NSAidb4q69a5aAcE+c+w==";
     let pub_key = priv_key.to_public_key();
     let pub_key_der = pub_key.to_public_key_der().expect("failed to encode public key").to_vec();
 
-    let endorsement_bytes = b"{\"artifact\":\"test\"}";
     let entry_id = "test-log-entry";
 
     // 1. Construct the PublicEndorsement
@@ -96,7 +103,7 @@ A1edf0NSAidb4q69a5aAcE+c+w==";
             serialized: endorsement_bytes.to_vec(),
         }),
         statement_signature: Some(Signature {
-            signature: vec![0; 64], // Dummy endorser signature
+            signature: vec![0; 64],
             verification_material: Some(VerificationMaterial {
                 verification_material: Some(VmOneof::EcdsaP256Sha256(EcdsaP256PublicKey {
                     der_bytes: dummy_endorser_key_bytes.clone(),
@@ -104,7 +111,7 @@ A1edf0NSAidb4q69a5aAcE+c+w==";
             }),
         }),
         endorsement_signatures: vec![Signature {
-            signature: vec![], // Will fill after signing PAE
+            signature: vec![],
             verification_material: Some(VerificationMaterial {
                 verification_material: Some(VmOneof::X509Certificate(X509Der {
                     der_bytes: cert_der,
@@ -182,15 +189,169 @@ A1edf0NSAidb4q69a5aAcE+c+w==";
         raw: dummy_endorser_key_bytes.clone(),
     };
 
+    (pes_confirmation_bytes, pes_key_set, trusted_endorser_key)
+}
+
+#[test]
+fn test_verify_pes_confirmation_success() {
+    let endorsement_bytes = b"{\"artifact\":\"test\"}";
+    let (pes_confirmation_bytes, pes_key_set, trusted_endorser_key) =
+        create_test_pes_confirmation_bytes(endorsement_bytes);
     // 6. Verify!
     let result = verify_pes_confirmation(
         &pes_confirmation_bytes,
         &pes_key_set,
         endorsement_bytes,
-        &trusted_endorser_key,
+        Some(&trusted_endorser_key),
     );
-
     assert!(result.is_ok(), "Verification failed: {:?}", result.err());
+}
+
+fn make_test_endorsement_statement() -> Vec<u8> {
+    let mut statement = intoto::statement::make_statement(
+        "test-subject",
+        &HexDigest {
+            sha2_256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                .to_string(),
+            ..Default::default()
+        },
+        Instant::from_unix_millis(1000),
+        Instant::from_unix_millis(0),
+        Instant::from_unix_millis(2000),
+        vec![],
+    );
+    let mut publisher_annotations = alloc::collections::BTreeMap::new();
+    publisher_annotations
+        .insert("publisher_id".to_string(), "test-publisher@google.com".to_string());
+    statement.predicate.claims.push(intoto::statement::Claim {
+        r#type:
+            "https://github.com/private-compute-infra-toolkit/public-endorsement-service/blob/main/docs/claims/publisher.md"
+                .to_string(),
+        annotations: publisher_annotations,
+    });
+    serde_json::to_vec(&statement).unwrap()
+}
+
+#[test]
+fn test_verify_pes_endorsement_success() {
+    let endorsement_bytes = make_test_endorsement_statement();
+    let (pes_confirmation_bytes, pes_key_set, _) =
+        create_test_pes_confirmation_bytes(&endorsement_bytes);
+
+    let endorsement = Endorsement {
+        format: EndorsementFormat::EndorsementFormatJsonIntoto.into(),
+        serialized: endorsement_bytes,
+        subject: vec![],
+    };
+    let ref_value = PesEndorsementReferenceValue {
+        key_set: Some(pes_key_set),
+        publisher_id: "test-publisher@google.com".to_string(),
+        ..Default::default()
+    };
+
+    let result = verify_pes_endorsement(
+        Instant::from_unix_millis(1000),
+        &endorsement,
+        &pes_confirmation_bytes,
+        &ref_value,
+    );
+    assert!(result.is_ok(), "verify_pes_endorsement failed: {:?}", result.err());
+}
+
+#[test]
+fn test_verify_pes_endorsement_failure_wrong_publisher() {
+    let endorsement_bytes = make_test_endorsement_statement();
+    let (pes_confirmation_bytes, pes_key_set, _) =
+        create_test_pes_confirmation_bytes(&endorsement_bytes);
+
+    let endorsement = Endorsement {
+        format: EndorsementFormat::EndorsementFormatJsonIntoto.into(),
+        serialized: endorsement_bytes,
+        subject: vec![],
+    };
+    let ref_value = PesEndorsementReferenceValue {
+        key_set: Some(pes_key_set),
+        publisher_id: "wrong-publisher@google.com".to_string(),
+        ..Default::default()
+    };
+
+    let result = verify_pes_endorsement(
+        Instant::from_unix_millis(1000),
+        &endorsement,
+        &pes_confirmation_bytes,
+        &ref_value,
+    );
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_verify_pes_endorsement_failure_missing_required_claim() {
+    let endorsement_bytes = make_test_endorsement_statement();
+    let (pes_confirmation_bytes, pes_key_set, _) =
+        create_test_pes_confirmation_bytes(&endorsement_bytes);
+
+    let endorsement = Endorsement {
+        format: EndorsementFormat::EndorsementFormatJsonIntoto.into(),
+        serialized: endorsement_bytes,
+        subject: vec![],
+    };
+    let req_claims = ClaimReferenceValue {
+        claims: vec![Claim {
+            r#type: "https://example.com/missing_claim".to_string(),
+            annotations: Default::default(),
+        }],
+        ..Default::default()
+    };
+    let ref_value = PesEndorsementReferenceValue {
+        key_set: Some(pes_key_set),
+        publisher_id: "test-publisher@google.com".to_string(),
+        additional_required_claims: Some(req_claims),
+    };
+
+    let result = verify_pes_endorsement(
+        Instant::from_unix_millis(1000),
+        &endorsement,
+        &pes_confirmation_bytes,
+        &ref_value,
+    );
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_verify_pes_endorsement_failure_publisher_id_in_additional_claims() {
+    let endorsement_bytes = make_test_endorsement_statement();
+    let (pes_confirmation_bytes, pes_key_set, _) =
+        create_test_pes_confirmation_bytes(&endorsement_bytes);
+
+    let endorsement = Endorsement {
+        format: EndorsementFormat::EndorsementFormatJsonIntoto.into(),
+        serialized: endorsement_bytes,
+        subject: vec![],
+    };
+    let req_claims = ClaimReferenceValue {
+        claims: vec![Claim {
+            r#type: "https://github.com/private-compute-infra-toolkit/public-endorsement-service/blob/main/docs/claims/publisher.md".to_string(),
+            annotations: Default::default(),
+        }],
+        ..Default::default()
+    };
+    let ref_value = PesEndorsementReferenceValue {
+        key_set: Some(pes_key_set),
+        publisher_id: "test-publisher@google.com".to_string(),
+        additional_required_claims: Some(req_claims),
+    };
+
+    let result = verify_pes_endorsement(
+        Instant::from_unix_millis(1000),
+        &endorsement,
+        &pes_confirmation_bytes,
+        &ref_value,
+    );
+    assert!(result.is_err());
+    assert!(
+        result.unwrap_err().to_string().contains("invalid argument"),
+        "expected error to contain invalid argument"
+    );
 }
 
 #[test]
