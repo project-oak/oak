@@ -36,6 +36,7 @@ rust_library(
         "//oak_proto_rust/oak_proto_rust_lib",
         "//oak_time",
         "//tr/intoto",
+        "//tr/pes",
         "//tr/rekor",
         "//tr/verify_endorsement",
         "//util/digest:oak_digest",

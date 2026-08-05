@@ -573,6 +573,18 @@ pub fn serialize_endorsement_reference_value(
     })
 }
 
+pub fn serialize_pes_endorsement_reference_value(
+    instance: &PesEndorsementReferenceValue,
+) -> serde_json::Value {
+    let PesEndorsementReferenceValue { key_set, publisher_id, additional_required_claims } =
+        instance;
+    json!({
+        "key_set": key_set.as_ref().map(serialize_verifying_key_set),
+        "publisher_id": publisher_id,
+        "additional_required_claims": additional_required_claims.as_ref().map(serialize_claim_reference_value),
+    })
+}
+
 pub fn serialize_binary_reference_value(instance: &BinaryReferenceValue) -> serde_json::Value {
     // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
     // all fields. If a new field is added to the struct, this code won't
@@ -585,6 +597,9 @@ pub fn serialize_binary_reference_value(instance: &BinaryReferenceValue) -> serd
         }
         Some(binary_reference_value::Type::Endorsement(instance)) => {
             json!({ "endorsement": serialize_endorsement_reference_value(instance) })
+        }
+        Some(binary_reference_value::Type::PesEndorsement(instance)) => {
+            json!({ "pes_endorsement": serialize_pes_endorsement_reference_value(instance) })
         }
         Some(binary_reference_value::Type::Digests(instance)) => {
             json!({ "digests": serialize_digests(instance) })
@@ -605,6 +620,9 @@ pub fn serialize_mpm_reference_value(instance: &MpmReferenceValue) -> serde_json
         }
         Some(mpm_reference_value::Type::Endorsement(instance)) => {
             json!({ "endorsement": serialize_endorsement_reference_value(instance) })
+        }
+        Some(mpm_reference_value::Type::PesEndorsement(instance)) => {
+            json!({ "pes_endorsement": serialize_pes_endorsement_reference_value(instance) })
         }
         Some(mpm_reference_value::Type::Versions(instance)) => {
             json!({ "versions": serialize_mpm_version_ids(instance) })
@@ -639,6 +657,9 @@ pub fn serialize_kernel_binary_reference_value(
         }
         Some(kernel_binary_reference_value::Type::Endorsement(instance)) => {
             json!({ "endorsement": serialize_endorsement_reference_value(instance) })
+        }
+        Some(kernel_binary_reference_value::Type::PesEndorsement(instance)) => {
+            json!({ "pes_endorsement": serialize_pes_endorsement_reference_value(instance) })
         }
         Some(kernel_binary_reference_value::Type::Digests(instance)) => {
             json!({ "digests": serialize_kernel_digests(instance) })
@@ -686,6 +707,9 @@ pub fn serialize_text_reference_value(instance: &TextReferenceValue) -> serde_js
         }
         Some(text_reference_value::Type::Endorsement(instance)) => {
             json!({ "endorsement": serialize_endorsement_reference_value(instance) })
+        }
+        Some(text_reference_value::Type::PesEndorsement(instance)) => {
+            json!({ "pes_endorsement": serialize_pes_endorsement_reference_value(instance) })
         }
         Some(text_reference_value::Type::Regex(instance)) => {
             json!({ "regex": serialize_regex(instance) })

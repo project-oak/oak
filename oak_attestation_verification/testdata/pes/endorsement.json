@@ -4,7 +4,7 @@
     {
       "name": "my_application_binary",
       "digest": {
-        "sha256": "1234567..."
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       }
     }
   ],
@@ -13,20 +13,19 @@
     "issuedOn": "2026-03-05T10:00:00.000000Z",
     "validity": {
       "notBefore": "2026-03-05T10:00:00.000000Z",
-      "notAfter": "2027-03-05T10:00:00.000000Z"
+      "notAfter": "2026-09-01T10:00:00.000000Z"
     },
     "claims": [
       {
-        "type": "https://github.com/pcit/pes/docs/claims/v1/publisher.md",
+        "type": "https://github.com/private-compute-infra-toolkit/public-endorsement-service/blob/main/docs/claims/publisher.md",
         "annotations": {
           "publisher_id": "ecdsa-publisher@google.com"
         }
       },
       {
-        "type": "https://github.com/pcit/pes/docs/claims/v1/workload.md",
+        "type": "https://github.com/private-compute-infra-toolkit/public-endorsement-service/blob/main/docs/claims/workload.md",
         "annotations": {
-          "workload_id": "workload",
-          "version": "1"
+          "workload_id": "workload"
         }
       },
       {

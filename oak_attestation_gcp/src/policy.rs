@@ -29,6 +29,7 @@ use oak_proto_rust::oak::{
 };
 use oak_time::Instant;
 use oci_spec::distribution::Reference as OciReference;
+use pes::verify_pes_endorsement;
 use verify_endorsement::verify_endorsement;
 use x509_cert::Certificate;
 
@@ -128,6 +129,24 @@ pub(crate) fn verify_endorsement_wrapper(
             let statement =
                 verify_endorsement(verification_time.into_unix_millis(), signed_endorsement, val)
                     .map_err(|err| EVError(format!("{err:#}")))?;
+            statement
+                .validate_subject_digest(&digest.clone().into())
+                .map_err(|err| EVError(format!("{err:#}")))
+        }
+        Some(binary_reference_value::Type::PesEndorsement(val)) => {
+            let signed_endorsement = signed_endorsement
+                .ok_or(ConfidentialSpaceVerificationError::MissingWorkloadEndorsementError)?;
+            let endorsement = signed_endorsement
+                .endorsement
+                .as_ref()
+                .ok_or_else(|| EVError("Missing endorsement".to_string()))?;
+            let statement = verify_pes_endorsement(
+                verification_time,
+                endorsement,
+                &signed_endorsement.pes_confirmation,
+                val,
+            )
+            .map_err(|err| EVError(format!("{err:#}")))?;
             statement
                 .validate_subject_digest(&digest.clone().into())
                 .map_err(|err| EVError(format!("{err:#}")))

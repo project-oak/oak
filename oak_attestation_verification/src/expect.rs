@@ -39,18 +39,21 @@ use oak_proto_rust::oak::{
         KernelExpectedValues, KernelLayerEndorsements, KernelLayerExpectedValues,
         KernelLayerReferenceValues, MpmAttachment, MpmReferenceValue, OakContainersEndorsements,
         OakContainersExpectedValues, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
-        OakRestrictedKernelExpectedValues, OakRestrictedKernelReferenceValues, RawDigests,
-        ReferenceValues, RootLayerEndorsements, RootLayerExpectedValues, RootLayerReferenceValues,
-        Signature, SignedEndorsement, SystemEndorsement, SystemLayerEndorsements,
-        SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersionExpectedValue,
-        TcbVersionReferenceValue, TdxTcbSvnExpectedValue, TdxTcbSvnReferenceValue,
-        TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
-        binary_reference_value, endorsement::Format, endorsements, expected_digests,
-        expected_values, kernel_binary_reference_value, mpm_reference_value, reference_values,
+        OakRestrictedKernelExpectedValues, OakRestrictedKernelReferenceValues,
+        PesEndorsementReferenceValue, RawDigests, ReferenceValues, RootLayerEndorsements,
+        RootLayerExpectedValues, RootLayerReferenceValues, Signature, SignedEndorsement,
+        SystemEndorsement, SystemLayerEndorsements, SystemLayerExpectedValues,
+        SystemLayerReferenceValues, TcbVersionExpectedValue, TcbVersionReferenceValue,
+        TdxTcbSvnExpectedValue, TdxTcbSvnReferenceValue, TextExpectedValue, TextReferenceValue,
+        TransparentReleaseEndorsement, VerificationSkipped, binary_reference_value,
+        endorsement::Format, endorsements, expected_digests, expected_values,
+        kernel_binary_reference_value, mpm_reference_value, reference_values,
         tcb_version_expected_value, tcb_version_reference_value, tdx_tcb_svn_expected_value,
         tdx_tcb_svn_reference_value, text_expected_value, text_reference_value,
     },
 };
+use oak_time::Instant;
+use pes::verify_pes_endorsement;
 use prost::Message;
 use verify_endorsement::{is_firmware_type, is_kernel_type, is_mpm_type, verify_endorsement};
 
@@ -609,6 +612,9 @@ pub(crate) fn get_expected_measurement_digest(
         Some(binary_reference_value::Type::Digests(expected_digests)) => {
             Ok(to_expected_digests(&expected_digests.digests, None))
         }
+        Some(binary_reference_value::Type::PesEndorsement(_)) => {
+            anyhow::bail!("PES endorsements are not supported in legacy attestation verification")
+        }
         None => Err(anyhow::anyhow!("empty binary reference value")),
     }
 }
@@ -639,6 +645,24 @@ pub(crate) fn acquire_expected_digests(
         }
         Some(binary_reference_value::Type::Digests(expected_digests)) => {
             Ok(to_expected_digests(&expected_digests.digests, None))
+        }
+        Some(binary_reference_value::Type::PesEndorsement(ref_value)) => {
+            let signed_endorsement = signed_endorsement.context("endorsement missing")?;
+            let endorsement = signed_endorsement
+                .endorsement
+                .as_ref()
+                .context("missing endorsement in signed endorsement")?;
+            let statement = verify_pes_endorsement(
+                Instant::from_unix_millis(now_utc_millis),
+                endorsement,
+                &signed_endorsement.pes_confirmation,
+                ref_value,
+            )
+            .context("verifying generic PES endorsement")?;
+            Ok(to_expected_digests(
+                &[hex_to_raw_digest(&get_hex_digest_from_statement(&statement)?)?],
+                statement.predicate.validity.as_ref(),
+            ))
         }
         None => Err(anyhow::anyhow!("empty binary reference value")),
     }
@@ -690,6 +714,32 @@ fn acquire_verified_stage0_attachment(
     Ok((decoded, statement))
 }
 
+fn acquire_verified_pes_stage0_attachment(
+    now_utc_millis: i64,
+    signed_endorsement: &SignedEndorsement,
+    ref_value: &PesEndorsementReferenceValue,
+) -> anyhow::Result<(FirmwareAttachment, DefaultStatement)> {
+    let endorsement = signed_endorsement
+        .endorsement
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("missing endorsement"))?;
+    let statement = verify_pes_endorsement(
+        Instant::from_unix_millis(now_utc_millis),
+        endorsement,
+        &signed_endorsement.pes_confirmation,
+        ref_value,
+    )
+    .context("verifying firmware endorsement")?;
+    if !is_firmware_type(&statement) {
+        anyhow::bail!("expected endorsement for firmware-type binary");
+    }
+
+    statement.validate_subject(&endorsement.subject)?;
+    let decoded = FirmwareAttachment::decode(&*endorsement.subject)
+        .map_err(|_| anyhow::anyhow!("couldn't parse firmware attachment"))?;
+    Ok((decoded, statement))
+}
+
 // Get the expected values from the provided TransparentReleaseEndorsement.
 // The endorsement is expected to contain a subject that can be deserialized as
 // a FirmwareAttachment.
@@ -724,7 +774,9 @@ pub(crate) fn get_stage0_expected_values(
         Some(binary_reference_value::Type::Digests(expected_digests)) => {
             Ok(to_expected_digests(expected_digests.digests.as_slice(), None))
         }
-
+        Some(binary_reference_value::Type::PesEndorsement(_)) => {
+            anyhow::bail!("PES endorsements are not supported in legacy attestation verification")
+        }
         None => Err(anyhow::anyhow!("empty stage0 reference value")),
     }
 }
@@ -762,7 +814,30 @@ pub(crate) fn acquire_stage0_expected_values(
         Some(binary_reference_value::Type::Digests(expected_digests)) => {
             Ok(to_expected_digests(expected_digests.digests.as_slice(), None))
         }
+        Some(binary_reference_value::Type::PesEndorsement(ref_value)) => {
+            let signed_endorsement = endorsement
+                .and_then(|value| value.firmware.as_ref())
+                .context("missing firmware endorsement")?;
+            let (firmware_attachment, statement) = acquire_verified_pes_stage0_attachment(
+                now_utc_millis,
+                signed_endorsement,
+                ref_value,
+            )
+            .context("getting verified PES stage0 attachment")?;
 
+            let mut raw_digests = Vec::new();
+            for digest in firmware_attachment.configs.values() {
+                let raw = hex_to_raw_digest(digest)
+                    .context("converting hex to raw digest in firmware attachment")?;
+                raw_digests.push(raw);
+            }
+            if let Some(ref digest) = firmware_attachment.tdx_measurement {
+                let raw = hex_to_raw_digest(digest)
+                    .context("converting TDX hex to raw digest in firmware attachment")?;
+                raw_digests.push(raw);
+            }
+            Ok(to_expected_digests(&raw_digests, statement.predicate.validity.as_ref()))
+        }
         None => Err(anyhow::anyhow!("empty stage0 reference value")),
     }
 }
@@ -806,6 +881,32 @@ fn acquire_verified_kernel_attachment(
         .endorsement
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("missing endorsement"))?;
+
+    statement.validate_subject(&endorsement.subject)?;
+    let decoded = KernelAttachment::decode(&*endorsement.subject)
+        .map_err(|_| anyhow::anyhow!("couldn't parse kernel attachment"))?;
+    Ok((decoded, statement))
+}
+
+fn acquire_verified_pes_kernel_attachment(
+    now_utc_millis: i64,
+    signed_endorsement: &SignedEndorsement,
+    ref_value: &PesEndorsementReferenceValue,
+) -> anyhow::Result<(KernelAttachment, DefaultStatement)> {
+    let endorsement = signed_endorsement
+        .endorsement
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("missing endorsement"))?;
+    let statement = verify_pes_endorsement(
+        Instant::from_unix_millis(now_utc_millis),
+        endorsement,
+        &signed_endorsement.pes_confirmation,
+        ref_value,
+    )
+    .context("verifying kernel endorsement")?;
+    if !is_kernel_type(&statement) {
+        anyhow::bail!("expected endorsement for kernel-type binary");
+    }
 
     statement.validate_subject(&endorsement.subject)?;
     let decoded = KernelAttachment::decode(&*endorsement.subject)
@@ -878,6 +979,9 @@ fn get_kernel_expected_values(
                 )),
             })
         }
+        Some(kernel_binary_reference_value::Type::PesEndorsement(_)) => {
+            anyhow::bail!("PES endorsements are not supported in legacy attestation verification")
+        }
         None => Err(anyhow::anyhow!("empty binary reference value")),
     }
 }
@@ -941,6 +1045,31 @@ fn acquire_kernel_expected_values(
                 )),
             })
         }
+        Some(kernel_binary_reference_value::Type::PesEndorsement(ref_value)) => {
+            let (kernel_attachment, statement) = acquire_verified_pes_kernel_attachment(
+                now_utc_millis,
+                signed_endorsement.context("endorsement not found")?,
+                ref_value,
+            )
+            .context("getting verified PES kernel attachment")?;
+            let expected_image = kernel_attachment
+                .image
+                .ok_or_else(|| anyhow::anyhow!("no image digest in kernel attachment"))?;
+            let expected_setup_data = kernel_attachment
+                .setup_data
+                .ok_or_else(|| anyhow::anyhow!("no setup data digest in kernel attachment"))?;
+
+            Ok(KernelExpectedValues {
+                image: Some(to_expected_digests(
+                    &[hex_to_raw_digest(&expected_image)?],
+                    statement.predicate.validity.as_ref(),
+                )),
+                setup_data: Some(to_expected_digests(
+                    &[hex_to_raw_digest(&expected_setup_data)?],
+                    statement.predicate.validity.as_ref(),
+                )),
+            })
+        }
         None => Err(anyhow::anyhow!("empty binary reference value")),
     }
 }
@@ -968,6 +1097,33 @@ fn acquire_verified_mpm_attachment(
         .endorsement
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("missing endorsement"))?;
+
+    statement.validate_subject(&endorsement.subject)?;
+    let decoded = MpmAttachment::decode(&*endorsement.subject)
+        .map_err(|_| anyhow::anyhow!("couldn't parse mpm attachment"))?;
+    let validity = statement.predicate.validity.as_ref().map(|v| v.into());
+    Ok((decoded, validity))
+}
+
+fn acquire_verified_pes_mpm_attachment(
+    now_utc_millis: i64,
+    signed_endorsement: &SignedEndorsement,
+    ref_value: &PesEndorsementReferenceValue,
+) -> anyhow::Result<(MpmAttachment, Option<oak_proto_rust::oak::Validity>)> {
+    let endorsement = signed_endorsement
+        .endorsement
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("missing endorsement"))?;
+    let statement = verify_pes_endorsement(
+        Instant::from_unix_millis(now_utc_millis),
+        endorsement,
+        &signed_endorsement.pes_confirmation,
+        ref_value,
+    )
+    .context("verifying mpm endorsement")?;
+    if !is_mpm_type(&statement) {
+        anyhow::bail!("expected endorsement for mpm-type binary");
+    }
 
     statement.validate_subject(&endorsement.subject)?;
     let decoded = MpmAttachment::decode(&*endorsement.subject)
@@ -1019,6 +1175,23 @@ pub(crate) fn acquire_mpm_expected_values(
             },
             None,
         )),
+        Some(mpm_reference_value::Type::PesEndorsement(ref_value)) => {
+            let (mpm_attachment, validity) = acquire_verified_pes_mpm_attachment(
+                now_utc_millis,
+                signed_endorsement.context("endorsement not found")?,
+                ref_value,
+            )
+            .context("getting verified PES mpm attachment")?;
+
+            Ok((
+                TextExpectedValue {
+                    r#type: Some(text_expected_value::Type::StringLiterals(
+                        ExpectedStringLiterals { value: vec![mpm_attachment.package_version] },
+                    )),
+                },
+                validity,
+            ))
+        }
         None => Err(anyhow::anyhow!("empty mpm reference value")),
     }
 }
@@ -1063,6 +1236,9 @@ pub(crate) fn get_text_expected_values(
                 })),
             })
         }
+        Some(text_reference_value::Type::PesEndorsement(_)) => {
+            anyhow::bail!("PES endorsements are not supported in legacy attestation verification")
+        }
         None => Err(anyhow::anyhow!("missing skip or value in the text reference value")),
     }
 }
@@ -1099,6 +1275,24 @@ pub(crate) fn acquire_text_expected_values(
                 r#type: Some(text_expected_value::Type::StringLiterals(ExpectedStringLiterals {
                     value: string_literals.value.clone(),
                 })),
+            })
+        }
+        Some(text_reference_value::Type::PesEndorsement(ref_value)) => {
+            let signed = signed_endorsement.context("missing signed endorsement")?;
+            let endorsement = signed.endorsement.as_ref().context("missing endorsement")?;
+            let statement = verify_pes_endorsement(
+                Instant::from_unix_millis(now_utc_millis),
+                endorsement,
+                &signed.pes_confirmation,
+                ref_value,
+            )
+            .context("verifying text endorsement")?;
+            statement.validate_subject(&endorsement.subject)?;
+            // Compare the actual command line against the one inlined in the endorsement.
+            let regex = String::from_utf8(endorsement.subject.clone())
+                .context("endorsement subject is not utf8")?;
+            Ok(TextExpectedValue {
+                r#type: Some(text_expected_value::Type::Regex(ExpectedRegex { value: regex })),
             })
         }
         None => Err(anyhow::anyhow!("missing skip or value in the text reference value")),

@@ -22,9 +22,10 @@ use hex;
 use key_util::convert_pem_to_raw;
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::attestation::v1::{
-    ClaimReferenceValue, Endorsement, EndorsementReferenceValue, KeyType, PesReferenceValue,
-    Signature, SignedEndorsement, TLogReferenceValues, TransparentReleaseEndorsement, VerifyingKey,
-    VerifyingKeySet, endorsement::Format,
+    ClaimReferenceValue, Endorsement, EndorsementReferenceValue, KeyType,
+    PesEndorsementReferenceValue, PesReferenceValue, Signature, SignedEndorsement,
+    TLogReferenceValues, TransparentReleaseEndorsement, VerifyingKey, VerifyingKeySet,
+    endorsement::Format,
 };
 use oak_time::{Instant, make_instant};
 use prost::Message;
@@ -292,8 +293,8 @@ impl EndorsementData {
             endorser_public_key: endorser_public_key_raw,
             rekor_public_key: vec![],
 
-            valid_not_before: make_instant!("2024-02-28T09:47:12.067000Z"),
-            valid_not_after: make_instant!("2025-02-27T09:47:12.067000Z"),
+            valid_not_before: make_instant!("2026-03-05T10:00:00.000000Z"),
+            valid_not_after: make_instant!("2026-09-01T10:00:00.000000Z"),
             signed_endorsement: SignedEndorsement {
                 endorsement: Some(endorsement_proto),
                 signature: Some(Signature { key_id: KEY_ID, raw: endorser_signature.clone() }),
@@ -335,5 +336,15 @@ impl EndorsementData {
 
     pub fn make_valid_time(&self) -> Instant {
         self.valid_not_before + (self.valid_not_after - self.valid_not_before) / 2
+    }
+
+    pub fn pes_ref_value(&self) -> PesEndorsementReferenceValue {
+        let tlog = self.ref_value.tlog.as_ref().expect("no tlog");
+        let pes_reference_value = tlog.pes.clone().expect("no pes reference value");
+        PesEndorsementReferenceValue {
+            key_set: pes_reference_value.key_set,
+            publisher_id: "ecdsa-publisher@google.com".to_string(),
+            additional_required_claims: self.ref_value.required_claims.clone(),
+        }
     }
 }

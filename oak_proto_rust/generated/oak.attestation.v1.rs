@@ -1184,7 +1184,7 @@ pub struct PesEndorsementReferenceValue {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct BinaryReferenceValue {
-    #[prost(oneof = "binary_reference_value::Type", tags = "1, 2, 3")]
+    #[prost(oneof = "binary_reference_value::Type", tags = "1, 2, 3, 4")]
     pub r#type: ::core::option::Option<binary_reference_value::Type>,
 }
 /// Nested message and enum types in `BinaryReferenceValue`.
@@ -1204,6 +1204,9 @@ pub mod binary_reference_value {
         /// Explicitly verifies digests if the client has them.
         #[prost(message, tag = "3")]
         Digests(super::Digests),
+        /// Verifies the PES endorsement of the underlying binary.
+        #[prost(message, tag = "4")]
+        PesEndorsement(super::PesEndorsementReferenceValue),
     }
 }
 /// Verifies that the endorsed subject is one of the specified MPM versions.
@@ -1217,7 +1220,7 @@ pub struct MpmVersionIds {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MpmReferenceValue {
-    #[prost(oneof = "mpm_reference_value::Type", tags = "1, 2, 3")]
+    #[prost(oneof = "mpm_reference_value::Type", tags = "1, 2, 3, 4")]
     pub r#type: ::core::option::Option<mpm_reference_value::Type>,
 }
 /// Nested message and enum types in `MpmReferenceValue`.
@@ -1230,6 +1233,8 @@ pub mod mpm_reference_value {
         Endorsement(super::EndorsementReferenceValue),
         #[prost(message, tag = "3")]
         Versions(super::MpmVersionIds),
+        #[prost(message, tag = "4")]
+        PesEndorsement(super::PesEndorsementReferenceValue),
     }
 }
 /// Similar to the `Digests` message, but allows to specify digests for the
@@ -1247,7 +1252,7 @@ pub struct KernelDigests {
 /// to facilitate the digest matching.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KernelBinaryReferenceValue {
-    #[prost(oneof = "kernel_binary_reference_value::Type", tags = "1, 2, 3")]
+    #[prost(oneof = "kernel_binary_reference_value::Type", tags = "1, 2, 3, 4")]
     pub r#type: ::core::option::Option<kernel_binary_reference_value::Type>,
 }
 /// Nested message and enum types in `KernelBinaryReferenceValue`.
@@ -1260,6 +1265,8 @@ pub mod kernel_binary_reference_value {
         Endorsement(super::EndorsementReferenceValue),
         #[prost(message, tag = "3")]
         Digests(super::KernelDigests),
+        #[prost(message, tag = "4")]
+        PesEndorsement(super::PesEndorsementReferenceValue),
     }
 }
 /// Reference value for a file including its digests.
@@ -1319,7 +1326,7 @@ pub struct StringLiterals {
 /// or a regular expression.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TextReferenceValue {
-    #[prost(oneof = "text_reference_value::Type", tags = "1, 4, 2, 3")]
+    #[prost(oneof = "text_reference_value::Type", tags = "1, 4, 2, 3, 5")]
     pub r#type: ::core::option::Option<text_reference_value::Type>,
 }
 /// Nested message and enum types in `TextReferenceValue`.
@@ -1334,6 +1341,8 @@ pub mod text_reference_value {
         Regex(super::Regex),
         #[prost(message, tag = "3")]
         StringLiterals(super::StringLiterals),
+        #[prost(message, tag = "5")]
+        PesEndorsement(super::PesEndorsementReferenceValue),
     }
 }
 #[derive(Clone, PartialEq, ::prost::Message)]

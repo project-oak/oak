@@ -60,6 +60,7 @@ rust_library(
         "//oak_time",
         "//tr/intoto",
         "//tr/key_util",
+        "//tr/pes",
         "//tr/rekor",
         "//tr/verify_endorsement",
         "//util/digest:oak_digest",
@@ -105,6 +106,7 @@ rust_test_suite(
     name = "integration_tests",
     srcs = [
         "tests/endorsement_tests.rs",
+        "tests/pes_endorsement_tests.rs",
         "tests/policy_tests.rs",
         "tests/verifier_tests.rs",
     ],
@@ -153,6 +155,7 @@ rust_library(
         "//oak_time",
         "//tr/intoto",
         "//tr/key_util",
+        "//tr/pes",
         "//tr/rekor",
         "//tr/verify_endorsement",
         "//util/digest:oak_digest",
@@ -200,6 +203,7 @@ rust_test_suite(
     name = "integration_tests_with_regex",
     srcs = [
         "tests/endorsement_tests.rs",
+        "tests/pes_endorsement_tests.rs",
         "tests/policy_tests.rs",
         "tests/verifier_tests.rs",
     ],
