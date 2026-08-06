@@ -127,6 +127,8 @@ fn entrypoint() {
         attested_app.initial_data.endorsement_bytes.len()
     );
 
+    zeroize::zeroize_stack::<{ 64 * 1024 }>();
+
     log::info!("Finished setup, handing off executing to the app and going to sleep.");
     let pid =
         syscall::unstable_create_proccess(attested_app.initial_data.application_bytes.as_bytes())

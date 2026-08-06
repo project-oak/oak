@@ -37,5 +37,7 @@ rust_library(
         "@oak_crates_index//:hkdf",
         "@oak_crates_index//:p256",
         "@oak_crates_index//:sha2",
+        "@oak_crates_index//:zerocopy",
+        "@oak_crates_index//:zeroize",
     ],
 )

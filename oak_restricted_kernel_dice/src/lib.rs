@@ -30,6 +30,8 @@ use hkdf::Hkdf;
 use oak_crypto::encryption_key::generate_encryption_key_pair;
 use oak_dice::cert::SHA2_256_ID;
 use sha2::{Digest, Sha256};
+use zerocopy::IntoBytes;
+use zeroize::Zeroize;
 
 /// A derived sealing key.
 pub type DerivedKey = [u8; 32];
@@ -61,7 +63,7 @@ fn certificate_to_byte_array(cert: coset::CoseSign1) -> [u8; oak_dice::evidence:
 
 /// Generates attestation evidence for the 'measurement' of the application.
 pub fn generate_dice_data(
-    stage0_dice_data: Box<oak_dice::evidence::Stage0DiceData>,
+    mut stage0_dice_data: Box<oak_dice::evidence::Stage0DiceData>,
     event_digest: &DigestSha2_256,
 ) -> oak_dice::evidence::RestrictedKernelDiceData {
     let (application_keys, application_private_keys): (
@@ -154,6 +156,10 @@ pub fn generate_dice_data(
         restricted_kernel_evidence: stage0_dice_data.layer_1_evidence.clone(),
         application_keys,
     };
+
+    stage0_dice_data.as_mut_bytes().zeroize();
+
+    zeroize::zeroize_stack::<{ 32 * 1024 }>();
 
     oak_dice::evidence::RestrictedKernelDiceData { evidence, application_private_keys }
 }
