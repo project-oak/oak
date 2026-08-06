@@ -638,12 +638,20 @@ fn test_search_memories_v2_sort_expiration_timestamp_descending() -> anyhow::Res
         enable_int8_embedding: false,
     })?;
 
+    // Expirations must be in the future: searches exclude expired memories, so
+    // past timestamps here would remove the very rows being sorted.
+    let future = std::time::SystemTime::now()
+        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+        .expect("system clock before unix epoch")
+        .as_secs() as i64
+        + 86_400;
+
     let mut m0 = mem_tagged("m0", &["common"]);
-    m0.expiration_timestamp = ts(1000);
+    m0.expiration_timestamp = ts(future + 1000);
     db.add_memory(&m0, "blob0".into())?;
 
     let mut m1 = mem_tagged("m1", &["common"]);
-    m1.expiration_timestamp = ts(300);
+    m1.expiration_timestamp = ts(future + 300);
     db.add_memory(&m1, "blob1".into())?;
 
     // m2: no expiration_timestamp
@@ -654,6 +662,31 @@ fn test_search_memories_v2_sort_expiration_timestamp_descending() -> anyhow::Res
         SortValue::ExpirationTimestampSort(TimeSort { order: SortOrder::OrderDescending as i32 }),
     );
     assert_that!(search_blob_ids(&db, &req)?, elements_are![eq("blob0"), eq("blob1"), eq("blob2")]);
+    Ok(())
+}
+
+/// Already-expired memories are never returned by a search, even when the
+/// caller sorts by expiration. They are only removed from storage later, by
+/// the `clean_expired_memories()` sweep at key sync.
+#[gtest]
+fn test_search_memories_v2_excludes_expired() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-excludes-expired-test"),
+        enable_int8_embedding: false,
+    })?;
+
+    let mut expired = mem_tagged("m0", &["common"]);
+    // Long in the past.
+    expired.expiration_timestamp = ts(1000);
+    db.add_memory(&expired, "blob_expired".into())?;
+
+    db.add_memory(&mem_tagged("m1", &["common"]), "blob_live".into())?;
+
+    let req = sorted_request(
+        tag_filter("common"),
+        SortValue::ExpirationTimestampSort(TimeSort { order: SortOrder::OrderDescending as i32 }),
+    );
+    assert_that!(search_blob_ids(&db, &req)?, elements_are![eq("blob_live")]);
     Ok(())
 }
 

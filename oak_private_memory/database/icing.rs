@@ -352,6 +352,11 @@ pub struct SearchResultIds {
 
 impl IcingMetaDatabase {
     /// Creates a ResultSpecProto projection to retrieve only the blob ids.
+    ///
+    /// Only used by tests that issue a raw Icing search to observe documents
+    /// the public API deliberately hides; every production read path now goes
+    /// through `search_memories`, which builds its own projection.
+    #[cfg(test)]
     fn create_blob_id_projection(schema_name: &str) -> icing::TypePropertyMask {
         icing::TypePropertyMask {
             schema_type: Some(schema_name.to_string()),
@@ -364,10 +369,6 @@ impl IcingMetaDatabase {
             schema_type: Some(schema_name.to_string()),
             paths: vec![MEMORY_ID_NAME.to_string(), BLOB_ID_NAME.to_string()],
         }
-    }
-
-    fn extract_blob_ids_from_search_result(search_result: icing::SearchResultProto) -> Vec<BlobId> {
-        search_result.results.iter().filter_map(Self::extract_blob_id_from_doc).collect::<Vec<_>>()
     }
 
     fn create_search_filter(schema_name: &str, path: &str) -> icing::TypePropertyMask {
@@ -695,6 +696,9 @@ impl IcingMetaDatabase {
         Ok(())
     }
 
+    /// Lists the blob IDs of non-expired memories carrying `tag`, newest first.
+    ///
+    /// An empty `tag` matches every memory.
     pub fn get_memories_by_tag(
         &self,
         tag: &str,
@@ -705,47 +709,37 @@ impl IcingMetaDatabase {
             bail!("Invalid page token provided");
         }
 
-        let query_str = build_non_expired_query_str(TAG_NAME, tag, Tokenizer::Verbatim);
-        let search_spec = icing::SearchSpecProto {
-            query: Some(query_str),
-            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
-            schema_type_filters: vec![SCHEMA_NAME.to_string()],
-            enabled_features: query_features(),
-            ..Default::default()
-        };
-        let scoring_spec = icing::ScoringSpecProto {
-            rank_by: Some(
-                icing::scoring_spec_proto::ranking_strategy::Code::CreationTimestamp.into(),
-            ),
-            ..Default::default()
-        };
-        let projection = Self::create_blob_id_projection(SCHEMA_NAME);
-        let (search_result, next_page_token) = self.execute_search(
-            &search_spec,
-            &scoring_spec,
+        // An empty tag means "everything", which is expressed as an absent
+        // filter rather than an equality against the empty string.
+        let filter = (!tag.is_empty()).then(|| SearchMemoriesFilter {
+            value: Some(search_memories_filter::Value::TagsFilter(StringFilter {
+                value: tag.to_string(),
+            })),
+        });
+
+        let request = SearchMemoriesRequest {
+            filter,
             page_size,
-            None,
-            page_token,
-            projection,
-        )?;
-        let blob_ids = Self::extract_blob_ids_from_search_result(search_result);
+            page_token: page_token.into(),
+            ..Default::default()
+        };
+
+        let (results, next_page_token) = self.search_memories(&request)?;
+        let blob_ids: Vec<BlobId> = results.items.into_iter().map(|item| item.blob_id).collect();
         if blob_ids.is_empty() {
             return Ok((blob_ids, PageToken::Start));
         }
         Ok((blob_ids, next_page_token))
     }
 
-    /// Resolves a memory's `(memory_id, blob_id)` from its unique name.
+    /// Resolves a non-expired memory's `(memory_id, blob_id)` from its unique
+    /// name.
     ///
     /// Implemented on top of the Search API v2 (`search_memories`) so that name
-    /// lookups and client-issued searches share one query-construction path;
-    /// the v1 hand-rolled queries are on their way out.
-    ///
-    /// Unlike the v1 lookups, v2 has no "not expired" predicate, so an expired
-    /// memory whose document is still resident is returned here. Expired
-    /// memories are deleted by `clean_expired_memories()` at key sync, so this
-    /// only differs from the old behaviour when that sweep failed, or when the
-    /// memory expired part way through a session.
+    /// lookups and client-issued searches share one query-construction path.
+    /// `search_memories` ANDs in the not-expired predicate, so a memory whose
+    /// expiration has passed is invisible here even if its document has not yet
+    /// been swept by `clean_expired_memories()`.
     pub fn get_memory_metadata_by_name(
         &self,
         name: &str,
@@ -779,48 +773,21 @@ impl IcingMetaDatabase {
         Ok(self.get_memory_metadata_by_name(name)?.map(|(_, bid)| bid))
     }
 
+    /// Resolves a non-expired memory's blob ID from its memory ID.
     pub fn get_blob_id_by_memory_id(&self, memory_id: MemoryId) -> anyhow::Result<Option<BlobId>> {
-        let query_str = build_non_expired_query_str(MEMORY_ID_NAME, &memory_id, Tokenizer::Plain);
-
-        let search_spec = icing::SearchSpecProto {
-            query: Some(query_str),
-            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
-            schema_type_filters: vec![SCHEMA_NAME.to_string()],
-            enabled_features: query_features(),
+        let request = SearchMemoriesRequest {
+            filter: Some(SearchMemoriesFilter {
+                value: Some(search_memories_filter::Value::IdFilter(StringFilter {
+                    value: memory_id,
+                })),
+            }),
+            // Memory IDs are unique, so at most one document can match.
+            page_size: 1,
             ..Default::default()
         };
 
-        let result_spec = icing::ResultSpecProto {
-            num_per_page: Some(1), // We expect at most one result
-            type_property_masks: vec![Self::create_blob_id_projection(SCHEMA_NAME)],
-            ..Default::default()
-        };
-
-        let search_result: icing::SearchResultProto = self.icing_search_engine.search(
-            &search_spec,
-            &icing::get_default_scoring_spec(), // Scoring doesn't matter much here
-            &result_spec,
-        )?;
-
-        if search_result
-            .status
-            .clone()
-            .context("get_blob_id_by_memory_id search returned no status")?
-            .code
-            != Some(icing::status_proto::Code::Ok.into())
-        {
-            bail!("Icing search failed for memory_id {}: {:?}", memory_id, search_result.status);
-        }
-
-        // Extract the blob_id from the first result, if any.
-        match search_result.results.first() {
-            None => Ok(None),
-            Some(doc) => {
-                let blob_id = Self::extract_blob_id_from_doc(doc)
-                    .context("memory document exists but has no blob_id property")?;
-                Ok(Some(blob_id))
-            }
-        }
+        let (results, _) = self.search_memories(&request)?;
+        Ok(results.items.into_iter().next().map(|item| item.blob_id))
     }
 
     fn extract_view_ids_from_search_result(search_result: icing::SearchResultProto) -> Vec<ViewId> {
@@ -842,7 +809,18 @@ impl IcingMetaDatabase {
         }
     }
 
+    /// Lists every view ID belonging to `memory_id`.
+    ///
+    /// Pages through the whole result set: this backs the delete path, and a
+    /// view left behind because it fell outside the first page would be an
+    /// orphan that embedding search can still return.
+    ///
+    /// Deliberately **not** restricted to non-expired documents — expired
+    /// views still have to be deleted.
     fn get_view_ids_by_memory_id(&self, memory_id: MemoryId) -> anyhow::Result<Vec<ViewId>> {
+        /// Views per Icing page. Only affects how many round trips are needed.
+        const VIEW_PAGE_SIZE: i32 = 1000;
+
         let search_spec = icing::SearchSpecProto {
             query: Some(build_property_equals_clause(MEMORY_ID_NAME, &memory_id, Tokenizer::Plain)),
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
@@ -854,26 +832,34 @@ impl IcingMetaDatabase {
             )],
             ..Default::default()
         };
-        let result_spec = icing::ResultSpecProto {
-            num_per_page: Some(1000), // Max page size
-            type_property_masks: vec![Self::create_view_id_projection(LLM_VIEW_SCHEMA_NAME)],
-            ..Default::default()
-        };
-        let search_result: icing::SearchResultProto = self.icing_search_engine.search(
-            &search_spec,
-            &icing::get_default_scoring_spec(),
-            &result_spec,
-        )?;
-        if search_result
-            .status
-            .clone()
-            .context("get_view_ids_by_memory_id search returned no status")?
-            .code
-            != Some(icing::status_proto::Code::Ok.into())
-        {
-            bail!("Icing search failed for memory_id {}: {:?}", memory_id, search_result.status);
+        let scoring_spec = icing::get_default_scoring_spec();
+
+        let mut view_ids = Vec::new();
+        let mut page_token = PageToken::Start;
+        loop {
+            let (search_result, next_page_token) = self.execute_search(
+                &search_spec,
+                &scoring_spec,
+                VIEW_PAGE_SIZE,
+                None,
+                page_token,
+                Self::create_view_id_projection(LLM_VIEW_SCHEMA_NAME),
+            )?;
+            let page = Self::extract_view_ids_from_search_result(search_result);
+            let page_was_empty = page.is_empty();
+            view_ids.extend(page);
+
+            // Icing signals "no more pages" with an absent or zero token, which
+            // `execute_search` maps to `Start`. Guard on an empty page as well
+            // so a misbehaving token can never spin forever.
+            match next_page_token {
+                PageToken::Token(token) if token != 0 && !page_was_empty => {
+                    page_token = PageToken::Token(token);
+                }
+                _ => break,
+            }
         }
-        Ok(Self::extract_view_ids_from_search_result(search_result))
+        Ok(view_ids)
     }
 
     /// Extract the `blob_id` property from a memory `DocumentProto`.
@@ -887,6 +873,11 @@ impl IcingMetaDatabase {
             .cloned()
     }
 
+    /// Extracts the blob id from a search hit.
+    ///
+    /// Only used by tests that issue a raw Icing search; production reads go
+    /// through `search_memories`, which extracts full metadata per hit.
+    #[cfg(test)]
     fn extract_blob_id_from_doc(
         doc_hit: &icing::search_result_proto::ResultProto,
     ) -> Option<BlobId> {
@@ -996,6 +987,13 @@ impl IcingMetaDatabase {
         }
     }
 
+    /// Lists every memory ID in the database, expired ones included.
+    ///
+    /// This and the other maintenance scans (`get_expired_memories_ids`,
+    /// `count_documents_by_schema`) deliberately do **not** go through
+    /// `search_memories`: that path hides expired documents, which is exactly
+    /// wrong for a sweep that has to find and delete them. Lookups by name, ID
+    /// or tag do go through it.
     pub fn get_all_memory_ids(&self) -> anyhow::Result<Vec<MemoryId>> {
         // Search for all memories.
         let mut all_memory_ids = Vec::new();
@@ -1163,6 +1161,10 @@ impl IcingMetaDatabase {
     ) -> anyhow::Result<(SearchResultIds, PageToken)> {
         // Build the Icing search spec from the filter tree.
         let mut search_spec = self.build_search_memories_filter(&request.filter)?;
+
+        // Expired documents are never visible to a search, regardless of the
+        // caller's filter.
+        restrict_to_non_expired(&mut search_spec);
 
         let scoring_spec = Self::build_search_memories_sort(&request.sort, &mut search_spec)?;
 
@@ -1875,7 +1877,7 @@ fn build_property_equals_clause(
 }
 
 /// The `enabled_features` required by queries built with
-/// [`build_property_equals_clause`] and [`build_non_expired_query_str`].
+/// [`build_property_equals_clause`] and [`build_non_expired_clause`].
 ///
 /// `VERBATIM_SEARCH` is always enabled: it only changes how *quoted* terms are
 /// interpreted, so it is a no-op for [`Tokenizer::Plain`] clauses and there is
@@ -1889,34 +1891,40 @@ fn query_features() -> Vec<String> {
     ]
 }
 
-/// Builds a query matching documents whose `property_name` equals
-/// `property_val` and which have not expired. An empty `property_val` matches
-/// every non-expired document.
+/// Builds a clause matching documents that have not expired.
 ///
-/// `tokenizer` must match the schema; see [`build_property_equals_clause`].
-fn build_non_expired_query_str(
-    property_name: &str,
-    property_val: &str,
-    tokenizer: Tokenizer,
-) -> String {
+/// A document counts as live if its expiration timestamp is in the future, or
+/// if it has no expiration timestamp at all. The second half cannot be
+/// expressed with an `ExpirationTimestampFilter`, which is why this is applied
+/// as an implicit predicate rather than being left to callers.
+///
+/// Both `Memory` and `LlmView` declare `expirationTimestamp`, so this clause is
+/// valid whichever schema types a search is restricted to.
+fn build_non_expired_clause() -> String {
     let now_ts = timestamp_to_i64(&system_time_to_timestamp(SystemTime::now()));
-
-    // A memory is considered not expired if its expiration timestamp is in the
-    // future, or if it has no expiration timestamp set.
-    let expiration_clause = format!(
-        "({} > {}) OR (NOT hasProperty(\"{}\"))",
+    format!(
+        "(({} > {}) OR (NOT hasProperty(\"{}\")))",
         EXPIRATION_TIMESTAMP_NAME, now_ts, EXPIRATION_TIMESTAMP_NAME
-    );
+    )
+}
 
-    if property_val.is_empty() {
-        // If no property value specified, filter just for non expired memories.
-        expiration_clause
-    } else {
-        format!(
-            "{} AND ({})",
-            build_property_equals_clause(property_name, property_val, tokenizer),
-            expiration_clause
-        )
+/// Restricts `spec` to documents that have not expired, preserving whatever
+/// query it already carries.
+///
+/// Applied to every search so that expired-but-not-yet-swept documents are
+/// never returned. `clean_expired_memories()` only runs at key sync, so
+/// without this a memory that expires mid-session stays visible.
+fn restrict_to_non_expired(spec: &mut icing::SearchSpecProto) {
+    let non_expired = build_non_expired_clause();
+    spec.query = Some(match spec.query.take() {
+        Some(query) if !query.is_empty() => format!("({query}) AND {non_expired}"),
+        // An empty query matches everything, so the predicate stands alone.
+        _ => non_expired,
+    });
+    for feature in query_features() {
+        if !spec.enabled_features.contains(&feature) {
+            spec.enabled_features.push(feature);
+        }
     }
 }
 
@@ -2006,6 +2014,26 @@ mod tests {
             views: Some(LlmViews { llm_views: views }),
             ..Default::default()
         }
+    }
+
+    /// Deleting a memory must remove *all* of its views, including when there
+    /// are more of them than fit in a single Icing result page. A single-page
+    /// view lookup silently orphans the remainder.
+    #[gtest]
+    fn icing_delete_memory_removes_views_beyond_one_page_test() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        // One more than the 1000-row page the view lookup used to request.
+        let view_count = 1001;
+        let views: Vec<LlmView> =
+            (0..view_count).map(|i| llm_view(&format!("view_{i}"), &[1.0, 0.0, 0.0])).collect();
+        db.add_memory(&mem_with_views("mem_many_views", &["tag"], views), "blob_many".into())?;
+
+        expect_that!(db.get_view_ids_by_memory_id("mem_many_views".to_string())?, len(eq(1001)));
+
+        expect_that!(db.delete_memories(&["mem_many_views".to_string()])?, len(eq(0)));
+        // No view of the deleted memory may survive.
+        expect_that!(db.get_view_ids_by_memory_id("mem_many_views".to_string())?, len(eq(0)));
+        Ok(())
     }
 
     fn add_test_memory(db: &mut IcingMetaDatabase, suffix: &str) -> (MemoryId, BlobId) {
@@ -2174,6 +2202,24 @@ mod tests {
         let memory_ids = db.get_all_memory_ids()?;
         assert_that!(memory_ids, elements_are![eq("no_ts")]);
 
+        Ok(())
+    }
+
+    /// `get_all_memory_ids` backs `reset_memory`, so if it stops early the
+    /// "delete everything" path silently leaves memories behind.
+    #[gtest]
+    fn get_all_memory_ids_returns_more_than_one_page() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        // More than the 1000-row page the scan requests.
+        let memory_count = 1500;
+        for i in 0..memory_count {
+            db.add_memory(
+                &Memory { id: format!("id_{i}"), ..Default::default() },
+                format!("blob_{i}"),
+            )?;
+        }
+
+        expect_that!(db.get_all_memory_ids()?, len(eq(memory_count)));
         Ok(())
     }
 
@@ -2604,29 +2650,64 @@ mod tests {
         Ok(())
     }
 
-    /// `get_memory_by_name` is implemented on the Search API v2 path, which has
-    /// no "not expired" predicate, so an expired memory is still resolvable by
-    /// name until `clean_expired_memories()` sweeps it at key sync. This test
-    /// pins that accepted behaviour difference; contrast with
-    /// `icing_get_memories_by_tag_with_expiration_test`, which still uses a v1
-    /// query and does filter.
+    /// Every read path runs through `search_memories`, which applies an
+    /// implicit non-expired predicate, so an expired memory is invisible even
+    /// before `clean_expired_memories()` sweeps it at key sync.
+    ///
+    /// This previously differed per path: the v1 queries filtered on
+    /// expiration, while v2 did not.
     #[gtest]
-    fn icing_get_memory_by_name_returns_expired_memory_test() -> anyhow::Result<()> {
+    fn icing_expired_memory_is_hidden_from_all_lookups_test() -> anyhow::Result<()> {
         let mut db = IcingMetaDatabase::new(test_config())?;
         let past = SystemTime::now() - std::time::Duration::from_secs(3600);
         db.add_memory(
             &Memory {
                 id: "expired_id".into(),
                 name: "expired.memory".into(),
+                tags: vec!["expired_tag".into()],
                 expiration_timestamp: Some(system_time_to_timestamp(past)),
                 ..Default::default()
             },
             "expired_blob".into(),
         )?;
 
+        expect_that!(db.get_memory_by_name("expired.memory")?, eq(&None));
+        expect_that!(db.get_blob_id_by_memory_id("expired_id".to_string())?, eq(&None));
         expect_that!(
-            db.get_memory_by_name("expired.memory")?,
-            eq(&Some("expired_blob".to_string()))
+            db.get_memories_by_tag("expired_tag", 10, PageToken::Start)?.0,
+            elements_are![]
+        );
+        // The catch-all listing must not resurrect it either.
+        expect_that!(db.get_memories_by_tag("", 10, PageToken::Start)?.0, elements_are![]);
+        Ok(())
+    }
+
+    /// A memory with no expiration set at all is not expired. This is the half
+    /// of the predicate that an `ExpirationTimestampFilter` cannot express.
+    #[gtest]
+    fn icing_memory_without_expiration_is_visible_test() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        db.add_memory(
+            &Memory {
+                id: "forever_id".into(),
+                name: "forever.memory".into(),
+                tags: vec!["forever_tag".into()],
+                ..Default::default()
+            },
+            "forever_blob".into(),
+        )?;
+
+        expect_that!(
+            db.get_memory_by_name("forever.memory")?,
+            eq(&Some("forever_blob".to_string()))
+        );
+        expect_that!(
+            db.get_blob_id_by_memory_id("forever_id".to_string())?,
+            eq(&Some("forever_blob".to_string()))
+        );
+        expect_that!(
+            db.get_memories_by_tag("forever_tag", 10, PageToken::Start)?.0,
+            elements_are![eq("forever_blob")]
         );
         Ok(())
     }
