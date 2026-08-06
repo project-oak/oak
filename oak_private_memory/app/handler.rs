@@ -13,7 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-use std::sync::Arc;
+use std::{
+    collections::{HashMap, hash_map},
+    sync::Arc,
+};
 
 use encryption::{decrypt, encrypt, generate_nonce};
 use external_db_client::{BlobId, DataBlobHandler};
@@ -237,9 +240,17 @@ impl SealedMemorySessionHandler {
             Vec::with_capacity(request.memories.len());
         let mut validation_errors: Vec<Option<tonic::Status>> =
             Vec::with_capacity(request.memories.len());
+        // Names claimed by earlier memories in this same batch, mapped to the
+        // ID that claimed them. Nothing is written until the whole batch has
+        // been validated, so `validate_single_memory` cannot see these.
+        let mut claimed_names: HashMap<String, String> = HashMap::new();
 
         for memory in request.memories {
-            match self.validate_single_memory(&memory, database).await {
+            let validation = match self.validate_single_memory(&memory, database).await {
+                Ok(()) => Self::claim_memory_name(&memory, &mut claimed_names),
+                Err(status) => Err(status),
+            };
+            match validation {
                 Ok(()) => {
                     validated_memories.push(Some(memory));
                     validation_errors.push(None);
@@ -343,6 +354,48 @@ impl SealedMemorySessionHandler {
             }
         }
         Ok(())
+    }
+
+    /// Reserves `memory`'s name for this batch, rejecting it if an earlier
+    /// memory in the same batch already claimed that name.
+    ///
+    /// [`Self::validate_single_memory`] can only compare against memories that
+    /// are already committed. Every memory in an `AddMemories` request is
+    /// validated before any of them is written, so on its own that check lets a
+    /// single request insert exactly the duplicates that the uniqueness rule
+    /// exists to prevent.
+    ///
+    /// Two entries sharing a name *and* a non-empty ID are one document written
+    /// twice rather than two memories competing for a name: indexing is keyed
+    /// by memory ID, so the second write replaces the first and the name still
+    /// resolves to a single memory. That mirrors the ID exemption in
+    /// [`Self::validate_single_memory`]. An empty ID is always treated as
+    /// distinct, because a fresh random ID is assigned per memory at insertion
+    /// time, which would yield two documents rather than one.
+    fn claim_memory_name(
+        memory: &Memory,
+        claimed_names: &mut HashMap<String, String>,
+    ) -> Result<(), tonic::Status> {
+        if memory.name.is_empty() {
+            return Ok(());
+        }
+        match claimed_names.entry(memory.name.clone()) {
+            hash_map::Entry::Occupied(claim) => {
+                if memory.id.is_empty() || *claim.get() != memory.id {
+                    return Err(tonic::Status::invalid_argument(format!(
+                        "duplicate memory name {} in the same request, existing {} -> new {}",
+                        memory.name,
+                        claim.get(),
+                        memory.id
+                    )));
+                }
+                Ok(())
+            }
+            hash_map::Entry::Vacant(slot) => {
+                slot.insert(memory.id.clone());
+                Ok(())
+            }
+        }
     }
 
     pub async fn get_memories_handler(

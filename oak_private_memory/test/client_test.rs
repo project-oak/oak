@@ -1049,3 +1049,163 @@ async fn test_add_memories_with_views() {
         assert!(get_response.success, "Failed to retrieve {}", id);
     }
 }
+
+/// Looks up a memory by name, returning the response so tests can assert on
+/// both the found/not-found flag and the resolved ID.
+async fn get_memory_by_name(
+    client: &mut PrivateMemoryClient,
+    name: &str,
+) -> GetMemoryByNameResponse {
+    let request = GetMemoryByNameRequest { name: name.to_string(), result_mask: None };
+    let response = client
+        .invoke(sealed_memory_request::Request::GetMemoryByNameRequest(request))
+        .await
+        .unwrap();
+    match response {
+        sealed_memory_response::Response::GetMemoryByNameResponse(resp) => resp,
+        other => panic!("unexpected response type: {other:?}"),
+    }
+}
+
+/// Names must be unique, and a single `AddMemories` request must not be able to
+/// smuggle two same-named memories past that rule: the per-memory check can
+/// only see what is already committed, and nothing in the batch is written
+/// until every memory has been validated.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_add_memories_rejects_duplicate_name_within_batch() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_add_memories_dup_name_user";
+
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK).await.unwrap();
+
+    // Nothing in the database claims "shared_name" yet, so without an
+    // intra-batch check both of these would be accepted.
+    let memories = vec![
+        make_named_test_memory("dup_first", "shared_name", "tag_d"),
+        make_named_test_memory("dup_second", "shared_name", "tag_d"),
+        make_test_memory("dup_unnamed", "tag_d"),
+    ];
+
+    let response = client.add_memories(memories).await.unwrap();
+    assert_eq!(response.results.len(), 3);
+
+    // The first claim on the name wins.
+    assert!(
+        matches!(
+            &response.results[0].result,
+            Some(add_memories_response::add_memory_result::Result::Id(_))
+        ),
+        "Expected the first memory to claim the name, got {:?}",
+        response.results[0].result
+    );
+    assert!(
+        matches!(
+            &response.results[1].result,
+            Some(add_memories_response::add_memory_result::Result::Error(_))
+        ),
+        "Expected the second memory to be rejected as a duplicate name, got {:?}",
+        response.results[1].result
+    );
+    // A rejected entry must not abort the rest of the batch.
+    assert!(
+        matches!(
+            &response.results[2].result,
+            Some(add_memories_response::add_memory_result::Result::Id(_))
+        ),
+        "Expected the unnamed memory to succeed, got {:?}",
+        response.results[2].result
+    );
+
+    // The name must still resolve to exactly one memory. If both had been
+    // written, this lookup would fail outright: two documents share the name
+    // and the uniqueness invariant is no longer satisfiable.
+    let by_name = get_memory_by_name(&mut client, "shared_name").await;
+    assert!(by_name.success, "Expected the name to still resolve");
+    assert_eq!(by_name.memory.unwrap().id, "dup_first");
+
+    // The rejected memory must not have been written under its own ID either.
+    let by_id = client.get_memory_by_id("dup_second", None).await.unwrap();
+    assert!(!by_id.success, "Expected the rejected memory to be absent");
+}
+
+/// The same collision, but with server-assigned IDs. Both memories have an
+/// empty ID at validation time, so the check cannot treat "equal IDs" as
+/// evidence that they are the same document: distinct random IDs are assigned
+/// later, producing two separate documents sharing one name.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_add_memories_rejects_duplicate_name_within_batch_without_ids() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_add_memories_dup_name_no_id_user";
+
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK).await.unwrap();
+
+    let memories = vec![
+        make_named_test_memory("", "unassigned_name", "tag_n"),
+        make_named_test_memory("", "unassigned_name", "tag_n"),
+    ];
+
+    let response = client.add_memories(memories).await.unwrap();
+    assert_eq!(response.results.len(), 2);
+
+    assert!(
+        matches!(
+            &response.results[0].result,
+            Some(add_memories_response::add_memory_result::Result::Id(_))
+        ),
+        "Expected the first memory to claim the name, got {:?}",
+        response.results[0].result
+    );
+    assert!(
+        matches!(
+            &response.results[1].result,
+            Some(add_memories_response::add_memory_result::Result::Error(_))
+        ),
+        "Expected the second memory to be rejected as a duplicate name, got {:?}",
+        response.results[1].result
+    );
+
+    let by_name = get_memory_by_name(&mut client, "unassigned_name").await;
+    assert!(by_name.success, "Expected the name to still resolve");
+}
+
+/// Two entries sharing a name *and* an explicit ID are one document written
+/// twice, not two memories competing for a name. Indexing is keyed by memory
+/// ID, so the second write replaces the first and the invariant holds. This
+/// mirrors the ID exemption that the against-the-database check already makes,
+/// and keeps idempotent retries within a batch working.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_add_memories_allows_same_id_and_name_within_batch() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_add_memories_same_id_name_user";
+
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK).await.unwrap();
+
+    let memories = vec![
+        make_named_test_memory("upsert_me", "upsert_name", "tag_u"),
+        make_named_test_memory("upsert_me", "upsert_name", "tag_u"),
+    ];
+
+    let response = client.add_memories(memories).await.unwrap();
+    assert_eq!(response.results.len(), 2);
+
+    for (i, result) in response.results.iter().enumerate() {
+        assert!(
+            matches!(&result.result, Some(add_memories_response::add_memory_result::Result::Id(_))),
+            "Expected memory {i} to succeed, got {:?}",
+            result.result
+        );
+    }
+
+    let by_name = get_memory_by_name(&mut client, "upsert_name").await;
+    assert!(by_name.success, "Expected the name to resolve to the single upserted memory");
+    assert_eq!(by_name.memory.unwrap().id, "upsert_me");
+}
