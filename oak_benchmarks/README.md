@@ -17,6 +17,46 @@ This suite answers that question by running identical workloads in:
 Both environments run the exact same benchmark code (`benchmark/`) to ensure
 fair comparison. The results inform the evaluation section of the Oak Paper.
 
+## Making a Comparison Valid
+
+Two runs are only comparable if they did the same work with the same tools.
+Three mechanisms enforce this, and all three should be checked before any number
+is quoted:
+
+1. **Same input data.** `--seed` defaults to a fixed constant shared by every
+   CLI (`DEFAULT_BENCHMARK_SEED`). Earlier versions derived the seed from the
+   clock independently on each platform, so the two sides silently processed
+   different data.
+2. **Same result.** Every response carries a `checksum` over the benchmark
+   output. For a given benchmark, seed and parameter set it **must** be
+   identical on both platforms. A mismatch means the comparison is invalid, not
+   merely noisy. `null-syscall` is the exception: the two platforms call
+   different syscalls, so its checksum can only count successful returns and
+   matches for free. See [Kernel Boundary](#kernel-boundary).
+3. **Same instruction set.** Every response carries `cpu_features`, reporting
+   the compile-time target features, the `CPUID` features, and whether the
+   crypto crates can dispatch on the latter at runtime. The _effective_ sets
+   must match. The field covers SHA-NI, AES-NI, PCLMULQDQ, AVX2, AVX-512 IFMA
+   and AVX-512VL. It has already caught two real problems: bare-metal builds
+   silently using software SHA-2 and AES, and `curve25519-dalek` selecting an
+   AVX-512 IFMA backend on Linux while the enclave fell back to AVX2, worth
+   1.65x on Ed25519. Note that this field covers only the dispatch-capable
+   crypto crates, **not** general codegen: two binaries can report identical
+   effective features while one was compiled for a newer baseline ISA than the
+   other. The baseline's build transition below is what closes that gap. See
+   [Crypto acceleration](#crypto-acceleration) below.
+
+## Metrics
+
+The headline metric is **cycles per operation**, computed from the guest's own
+TSC reading. It requires no knowledge of the TSC frequency and therefore cannot
+be distorted by a mis-detected one, which makes it the safest number to compare
+across platforms.
+
+Nanoseconds and MB/s are derived figures. On the Linux baseline they come from a
+real clock; for the enclave, which has no clock, the host converts from TSC
+ticks using a frequency measured against `CLOCK_MONOTONIC` at startup.
+
 ## Running Benchmarks
 
 ### Oak Enclave
@@ -69,6 +109,9 @@ bazel run -c opt //oak_benchmarks/linux_enclave_app -- \
 
 ## Available Benchmarks
 
+The authoritative list of names is `BENCHMARK_TYPE_NAMES` in
+[`cli_common/cli.rs`](cli_common/cli.rs); pass one of them to `--benchmark`.
+
 ### CPU-Bound: Cryptographic Hashing
 
 Measures throughput of cryptographic hash operations with configurable data
@@ -81,17 +124,173 @@ sizes and iterations.
 | SHA3-256  | Keccak-based, 256-bit   |
 | SHA3-512  | Keccak-based, 512-bit   |
 
+### CPU-Bound: Public-Key and AEAD Crypto
+
+| Benchmark        | What it measures                                |
+| ---------------- | ----------------------------------------------- |
+| P-256 Sign       | ECDSA signing, RFC 6979 deterministic nonces    |
+| P-256 Verify     | ECDSA verification over precomputed signatures  |
+| Ed25519 Sign     | EdDSA signing over Curve25519                   |
+| Ed25519 Verify   | EdDSA verification, strict                      |
+| AES-256-GCM Seal | Authenticated encryption                        |
+| AES-256-GCM Open | Authenticated decryption over cached ciphertext |
+
+Deterministic nonces are used so that no random number generator is needed in
+the enclave, and so that both platforms produce byte-identical signatures.
+
+Ed25519 is roughly an order of magnitude cheaper than P-256 here. Two build
+choices affect the absolute numbers and neither is guessable from the output:
+`ed25519-dalek` is built without `precomputed-tables`, and verification uses
+`verify_strict`, which additionally rejects small-order keys and `R` values.
+
 ### Memory-Bound
 
-| Benchmark     | What it measures                                                |
-| ------------- | --------------------------------------------------------------- |
-| Array Update  | Random writes to a caller-sized buffer — memory access latency  |
-| Memory Insert | HashMap insert (key + alloc value) — allocator + hashing        |
-| Memory Lookup | HashMap lookup (read-only) — hash + memory-read, no allocation  |
-| Alloc Churn   | Alloc/dealloc at a fixed or cycling size — allocator throughput |
+| Benchmark     | What it measures                                                  |
+| ------------- | ----------------------------------------------------------------- |
+| Array Update  | Random single-byte writes over `--working-set-size` bytes         |
+| Memory Insert | HashMap insert into an unreserved map, including growth/rehash    |
+| Memory Lookup | HashMap lookup (read-only) — hash plus memory read, no allocation |
+| Memory Churn  | HashMap evict and insert at constant size — free then alloc       |
+| Alloc Churn   | Alloc/dealloc churn — pure allocator throughput                   |
+| Pointer Chase | Dependent-load latency and TLB reach — see below                  |
+| Page Touch    | Cost of provisioning fresh memory — see below                     |
 
-Available benchmarks: `sha256`, `sha512`, `sha3-256`, `sha3-512`,
-`array-update`, `memory-insert`, `memory-lookup`, `alloc-churn`, `debug`.
+The three hash map modes are meant to be read together. Insert only ever grows
+the heap: it covers the table's growth and rehash path, but every key lands in a
+bucket that was empty and the allocator's free path is never used. Churn evicts
+a resident key and inserts one that has never been in the map, holding the size
+constant, so it covers the free path and the deleted-slot bookkeeping that goes
+with it. Lookup allocates nothing at all.
+
+Two caveats before reading churn as an allocator result. The value size is
+fixed, so the allocator only ever sees one size class and the block it frees is
+usually the one it is asked for next — its fast path, which glibc serves from a
+per-thread cache without taking a lock. Size variation lives in `alloc-churn`,
+not here. And the enclave allocator is `rlsf`'s TLSF behind a spinlock, so part
+of any gap is the lock and the coalescing rather than allocator quality.
+
+Churn rebuilds the map after measuring, outside the timed region, so that a
+later request against the same enclave process sees the map a fresh one would. A
+churn request therefore takes about twice as long as its iteration count
+suggests.
+
+Use `--working-set-size` to choose the footprint; pick values that straddle the
+L3 cache so both cache-resident and DRAM-resident behaviour are covered. Alloc
+churn takes its allocation size from `--data-size`, where `0` selects a rotating
+schedule of size classes that exercises allocator size-class boundaries.
+
+> [!IMPORTANT] The enclave needs a guest large enough to hold the working set.
+> Pass `--memory-size` to `oak_cli` accordingly, with headroom: `pointer-chase`
+> peaks at nine eighths of its working set during setup, because the permutation
+> is built in a separate dense array before being scattered, and the hash map
+> modes need about half as much again for the key array and the table's
+> load-factor headroom. These benchmarks allocate with `try_reserve`, so an
+> undersized guest reports `allocation failure` rather than aborting.
+
+### Memory-Bound: Latency and Page Size
+
+`pointer-chase` walks a randomly permuted list of cache lines where each access
+supplies the address of the next, so nothing can be prefetched or overlapped and
+`cycles_per_op` is the load-to-use latency directly. It is the construction used
+by lmbench's
+[`lat_mem_rd`](https://lmbench.sourceforge.net/man/lat_mem_rd.8.html), which
+cannot run here because it needs `fork`, signals and a filesystem.
+
+Sweeping `--working-set-size` across the cache hierarchy gives the usual latency
+curve, directly comparable with any published `lat_mem_rd` figure.
+
+It was also added to expose a page-size difference. Measurement did not find one
+where it was expected.
+
+The enclave heap is mapped in 2 MiB units by construction, and the expectation
+was that the baseline would be on 4 KiB pages and would spend most of a
+large-working-set run walking page tables. At the top of the range it does not:
+`transparent_hugepage/enabled` is `always`, and sampling
+`/proc/<pid>/smaps_rollup` while the baseline runs shows `AnonHugePages`
+covering 100% of a 256 MiB or 1 GiB working set. Nor could the difference show
+there anyway — with 2 MiB pages the 4 GiB maximum needs 2048 entries of the
+reference part's 3072-entry L2 TLB, so where both platforms get 2 MiB pages
+neither should walk.
+
+Around 1 MiB there is a real band of roughly 2x, which narrows to the backing of
+the allocation rather than to the platform: a Linux process that aligns its
+`mmap` to 2 MiB, or asks for `MADV_HUGEPAGE`, closes it completely. Report it as
+a difference in allocator defaults, not as a capability the enclave has and
+Linux lacks.
+
+What the benchmark is good for instead is a positive control on the
+virtualisation wrapper. Outside that band there is no translation term and the
+DRAM subsystem is the host's on both sides, so a ratio of 1.0 is a testable
+prediction, and confirming it licenses attributing differences elsewhere to the
+kernels rather than to QEMU. At 32 KiB both platforms are L1 resident, which
+compares the emitted loops themselves and rules out codegen divergence between
+the two targets.
+
+`--iterations` is rounded up to at least one full lap of the buffer, so a short
+request cannot report a working set larger than the region it visited; the count
+actually used is in `iterations_completed`. There is no cold mode — the
+constructor verifies the cycle by walking the whole buffer, so everything has
+been touched once before measurement starts.
+
+`page-touch` allocates a region, writes one word to each 4 KiB page of it, and
+frees it, once per iteration. `--working-set-size` is the per-iteration region
+size. Unlike every other benchmark here, the allocation is **inside** the timed
+region, because provisioning is the thing being measured.
+
+> [!WARNING] Several things differ between the platforms at once and this
+> benchmark cannot separate them. Linux resolves a first write with a page
+> fault; the Restricted Kernel maps and zeroes eagerly at `mmap` time, so a
+> first write never traps. Independently, the enclave heap never returns memory
+> to the kernel, while glibc unmaps chunks above its mmap threshold — dynamic,
+> starting at 128 KiB and capped at 32 MiB, see
+> [`mallopt(3)`](https://man7.org/linux/man-pages/man3/mallopt.3.html) — and
+> re-faults them next time. The two sides also move different volumes of memory
+> to do it: Linux zeroes the whole region, the enclave writes one word per page.
+> Compare a cold run (`--iterations=1 --warmup-iterations=0`) against a warm one
+> rather than reading either alone.
+
+Even having done that, the warm side needs one more caveat.
+
+> [!CAUTION] The warm ratio is a function of `--iterations`, not a property of
+> the platforms. Linux re-pays provisioning every iteration while the enclave
+> pays once and recycles, so with no warmup the enclave's cost is
+> `touch + one_time / iterations`, falling towards `touch`. At 64 MiB and
+> `--warmup-iterations=0` it looks 2.6x cheaper at 10 iterations and 26x at
+> 10000, already within a percent of that ceiling. With the default warmup the
+> one-time cost lands before the timer starts and the ratio is flat. Report the
+> curve, or state the iteration and warmup counts beside any single figure.
+
+The cold number is not purely the guest's either. Guest RAM is an ordinary
+anonymous mapping in the QEMU process with no `-mem-prealloc`, so the host
+demand-pages it. Sampling the QEMU process during a cold run shows peak RSS
+rising by 66 MiB for a 64 MiB region and 262 MiB for a 256 MiB region, almost
+entirely `AnonHugePages` — the host instantiates and zeroes the same memory
+underneath, in 2 MiB units, inside the guest's timed region. On hardware with
+preallocated private memory that component would not be present.
+
+### Kernel Boundary
+
+`null-syscall` measures one user/kernel round trip, the analogue of lmbench's
+`lat_syscall null`.
+
+> [!WARNING] The two platforms deliberately invoke **different syscalls**: the
+> enclave uses `write(-1, NULL, 0)`, which the Restricted Kernel answers before
+> looking up the descriptor, and Linux uses `getppid()`. Each is the cheapest
+> crossing its kernel offers, which is what lmbench does, but it makes the
+> result a comparison of kernels rather than of one syscall. The syscall that
+> was actually measured is reported in the `detail` column. Any use of this
+> number has to carry that caveat.
+
+The checksum is no help here. The two syscalls return different values, so it
+can only fold the count of successful returns, and the run already fails if that
+count is short of the request. It matches across platforms for free.
+
+`syscall-control` runs the same loop with no syscall in it: the loop, the
+indirect call through the probe, the barrier and the timer. Subtracting a
+platform's control from its own figure estimates the kernel crossing, and only
+estimates it — the source is identical but the two targets are built with
+different flags, and the two loops leave the branch predictor and caches in
+different states. Report both numbers.
 
 ## Reproducing a Comparison
 
@@ -156,9 +355,73 @@ oak_benchmarks/
 
 4. **BenchmarkTimer Trait**: Timing is injected by the host application:
    - **Oak enclave**: `TscTimer` (TSC-based, no_std compatible)
-   - **Linux**: `NativeTimer` (`std::time::Instant`-based)
+   - **Linux**: `NativeTimer`, which records **both** `std::time::Instant` and
+     the TSC, so that cycles/op is available on both platforms
 
    This ensures warmup iterations are correctly excluded from measurement.
+
+## Crypto Acceleration
+
+The `sha2` and `aes` crates pick a hardware backend through the `cpufeatures`
+crate, which does a runtime `CPUID` check. On `x86_64-unknown-none` there is no
+OS to support that check, so `cpufeatures` compiles it out and the crates fall
+back to whatever the _compile-time_ target features allow.
+
+The consequence, before this was addressed, was that the enclave binary
+contained zero SHA-NI and zero AES-NI instructions while the Linux baseline
+contained 56 and 462 respectively. A naive comparison then reported a large
+"enclave overhead" that was really the gap between a hardware and a software
+implementation of the same primitive: SHA-256 appeared to run at 0.20x native,
+when the true figure is close to parity.
+
+The fix is in [`bazel/rust/extensions.bzl`](../bazel/rust/extensions.bzl), which
+adds `+sha,+aes,+pclmulqdq` to the bare-metal target features. To verify:
+
+```bash
+objdump -d "$(bazel cquery -c opt --output=files \
+    //oak_benchmarks/oak_enclave_app:oak_enclave_app)" |
+    grep -cE 'sha256rnds2|sha256msg'
+```
+
+### The baseline is built to match
+
+Correcting the enclave side exposes the same problem in the opposite direction.
+The bare-metal toolchain sets `--codegen=target-cpu=x86-64-v3` and an explicit
+target-feature list, but nothing sets either for `x86_64-unknown-linux-gnu`, so
+the baseline is compiled for the generic x86-64 target: no AVX2, no AES-NI. Left
+alone, that biases every workload the compiler can vectorise, and every one that
+reaches for AES-NI, in the enclave's favour.
+
+`//oak_benchmarks/linux_enclave_app` closes the gap itself. It is a
+`matched_isa_binary`, defined in [`defs.bzl`](linux_enclave_app/defs.bzl), which
+applies a configuration transition that compiles the binary and every crate it
+links with the enclave's instruction set. No build flag is needed, and an
+unmatched baseline cannot be produced by accident:
+
+```bash
+bazel build -c opt //oak_benchmarks/linux_enclave_app
+```
+
+The transition lists the target features explicitly rather than relying on
+`target-cpu=x86-64-v3` to imply them, because the v3 level does not include
+AES-NI. That distinction is load-bearing for the hash map benchmark: `ahash`
+picks its backend from `cfg(target_feature = "aes")` at compile time, and with
+`target-cpu=x86-64-v3` alone it still compiles the fallback backend, so the two
+sides would hash differently.
+
+`:linux_enclave_app_base` is the same binary without the transition, which is
+what to build when you want to measure the gap rather than close it.
+
+To confirm both sides agree, compare the instruction census rather than trusting
+the `cpu_features` field:
+
+```bash
+objdump -d "${binary}" |
+    grep -oE '\b(v?aesenc|sha256rnds2|rorx|mulx)\b' | sort | uniq -c
+```
+
+Both binaries should show `vaesenc` (not the legacy `aesenc`), the same
+`sha256rnds2` count, and non-zero `rorx`/`mulx`.
 
 ## Notes
 
@@ -169,9 +432,22 @@ oak_benchmarks/
 
 <!-- -->
 
-> [!IMPORTANT] **TSC Frequency**: The benchmarks assume a fixed TSC frequency
-> (default 3.0 GHz). Adjust with `--tsc-freq` for your hardware. Check:
-> `dmesg | grep -i tsc`
+> [!IMPORTANT] **TSC Frequency**: The host measures the TSC frequency against
+> `CLOCK_MONOTONIC` at startup; `--tsc-freq` overrides it. Do not rely on the
+> sysfs `cpuinfo_max_freq` value: under `amd_pstate` it reports the boost clock
+> rather than the invariant TSC rate. Cross-check with
+> `journalctl -k | grep -i "refined tsc"`. Prefer cycles/op, which needs no
+> frequency at all.
+
+<!-- -->
+
+> [!WARNING] **Guest memory**: the launcher passes no `-m` to QEMU unless
+> `--memory-size` is given, leaving the enclave with ~112 MiB usable. The
+> benchmarks that allocate with `try_reserve` report `allocation failure`;
+> `array-update` and the hash-map benchmarks use `vec![]`, which aborts the
+> guest because the Oak allocator panics rather than returning an error. Pass
+> `--memory-size=4G` (or more) for the memory benchmarks, and keep it constant
+> across a comparison.
 
 <!-- -->
 
