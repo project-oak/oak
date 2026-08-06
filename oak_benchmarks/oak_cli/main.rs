@@ -81,6 +81,18 @@ struct Args {
     /// Output format.
     #[arg(long, value_enum, default_value = "human")]
     output: OutputFormat,
+
+    /// Report how long the enclave took to become usable.
+    ///
+    /// Prints one extra line, `boot-latency launch_ns=<n> ready_ns=<n>`,
+    /// where `launch_ns` is the time for the launcher to return and
+    /// `ready_ns` is the time until the first RPC response arrives. The line
+    /// has its own format and is ignored by anything parsing the CSV row.
+    ///
+    /// `ready_ns` includes the benchmark itself, so it is only a boot latency
+    /// when the benchmark is trivial. Use `--benchmark=debug --iterations=1`.
+    #[arg(long, default_value = "false")]
+    report_boot_latency: bool,
 }
 
 #[tokio::main]
@@ -95,9 +107,11 @@ async fn main() -> Result<()> {
 
     // Launch the enclave.
     log::info!("Launching enclave...");
+    let launch_start = Instant::now();
     let (guest_instance, connector_handle) = launcher::launch(args.launcher_params)
         .await
         .map_err(|e| anyhow::anyhow!("Failed to launch enclave: {}", e))?;
+    let launch_elapsed = launch_start.elapsed();
 
     log::info!("Enclave launched");
 
@@ -126,6 +140,17 @@ async fn main() -> Result<()> {
         .map_err(|e| anyhow::anyhow!("Benchmark RPC returned error: {:?}", e))?;
 
     let host_elapsed = host_start.elapsed();
+    let ready_elapsed = launch_start.elapsed();
+
+    // Printed before the status check so a failed benchmark still yields a
+    // boot measurement, which does not depend on the benchmark succeeding.
+    if args.report_boot_latency {
+        println!(
+            "boot-latency launch_ns={} ready_ns={}",
+            launch_elapsed.as_nanos(),
+            ready_elapsed.as_nanos()
+        );
+    }
 
     // Abort before formatting: a failed benchmark returns an all-zero
     // response, which would otherwise be printed as a plausible-looking row of
