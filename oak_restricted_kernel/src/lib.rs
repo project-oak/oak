@@ -234,7 +234,7 @@ pub fn start_kernel<P: Platform + crate::hal::KernelPlatform + 'static>(info: &B
 
     syscall::enable_syscalls(
         channel,
-        syscall::dice_data::DiceData::Layer0(Box::new(stage0_dice_data)),
+        syscall::dice_data::DiceData::Layer0(stage0_dice_data),
         encoded_event_log,
     );
 

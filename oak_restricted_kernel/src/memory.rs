@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec::Vec};
 use core::{
     alloc::{GlobalAlloc, Layout},
     ops::{Deref, DerefMut},
@@ -23,6 +23,7 @@ use core::{
 
 use linked_list_allocator::Heap;
 use log::info;
+use oak_dice::evidence::Stage0DiceData;
 use oak_hal::{PageAssignment, Platform};
 use spinning_top::Spinlock;
 use x86_64::{
@@ -33,7 +34,7 @@ use x86_64::{
         page::PageRange,
     },
 };
-use zerocopy::FromBytes;
+use zerocopy::{FromZeros, IntoBytes};
 use zeroize::Zeroize;
 
 use crate::{
@@ -379,16 +380,14 @@ impl SensitiveDiceDataMemory {
         }
     }
 
-    pub fn read_stage0_dice_data(&self) -> oak_dice::evidence::Stage0DiceData {
+    pub fn read_stage0_dice_data(&self) -> Box<Stage0DiceData> {
+        let mut dice_data =
+            Stage0DiceData::new_box_zeroed().expect("failed to allocate memory for Stage0DiceData");
         let dice_memory_slice = unsafe {
-            core::slice::from_raw_parts(
-                self.start_ptr,
-                core::mem::size_of::<oak_dice::evidence::Stage0DiceData>(),
-            )
+            core::slice::from_raw_parts(self.start_ptr, core::mem::size_of::<Stage0DiceData>())
         };
 
-        let dice_data = oak_dice::evidence::Stage0DiceData::read_from_bytes(dice_memory_slice)
-            .expect("failed to read dice data");
+        dice_data.as_mut_bytes().copy_from_slice(dice_memory_slice);
 
         if dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {
             panic!("dice data loaded from stage0 failed validation");
