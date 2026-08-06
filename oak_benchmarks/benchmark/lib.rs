@@ -19,7 +19,7 @@
 //!
 //! - `cpu`: CPU-bound benchmarks (hashing, AEAD, signing, integer compute)
 //! - `memory`: Memory-bound benchmarks (random writes, hash maps, allocation,
-//!   sequential bandwidth, dependent-load latency, page provisioning)
+//!   dependent-load latency, page provisioning)
 //! - `syscall`: cost of a user/kernel round trip
 //! - `service`: routes requests to benchmark implementations
 //! - `timer`: timing utilities
@@ -30,11 +30,27 @@
 //! 1. **Identical work.** The enclave and the baseline must execute the same
 //!    operations over the same inputs. All pseudo-random data is derived from a
 //!    caller-supplied seed, never from a clock or the TSC.
-//! 2. **Verifiable work.** Each benchmark must return a checksum over its
-//!    output. Matching checksums across platforms then demonstrate that the
-//!    same work was performed and that the optimiser did not elide it.
+//! 2. **Verifiable work.** Each benchmark returns a checksum over its output,
+//!    and that checksum must be a function of the data the benchmark actually
+//!    touched — not only of the request parameters. Matching checksums across
+//!    platforms then demonstrate that the same work was performed and that the
+//!    optimiser did not elide it.
 //! 3. **Untimed setup.** Allocation and input generation happen outside the
 //!    timed region.
+//!
+//! Property 2 is easy to break by accident: three benchmarks have shipped with
+//! a checksum that a fold had cancelled the data out of, leaving a function of
+//! the iteration count alone. Prefer a multiply-XOR fold.
+//! `test_checksums_witness_the_seed` in `tests.rs` catches this class, at a
+//! working set size the suite really runs at, since all three bugs were
+//! invisible at the sizes the unit tests happened to use.
+//!
+//! Two modules are documented exceptions. [`syscall`] breaks both 1 and 2: each
+//! kernel's cheapest crossing is a different syscall, and since the two return
+//! different values its checksum can only be folded from a count the run
+//! already requires to equal `iterations`, so it matches for free and witnesses
+//! nothing. [`memory::page_touch`] breaks 1 alone, moving different volumes of
+//! memory on the two platforms. Both modules say what is checked instead.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
