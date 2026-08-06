@@ -43,6 +43,7 @@ use crate::{
     memory::{
         AllocChurnBenchmark, AllocSizeMode, ArrayUpdateBenchmark,
         hashmap::{HashMapBenchmark, HashMapMode},
+        page_touch::PageTouchBenchmark,
         pointer_chase::PointerChaseBenchmark,
     },
     timer::BenchmarkTimer,
@@ -206,6 +207,14 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
                 );
                 let b = self.pointer_chase_bench(size, seed)?;
                 b.run::<T>(iterations, warmup)
+            }
+            BenchmarkType::PageTouch => {
+                let size =
+                    Self::working_set_or(request, crate::memory::page_touch::DEFAULT_REGION_SIZE);
+                // Nothing to cache: the benchmark carries only a seed and
+                // allocates its region inside the timed region every
+                // iteration.
+                PageTouchBenchmark::new(seed).run::<T>(size, iterations, warmup)
             }
 
             // ── Connectivity check ──

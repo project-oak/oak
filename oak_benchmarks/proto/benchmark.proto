@@ -42,8 +42,14 @@ message RunBenchmarkRequest {
   optional uint64 seed = 5;
   // Working set size in bytes for memory-bound benchmarks (0 = use default).
   //
-  // Which benchmarks read this, and what it means for each, is documented on
-  // the benchmark types that use it.
+  // Applies to the array update, hash map and pointer chase benchmarks. For
+  // the pointer chase it is rounded down to a whole number of 64-byte slots.
+  // The allocation is performed outside the timed region.
+  //
+  // BENCHMARK_TYPE_PAGE_TOUCH also reads this field, but for it the meaning
+  // differs: it is the size of the region allocated and freed on *each*
+  // iteration, and that allocation is inside the timed region because
+  // provisioning is what that benchmark measures.
   uint64 working_set_size = 6;
 }
 
@@ -82,6 +88,17 @@ enum BenchmarkType {
   // mapped in 2 MiB units by construction, where the Linux baseline gets
   // 4 KiB pages plus whatever transparent huge pages it happens to be given.
   BENCHMARK_TYPE_POINTER_CHASE = 22;
+
+  // Cost of allocating a fresh region, writing one word to each 4 KiB page of
+  // it, and freeing it. `working_set_size` is the per-iteration region size.
+  //
+  // Unlike every other memory benchmark, the allocation is inside the timed
+  // region. Two things differ between the platforms at once here — whether a
+  // first write traps, and whether the allocator returns memory to the kernel
+  // between uses — and this benchmark cannot separate them. Compare a cold
+  // run against a warm one rather than reading the warm number as a page
+  // fault cost.
+  BENCHMARK_TYPE_PAGE_TOUCH = 23;
 
   // Debug/connectivity test - returns dummy values without doing work.
   BENCHMARK_TYPE_DEBUG = 100;

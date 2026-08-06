@@ -18,15 +18,21 @@
 //!
 //! These benchmarks stress memory subsystem performance with large working
 //! sets to evaluate allocator efficiency and memory access patterns.
+//!
+//! [`page_touch`] is the odd one out: it measures how a platform provisions
+//! memory, so its allocation is inside the timed region rather than outside
+//! it.
 
 pub mod alloc_churn;
 pub mod array_update;
 pub mod hashmap;
+pub mod page_touch;
 pub mod pointer_chase;
 
 pub use alloc_churn::{AllocChurnBenchmark, AllocSizeMode};
 pub use array_update::ArrayUpdateBenchmark;
 pub use hashmap::{HashMapBenchmark, HashMapMode};
+pub use page_touch::PageTouchBenchmark;
 pub use pointer_chase::PointerChaseBenchmark;
 
 /// Trait for memory-bound benchmarks.

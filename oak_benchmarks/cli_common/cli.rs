@@ -42,6 +42,7 @@ pub const BENCHMARK_TYPE_NAMES: &[(&str, BenchmarkType)] = &[
     ("array-update", BenchmarkType::ArrayUpdate),
     ("alloc-churn", BenchmarkType::AllocChurn),
     ("pointer-chase", BenchmarkType::PointerChase),
+    ("page-touch", BenchmarkType::PageTouch),
     ("debug", BenchmarkType::Debug),
 ];
 
@@ -91,6 +92,7 @@ impl fmt::Display for DisplayBenchmarkType {
             BenchmarkType::ArrayUpdate => "Array Update",
             BenchmarkType::AllocChurn => "Alloc Churn",
             BenchmarkType::PointerChase => "Pointer Chase",
+            BenchmarkType::PageTouch => "Page Touch",
             BenchmarkType::Debug => "Debug",
             BenchmarkType::Unspecified => "Unspecified",
         };
