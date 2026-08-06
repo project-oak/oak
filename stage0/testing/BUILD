@@ -90,9 +90,9 @@ rust_test(
     deps = [
         "//oak_dice",
         "//oak_file_utils",
-        "@oak_crates_index//:goblin",
+        "//oak_test_utils",
+        "@oak_crates_index//:anyhow",
         "@oak_crates_index//:googletest",
         "@oak_crates_index//:sha2",
-        "@oak_crates_index//:which",
     ],
 )
