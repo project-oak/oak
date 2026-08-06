@@ -20,7 +20,7 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec::Vec};
 use core::fmt::Write;
 
 use oak_dice::evidence::Stage0DiceData;
@@ -81,8 +81,9 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
     oak_restricted_kernel_interface::syscall::exit(-1);
 }
 
-fn read_stage0_dice_data() -> Stage0DiceData {
-    let mut result = Stage0DiceData::new_zeroed();
+fn read_stage0_dice_data() -> Box<Stage0DiceData> {
+    let mut result =
+        Stage0DiceData::new_box_zeroed().expect("failed to allocate memory for Stage0DiceData");
     let buffer = result.as_mut_bytes();
     let len = syscall::read(DICE_DATA_FD, buffer).expect("failed to read dice data");
     assert!(len == buffer.len(), "invalid dice data size");

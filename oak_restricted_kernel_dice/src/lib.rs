@@ -23,7 +23,7 @@
 
 extern crate alloc;
 
-use alloc::vec;
+use alloc::{boxed::Box, vec};
 
 use coset::{CborSerializable, cbor::Value, cwt::ClaimName};
 use hkdf::Hkdf;
@@ -61,7 +61,7 @@ fn certificate_to_byte_array(cert: coset::CoseSign1) -> [u8; oak_dice::evidence:
 
 /// Generates attestation evidence for the 'measurement' of the application.
 pub fn generate_dice_data(
-    stage0_dice_data: oak_dice::evidence::Stage0DiceData,
+    stage0_dice_data: Box<oak_dice::evidence::Stage0DiceData>,
     event_digest: &DigestSha2_256,
 ) -> oak_dice::evidence::RestrictedKernelDiceData {
     let (application_keys, application_private_keys): (
@@ -150,8 +150,8 @@ pub fn generate_dice_data(
     };
 
     let evidence = oak_dice::evidence::Evidence {
-        root_layer_evidence: stage0_dice_data.root_layer_evidence,
-        restricted_kernel_evidence: stage0_dice_data.layer_1_evidence,
+        root_layer_evidence: stage0_dice_data.root_layer_evidence.clone(),
+        restricted_kernel_evidence: stage0_dice_data.layer_1_evidence.clone(),
         application_keys,
     };
 

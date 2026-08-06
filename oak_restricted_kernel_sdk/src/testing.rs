@@ -104,7 +104,7 @@ fn get_mock_dice_data_and_event_log() -> (RestrictedKernelDiceData, Vec<u8>) {
     let encoded_application_event = application_event.encode_to_vec();
     mock_event_log.encoded_events.push(encoded_application_event.clone());
     let dice_data = oak_restricted_kernel_dice::generate_dice_data(
-        stage0_dice_data,
+        alloc::boxed::Box::new(stage0_dice_data),
         &oak_restricted_kernel_dice::measure_digest_sha2_256(&encoded_application_event),
     );
     (dice_data, mock_event_log.encode_to_vec())

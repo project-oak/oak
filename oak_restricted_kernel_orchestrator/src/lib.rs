@@ -48,7 +48,7 @@ pub struct AttestedApp {
 impl AttestedApp {
     pub fn load_and_attest<C: oak_channel::Channel>(
         mut channel: C,
-        stage0_dice_data: Stage0DiceData,
+        stage0_dice_data: alloc::boxed::Box<Stage0DiceData>,
         encoded_event_log: Vec<u8>,
     ) -> Self {
         let initial_data_bytes = receive_raw(&mut channel).expect("failed to read first frame");
