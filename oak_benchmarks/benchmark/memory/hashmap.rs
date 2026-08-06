@@ -16,10 +16,14 @@
 
 //! HashMap benchmark.
 //!
-//! Two modes whose difference isolates the allocator's contribution. Insert
+//! Three modes whose differences isolate the allocator's contribution. Insert
 //! works on a map with no reserved capacity, so each insert allocates a value
 //! and the table periodically grows and rehashes. Lookup queries a fully
 //! populated map and allocates nothing, leaving hashing plus a dependent read.
+//! Churn evicts a resident entry and inserts one that has never been in the
+//! map, so the map holds its size while its contents turn over: one free and
+//! one allocation of the same size per iteration, on top of the table work of
+//! a deletion and an insertion.
 //!
 //! Both platforms use `hashbrown::HashMap` with the same explicit hasher.
 //! `std::collections::HashMap` is also hashbrown, but with a randomly seeded
@@ -72,6 +76,13 @@ fn bytes_per_entry(value_size: usize) -> usize {
 /// the whole array: if two platforms agree here they agree everywhere.
 const CHECKSUM_SAMPLE_KEYS: usize = 1024;
 
+/// Advance `rng` one step and return the slot it selects.
+#[inline(always)]
+fn next_slot(rng: &mut u64, len: usize) -> usize {
+    *rng = rng.wrapping_mul(LCG_MULTIPLIER).wrapping_add(1);
+    (*rng >> 16) as usize % len
+}
+
 /// Advance `rng` one step and return the key it selects.
 ///
 /// The warmup and the measured loop share this so that both walk the same
@@ -79,8 +90,7 @@ const CHECKSUM_SAMPLE_KEYS: usize = 1024;
 /// afterwards identifies the walk that was taken.
 #[inline(always)]
 fn next_key(rng: &mut u64, keys: &[u64]) -> u64 {
-    *rng = rng.wrapping_mul(LCG_MULTIPLIER).wrapping_add(1);
-    keys[(*rng >> 16) as usize % keys.len()]
+    keys[next_slot(rng, keys.len())]
 }
 
 /// The fixed hash keys both platforms use.
@@ -109,6 +119,8 @@ pub enum HashMapMode {
     Insert,
     /// Look up existing keys. Read-only.
     Lookup,
+    /// Evict a resident entry and insert a new one, at constant map size.
+    Churn,
 }
 
 /// HashMap benchmark.
@@ -206,14 +218,17 @@ impl HashMapBenchmark {
         match mode {
             HashMapMode::Insert => self.run_insert::<T>(iterations, warmup_iterations),
             HashMapMode::Lookup => self.run_lookup::<T>(iterations, warmup_iterations),
+            HashMapMode::Churn => self.run_churn::<T>(iterations, warmup_iterations),
         }
     }
 
     /// Measure insertion into an empty map with no reserved capacity.
     ///
     /// Table growth and rehashing are deliberately included: they are a real
-    /// part of insertion cost and are exactly where a naive allocator is
-    /// expected to differ from the Linux system allocator.
+    /// part of insertion cost, and are where the enclave's allocator is
+    /// expected to differ from glibc's. That allocator is `rlsf`'s TLSF behind
+    /// a spinlock (`oak_enclave_runtime_support::heap`), so the difference to
+    /// expect is the lock and the coalescing, not a missing free list.
     fn run_insert<T: BenchmarkTimer>(
         &mut self,
         iterations: u32,
@@ -330,6 +345,117 @@ impl HashMapBenchmark {
         Ok(BenchmarkResult::new(timing, iterations, bytes_processed, checksum)
             .with_working_set(working_set))
     }
+
+    /// Measure deletion paired with insertion, at constant map size.
+    ///
+    /// Each iteration evicts a randomly chosen resident entry and inserts a
+    /// key that has never been in the map, so the map holds the same number
+    /// of entries throughout while its contents turn over. That is the
+    /// workload the insert mode cannot reach: insert only ever grows the
+    /// heap, so it never exercises the allocator's free path, and it puts
+    /// every key in a bucket that was empty.
+    ///
+    /// Evicting one key and inserting a different one is what makes this
+    /// churn rather than replacement. Re-inserting the key just removed would
+    /// return it to the same bucket with the same tag, leaving hashbrown's
+    /// spare capacity untouched and never triggering the periodic rehash that
+    /// clears deleted slots. Inserting an unrelated key consumes spare
+    /// capacity and so pays for that rehash on the schedule a real workload
+    /// would.
+    ///
+    /// New keys continue the generator that produced [`Self::keys`]. The LCG
+    /// has full period, so a key it has not yet emitted cannot already be in
+    /// the map, and the eviction cannot miss.
+    ///
+    /// Slots are chosen pseudo-randomly, the same way the lookup mode chooses
+    /// keys. Walking them in order would be much cheaper than it looks: the
+    /// values are allocated in key order, so a sequential walk reads the value
+    /// heap in ascending address order and the prefetcher covers it, which is
+    /// exactly the cost this is supposed to be paying.
+    ///
+    /// The map is rebuilt afterwards, outside the timed region. Churn is the
+    /// only mode that leaves the map holding different keys, and the service
+    /// caches one instance across requests, so without the rebuild a later
+    /// lookup would report a different checksum than the same request would
+    /// in a fresh process.
+    fn run_churn<T: BenchmarkTimer>(
+        &mut self,
+        iterations: u32,
+        warmup_iterations: u32,
+    ) -> Result<BenchmarkResult, BenchmarkError> {
+        // Warm up by removing and re-inserting the same key. That reaches the
+        // allocator's steady state, which is the point of warming this mode,
+        // without changing which keys are resident: the measured phase then
+        // starts from the same map whatever the warmup count, as it must.
+        let mut rng = self.seed;
+        for _ in 0..warmup_iterations {
+            let key = next_key(&mut rng, &self.keys);
+            self.populated.remove(&key);
+            self.populated.insert(key, self.value_template.clone());
+        }
+
+        // Offset the generator past the warmup's walk, so the measured loop
+        // does not begin by revisiting slots it has just left in cache. The
+        // offset is a function of the seed alone.
+        let mut rng = self.seed ^ MEASURED_SEED_OFFSET;
+        // The next key the construction generator would have produced.
+        let mut fresh = self.keys[self.keys.len() - 1];
+        let mut removed = 0u64;
+
+        let timer = T::start();
+
+        for _ in 0..iterations {
+            let slot = next_slot(&mut rng, self.keys.len());
+            let old = core::hint::black_box(self.keys[slot]);
+            fresh = fresh.wrapping_mul(LCG_MULTIPLIER).wrapping_add(1);
+            // The evicted value drops at the end of this statement, before the
+            // insert below allocates. Free then allocate is the order an
+            // update takes, and it is the order that lets an allocator with a
+            // free list hand the same block straight back.
+            removed += self.populated.remove(&old).is_some() as u64;
+            self.populated.insert(fresh, self.value_template.clone());
+            self.keys[slot] = fresh;
+        }
+
+        let timing = timer.stop();
+
+        // Every key evicted was resident, so a miss means the map has lost
+        // entries and the timing is not measuring a constant-size map.
+        if removed != iterations as u64 {
+            return Err(BenchmarkError::Generic);
+        }
+
+        // Checksum after the clock stops. The key array now records which slot
+        // received which new key, so it is a fingerprint of the walk rather
+        // than of the request: a loop that did not run, or ran a different
+        // number of times, or visited slots in another order, cannot produce
+        // it. The two generator states pin the walk exactly.
+        let mut checksum = CHECKSUM_INIT;
+        checksum = checksum_update(checksum, &(self.populated.len() as u64).to_le_bytes());
+        checksum = checksum_update(checksum, &removed.to_le_bytes());
+        checksum = checksum_update(checksum, &rng.to_le_bytes());
+        checksum = checksum_update(checksum, &fresh.to_le_bytes());
+        for &key in self.keys.iter().take(CHECKSUM_SAMPLE_KEYS) {
+            // Resident by construction; if not, the map and the key array have
+            // diverged and neither the checksum nor the timing means anything.
+            self.populated.get(&key).ok_or(BenchmarkError::Generic)?;
+            checksum = checksum_update(checksum, &key.to_le_bytes());
+        }
+
+        let bytes_processed = iterations as u64 * (8 + self.value_template.len() as u64);
+        let working_set =
+            self.populated.len() as u64 * bytes_per_entry(self.value_template.len()) as u64;
+
+        // Drop the churned map before building the replacement, so the peak
+        // footprint stays at one map rather than two.
+        let (entries, value_size, seed) = (self.num_entries, self.value_template.len(), self.seed);
+        self.populated = BenchMap::with_hasher(HASH_STATE);
+        self.keys = Vec::new();
+        *self = Self::new(entries, value_size, seed)?;
+
+        Ok(BenchmarkResult::new(timing, iterations, bytes_processed, checksum)
+            .with_working_set(working_set))
+    }
 }
 
 impl MemoryBenchmark for HashMapBenchmark {
@@ -384,6 +510,59 @@ mod tests {
         let a = bench.run::<NativeTimer>(HashMapMode::Insert, 1_500, 0).unwrap().checksum;
         let b = bench.run::<NativeTimer>(HashMapMode::Insert, 1_500, 0).unwrap().checksum;
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn churn_holds_the_map_at_a_constant_size() {
+        // Every eviction must hit. `run_churn` returns `Generic` if one misses,
+        // which is what would happen if a new key collided with a resident one
+        // and shrank the map. More iterations than entries, so slots are
+        // revisited and later evictions remove keys churn itself inserted.
+        let mut bench = HashMapBenchmark::with_defaults(2_000, 7).unwrap();
+        let r = bench.run::<NativeTimer>(HashMapMode::Churn, 5_000, 0).unwrap();
+        assert_eq!(r.iterations_completed, 5_000);
+        assert_eq!(bench.populated.len(), 2_000);
+    }
+
+    #[test]
+    fn churn_checksum_witnesses_the_loop() {
+        // The failure this guards against is a checksum that is a function of
+        // the request alone: it would match across platforms whatever the loop
+        // did, or did not do.
+        let mut bench = HashMapBenchmark::with_defaults(2_000, 7).unwrap();
+        let short = bench.run::<NativeTimer>(HashMapMode::Churn, 1_000, 0).unwrap().checksum;
+        let long = bench.run::<NativeTimer>(HashMapMode::Churn, 2_000, 0).unwrap().checksum;
+        assert_ne!(short, long);
+    }
+
+    #[test]
+    fn churn_is_repeatable() {
+        // Churn mutates the map it measures, so a second run has to find the
+        // map in the state the first one started from.
+        let mut bench = HashMapBenchmark::with_defaults(2_000, 7).unwrap();
+        let a = bench.run::<NativeTimer>(HashMapMode::Churn, 3_000, 0).unwrap().checksum;
+        let b = bench.run::<NativeTimer>(HashMapMode::Churn, 3_000, 0).unwrap().checksum;
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn churn_warmup_does_not_change_measured_checksum() {
+        let mut a = HashMapBenchmark::with_defaults(2_000, 8).unwrap();
+        let ra = a.run::<NativeTimer>(HashMapMode::Churn, 3_000, 0).unwrap();
+        let mut b = HashMapBenchmark::with_defaults(2_000, 8).unwrap();
+        let rb = b.run::<NativeTimer>(HashMapMode::Churn, 3_000, 5_000).unwrap();
+        assert_eq!(ra.checksum, rb.checksum);
+    }
+
+    #[test]
+    fn churn_leaves_the_map_usable_for_lookups() {
+        // Every value is a fresh clone of the template, so a lookup after a
+        // churn has to find the same bytes it would have found before.
+        let mut bench = HashMapBenchmark::with_defaults(2_000, 9).unwrap();
+        let before = bench.run::<NativeTimer>(HashMapMode::Lookup, 4_000, 0).unwrap().checksum;
+        bench.run::<NativeTimer>(HashMapMode::Churn, 3_000, 0).unwrap();
+        let after = bench.run::<NativeTimer>(HashMapMode::Lookup, 4_000, 0).unwrap().checksum;
+        assert_eq!(before, after);
     }
 
     #[test]

@@ -66,6 +66,12 @@ enum BenchmarkType {
   BENCHMARK_TYPE_ARRAY_UPDATE = 5;
   BENCHMARK_TYPE_ALLOC_CHURN = 9;
 
+  // Removals paired with insertions on a map that stays at the size
+  // `working_set_size` asks for. BENCHMARK_TYPE_MEMORY_INSERT covers the
+  // growth path; this covers the steady state, where every insertion is
+  // preceded by a free of the same size.
+  BENCHMARK_TYPE_MEMORY_CHURN = 16;
+
   // Debug/connectivity test - returns dummy values without doing work.
   BENCHMARK_TYPE_DEBUG = 100;
 }

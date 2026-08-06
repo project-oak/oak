@@ -181,6 +181,11 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
                 let b = self.hashmap_bench(entries, seed)?;
                 b.run::<T>(HashMapMode::Lookup, iterations, warmup)
             }
+            BenchmarkType::MemoryChurn => {
+                let entries = Self::hashmap_entries(request);
+                let b = self.hashmap_bench(entries, seed)?;
+                b.run::<T>(HashMapMode::Churn, iterations, warmup)
+            }
             BenchmarkType::AllocChurn => {
                 // `data_size` selects the allocation size; 0 selects the
                 // variable-size schedule.
