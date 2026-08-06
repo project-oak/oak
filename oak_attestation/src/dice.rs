@@ -322,11 +322,6 @@ pub fn stage0_dice_data_and_event_log_to_proto(
     value: Stage0DiceData,
     event_log: EventLog,
 ) -> anyhow::Result<DiceData> {
-    let mut layers = Vec::new();
-    let eca_certificate =
-        oak_dice::utils::cbor_encoded_bytes_to_vec(&value.layer_1_evidence.eca_certificate[..])
-            .map_err(anyhow::Error::msg)?;
-    layers.push(LayerEvidence { eca_certificate });
     let root_layer = Some(root_layer_evidence_to_proto(value.root_layer_evidence)?);
     // TODO: b/527437181 - Build equal number of layers and event log entries.
     // At the moment we build 1 layer and 2 events (this is the one layer).
