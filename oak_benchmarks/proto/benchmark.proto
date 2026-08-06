@@ -72,6 +72,17 @@ enum BenchmarkType {
   // preceded by a free of the same size.
   BENCHMARK_TYPE_MEMORY_CHURN = 16;
 
+  // Dependent-load latency over a randomly permuted list of cache lines, the
+  // construction used by lmbench's lat_mem_rd. `working_set_size` selects the
+  // size of the list, which is what makes the result a curve across the cache
+  // hierarchy rather than a single number.
+  //
+  // At working sets of a few hundred megabytes this is also the suite's only
+  // measurement sensitive to page size: the Restricted Kernel's heap is
+  // mapped in 2 MiB units by construction, where the Linux baseline gets
+  // 4 KiB pages plus whatever transparent huge pages it happens to be given.
+  BENCHMARK_TYPE_POINTER_CHASE = 22;
+
   // Debug/connectivity test - returns dummy values without doing work.
   BENCHMARK_TYPE_DEBUG = 100;
 }

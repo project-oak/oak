@@ -109,6 +109,20 @@ impl BenchmarkResult {
 /// <https://nuclear.llnl.gov/CNP/rng/rngman/node4.html>.
 pub const LCG_MULTIPLIER: u64 = 6364136223846793005;
 
+/// The 64-bit golden ratio constant, floor(2^64 / phi).
+///
+/// Used as a mixing multiplier. It is odd, so multiplying modulo 2^64 is
+/// invertible and no state is lost, and its bits are spread across the word
+/// so a change low down propagates upward. The same value is the additive
+/// increment of `splitmix64`, described in
+/// <https://prng.di.unimi.it/splitmix64.c>, whose two multipliers are
+/// different constants.
+///
+/// Deliberately not [`LCG_MULTIPLIER`], which generates the data being mixed.
+/// Reusing that multiplier would let the generator and the mixing step
+/// interact.
+pub const GOLDEN_RATIO_64: u64 = 0x9E37_79B9_7F4A_7C15;
+
 /// XORed into a seed to move a generator off a sequence already walked.
 ///
 /// A benchmark that warms up and then measures must not replay the warmup's

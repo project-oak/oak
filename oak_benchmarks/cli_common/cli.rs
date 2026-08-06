@@ -41,6 +41,7 @@ pub const BENCHMARK_TYPE_NAMES: &[(&str, BenchmarkType)] = &[
     ("memory-churn", BenchmarkType::MemoryChurn),
     ("array-update", BenchmarkType::ArrayUpdate),
     ("alloc-churn", BenchmarkType::AllocChurn),
+    ("pointer-chase", BenchmarkType::PointerChase),
     ("debug", BenchmarkType::Debug),
 ];
 
@@ -89,6 +90,7 @@ impl fmt::Display for DisplayBenchmarkType {
             BenchmarkType::MemoryChurn => "Memory Churn",
             BenchmarkType::ArrayUpdate => "Array Update",
             BenchmarkType::AllocChurn => "Alloc Churn",
+            BenchmarkType::PointerChase => "Pointer Chase",
             BenchmarkType::Debug => "Debug",
             BenchmarkType::Unspecified => "Unspecified",
         };

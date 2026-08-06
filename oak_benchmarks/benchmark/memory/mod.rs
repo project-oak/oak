@@ -22,10 +22,12 @@
 pub mod alloc_churn;
 pub mod array_update;
 pub mod hashmap;
+pub mod pointer_chase;
 
 pub use alloc_churn::{AllocChurnBenchmark, AllocSizeMode};
 pub use array_update::ArrayUpdateBenchmark;
 pub use hashmap::{HashMapBenchmark, HashMapMode};
+pub use pointer_chase::PointerChaseBenchmark;
 
 /// Trait for memory-bound benchmarks.
 ///

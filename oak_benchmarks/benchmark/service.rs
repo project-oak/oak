@@ -43,6 +43,7 @@ use crate::{
     memory::{
         AllocChurnBenchmark, AllocSizeMode, ArrayUpdateBenchmark,
         hashmap::{HashMapBenchmark, HashMapMode},
+        pointer_chase::PointerChaseBenchmark,
     },
     timer::BenchmarkTimer,
 };
@@ -70,6 +71,7 @@ pub struct BenchmarkService<T: BenchmarkTimer> {
     aead: Option<Box<AeadBenchmark>>,
     array_update: Option<Box<ArrayUpdateBenchmark>>,
     hashmap: Option<Box<HashMapBenchmark>>,
+    pointer_chase: Option<Box<PointerChaseBenchmark>>,
     alloc_churn: AllocChurnBenchmark,
     _timer: PhantomData<T>,
 }
@@ -87,6 +89,7 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
             aead: None,
             array_update: None,
             hashmap: None,
+            pointer_chase: None,
             alloc_churn: AllocChurnBenchmark::with_defaults(),
             _timer: PhantomData,
         }
@@ -163,11 +166,10 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
 
             // ── Memory ──
             BenchmarkType::ArrayUpdate => {
-                let size = if request.working_set_size != 0 {
-                    request.working_set_size as usize
-                } else {
-                    crate::memory::array_update::DEFAULT_WORKING_SET_SIZE
-                };
+                let size = Self::working_set_or(
+                    request,
+                    crate::memory::array_update::DEFAULT_WORKING_SET_SIZE,
+                );
                 let b = self.array_update_bench(size, seed)?;
                 b.run::<T>(iterations, warmup)
             }
@@ -197,6 +199,15 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
                 self.alloc_churn.run::<T>(iterations, warmup)
             }
 
+            BenchmarkType::PointerChase => {
+                let size = Self::working_set_or(
+                    request,
+                    crate::memory::pointer_chase::DEFAULT_WORKING_SET_SIZE,
+                );
+                let b = self.pointer_chase_bench(size, seed)?;
+                b.run::<T>(iterations, warmup)
+            }
+
             // ── Connectivity check ──
             BenchmarkType::Debug => Ok(BenchmarkResult::new(
                 Default::default(),
@@ -207,6 +218,14 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
 
             BenchmarkType::Unspecified => Err(BenchmarkError::UnsupportedBenchmark),
         }
+    }
+
+    /// Resolve a requested working set size, falling back to a default.
+    ///
+    /// Zero means "unset" on the wire, so every memory benchmark has to make
+    /// the same substitution.
+    fn working_set_or(request: &RunBenchmarkRequest, default: usize) -> usize {
+        if request.working_set_size != 0 { request.working_set_size as usize } else { default }
     }
 
     fn hashmap_entries(request: &RunBenchmarkRequest) -> u32 {
@@ -280,6 +299,24 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
             }
         }
         Ok(self.hashmap.as_mut().unwrap())
+    }
+
+    fn pointer_chase_bench(
+        &mut self,
+        working_set_size: usize,
+        seed: u64,
+    ) -> Result<&mut PointerChaseBenchmark, BenchmarkError> {
+        match self.pointer_chase.as_mut() {
+            // Reconfiguring rebuilds the cycle, so a second request with
+            // different parameters gets the same state a fresh instance
+            // would.
+            Some(b) => b.reconfigure(working_set_size, seed)?,
+            None => {
+                self.pointer_chase =
+                    Some(Box::new(PointerChaseBenchmark::new(working_set_size, seed)?));
+            }
+        }
+        Ok(self.pointer_chase.as_mut().unwrap())
     }
 
     fn result_to_response(result: Result<BenchmarkResult, BenchmarkError>) -> RunBenchmarkResponse {
