@@ -26,6 +26,7 @@ use clap::Parser;
 use cli_common::{
     BenchmarkMetrics, CpuFeatures, DEFAULT_BENCHMARK_SEED, DisplayBenchmarkType, OutputFormat,
     check_status, csv_header, detect_tsc_freq, format_result, parse_benchmark_type,
+    sanitize_detail,
 };
 use oak_benchmark_proto_rust::oak::benchmark::{BenchmarkType, RunBenchmarkRequest};
 use oak_launcher_utils::launcher;
@@ -173,6 +174,7 @@ async fn main() -> Result<()> {
         working_set_size: response.working_set_size,
         checksum: response.checksum,
         cpu_features: response.cpu_features,
+        detail: sanitize_detail(&response.detail),
     };
     if args.csv_header && matches!(args.output, OutputFormat::Csv) {
         print!("{}", csv_header());

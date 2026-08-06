@@ -18,7 +18,9 @@
 //! that both run the same code.
 //!
 //! - `cpu`: CPU-bound benchmarks (hashing, AEAD, signing, integer compute)
-//! - `memory`: Memory-bound benchmarks (random writes, hash maps, allocation)
+//! - `memory`: Memory-bound benchmarks (random writes, hash maps, allocation,
+//!   sequential bandwidth, dependent-load latency, page provisioning)
+//! - `syscall`: cost of a user/kernel round trip
 //! - `service`: routes requests to benchmark implementations
 //! - `timer`: timing utilities
 //!
@@ -41,6 +43,7 @@ extern crate alloc;
 pub mod cpu;
 pub mod memory;
 pub mod service;
+pub mod syscall;
 pub mod timer;
 
 #[cfg(test)]
@@ -48,6 +51,7 @@ mod tests;
 
 // Re-exports for convenience.
 pub use service::BenchmarkService;
+pub use syscall::{NoSyscall, NullSyscall};
 #[cfg(feature = "std")]
 pub use timer::NativeTimer;
 pub use timer::{BenchmarkTimer, TimerReading, TscTimer, read_tsc};
@@ -169,6 +173,8 @@ pub enum BenchmarkError {
     CryptoFailure = 5,
     /// Allocation of the requested working set failed.
     AllocationFailure = 6,
+    /// A syscall the benchmark invoked returned an error.
+    SyscallFailure = 7,
 }
 
 impl BenchmarkError {
@@ -188,6 +194,7 @@ impl BenchmarkError {
             4 => "invalid parameter",
             5 => "crypto failure",
             6 => "allocation failure",
+            7 => "syscall failure",
             _ => "unknown status",
         }
     }

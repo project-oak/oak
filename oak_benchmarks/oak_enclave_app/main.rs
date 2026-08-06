@@ -29,14 +29,42 @@ extern crate alloc;
 
 use alloc::boxed::Box;
 
-use benchmark::{BenchmarkService, DEFAULT_BENCHMARK_SEED, TscTimer};
+use benchmark::{BenchmarkService, DEFAULT_BENCHMARK_SEED, NullSyscall, TscTimer};
 use oak_benchmark_proto_rust::oak::benchmark::{RunBenchmarkRequest, RunBenchmarkResponse};
+use oak_restricted_kernel_interface::syscall::sys_write;
 use oak_restricted_kernel_sdk::{
     channel::{FileDescriptorChannel, start_blocking_server},
     entrypoint,
     utils::samplestore::StaticSampleStore,
 };
 use service::oak::benchmark::{Benchmark, BenchmarkServer};
+
+/// The cheapest syscall the Restricted Kernel offers.
+///
+/// `syscall_write` returns 0 for `count == 0` before looking the descriptor up,
+/// so this measures the `syscall`/`sysretq` round trip and the entry stub's
+/// register save and restore, and nothing else. See
+/// `oak_restricted_kernel/src/syscall/fd.rs`.
+///
+/// The descriptor is deliberately invalid and the pointer null, so if that fast
+/// path is ever removed the call returns `EBADF` and the benchmark fails rather
+/// than measuring a real channel write. This is not the syscall the Linux
+/// baseline measures; the benchmark crate's `syscall` module explains why.
+struct ZeroLengthWrite;
+
+/// A descriptor that is never registered, so the fast path is the only way
+/// this call can succeed.
+const INVALID_FD: i32 = -1;
+
+impl NullSyscall for ZeroLengthWrite {
+    fn invoke(&self) -> i64 {
+        sys_write(INVALID_FD, core::ptr::null(), 0) as i64
+    }
+
+    fn name(&self) -> &'static str {
+        "write(-1,NULL,0)"
+    }
+}
 
 /// Wrapper that implements the micro_rpc Benchmark trait using the shared
 /// service.
@@ -46,7 +74,8 @@ struct BenchmarkServiceWrapper {
 
 impl BenchmarkServiceWrapper {
     fn new() -> Self {
-        Self { service: BenchmarkService::new(DEFAULT_BENCHMARK_SEED) }
+        static PROBE: ZeroLengthWrite = ZeroLengthWrite;
+        Self { service: BenchmarkService::new(DEFAULT_BENCHMARK_SEED).with_null_syscall(&PROBE) }
     }
 }
 

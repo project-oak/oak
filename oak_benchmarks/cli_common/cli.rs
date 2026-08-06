@@ -45,6 +45,8 @@ pub const BENCHMARK_TYPE_NAMES: &[(&str, BenchmarkType)] = &[
     ("alloc-churn", BenchmarkType::AllocChurn),
     ("pointer-chase", BenchmarkType::PointerChase),
     ("page-touch", BenchmarkType::PageTouch),
+    ("null-syscall", BenchmarkType::NullSyscall),
+    ("syscall-control", BenchmarkType::SyscallControl),
     ("debug", BenchmarkType::Debug),
 ];
 
@@ -99,6 +101,8 @@ impl fmt::Display for DisplayBenchmarkType {
             BenchmarkType::AllocChurn => "Alloc Churn",
             BenchmarkType::PointerChase => "Pointer Chase",
             BenchmarkType::PageTouch => "Page Touch",
+            BenchmarkType::NullSyscall => "Null Syscall",
+            BenchmarkType::SyscallControl => "Syscall Control (no syscall)",
             BenchmarkType::Debug => "Debug",
             BenchmarkType::Unspecified => "Unspecified",
         };

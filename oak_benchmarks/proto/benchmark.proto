@@ -80,6 +80,21 @@ enum BenchmarkType {
   // preceded by a free of the same size.
   BENCHMARK_TYPE_MEMORY_CHURN = 16;
 
+  // Cost of one user/kernel round trip with no useful work in between.
+  //
+  // The host application supplies the syscall to invoke, so the two platforms
+  // do not necessarily measure the same syscall; see the benchmark crate's
+  // `syscall` module for what each one uses and why.
+  BENCHMARK_TYPE_NULL_SYSCALL = 20;
+
+  // The null syscall benchmark's loop with no syscall in it.
+  //
+  // Measures the harness: the loop, the indirect call to the probe, the
+  // optimisation barrier and the timer. Subtracting it from
+  // BENCHMARK_TYPE_NULL_SYSCALL leaves the kernel crossing. Unlike the
+  // benchmark it controls for, this one is identical on both platforms.
+  BENCHMARK_TYPE_SYSCALL_CONTROL = 21;
+
   // Dependent-load latency over a randomly permuted list of cache lines, the
   // construction used by lmbench's lat_mem_rd. `working_set_size` selects the
   // size of the list, which is what makes the result a curve across the cache
@@ -152,6 +167,20 @@ message RunBenchmarkResponse {
   //   2  PCLMULQDQ
   //   3  AVX2
   uint32 cpu_features = 8;
+
+  // Free-form detail about what was measured, for benchmarks where the
+  // number is not interpretable without it.
+  //
+  // Set by BENCHMARK_TYPE_NULL_SYSCALL to the name of the syscall the host
+  // installed, and by BENCHMARK_TYPE_SYSCALL_CONTROL to a constant marking it
+  // as the no-op control. Empty for every other benchmark.
+  //
+  // Unlike `checksum`, this is expected to DIFFER between two platforms
+  // running the same benchmark: the whole point of the null syscall benchmark
+  // is that each platform invokes the syscall native to it. A harness
+  // comparing two platforms should equality-check `checksum` and report
+  // `detail`, not the other way round.
+  string detail = 9;
 }
 
 // Benchmark service for Oak performance evaluation.

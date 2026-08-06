@@ -30,7 +30,7 @@ use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use cli_common::{
     BenchmarkMetrics, BenchmarkResult, CpuFeatures, DEFAULT_BENCHMARK_SEED, DisplayBenchmarkType,
-    OutputFormat, check_status, csv_header, format_result, parse_benchmark_type,
+    OutputFormat, check_status, csv_header, format_result, parse_benchmark_type, sanitize_detail,
 };
 use oak_benchmark_grpc::oak::benchmark::benchmark_client::BenchmarkClient;
 use oak_benchmark_proto_rust::oak::benchmark::{
@@ -227,6 +227,7 @@ async fn main() -> Result<()> {
         working_set_size: response.working_set_size,
         checksum: response.checksum,
         cpu_features: response.cpu_features,
+        detail: sanitize_detail(&response.detail),
     };
     if args.csv_header && matches!(args.output, OutputFormat::Csv) {
         print!("{}", csv_header());

@@ -47,6 +47,7 @@ use crate::{
         page_touch::PageTouchBenchmark,
         pointer_chase::PointerChaseBenchmark,
     },
+    syscall::{NoSyscall, NullSyscall, NullSyscallBenchmark},
     timer::BenchmarkTimer,
 };
 
@@ -76,6 +77,7 @@ pub struct BenchmarkService<T: BenchmarkTimer> {
     hashmap: Option<Box<HashMapBenchmark>>,
     pointer_chase: Option<Box<PointerChaseBenchmark>>,
     alloc_churn: AllocChurnBenchmark,
+    null_syscall: Option<&'static dyn NullSyscall>,
     _timer: PhantomData<T>,
 }
 
@@ -84,6 +86,10 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
     ///
     /// No working sets are allocated until the corresponding benchmark is
     /// first requested.
+    ///
+    /// No syscall probe is installed, so [`BenchmarkType::NullSyscall`]
+    /// reports [`BenchmarkError::UnsupportedBenchmark`] until the host
+    /// application calls [`with_null_syscall`](Self::with_null_syscall).
     pub fn new(seed: u64) -> Self {
         Self {
             seed,
@@ -95,8 +101,31 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
             hashmap: None,
             pointer_chase: None,
             alloc_churn: AllocChurnBenchmark::with_defaults(),
+            null_syscall: None,
             _timer: PhantomData,
         }
+    }
+
+    /// Install the syscall the null syscall benchmark should invoke.
+    ///
+    /// Only the host application knows which syscalls exist on its platform,
+    /// so it supplies one. See the [`syscall`](crate::syscall) module for what
+    /// each platform installs and why they differ.
+    ///
+    /// The probe is `'static` because both real implementations are
+    /// zero-sized types held in statics. Taking a reference rather than a
+    /// value keeps [`BenchmarkService`] free of a lifetime parameter.
+    pub fn with_null_syscall(mut self, probe: &'static dyn NullSyscall) -> Self {
+        self.null_syscall = Some(probe);
+        self
+    }
+
+    /// The syscall installed for [`BenchmarkType::NullSyscall`], if any.
+    ///
+    /// The host reports this alongside the result: the two platforms invoke
+    /// different syscalls, so the number is only interpretable with it.
+    pub fn null_syscall_name(&self) -> Option<&'static str> {
+        self.null_syscall.map(|p| p.name())
     }
 
     /// Handle a benchmark request and return the response.
@@ -105,8 +134,17 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
         // data. Leaving it unset selects the service default; zero is a seed
         // like any other.
         let seed = request.seed.unwrap_or(self.seed);
+        let benchmark_type = request.benchmark_type();
         let result = self.dispatch(&request, seed);
-        Self::result_to_response(result)
+        let mut response = Self::result_to_response(result);
+        // The syscall benchmarks measure a different call on each platform, so
+        // the name has to travel with the number.
+        response.detail = match benchmark_type {
+            BenchmarkType::NullSyscall => self.null_syscall_name().unwrap_or_default().into(),
+            BenchmarkType::SyscallControl => NoSyscall.name().into(),
+            _ => Default::default(),
+        };
+        response
     }
 
     fn dispatch(
@@ -224,6 +262,19 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
                 // allocates its region inside the timed region every
                 // iteration.
                 PageTouchBenchmark::new(seed).run::<T>(size, iterations, warmup)
+            }
+
+            // ── Kernel boundary ──
+            BenchmarkType::NullSyscall => {
+                let probe = self.null_syscall.ok_or(BenchmarkError::UnsupportedBenchmark)?;
+                NullSyscallBenchmark::new(probe).run::<T>(iterations, warmup)
+            }
+
+            // Same loop, same barrier, same timer, no syscall. Subtracting
+            // this from `NullSyscall` leaves the kernel crossing.
+            BenchmarkType::SyscallControl => {
+                static NO_SYSCALL: NoSyscall = NoSyscall;
+                NullSyscallBenchmark::new(&NO_SYSCALL).run::<T>(iterations, warmup)
             }
 
             // ── Connectivity check ──
@@ -356,6 +407,7 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
                 working_set_size: result.working_set_size,
                 checksum: result.checksum,
                 cpu_features,
+                detail: Default::default(),
             },
             Err(e) => RunBenchmarkResponse {
                 elapsed_tsc: 0,
@@ -366,6 +418,7 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
                 working_set_size: 0,
                 checksum: 0,
                 cpu_features,
+                detail: Default::default(),
             },
         }
     }

@@ -31,6 +31,6 @@ pub use cli::{
 };
 pub use results::{
     BenchmarkMetrics, BenchmarkResult, CpuFeatures, check_status, csv_header, describe_status,
-    format_result,
+    format_result, sanitize_detail,
 };
 pub use tsc::{DEFAULT_TSC_FREQ_HZ, TscFreq, detect_tsc_freq, tsc_to_nanos};

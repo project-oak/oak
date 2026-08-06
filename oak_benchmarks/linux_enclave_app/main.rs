@@ -24,13 +24,61 @@
 //! `--seed`, sizes and iteration counts, and must report the same `checksum`
 //! and `cpu_features`. The defaults already satisfy this.
 
-use benchmark::{BenchmarkService, DEFAULT_BENCHMARK_SEED, NativeTimer};
+use benchmark::{BenchmarkService, DEFAULT_BENCHMARK_SEED, NativeTimer, NullSyscall};
 use clap::Parser;
 use cli_common::{
     BenchmarkMetrics, BenchmarkResult, CpuFeatures, DisplayBenchmarkType, OutputFormat,
-    check_status, csv_header, format_result, parse_benchmark_type,
+    check_status, csv_header, format_result, parse_benchmark_type, sanitize_detail,
 };
 use oak_benchmark_proto_rust::oak::benchmark::{BenchmarkType, RunBenchmarkRequest};
+
+/// The syscall the null syscall benchmark invokes on Linux.
+///
+/// `getppid()` is lmbench's choice for `lat_syscall null`, so almost all of the
+/// measured cost is entry and exit. It is not the syscall the enclave measures;
+/// the benchmark crate's `syscall` module explains why.
+///
+/// Issued as raw assembly because whether the libc wrapper caches the result
+/// has changed over time (glibc cached `getpid()` until 2.25), and a cached
+/// call would measure nothing. Syscall number 110 is `getppid` on x86-64, per
+/// <https://github.com/torvalds/linux/blob/master/arch/x86/entry/syscalls/syscall_64.tbl>,
+/// and the clobber set is the one in
+/// <https://man7.org/linux/man-pages/man2/syscall.2.html>.
+struct Getppid;
+
+#[cfg(not(target_arch = "x86_64"))]
+compile_error!("the null syscall probe is written in x86-64 assembly");
+
+impl NullSyscall for Getppid {
+    fn invoke(&self) -> i64 {
+        const SYS_GETPPID: i64 = 110;
+        let result: i64;
+        // Safety: the kernel reads no memory through this call, so there is no
+        // pointer to get wrong, and `rax`, `rcx` and `r11` are the full clobber
+        // set for `syscall` on x86-64; all three are declared. `nostack` holds
+        // because `syscall` switches to the kernel stack through `MSR_LSTAR`
+        // and `swapgs`, and the kernel never writes below the user `rsp`, so
+        // the red zone survives. `preserves_flags` holds because `SYSCALL`
+        // saves `RFLAGS` into `r11` and `SYSRET` restores it.
+        unsafe {
+            std::arch::asm!(
+                "syscall",
+                inlateout("rax") SYS_GETPPID => result,
+                lateout("rcx") _,
+                lateout("r11") _,
+                options(nostack, preserves_flags),
+            );
+        }
+        result
+    }
+
+    fn name(&self) -> &'static str {
+        "getppid()"
+    }
+}
+
+/// The probe installed on every service in this binary.
+static NULL_SYSCALL_PROBE: Getppid = Getppid;
 
 #[derive(Parser, Debug)]
 #[command(name = "linux_benchmark_runner")]
@@ -83,7 +131,7 @@ struct Args {
 mod grpc_server {
     use std::sync::Mutex;
 
-    use benchmark::{BenchmarkService, NativeTimer};
+    use benchmark::{BenchmarkService, NativeTimer, NullSyscall};
     use oak_benchmark_grpc::oak::benchmark::benchmark_server::Benchmark;
     use oak_benchmark_proto_rust::oak::benchmark::{RunBenchmarkRequest, RunBenchmarkResponse};
     use tonic::{Request, Response, Status};
@@ -93,8 +141,8 @@ mod grpc_server {
     }
 
     impl BenchmarkGrpcService {
-        pub fn new(seed: u64) -> Self {
-            Self { service: Mutex::new(BenchmarkService::new(seed)) }
+        pub fn new(seed: u64, probe: &'static dyn NullSyscall) -> Self {
+            Self { service: Mutex::new(BenchmarkService::new(seed).with_null_syscall(probe)) }
         }
     }
 
@@ -132,7 +180,7 @@ async fn run_server(port: u16, seed: u64) -> Result<(), Box<dyn std::error::Erro
     use oak_benchmark_grpc::oak::benchmark::benchmark_server::BenchmarkServer;
 
     let addr = format!("0.0.0.0:{}", port).parse()?;
-    let service = grpc_server::BenchmarkGrpcService::new(seed);
+    let service = grpc_server::BenchmarkGrpcService::new(seed, &NULL_SYSCALL_PROBE);
 
     eprintln!("benchmark gRPC server listening on {}", addr);
 
@@ -146,7 +194,8 @@ async fn run_server(port: u16, seed: u64) -> Result<(), Box<dyn std::error::Erro
 
 /// Run the benchmark locally and print results.
 fn run_standalone(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
-    let mut service = BenchmarkService::<NativeTimer>::new(args.seed);
+    let mut service =
+        BenchmarkService::<NativeTimer>::new(args.seed).with_null_syscall(&NULL_SYSCALL_PROBE);
 
     let request = RunBenchmarkRequest {
         benchmark_type: args.benchmark as i32,
@@ -184,6 +233,7 @@ fn run_standalone(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
         working_set_size: response.working_set_size,
         checksum: response.checksum,
         cpu_features: response.cpu_features,
+        detail: sanitize_detail(&response.detail),
     };
 
     if args.csv_header && matches!(args.output, OutputFormat::Csv) {

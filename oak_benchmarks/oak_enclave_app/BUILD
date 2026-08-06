@@ -35,6 +35,7 @@ rust_binary(
         "//oak_benchmarks/benchmark",
         "//oak_benchmarks/proto:oak_benchmark_proto_rust",
         "//oak_benchmarks/proto:service",
+        "//oak_restricted_kernel_interface",
         "//oak_restricted_kernel_sdk",
         "@oak_no_std_crates_index//:prost",
     ],
