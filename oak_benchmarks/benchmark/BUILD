@@ -25,6 +25,7 @@ rust_library(
     name = "benchmark",
     srcs = [
         "cpu/aead.rs",
+        "cpu/eddsa.rs",
         "cpu/hashing.rs",
         "cpu/mod.rs",
         "cpu/signing.rs",
@@ -46,6 +47,7 @@ rust_library(
         "@oak_crates_index//:aes-gcm",
         "@oak_crates_index//:ahash",
         "@oak_crates_index//:bitflags",
+        "@oak_crates_index//:ed25519-dalek",
         "@oak_crates_index//:hashbrown",
         "@oak_crates_index//:p256",
         "@oak_crates_index//:sha2",
@@ -57,6 +59,7 @@ rust_library(
     name = "benchmark_std",
     srcs = [
         "cpu/aead.rs",
+        "cpu/eddsa.rs",
         "cpu/hashing.rs",
         "cpu/mod.rs",
         "cpu/signing.rs",
@@ -83,6 +86,7 @@ rust_library(
         "@oak_crates_index//:aes-gcm",
         "@oak_crates_index//:ahash",
         "@oak_crates_index//:bitflags",
+        "@oak_crates_index//:ed25519-dalek",
         "@oak_crates_index//:hashbrown",
         "@oak_crates_index//:p256",
         "@oak_crates_index//:sha2",

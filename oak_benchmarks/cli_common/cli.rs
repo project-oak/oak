@@ -34,6 +34,8 @@ pub const BENCHMARK_TYPE_NAMES: &[(&str, BenchmarkType)] = &[
     ("sha3-512", BenchmarkType::Sha3512),
     ("p256-sign", BenchmarkType::P256Sign),
     ("p256-verify", BenchmarkType::P256Verify),
+    ("ed25519-sign", BenchmarkType::Ed25519Sign),
+    ("ed25519-verify", BenchmarkType::Ed25519Verify),
     ("aes256gcm-seal", BenchmarkType::Aes256GcmSeal),
     ("aes256gcm-open", BenchmarkType::Aes256GcmOpen),
     ("memory-insert", BenchmarkType::MemoryInsert),
@@ -65,6 +67,8 @@ pub fn parse_benchmark_type(s: &str) -> Result<BenchmarkType, String> {
     match wanted.as_str() {
         "sha3256" => return Ok(BenchmarkType::Sha3256),
         "sha3512" => return Ok(BenchmarkType::Sha3512),
+        "eddsa_sign" => return Ok(BenchmarkType::Ed25519Sign),
+        "eddsa_verify" => return Ok(BenchmarkType::Ed25519Verify),
         _ => {}
     }
 
@@ -84,6 +88,8 @@ impl fmt::Display for DisplayBenchmarkType {
             BenchmarkType::Sha3512 => "SHA3-512",
             BenchmarkType::P256Sign => "P-256 Sign",
             BenchmarkType::P256Verify => "P-256 Verify",
+            BenchmarkType::Ed25519Sign => "Ed25519 Sign",
+            BenchmarkType::Ed25519Verify => "Ed25519 Verify (strict)",
             BenchmarkType::Aes256GcmSeal => "AES-256-GCM Seal",
             BenchmarkType::Aes256GcmOpen => "AES-256-GCM Open",
             BenchmarkType::MemoryInsert => "Memory Insert",

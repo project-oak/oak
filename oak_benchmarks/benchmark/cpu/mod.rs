@@ -21,6 +21,7 @@ use core::fmt;
 use bitflags::bitflags;
 
 pub mod aead;
+pub mod eddsa;
 pub mod hashing;
 pub mod signing;
 

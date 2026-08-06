@@ -37,6 +37,7 @@ use crate::{
     cpu::{
         CpuFeatures,
         aead::{AeadBenchmark, AeadMode},
+        eddsa::{EddsaBenchmark, EddsaMode},
         hashing::{HashAlgorithm, HashingBenchmark},
         signing::{SigningBenchmark, SigningMode},
     },
@@ -69,6 +70,7 @@ pub struct BenchmarkService<T: BenchmarkTimer> {
     seed: u64,
     hashing: Option<Box<HashingBenchmark>>,
     signing: Option<Box<SigningBenchmark>>,
+    eddsa: Option<Box<EddsaBenchmark>>,
     aead: Option<Box<AeadBenchmark>>,
     array_update: Option<Box<ArrayUpdateBenchmark>>,
     hashmap: Option<Box<HashMapBenchmark>>,
@@ -87,6 +89,7 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
             seed,
             hashing: None,
             signing: None,
+            eddsa: None,
             aead: None,
             array_update: None,
             hashmap: None,
@@ -149,6 +152,12 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
             BenchmarkType::P256Verify => {
                 let b = self.signing_bench(seed)?;
                 b.run::<T>(SigningMode::Verify, iterations, warmup)
+            }
+            BenchmarkType::Ed25519Sign => {
+                self.eddsa_bench(seed).run::<T>(EddsaMode::Sign, iterations, warmup)
+            }
+            BenchmarkType::Ed25519Verify => {
+                self.eddsa_bench(seed).run::<T>(EddsaMode::Verify, iterations, warmup)
             }
 
             // ── AEAD ──
@@ -273,6 +282,13 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
             self.aead = Some(Box::new(AeadBenchmark::new(seed)));
         }
         self.aead.as_mut().unwrap()
+    }
+
+    fn eddsa_bench(&mut self, seed: u64) -> &mut EddsaBenchmark {
+        if self.eddsa.is_none() {
+            self.eddsa = Some(Box::new(EddsaBenchmark::new(seed)));
+        }
+        self.eddsa.as_mut().unwrap()
     }
 
     fn array_update_bench(
