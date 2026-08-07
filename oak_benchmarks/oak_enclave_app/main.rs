@@ -29,7 +29,7 @@ extern crate alloc;
 
 use alloc::boxed::Box;
 
-use benchmark::{BenchmarkService, TscTimer, read_tsc};
+use benchmark::{BenchmarkService, DEFAULT_BENCHMARK_SEED, TscTimer};
 use oak_benchmark_proto_rust::oak::benchmark::{RunBenchmarkRequest, RunBenchmarkResponse};
 use oak_restricted_kernel_sdk::{
     channel::{FileDescriptorChannel, start_blocking_server},
@@ -46,8 +46,7 @@ struct BenchmarkServiceWrapper {
 
 impl BenchmarkServiceWrapper {
     fn new() -> Self {
-        let seed = read_tsc();
-        Self { service: BenchmarkService::new(seed) }
+        Self { service: BenchmarkService::new(DEFAULT_BENCHMARK_SEED) }
     }
 }
 

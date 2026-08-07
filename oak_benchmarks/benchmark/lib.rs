@@ -44,6 +44,14 @@ pub use service::BenchmarkService;
 pub use timer::NativeTimer;
 pub use timer::{BenchmarkTimer, TimerReading, TscTimer, read_tsc};
 
+/// Seed used when a request does not pin one.
+///
+/// A fixed constant rather than anything derived from the clock: both platforms
+/// must generate the same input data, or they are not running the same
+/// benchmark. It lives here rather than in the CLI so the enclave, which cannot
+/// depend on `cli_common`, uses the same value.
+pub const DEFAULT_BENCHMARK_SEED: u64 = 0x0A6B_1234_5678_9ABC;
+
 /// Benchmark result returned on success.
 ///
 /// Use `Result<BenchmarkResult, BenchmarkError>` for fallible benchmark

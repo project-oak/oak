@@ -24,7 +24,7 @@
 //!   - **Server**: starts a gRPC server so that `linux_cli` can send benchmark
 //!     requests remotely (e.g. to a VM with SEV-SNP enabled).
 
-use benchmark::{BenchmarkService, NativeTimer};
+use benchmark::{BenchmarkService, DEFAULT_BENCHMARK_SEED, NativeTimer};
 use clap::Parser;
 use cli_common::{
     BenchmarkMetrics, BenchmarkResult, DisplayBenchmarkType, OutputFormat, format_result,
@@ -61,8 +61,12 @@ struct Args {
     #[arg(long, value_enum, default_value = "human")]
     output: OutputFormat,
 
-    /// Seed for random data generation (0 = random seed from time).
-    #[arg(long, default_value = "0")]
+    /// Seed for deterministic benchmark data.
+    ///
+    /// Defaults to the same fixed constant used by `oak_cli`. This used to
+    /// default to the wall clock, which meant the baseline and the enclave
+    /// silently ran over different input data.
+    #[arg(long, default_value_t = DEFAULT_BENCHMARK_SEED)]
     seed: u64,
 }
 
@@ -120,13 +124,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn run_server(port: u16, seed: u64) -> Result<(), Box<dyn std::error::Error>> {
     use oak_benchmark_grpc::oak::benchmark::benchmark_server::BenchmarkServer;
 
-    let seed = if seed == 0 {
-        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
-            as u64
-    } else {
-        seed
-    };
-
     let addr = format!("0.0.0.0:{}", port).parse()?;
     let service = grpc_server::BenchmarkGrpcService::new(seed);
 
@@ -142,14 +139,7 @@ async fn run_server(port: u16, seed: u64) -> Result<(), Box<dyn std::error::Erro
 
 /// Run the benchmark locally and print results.
 fn run_standalone(args: &Args) {
-    let seed = if args.seed == 0 {
-        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
-            as u64
-    } else {
-        args.seed
-    };
-
-    let mut service = BenchmarkService::<NativeTimer>::new(seed);
+    let mut service = BenchmarkService::<NativeTimer>::new(args.seed);
 
     let request = RunBenchmarkRequest {
         benchmark_type: args.benchmark as i32,

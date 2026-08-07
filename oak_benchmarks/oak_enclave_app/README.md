@@ -30,6 +30,7 @@ bazel build -c opt //oak_benchmarks/oak_enclave_app
 
 ## Notes
 
-- Random data is generated at startup using TSC as a seed
+- Random data is generated at startup from a fixed seed, the same one the Linux
+  baseline uses, so both operate on identical data
 - Data buffer is pre-allocated to avoid allocation during benchmarks
 - Each benchmark iteration is measured on the guest side using RDTSCP
