@@ -30,6 +30,21 @@ message RunBenchmarkRequest {
   uint32 iterations = 3;
   // Number of warmup iterations to run before measurement (not timed).
   uint32 warmup_iterations = 4;
+  // Seed for deterministic pseudo-random data generation.
+  //
+  // Both the enclave and the Linux baseline must be given the same seed,
+  // otherwise they operate on different data and the comparison is not
+  // apples-to-apples. The host CLIs default this to a fixed constant rather
+  // than deriving it from the clock.
+  //
+  // Explicitly optional: zero is a valid seed, so an unset field and a seed of
+  // zero have to be distinguishable. When unset the service uses its default.
+  optional uint64 seed = 5;
+  // Working set size in bytes for memory-bound benchmarks (0 = use default).
+  //
+  // Which benchmarks read this, and what it means for each, is documented on
+  // the benchmark types that use it.
+  uint64 working_set_size = 6;
 }
 
 // Types of benchmarks supported.
@@ -73,6 +88,31 @@ message RunBenchmarkResponse {
   uint64 bytes_processed = 4;
   // Status code (0 = success).
   uint32 status = 5;
+  // Actual working set size used, in bytes. Lets the host report what was
+  // really measured rather than what was requested.
+  uint64 working_set_size = 6;
+  // Checksum over the benchmark output.
+  //
+  // Guards against the compiler eliding the work and against the two platforms
+  // silently computing different things: for a given benchmark, seed and
+  // parameter set this value must match across the enclave and the baseline.
+  uint64 checksum = 7;
+  // Bitfield of instruction-set extensions this binary was compiled to use.
+  //
+  // Comparing a run that used SHA-NI against one that did not measures the
+  // difference between two crypto implementations, not the cost of the
+  // Restricted Kernel, so the host fails a comparison where the two sides
+  // disagree.
+  //
+  // Layout, low bit first. Bits 0-7 are the set the binary was compiled for,
+  // bits 8-15 the set the CPU reports, bit 16 whether the binary performs
+  // runtime dispatch:
+  //
+  //   0  SHA-NI          4  AVX512IFMA
+  //   1  AES-NI          5  AVX512VL
+  //   2  PCLMULQDQ
+  //   3  AVX2
+  uint32 cpu_features = 8;
 }
 
 // Benchmark service for Oak performance evaluation.

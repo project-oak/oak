@@ -94,6 +94,8 @@ async fn main() -> Result<()> {
         data_size: args.data_size,
         iterations: args.iterations,
         warmup_iterations: args.warmup_iterations,
+        seed: None,
+        working_set_size: 0,
     };
 
     log::info!("Sending benchmark request...");

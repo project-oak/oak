@@ -174,6 +174,8 @@ async fn main() -> Result<()> {
         data_size: args.data_size,
         iterations: args.iterations,
         warmup_iterations: args.warmup_iterations,
+        seed: None,
+        working_set_size: 0,
     };
     let addr = format!("127.0.0.1:{}", args.port);
     let timeout = Duration::from_secs(args.boot_timeout);

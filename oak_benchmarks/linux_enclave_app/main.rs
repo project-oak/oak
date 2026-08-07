@@ -156,6 +156,8 @@ fn run_standalone(args: &Args) {
         data_size: args.data_size,
         iterations: args.iterations,
         warmup_iterations: args.warmup_iterations,
+        seed: None,
+        working_set_size: 0,
     };
 
     let response = service.handle_request(request);

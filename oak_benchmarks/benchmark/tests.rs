@@ -29,6 +29,8 @@ fn test_service_unsupported() {
         data_size: 1024,
         iterations: 100,
         warmup_iterations: 0,
+        seed: None,
+        working_set_size: 0,
     };
 
     let response = svc.handle_request(request);

@@ -153,6 +153,9 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
                 iterations_completed: result.iterations_completed,
                 bytes_processed: result.bytes_processed,
                 status: status::OK,
+                working_set_size: 0,
+                checksum: 0,
+                cpu_features: 0,
             },
             Err(e) => RunBenchmarkResponse { status: e.as_status_code(), ..Default::default() },
         }
