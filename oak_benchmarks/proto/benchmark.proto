@@ -54,11 +54,18 @@ enum BenchmarkType {
 
 // Result of a benchmark run.
 message RunBenchmarkResponse {
-  // TSC ticks elapsed during the benchmark (Oak enclave only).
-  // For Linux, this will be 0 - use elapsed_ns instead.
+  // TSC ticks elapsed during the benchmark.
+  //
+  // Populated on both platforms. This is the frequency-independent measure and
+  // is the basis for the cycles-per-operation metric, which is the fairest way
+  // to compare the enclave against the Linux baseline: it needs no TSC
+  // frequency calibration and so cannot be skewed by a mis-detected frequency.
   uint64 elapsed_tsc = 1;
-  // Elapsed time in nanoseconds (Linux only).
-  // For Oak enclave, this will be 0 - use elapsed_tsc instead.
+  // Elapsed time in nanoseconds.
+  //
+  // Populated only where a real clock is available (the Linux baseline). The
+  // enclave has no clock, so this is 0 there and the host converts from
+  // `elapsed_tsc` using a calibrated frequency.
   uint64 elapsed_ns = 2;
   // Number of iterations completed.
   uint32 iterations_completed = 3;

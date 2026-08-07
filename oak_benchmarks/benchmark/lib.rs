@@ -42,7 +42,7 @@ mod tests;
 pub use service::BenchmarkService;
 #[cfg(feature = "std")]
 pub use timer::NativeTimer;
-pub use timer::{BenchmarkTimer, DEFAULT_TSC_FREQ_HZ, TimerReading, TscTimer, read_tsc};
+pub use timer::{BenchmarkTimer, TimerReading, TscTimer, read_tsc};
 
 /// Benchmark result returned on success.
 ///

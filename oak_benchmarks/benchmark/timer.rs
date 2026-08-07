@@ -16,34 +16,29 @@
 
 //! Timing utilities for benchmarks.
 //!
-//! Provides the [`BenchmarkTimer`] trait for platform-specific timing:
-//! - [`TscTimer`]: Uses the CPU's Time Stamp Counter (TSC) via RDTSC. Works on
-//!   both Oak enclave and Linux, but requires TSC frequency for conversion to
-//!   wall-clock time.
-//! - [`NativeTimer`] (std only): Uses `std::time::Instant` for direct
-//!   nanosecond measurement on Linux.
+//! [`TscTimer`] reads the TSC, the only option inside the enclave, which has no
+//! clock. [`NativeTimer`] (std only) records both wall-clock nanoseconds and
+//! TSC ticks.
+//!
+//! Both record TSC so the platforms can be compared in raw ticks, where the
+//! frequency cancels out and a mis-calibrated one cannot distort the ratio. The
+//! nanosecond reading is kept for absolute figures, and lets the host derive
+//! the true frequency from a baseline run.
 
 use core::{
     arch::x86_64::{_mm_lfence, _rdtsc},
     marker::Sized,
 };
 
-/// Default assumed TSC frequency in Hz (3.0 GHz).
-///
-/// This should be calibrated for your specific hardware. Common values:
-/// - Intel Xeon (Skylake+): 2.0 - 3.5 GHz
-/// - AMD EPYC: 2.0 - 3.0 GHz
-pub const DEFAULT_TSC_FREQ_HZ: u64 = 3_000_000_000;
-
 /// Result of a timer measurement.
 ///
-/// At least one of `elapsed_tsc` or `elapsed_ns` will be non-zero,
-/// depending on the timer implementation used.
+/// `elapsed_tsc` is populated by every timer. `elapsed_ns` is only populated
+/// where a real clock is available, and is 0 inside the enclave.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct TimerReading {
-    /// TSC ticks elapsed (non-zero when using [`TscTimer`]).
+    /// TSC ticks elapsed. Always populated.
     pub elapsed_tsc: u64,
-    /// Nanoseconds elapsed (non-zero when using [`NativeTimer`]).
+    /// Nanoseconds elapsed. Zero when no clock is available.
     pub elapsed_ns: u64,
 }
 
@@ -114,24 +109,33 @@ impl BenchmarkTimer for TscTimer {
     }
 }
 
-/// A timer that uses `std::time::Instant` for nanosecond measurement.
+/// A timer that uses `std::time::Instant` alongside the TSC.
 ///
-/// Only available with the `std` feature. Returns wall-clock elapsed time
-/// in nanoseconds, suitable for the Linux benchmark runner.
+/// Only available with the `std` feature. Records both wall-clock nanoseconds
+/// and TSC ticks so that the Linux baseline is directly comparable to the
+/// enclave in raw ticks, and so the host can derive the true TSC frequency
+/// from the ratio of the two readings.
 #[cfg(feature = "std")]
 pub struct NativeTimer {
-    start: std::time::Instant,
+    start_instant: std::time::Instant,
+    start_tsc: u64,
 }
 
 #[cfg(feature = "std")]
 impl BenchmarkTimer for NativeTimer {
     #[inline]
     fn start() -> Self {
-        Self { start: std::time::Instant::now() }
+        // Read the TSC first, then the clock, and reverse the order in `stop`.
+        // This makes the TSC interval enclose the clock interval, so neither
+        // reading is systematically biased low by the cost of the other.
+        let start_tsc = read_tsc_serialized();
+        Self { start_instant: std::time::Instant::now(), start_tsc }
     }
 
     #[inline]
     fn stop(&self) -> TimerReading {
-        TimerReading { elapsed_tsc: 0, elapsed_ns: self.start.elapsed().as_nanos() as u64 }
+        let elapsed_ns = self.start_instant.elapsed().as_nanos() as u64;
+        let elapsed_tsc = read_tsc_serialized().saturating_sub(self.start_tsc);
+        TimerReading { elapsed_tsc, elapsed_ns }
     }
 }
