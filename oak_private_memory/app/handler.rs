@@ -44,17 +44,6 @@ use crate::{
     IntoTonicResult, context::UserSessionContext, db_client::SharedDbClient,
     packing::ResponsePacking, persistence_worker,
 };
-/// Controls how errors are propagated to the client.
-///
-/// Note: The header-based configuration and `PropagateAsGrpcStatus` behavior
-/// are only for migration purposes. Once all clients move to the new
-/// in-response error handling (`PropagateInResponseProto`), we will make it the
-/// default and remove the header support.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ErrorPropagationBehavior {
-    PropagateAsGrpcStatus = 0,
-    PropagateInResponseProto = 1,
-}
 
 // The implementation for one active Oak Private Memory session.
 // A new instances of this struct is created per-request.
@@ -64,7 +53,6 @@ pub struct SealedMemorySessionHandler {
     metrics: Arc<metrics::Metrics>,
     persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
     clock: Arc<dyn Clock>,
-    error_propagation_behavior: ErrorPropagationBehavior,
     max_database_size_bytes: usize,
     blanket_ttl_seconds: i64,
     max_memory_ttl_seconds: i64,
@@ -95,7 +83,6 @@ impl SealedMemorySessionHandler {
         persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
         db_client: Arc<SharedDbClient>,
         clock: Arc<dyn Clock>,
-        error_propagation_behavior: ErrorPropagationBehavior,
         max_database_size_bytes: usize,
         blanket_ttl_seconds: i64,
         max_memory_ttl_seconds: i64,
@@ -108,7 +95,6 @@ impl SealedMemorySessionHandler {
             metrics,
             persistence_tx,
             clock,
-            error_propagation_behavior,
             max_database_size_bytes,
             blanket_ttl_seconds,
             max_memory_ttl_seconds,
@@ -787,7 +773,7 @@ impl SealedMemorySessionHandler {
             Some(v) => v,
             None => {
                 let status = tonic::Status::invalid_argument("The request is empty.");
-                let resp = Self::handle_error(status, self.error_propagation_behavior, request_id)?;
+                let resp = Self::make_error_response(status, request_id);
                 return self
                     .serialize_response(&resp)
                     .into_internal_error("failed to serialize response");
@@ -803,7 +789,7 @@ impl SealedMemorySessionHandler {
 
         let mut response = match result {
             Ok(resp) => resp,
-            Err(status) => Self::handle_error(status, self.error_propagation_behavior, request_id)?,
+            Err(status) => Self::make_error_response(status, request_id),
         };
 
         let elapsed_time = start_time.elapsed().as_millis() as u64;
@@ -862,6 +848,13 @@ impl SealedMemorySessionHandler {
         Ok(response)
     }
 
+    /// Wraps a failed request as a `SealedMemoryResponse` carrying the error.
+    ///
+    /// Every application error is reported this way: the `error` arm of the
+    /// response oneof holds a `google.rpc.Status`, and the gRPC stream stays
+    /// open so the session survives. Note that the oneof means the
+    /// request-specific response arm is *not* populated, so a client has to
+    /// check for `error` rather than inspecting a per-response success flag.
     fn make_error_response(status: tonic::Status, request_id: i32) -> SealedMemoryResponse {
         SealedMemoryResponse {
             response: Some(sealed_memory_response::Response::Error(
@@ -872,18 +865,6 @@ impl SealedMemorySessionHandler {
                 },
             )),
             request_id,
-        }
-    }
-
-    fn handle_error(
-        status: tonic::Status,
-        error_propagation_behavior: ErrorPropagationBehavior,
-        request_id: i32,
-    ) -> Result<SealedMemoryResponse, tonic::Status> {
-        if error_propagation_behavior == ErrorPropagationBehavior::PropagateInResponseProto {
-            Ok(Self::make_error_response(status, request_id))
-        } else {
-            Err(status)
         }
     }
 }
@@ -1007,7 +988,6 @@ mod tests {
             persistence_tx,
             db_client,
             Arc::new(SystemClock),
-            ErrorPropagationBehavior::PropagateInResponseProto,
             MAX_DATABASE_SIZE,
             METADATA_BLANKET_TTL_SECONDS,
             MAX_MEMORY_TTL_SECONDS,

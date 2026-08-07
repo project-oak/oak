@@ -600,11 +600,10 @@ message SealedMemoryResponse {
     // If a provided request was not successful, the server will populate this
     // field with the error status, rather than sending a response with the
     // corresponding response type, and the request should be considered
-    // completed.
+    // completed. This is the only way the server reports an application
+    // error; it does not terminate the gRPC stream.
     //
     // TODO: b/474398323 - Update clients to check for this variant.
-    // TODO: b/474398548 - Update Sealed Memory server to populate this variant
-    // for error conditions.
     google.rpc.Status error = 100;
   }
 

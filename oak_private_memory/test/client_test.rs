@@ -83,7 +83,6 @@ async fn test_client_with_dummy_attestation() {
         pm_uid,
         TEST_EK,
         dummy_client_session_config(),
-        false,
     )
     .await
     .unwrap();
@@ -128,7 +127,6 @@ async fn test_client_rejects_bad_evidence() {
         pm_uid,
         TEST_EK,
         rejecting_config,
-        false,
     )
     .await;
 
@@ -414,6 +412,9 @@ async fn test_get_memories_by_id() {
     assert_eq!(response.not_found_ids.len(), 2);
 }
 
+/// Every application error comes back inside `SealedMemoryResponse.error` as
+/// a `google.rpc.Status`, with the gRPC stream left open. There is no longer
+/// a header or config knob to opt out of this.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_error_propagation_behavior() {
     let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
@@ -421,45 +422,24 @@ async fn test_error_propagation_behavior() {
     let url = format!("http://{}", addr);
     let pm_uid = "test_error_user";
 
-    // 1. Test default behavior (propagates as gRPC status)
-    let mut client_default = PrivateMemoryClient::create_with_start_session_config(
+    let mut client = PrivateMemoryClient::create_with_start_session_config(
         &url,
         pm_uid,
         TEST_EK,
         dummy_client_session_config(),
-        false,
     )
     .await
     .unwrap();
 
-    // Send invalid request (empty key) to trigger an error
+    // Send an invalid request (empty key) to trigger an error.
     let request = UserRegistrationRequest {
         pm_uid: pm_uid.to_string(),
         key_encryption_key: vec![], // Invalid!
         ..Default::default()
     };
 
-    let result = client_default
+    let response = client
         .invoke(sealed_memory_request::Request::UserRegistrationRequest(request.clone()))
-        .await;
-
-    assert!(result.is_err());
-    let err = result.unwrap_err();
-    assert!(format!("{:?}", err).contains("key_encryption_key not set"));
-
-    // 2. Test metadata-triggered behavior (propagates in response proto)
-    let mut client_proto = PrivateMemoryClient::create_with_start_session_config(
-        &url,
-        pm_uid,
-        TEST_EK,
-        dummy_client_session_config(),
-        true,
-    )
-    .await
-    .unwrap();
-
-    let response = client_proto
-        .invoke(sealed_memory_request::Request::UserRegistrationRequest(request))
         .await
         .unwrap();
 
@@ -470,102 +450,29 @@ async fn test_error_propagation_behavior() {
         }
         _ => panic!("expected error response, got {:?}", response),
     }
-}
 
-/// Verifies that `default_error_propagation_in_response = true` in
-/// `ApplicationConfig` causes errors to be returned inside the response
-/// proto even when the client does NOT set the `x-error-propagation` header.
-#[tokio::test(flavor = "multi_thread")]
-async fn test_default_error_propagation_in_response_config() {
-    fn config_with_error_in_response(
-        db_addr: std::net::SocketAddr,
-    ) -> private_memory_server_lib::app::ApplicationConfig {
-        let mut config = private_memory_test_utils::default_test_application_config(db_addr);
-        config.default_error_propagation_in_response = true;
-        config
-    }
-
-    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
-        start_server_with_config(config_with_error_in_response, None).await.unwrap();
-    let url = format!("http://{}", addr);
-    let pm_uid = "test_config_error_user";
-
-    // Create a client WITHOUT the x-error-propagation header
-    // (propagate_errors_in_proto = false).
-    let mut client = PrivateMemoryClient::create_with_start_session_config(
-        &url,
-        pm_uid,
-        TEST_EK,
-        dummy_client_session_config(),
-        false, // No x-error-propagation header
-    )
-    .await
-    .unwrap();
-
-    // Send an invalid request to trigger an error.
-    let request = UserRegistrationRequest {
-        pm_uid: pm_uid.to_string(),
-        key_encryption_key: vec![], // Invalid!
-        ..Default::default()
-    };
-
-    // Because the server config has default_error_propagation_in_response = true,
-    // the error should come back inside the response proto (not as a gRPC status
-    // error).
+    // The session survives the error, so a subsequent request still works.
     let response = client
-        .invoke(sealed_memory_request::Request::UserRegistrationRequest(request))
+        .invoke(sealed_memory_request::Request::UserRegistrationRequest(UserRegistrationRequest {
+            pm_uid: pm_uid.to_string(),
+            key_encryption_key: TEST_EK.to_vec(),
+            boot_strap_info: Some(Default::default()),
+        }))
         .await
         .unwrap();
+    assert!(
+        matches!(response, sealed_memory_response::Response::UserRegistrationResponse(_)),
+        "expected the session to stay usable, got {:?}",
+        response
+    );
 
-    match response {
-        sealed_memory_response::Response::Error(status) => {
-            assert_eq!(status.code, tonic::Code::InvalidArgument as i32);
-            assert!(status.message.contains("key_encryption_key not set"));
-        }
-        _ => panic!("expected error response, got {:?}", response),
-    }
-}
-
-/// Verifies that the `x-error-propagation` header can still override the
-/// config. Even with `default_error_propagation_in_response = false`,
-/// sending the header should propagate errors in the response proto.
-#[tokio::test(flavor = "multi_thread")]
-async fn test_error_propagation_header_overrides_config() {
-    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
-        start_server().await.unwrap();
-    let url = format!("http://{}", addr);
-    let pm_uid = "test_override_error_user";
-
-    // Server has default_error_propagation_in_response = false,
-    // but the client sets the x-error-propagation header.
-    let mut client = PrivateMemoryClient::create_with_start_session_config(
-        &url,
-        pm_uid,
-        TEST_EK,
-        dummy_client_session_config(),
-        true, // Sets x-error-propagation: response-proto
-    )
-    .await
-    .unwrap();
-
-    let request = UserRegistrationRequest {
-        pm_uid: pm_uid.to_string(),
-        key_encryption_key: vec![],
-        ..Default::default()
-    };
-
-    let response = client
-        .invoke(sealed_memory_request::Request::UserRegistrationRequest(request))
-        .await
-        .unwrap();
-
-    match response {
-        sealed_memory_response::Response::Error(status) => {
-            assert_eq!(status.code, tonic::Code::InvalidArgument as i32);
-            assert!(status.message.contains("key_encryption_key not set"));
-        }
-        _ => panic!("expected error response, got {:?}", response),
-    }
+    // The typed helpers unwrap the `error` arm, so callers see the server's
+    // message rather than a generic type mismatch.
+    let err = client.add_memory(Memory::default()).await.unwrap_err();
+    assert!(
+        !format!("{err:?}").contains("unexpected response type"),
+        "typed helper should surface the server error, got: {err:?}"
+    );
 }
 
 // ── Memory source allowlist tests ──────────────────────────────────────────

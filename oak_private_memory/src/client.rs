@@ -89,10 +89,21 @@ impl Transport for TonicStartSessionTransport {
     }
 }
 
+/// Unwraps the expected arm of a `SealedMemoryResponse` oneof.
+///
+/// The server reports every application failure through the `error` arm rather
+/// than as a gRPC status, so that arm is matched explicitly — otherwise a
+/// perfectly clear server-side message would be reported as a generic type
+/// mismatch.
 macro_rules! expect_response_type {
     ($response:expr, $variant:path) => {
         match $response {
             $variant(resp) => Ok(resp),
+            sealed_memory_response::Response::Error(status) => Err(anyhow!(
+                "request failed with {:?}: {}",
+                tonic::Code::from_i32(status.code),
+                status.message
+            )),
             _ => Err(anyhow!("unexpected response type")),
         }
     };
@@ -156,7 +167,6 @@ impl PrivateMemoryClient {
             pm_uid,
             kek,
             Self::default_session_config(),
-            false,
         )
         .await
     }
@@ -213,7 +223,6 @@ impl PrivateMemoryClient {
         pm_uid: &str,
         kek: &[u8],
         session_config: SessionConfig,
-        propagate_errors_in_proto: bool,
     ) -> Result<Self> {
         let channel = Channel::from_shared(server_addr.to_string())
             .context("failed to create shared channel")?
@@ -223,13 +232,7 @@ impl PrivateMemoryClient {
         let mut client = SealedMemoryServiceClient::new(channel);
         let (tx, rx_stream) = mpsc::channel(10);
 
-        let mut request = tonic::Request::new(rx_stream);
-        if propagate_errors_in_proto {
-            // Note: The `x-error-propagation` header is only for migration purposes.
-            // Once all clients move to the new in-response error handling, we will
-            // remove this header and always use the in-response error behavior.
-            request.metadata_mut().insert("x-error-propagation", "response-proto".parse().unwrap());
-        }
+        let request = tonic::Request::new(rx_stream);
 
         let rx =
             client.start_session(request).await.context("failed to start session")?.into_inner();
@@ -284,10 +287,11 @@ pub trait PrivateMemoryAppClient {
             .invoke(sealed_memory_request::Request::UserRegistrationRequest(request.clone()))
             .await;
         request.key_encryption_key.zeroize();
-        match response? {
-            sealed_memory_response::Response::UserRegistrationResponse(resp) => Ok(resp.status()),
-            _ => Err(anyhow!("unexpected response type for user registration")),
-        }
+        let resp = expect_response_type!(
+            response?,
+            sealed_memory_response::Response::UserRegistrationResponse
+        )?;
+        Ok(resp.status())
     }
 
     async fn key_sync(&mut self, pm_uid: &str, kek: &[u8]) -> Result<key_sync_response::Status> {
@@ -299,10 +303,9 @@ pub trait PrivateMemoryAppClient {
         let response =
             self.invoke(sealed_memory_request::Request::KeySyncRequest(request.clone())).await;
         request.key_encryption_key.zeroize();
-        match response? {
-            sealed_memory_response::Response::KeySyncResponse(resp) => Ok(resp.status()),
-            _ => Err(anyhow!("unexpected response type for key sync")),
-        }
+        let resp =
+            expect_response_type!(response?, sealed_memory_response::Response::KeySyncResponse)?;
+        Ok(resp.status())
     }
 
     async fn add_memory(&mut self, memory: Memory) -> Result<AddMemoryResponse> {
@@ -512,10 +515,11 @@ impl AsyncPrivateMemoryClient {
             .invoke(sealed_memory_request::Request::UserRegistrationRequest(request.clone()))
             .await;
         request.key_encryption_key.zeroize();
-        match response? {
-            sealed_memory_response::Response::UserRegistrationResponse(resp) => Ok(resp.status()),
-            _ => Err(anyhow!("unexpected response type for user registration")),
-        }
+        let resp = expect_response_type!(
+            response?,
+            sealed_memory_response::Response::UserRegistrationResponse
+        )?;
+        Ok(resp.status())
     }
 
     async fn key_sync(&mut self, pm_uid: &str, kek: &[u8]) -> Result<key_sync_response::Status> {
@@ -527,10 +531,9 @@ impl AsyncPrivateMemoryClient {
         let response =
             self.invoke(sealed_memory_request::Request::KeySyncRequest(request.clone())).await;
         request.key_encryption_key.zeroize();
-        match response? {
-            sealed_memory_response::Response::KeySyncResponse(resp) => Ok(resp.status()),
-            _ => Err(anyhow!("unexpected response type for key sync")),
-        }
+        let resp =
+            expect_response_type!(response?, sealed_memory_response::Response::KeySyncResponse)?;
+        Ok(resp.status())
     }
 
     pub async fn add_memory(&mut self, memory: Memory) -> Result<AddMemoryResponse> {

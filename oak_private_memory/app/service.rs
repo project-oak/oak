@@ -35,10 +35,8 @@ use tokio::{net::TcpListener, sync::mpsc};
 use tokio_stream::{Stream, StreamExt, wrappers::TcpListenerStream};
 
 use crate::{
-    ApplicationConfig, IntoTonicResult,
-    context::UserSessionContext,
-    db_client::SharedDbClient,
-    handler::{ErrorPropagationBehavior, SealedMemorySessionHandler},
+    ApplicationConfig, IntoTonicResult, context::UserSessionContext, db_client::SharedDbClient,
+    handler::SealedMemorySessionHandler,
 };
 
 /// The gRPC service implementation.
@@ -79,50 +77,19 @@ impl SealedMemoryServiceImplementation {
         }
     }
 
-    fn new_oak_session_handler(
-        &self,
-        error_propagation_behavior: ErrorPropagationBehavior,
-    ) -> tonic::Result<OakSessionHandler> {
+    fn new_oak_session_handler(&self) -> tonic::Result<OakSessionHandler> {
         OakSessionHandler::new(
             &self.metrics,
             &self.persistence_tx,
             self.db_client.clone(),
             (self.session_config_factory)(),
             self.clock.clone(),
-            error_propagation_behavior,
             self.application_config.max_database_size_bytes,
             self.application_config.blanket_ttl_seconds,
             self.application_config.max_memory_ttl_seconds,
             self.application_config.enable_int8_embedding,
             self.application_config.allowed_memory_sources.clone(),
         )
-    }
-
-    /// Extracts the error propagation behavior from gRPC metadata.
-    ///
-    /// Note: The `x-error-propagation` header is only for migration purposes.
-    /// Once all clients move to the new in-response error handling, we will
-    /// make it the default and remove the header.
-    fn get_error_propagation_behavior(
-        &self,
-        metadata: &tonic::metadata::MetadataMap,
-    ) -> ErrorPropagationBehavior {
-        let default_behavior = if self.application_config.default_error_propagation_in_response {
-            ErrorPropagationBehavior::PropagateInResponseProto
-        } else {
-            ErrorPropagationBehavior::PropagateAsGrpcStatus
-        };
-        metadata
-            .get("x-error-propagation")
-            .map(|v| v.to_str().unwrap_or(""))
-            .map(|s| {
-                if s == "response-proto" {
-                    ErrorPropagationBehavior::PropagateInResponseProto
-                } else {
-                    ErrorPropagationBehavior::PropagateAsGrpcStatus
-                }
-            })
-            .unwrap_or(default_behavior)
     }
 }
 
@@ -144,7 +111,6 @@ impl OakSessionHandler {
         db_client: Arc<SharedDbClient>,
         session_config: SessionConfig,
         clock: Arc<dyn Clock>,
-        error_propagation_behavior: ErrorPropagationBehavior,
         max_database_size_bytes: usize,
         blanket_ttl_seconds: i64,
         max_memory_ttl_seconds: i64,
@@ -161,7 +127,6 @@ impl OakSessionHandler {
                 persistence_tx.clone(),
                 db_client,
                 clock,
-                error_propagation_behavior,
                 max_database_size_bytes,
                 blanket_ttl_seconds,
                 max_memory_ttl_seconds,
@@ -273,7 +238,6 @@ impl TlsSessionHandler {
         db_client: Arc<SharedDbClient>,
         tls_session: oak_session_tls::OakSessionTls,
         clock: Arc<dyn Clock>,
-        error_propagation_behavior: ErrorPropagationBehavior,
         max_database_size_bytes: usize,
         blanket_ttl_seconds: i64,
         max_memory_ttl_seconds: i64,
@@ -288,7 +252,6 @@ impl TlsSessionHandler {
                 persistence_tx.clone(),
                 db_client,
                 clock,
-                error_propagation_behavior,
                 max_database_size_bytes,
                 blanket_ttl_seconds,
                 max_memory_ttl_seconds,
@@ -315,8 +278,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         &self,
         request: tonic::Request<tonic::Streaming<SessionRequest>>,
     ) -> Result<tonic::Response<Self::InvokeStream>, tonic::Status> {
-        let behavior = self.get_error_propagation_behavior(request.metadata());
-        let mut oak_session_handler = self.new_oak_session_handler(behavior)?;
+        let mut oak_session_handler = self.new_oak_session_handler()?;
 
         let mut request_stream = request.into_inner();
         let response_stream = async_stream::try_stream! {
@@ -334,8 +296,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         &self,
         request: tonic::Request<tonic::Streaming<SessionRequest>>,
     ) -> Result<tonic::Response<Self::InvokeAsyncStream>, tonic::Status> {
-        let behavior = self.get_error_propagation_behavior(request.metadata());
-        let mut oak_session_handler = self.new_oak_session_handler(behavior)?;
+        let mut oak_session_handler = self.new_oak_session_handler()?;
 
         let mut request_stream = request.into_inner();
         let (tx, rx) = tokio::sync::mpsc::channel(32);
@@ -386,8 +347,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         &self,
         request: tonic::Request<tonic::Streaming<SealedMemorySessionRequest>>,
     ) -> Result<tonic::Response<Self::StartSessionStream>, tonic::Status> {
-        let behavior = self.get_error_propagation_behavior(request.metadata());
-        let mut oak_session_handler = self.new_oak_session_handler(behavior)?;
+        let mut oak_session_handler = self.new_oak_session_handler()?;
 
         let mut request_stream = request.into_inner();
         let response_stream = async_stream::try_stream! {
@@ -407,7 +367,6 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         &self,
         request: tonic::Request<tonic::Streaming<TlsSessionFrame>>,
     ) -> Result<tonic::Response<Self::StartTlsSessionStream>, tonic::Status> {
-        let behavior = self.get_error_propagation_behavior(request.metadata());
         let tls_ctx = self
             .tls_server_context
             .as_ref()
@@ -475,7 +434,6 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
                 db_client,
                 tls_session,
                 clock,
-                behavior,
                 max_database_size_bytes,
                 blanket_ttl_seconds,
                 max_memory_ttl_seconds,
