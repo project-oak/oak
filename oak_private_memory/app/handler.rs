@@ -24,7 +24,7 @@ use oak_private_memory_database::{
     clock::Clock,
     database::Database,
     encryption::decrypt_database,
-    icing::{IcingDatabaseConfig, IcingMetaDatabase, PageToken},
+    icing::{DuplicateMemoryName, IcingDatabaseConfig, IcingMetaDatabase, PageToken},
 };
 use prost::Message;
 use rand::Rng;
@@ -329,10 +329,10 @@ impl SealedMemorySessionHandler {
         self.validate_expiration_timestamp(memory.expiration_timestamp.as_ref())?;
 
         if !memory.name.is_empty() {
-            let existing_memory = database
-                .get_memory_by_name(&memory.name, &None)
-                .await
-                .into_internal_error("failed to check for existing named memory")?;
+            let existing_memory =
+                database.get_memory_by_name(&memory.name, &None).await.map_err(|e| {
+                    Self::name_lookup_status(e, "failed to check for existing named memory")
+                })?;
             if let Some(existing_memory) = existing_memory
                 && existing_memory.id != memory.id
             {
@@ -398,9 +398,25 @@ impl SealedMemorySessionHandler {
         let memory = database
             .get_memory_by_name(&request.name, &request.result_mask)
             .await
-            .into_internal_error("failed to get memory by name")?;
+            .map_err(|e| Self::name_lookup_status(e, "failed to get memory by name"))?;
         let success = memory.is_some();
         Ok(GetMemoryByNameResponse { memory, success })
+    }
+
+    /// Converts a name-lookup failure into a `tonic::Status`.
+    ///
+    /// A duplicated name is not a server fault: the database is in a state the
+    /// caller has to repair, and no retry will clear it. Reporting it as
+    /// `Internal` invites clients to retry forever, so it is surfaced as
+    /// `FailedPrecondition` with the conflicting ids in the message. The caller
+    /// can delete all but one of them — `SearchMemories` with a name filter
+    /// returns the same set with full contents. Everything else stays
+    /// `Internal`.
+    fn name_lookup_status(err: anyhow::Error, context: &str) -> tonic::Status {
+        match err.downcast_ref::<DuplicateMemoryName>() {
+            Some(duplicate) => tonic::Status::failed_precondition(duplicate.to_string()),
+            None => tonic::Status::internal(format!("{context}: {err:?}")),
+        }
     }
 
     pub async fn reset_memory_handler(
@@ -1112,5 +1128,38 @@ mod tests {
         let response =
             handler.add_memory_handler(AddMemoryRequest { memory: Some(memory) }).await.unwrap();
         assert!(!response.id.is_empty());
+    }
+
+    /// A duplicated name is a state the caller has to repair, not a server
+    /// fault. It must not be reported as `Internal`, which reads as "retry" and
+    /// would have a client spinning forever on a condition no retry can clear.
+    #[tokio::test]
+    async fn duplicate_name_maps_to_failed_precondition() {
+        let err = anyhow::Error::from(DuplicateMemoryName {
+            name: "shared.name".to_string(),
+            ids: vec!["mem_a".to_string(), "mem_b".to_string()],
+        })
+        .context("looking up memory by name");
+
+        let status = SealedMemorySessionHandler::name_lookup_status(err, "unused");
+
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        // The ids are the client's only handle on which memories to delete, so
+        // they have to survive into the message.
+        assert!(status.message().contains("mem_a"), "message was: {}", status.message());
+        assert!(status.message().contains("mem_b"), "message was: {}", status.message());
+        assert!(status.message().contains("shared.name"), "message was: {}", status.message());
+    }
+
+    /// Anything that is not a name conflict keeps the old behaviour, so a real
+    /// infrastructure failure is not mistaken for a caller problem.
+    #[tokio::test]
+    async fn other_name_lookup_errors_stay_internal() {
+        let err = anyhow::anyhow!("icing exploded");
+
+        let status = SealedMemorySessionHandler::name_lookup_status(err, "getting memory by name");
+
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert!(status.message().contains("icing exploded"), "message was: {}", status.message());
     }
 }

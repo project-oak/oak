@@ -350,6 +350,43 @@ pub struct SearchResultIds {
     pub items: Vec<SearchResultId>,
 }
 
+/// A name resolved to more than one memory.
+///
+/// Memory names are required to be unique, so the point lookups treat a name
+/// as identifying a single memory. When that invariant has already been
+/// violated there is no correct answer to return, and picking one arbitrarily
+/// would hand the caller a memory it did not ask for, so the lookup fails with
+/// this error instead.
+///
+/// It is a distinct type rather than a string so that callers can
+/// `downcast_ref` and map it onto a status that says "the caller must repair
+/// this", separating it from ordinary infrastructure failures. `ids` lists
+/// every memory carrying the name so the caller can resolve the conflict
+/// without a second round trip; the same set is available with full memory
+/// contents via `SearchMemories` with a name filter.
+///
+/// Defined by hand rather than with `thiserror`, which is not among this
+/// module's dependencies.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DuplicateMemoryName {
+    pub name: String,
+    pub ids: Vec<MemoryId>,
+}
+
+impl core::fmt::Display for DuplicateMemoryName {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "name {:?} resolves to {} memories, expected at most one: {}",
+            self.name,
+            self.ids.len(),
+            self.ids.join(", ")
+        )
+    }
+}
+
+impl core::error::Error for DuplicateMemoryName {}
+
 impl IcingMetaDatabase {
     /// Creates a ResultSpecProto projection to retrieve only the blob ids.
     ///
@@ -740,33 +777,73 @@ impl IcingMetaDatabase {
     /// `search_memories` ANDs in the not-expired predicate, so a memory whose
     /// expiration has passed is invisible here even if its document has not yet
     /// been swept by `clean_expired_memories()`.
+    ///
+    /// Returns [`DuplicateMemoryName`] if the name resolves to more than one
+    /// memory. A name is supposed to identify exactly one memory, so this
+    /// function cannot answer the question, and guessing would hand the caller
+    /// an arbitrary memory. See [`Self::find_memories_by_name`] for the
+    /// enumerating variant used to repair such a database.
     pub fn get_memory_metadata_by_name(
         &self,
         name: &str,
     ) -> anyhow::Result<Option<(MemoryId, BlobId)>> {
-        let request = SearchMemoriesRequest {
-            filter: Some(SearchMemoriesFilter {
-                value: Some(search_memories_filter::Value::NameFilter(StringFilter {
-                    value: name.to_string(),
-                })),
-            }),
-            // Names are unique, so ask for two: a second hit means the
-            // invariant has been violated and we want to report it rather than
-            // silently pick one.
-            page_size: 2,
-            ..Default::default()
-        };
+        let mut found = self.find_memories_by_name(name)?;
 
-        let (results, _) = self.search_memories(&request)?;
-
-        if results.items.len() > 1 {
-            bail!(
-                "Two memories with the same name found: {:?}",
-                results.items.iter().map(|item| &item.memory_id).collect::<Vec<_>>()
-            )
+        if found.len() > 1 {
+            return Err(DuplicateMemoryName {
+                name: name.to_string(),
+                ids: found.into_iter().map(|(memory_id, _)| memory_id).collect(),
+            }
+            .into());
         }
 
-        Ok(results.items.into_iter().next().map(|item| (item.memory_id, item.blob_id)))
+        Ok(found.pop())
+    }
+
+    /// Returns every non-expired memory carrying `name`, as `(memory_id,
+    /// blob_id)` pairs ordered by memory id.
+    ///
+    /// Names are supposed to be unique, so this normally returns zero or one
+    /// entry. It returns more only when the uniqueness invariant has already
+    /// been violated, which is why the repair paths use it in preference to
+    /// [`Self::get_memory_metadata_by_name`]: they need the full list rather
+    /// than an error.
+    ///
+    /// Ordering is by memory id purely so that the result — and therefore any
+    /// error message built from it — is deterministic.
+    pub fn find_memories_by_name(&self, name: &str) -> anyhow::Result<Vec<(MemoryId, BlobId)>> {
+        // A name resolving to many memories is already pathological; page
+        // rather than assume a bound, so the repair paths see all of them.
+        const NAME_PAGE_SIZE: i32 = 100;
+
+        let mut found = Vec::new();
+        let mut page_token = PageToken::Start;
+        loop {
+            let request = SearchMemoriesRequest {
+                filter: Some(SearchMemoriesFilter {
+                    value: Some(search_memories_filter::Value::NameFilter(StringFilter {
+                        value: name.to_string(),
+                    })),
+                }),
+                page_size: NAME_PAGE_SIZE,
+                page_token: page_token.into(),
+                ..Default::default()
+            };
+
+            let (results, next_page_token) = self.search_memories(&request)?;
+            if results.items.is_empty() {
+                break;
+            }
+            found.extend(results.items.into_iter().map(|item| (item.memory_id, item.blob_id)));
+
+            if next_page_token == PageToken::Start {
+                break;
+            }
+            page_token = next_page_token;
+        }
+
+        found.sort();
+        Ok(found)
     }
 
     pub fn get_memory_by_name(&self, name: &str) -> anyhow::Result<Option<BlobId>> {
@@ -1698,14 +1775,30 @@ impl IcingMetaDatabase {
                     Ok(())
                 }
                 MutationOperation::AddMemory { metadata, views } => {
-                    // Enforce name uniqueness: if a memory with the same name
-                    // already exists in the new base, delete it first. This
-                    // mirrors the handler-level semantics where a name
-                    // identifies a unique memory.
-                    if let Some(name) = metadata.name()
-                        && let Ok(Some((existing_id, _))) = new_db.get_memory_metadata_by_name(name)
-                    {
-                        let _ = new_db.delete_memory_documents(&existing_id);
+                    // Enforce name uniqueness: delete every memory in the new
+                    // base already carrying this name. This mirrors the
+                    // handler-level semantics where a name identifies a unique
+                    // memory, and the replayed AddMemory is the authoritative
+                    // one.
+                    //
+                    // `find_memories_by_name` is used rather than the point
+                    // lookup because the new base may itself already contain
+                    // duplicates. The point lookup reports those as an error,
+                    // which this replay used to discard along with the
+                    // deletion — leaving the existing memories in place and
+                    // then adding one more, so every rebase widened the
+                    // violation instead of repairing it.
+                    if let Some(name) = metadata.name() {
+                        match new_db.find_memories_by_name(name) {
+                            Ok(existing) => {
+                                for (existing_id, _) in existing {
+                                    let _ = new_db.delete_memory_documents(&existing_id);
+                                }
+                            }
+                            Err(e) => {
+                                error!("failed to resolve name {name} while rebasing: {e}")
+                            }
+                        }
                     }
                     // Also handle ID-based upsert: if the memory ID already
                     // exists, delete it first to clear stale views.
@@ -2270,6 +2363,107 @@ mod tests {
         Ok(())
     }
 
+    /// Adds a memory carrying `name` straight to the metadata layer, bypassing
+    /// the handler-level uniqueness check. This is the only way to construct
+    /// the corrupt state under test: the public API refuses to create it.
+    fn add_named_memory(db: &mut IcingMetaDatabase, id: &str, name: &str) {
+        db.add_memory(
+            &Memory {
+                id: id.to_string(),
+                name: name.to_string(),
+                tags: vec!["tag".to_string()],
+                ..Default::default()
+            },
+            format!("blob_{id}"),
+        )
+        .expect("failed to add memory");
+    }
+
+    /// A name resolving to several memories has no correct answer, so the point
+    /// lookup reports the conflict as a typed error listing every id rather
+    /// than picking one. Callers downcast to map it onto a distinct status.
+    #[gtest]
+    fn icing_get_memory_by_name_reports_duplicates_test() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        add_named_memory(&mut db, "dup_b", "shared.name");
+        add_named_memory(&mut db, "dup_a", "shared.name");
+        add_named_memory(&mut db, "solo", "unique.name");
+
+        let err = db.get_memory_metadata_by_name("shared.name").expect_err("expected a conflict");
+        let duplicate =
+            err.downcast_ref::<DuplicateMemoryName>().expect("expected a DuplicateMemoryName");
+        expect_that!(duplicate.name, eq("shared.name"));
+        // Sorted, so the message is stable across runs.
+        expect_that!(duplicate.ids, eq(&vec!["dup_a".to_string(), "dup_b".to_string()]));
+        // The ids have to reach the client, which only sees the message.
+        expect_that!(duplicate.to_string(), contains_substring("dup_a"));
+        expect_that!(duplicate.to_string(), contains_substring("dup_b"));
+
+        // An unaffected name still resolves.
+        expect_that!(
+            db.get_memory_metadata_by_name("unique.name")?,
+            some((eq("solo"), eq("blob_solo")))
+        );
+        // As does a name nobody claimed.
+        expect_that!(db.get_memory_metadata_by_name("absent.name")?, none());
+
+        Ok(())
+    }
+
+    /// The enumerating lookup must return every duplicate, including past the
+    /// first page, so the repair paths do not leave stragglers behind.
+    #[gtest]
+    fn icing_find_memories_by_name_paginates_test() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        // One more than the internal page size.
+        let count = 101;
+        for i in 0..count {
+            add_named_memory(&mut db, &format!("dup_{i:03}"), "crowded.name");
+        }
+
+        let found = db.find_memories_by_name("crowded.name")?;
+        expect_that!(found, len(eq(count)));
+        // Sorted by id, so the first and last are predictable.
+        expect_that!(found.first().map(|(id, _)| id.clone()), some(eq("dup_000")));
+        expect_that!(found.last().map(|(id, _)| id.clone()), some(eq("dup_100")));
+
+        Ok(())
+    }
+
+    /// Replaying an `AddMemory` onto a base that already contains duplicates of
+    /// that name must clear *all* of them. Resolving the name through the point
+    /// lookup returns an error in this state; discarding that error skips the
+    /// deletion entirely, so the replay adds a further duplicate and every
+    /// rebase makes the violation worse.
+    #[gtest]
+    fn icing_import_with_changes_clears_duplicate_names_test() -> anyhow::Result<()> {
+        // A base that is already corrupt: two memories share a name.
+        let mut base = IcingMetaDatabase::new(test_config())?;
+        add_named_memory(&mut base, "old_a", "shared.name");
+        add_named_memory(&mut base, "old_b", "shared.name");
+        let base_exported = base.export().expect("failed to export base").encode_to_vec();
+
+        // A concurrent session re-adds the same name.
+        let mut changes = IcingMetaDatabase::import(base_exported.as_slice(), test_config())?;
+        add_named_memory(&mut changes, "fresh", "shared.name");
+
+        let (rebased, _) =
+            IcingMetaDatabase::import_with_changes(tempdir(), base_exported.as_slice(), &changes)?;
+
+        // Only the replayed memory survives; the stale duplicates are gone and
+        // the name resolves again.
+        let found = rebased.find_memories_by_name("shared.name")?;
+        expect_that!(found, len(eq(1)));
+        expect_that!(
+            rebased.get_memory_metadata_by_name("shared.name")?,
+            some((eq("fresh"), eq("blob_fresh")))
+        );
+        expect_that!(rebased.get_blob_id_by_memory_id("old_a".to_string())?, none());
+        expect_that!(rebased.get_blob_id_by_memory_id("old_b".to_string())?, none());
+
+        Ok(())
+    }
+
     #[gtest]
     fn icing_import_with_changes_test_add_and_delete_memory() -> anyhow::Result<()> {
         // Original base db.
@@ -2647,6 +2841,49 @@ mod tests {
         expect_that!(db.delete_memories(std::slice::from_ref(&id_a))?, len(eq(0)));
         expect_that!(db.get_blob_id_by_memory_id(id_a)?, eq(&None));
         expect_that!(db.get_blob_id_by_memory_id(id_b)?, eq(&Some("blob_b".to_string())));
+        Ok(())
+    }
+
+    /// `search_memories` applies no name-uniqueness policy, so a `NameFilter`
+    /// surfaces *every* memory carrying that name. This is what lets a client
+    /// recover from a database that already contains duplicates: the point
+    /// lookups treat a name as identifying one memory, but a search returns the
+    /// full list of ids so the caller can pick which ones to delete.
+    #[gtest]
+    fn icing_search_by_name_returns_all_duplicates_test() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        let name = "duplicated.name";
+
+        for suffix in ["a", "b", "c"] {
+            db.add_memory(
+                &Memory {
+                    id: format!("dup_{suffix}"),
+                    name: name.to_string(),
+                    tags: vec!["tag".to_string()],
+                    ..Default::default()
+                },
+                format!("blob_{suffix}"),
+            )?;
+        }
+
+        let request = SearchMemoriesRequest {
+            filter: Some(SearchMemoriesFilter {
+                value: Some(search_memories_filter::Value::NameFilter(StringFilter {
+                    value: name.to_string(),
+                })),
+            }),
+            ..Default::default()
+        };
+        let (results, next_page_token) = db.search_memories(&request)?;
+
+        let mut ids: Vec<MemoryId> =
+            results.items.iter().map(|item| item.memory_id.clone()).collect();
+        ids.sort();
+        expect_that!(ids, eq(&vec!["dup_a".to_string(), "dup_b".to_string(), "dup_c".to_string()]));
+        // All hits fit in the default page, so the caller is not silently
+        // handed a partial list.
+        expect_that!(next_page_token, eq(&PageToken::Start));
+
         Ok(())
     }
 
