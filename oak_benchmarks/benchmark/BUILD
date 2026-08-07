@@ -39,6 +39,7 @@ rust_library(
     deps = [
         "//oak_benchmarks/proto:oak_benchmark_proto_rust",
         "//oak_benchmarks/proto:service",
+        "@oak_crates_index//:bitflags",
         "@oak_crates_index//:hashbrown",
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:sha3",
@@ -68,6 +69,7 @@ rust_library(
     deps = [
         "//oak_benchmarks/proto:oak_benchmark_proto_rust",
         "//oak_benchmarks/proto:service",
+        "@oak_crates_index//:bitflags",
         "@oak_crates_index//:hashbrown",
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:sha3",
