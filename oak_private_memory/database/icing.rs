@@ -131,6 +131,29 @@ const LLM_VIEW_SCHEMA_NAME: &str = "LlmView";
 const VIEW_ID_NAME: &str = "viewId";
 const VIEW_TYPE_NAME: &str = "viewType";
 
+// Limits bounding what reaches Icing's query parser.
+//
+// That parser is recursive descent with no depth limit of its own, and
+// overflowing the native stack aborts the process rather than unwinding, so the
+// per-request panic handler cannot contain it. These limits keep query nesting
+// and size bounded by construction.
+
+/// Maximum nesting depth of a `SearchMemoriesFilter` tree.
+///
+/// Each level costs one Rust stack frame during translation and one
+/// parenthesis pair in the emitted query. Real filters nest a handful of levels
+/// deep at most.
+const MAX_FILTER_DEPTH: usize = 32;
+
+/// Maximum length of a query string handed to Icing.
+///
+/// A backstop rather than a tuned limit: orders of magnitude above any query
+/// the filter API can legitimately produce, but well below what is needed to
+/// drive the parser into a stack overflow. It bounds inputs that no per-field
+/// limit covers, such as a very long `name`, which is otherwise capped only by
+/// the gRPC message ceiling.
+const MAX_QUERY_LEN: usize = 64 * 1024;
+
 /// A representation of a mutation operation.
 /// These are used to track changes that have been applied to the local
 /// in-memory metadata database, but not yet committed to durable storage.
@@ -1177,6 +1200,12 @@ impl IcingMetaDatabase {
         Ok(())
     }
 
+    /// Runs a search, enforcing the query-size backstop.
+    ///
+    /// Every user-facing search goes through here, so this is the one place
+    /// that can bound what reaches Icing's parser. The maintenance scans that
+    /// call `icing_search_engine.search` directly are excluded deliberately:
+    /// their queries are built from constants.
     fn execute_search(
         &self,
         search_spec: &icing::SearchSpecProto,
@@ -1186,6 +1215,8 @@ impl IcingMetaDatabase {
         page_token: PageToken,
         result_projection: icing::TypePropertyMask,
     ) -> anyhow::Result<(icing::SearchResultProto, PageToken)> {
+        ensure_query_within_limit(search_spec)?;
+
         const DEFAULT_PAGE_SIZE: i32 = 10;
         let num_per_page = if page_size > 0 { page_size } else { DEFAULT_PAGE_SIZE };
 
@@ -1489,7 +1520,25 @@ impl IcingMetaDatabase {
         &self,
         filter: &Option<SearchMemoriesFilter>,
     ) -> anyhow::Result<icing::SearchSpecProto> {
+        self.build_search_memories_filter_at_depth(filter, 0)
+    }
+
+    /// Body of [`Self::build_search_memories_filter`], tracking nesting depth.
+    ///
+    /// `depth` is the number of enclosing boolean operators. It is bounded by
+    /// [`MAX_FILTER_DEPTH`] because the translation recurses once per level
+    /// *and* emits one parenthesis pair per level into the query string, which
+    /// Icing then parses with its own recursive-descent parser.
+    fn build_search_memories_filter_at_depth(
+        &self,
+        filter: &Option<SearchMemoriesFilter>,
+        depth: usize,
+    ) -> anyhow::Result<icing::SearchSpecProto> {
         use search_memories_filter::Value;
+        ensure!(
+            depth <= MAX_FILTER_DEPTH,
+            "filter nesting exceeds the maximum depth of {MAX_FILTER_DEPTH}"
+        );
         let value = match filter.as_ref().and_then(|f| f.value.as_ref()) {
             // No filter provided, default to selecting everything.
             Some(v) => v,
@@ -1518,10 +1567,15 @@ impl IcingMetaDatabase {
                 self.build_time_filter_spec(EXPIRATION_TIMESTAMP_NAME, f)
             }
             Value::EmbeddingFilter(f) => self.build_embedding_filter_spec(f),
-            Value::AndOperator(filters) => self.build_composite_filter(&filters.filters, "AND"),
-            Value::OrOperator(filters) => self.build_composite_filter(&filters.filters, "OR"),
+            Value::AndOperator(filters) => {
+                self.build_composite_filter(&filters.filters, "AND", depth)
+            }
+            Value::OrOperator(filters) => {
+                self.build_composite_filter(&filters.filters, "OR", depth)
+            }
             Value::NotOperator(inner) => {
-                let mut child = self.build_search_memories_filter(&Some((**inner).clone()))?;
+                let mut child = self
+                    .build_search_memories_filter_at_depth(&Some((**inner).clone()), depth + 1)?;
                 let child_query = child.query.take().context("child filter produced no query")?;
                 child.query = Some(format!("NOT ({child_query})"));
                 Ok(child)
@@ -1530,10 +1584,14 @@ impl IcingMetaDatabase {
     }
 
     /// Combine multiple sub-filters with a boolean operator (AND / OR).
+    ///
+    /// `depth` is the caller's nesting depth; children are built one level
+    /// deeper. See [`Self::build_search_memories_filter_at_depth`].
     fn build_composite_filter(
         &self,
         filters: &[SearchMemoriesFilter],
         operator: &str,
+        depth: usize,
     ) -> anyhow::Result<icing::SearchSpecProto> {
         ensure!(!filters.is_empty(), "composite filter must have at least one child");
         let mut sub_queries = Vec::new();
@@ -1542,7 +1600,8 @@ impl IcingMetaDatabase {
         let mut merged_spec = icing::SearchSpecProto::default();
 
         for child_filter in filters {
-            let child = self.build_search_memories_filter(&Some(child_filter.clone()))?;
+            let child =
+                self.build_search_memories_filter_at_depth(&Some(child_filter.clone()), depth + 1)?;
             if let Some(q) = child.query {
                 if q.contains("getEmbeddingParameter") {
                     embedding_filter_count += 1;
@@ -1906,6 +1965,32 @@ impl IcingMetaDatabase {
         );
         icing::IcingGroundTruthFiles::new(self.config.base_dir.as_str())
     }
+}
+
+/// Rejects a search whose query string exceeds [`MAX_QUERY_LEN`].
+///
+/// Checks the nested join query as well as the top-level one: the embedding
+/// sort path builds a separate query inside `join_spec`, and Icing parses that
+/// independently, so bounding only the outer query would leave a gap.
+fn ensure_query_within_limit(spec: &icing::SearchSpecProto) -> anyhow::Result<()> {
+    fn check(query: Option<&String>) -> anyhow::Result<()> {
+        if let Some(query) = query {
+            ensure!(
+                query.len() <= MAX_QUERY_LEN,
+                "query is {} bytes, exceeding the maximum of {MAX_QUERY_LEN}",
+                query.len()
+            );
+        }
+        Ok(())
+    }
+
+    check(spec.query.as_ref())?;
+    let nested = spec
+        .join_spec
+        .as_ref()
+        .and_then(|join| join.nested_spec.as_ref())
+        .and_then(|nested| nested.search_spec.as_ref());
+    check(nested.and_then(|nested| nested.query.as_ref()))
 }
 
 /// How an indexed string property is tokenized by Icing.
@@ -3045,6 +3130,58 @@ mod tests {
         ] {
             expect_that!(db.get_memory_by_name(injection)?, eq(&None), "injection: {injection:?}");
         }
+        Ok(())
+    }
+
+    /// Filter translation recurses once per nesting level and emits one
+    /// parenthesis pair per level for Icing to parse, so an unbounded tree
+    /// exhausts the stack twice over. Depth must be capped before either
+    /// recursion runs.
+    #[gtest]
+    fn icing_search_memories_rejects_deeply_nested_filter_test() -> anyhow::Result<()> {
+        fn nest(depth: usize) -> SearchMemoriesFilter {
+            let mut filter = SearchMemoriesFilter {
+                value: Some(search_memories_filter::Value::NameFilter(StringFilter {
+                    value: "leaf".to_string(),
+                })),
+            };
+            for _ in 0..depth {
+                filter = SearchMemoriesFilter {
+                    value: Some(search_memories_filter::Value::NotOperator(Box::new(filter))),
+                };
+            }
+            filter
+        }
+
+        let db = IcingMetaDatabase::new(test_config())?;
+        let search = |depth: usize| {
+            db.search_memories(&SearchMemoriesRequest {
+                filter: Some(nest(depth)),
+                ..Default::default()
+            })
+            .map(|_| ())
+        };
+
+        expect_that!(search(MAX_FILTER_DEPTH - 1).is_ok(), eq(true));
+        expect_that!(search(MAX_FILTER_DEPTH + 1).is_err(), eq(true));
+        Ok(())
+    }
+
+    /// Even a filter tree within the depth limit can produce an arbitrarily
+    /// long query, because leaf values are client-supplied and unbounded. The
+    /// assembled query therefore needs its own cap.
+    #[gtest]
+    fn icing_search_memories_rejects_oversized_query_test() -> anyhow::Result<()> {
+        let db = IcingMetaDatabase::new(test_config())?;
+        let request = SearchMemoriesRequest {
+            filter: Some(SearchMemoriesFilter {
+                value: Some(search_memories_filter::Value::NameFilter(StringFilter {
+                    value: "a".repeat(MAX_QUERY_LEN + 1),
+                })),
+            }),
+            ..Default::default()
+        };
+        expect_that!(db.search_memories(&request).is_err(), eq(true));
         Ok(())
     }
 
