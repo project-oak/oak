@@ -201,10 +201,13 @@ fn extract_directory_snapshot(target_dir: &Path, snapshot: &[u8]) -> Result<()> 
 /// Icing uses this as the normalizer's `max_term_byte_size` (see
 /// `icing-search-engine.cc`, where the normalizer is constructed), which
 /// truncates terms on both the indexing and the query side. Its default is 30
-/// bytes, which is far too small for the identifiers stored in
-/// `Plain`-tokenized properties (`memoryId`, `viewId`): two distinct ids
-/// sharing a 30-byte prefix would collapse to the same term and a lookup for
-/// one could return the other.
+/// bytes, which is small enough that two distinct values sharing a 30-byte
+/// prefix collapse to the same term and a lookup for one can return the other.
+///
+/// This only applies to `Plain`-tokenized properties. `Verbatim` terms skip the
+/// normalizer on both sides, so they are exempt — which is why the ids
+/// (`memoryId`, `viewId`) are indexed `Verbatim` rather than relying on this
+/// limit being large enough. See `database/SCHEMA_MIGRATION.md`.
 ///
 /// This is deliberately well below `int32::MAX`; very large values can exhaust
 /// Icing's lexicon and make indexing fail with `OUT_OF_SPACE`.

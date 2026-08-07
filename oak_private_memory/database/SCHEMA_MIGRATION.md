@@ -54,10 +54,10 @@ Incompatible changes (renaming/removing fields, changing data types) cause
 Indexed string properties do not all use the same tokenizer, and a query has to
 be written to match the one its property uses:
 
-| Property                         | Tokenizer  | Query form             |
-| -------------------------------- | ---------- | ---------------------- |
-| `name`, `tag`                    | `Verbatim` | quoted: `name:"foo"`   |
-| `memoryId`, `viewId`, `viewType` | `Plain`    | unquoted: `memoryId:x` |
+| Property                            | Tokenizer  | Query form             |
+| ----------------------------------- | ---------- | ---------------------- |
+| `name`, `tag`, `memoryId`, `viewId` | `Verbatim` | quoted: `name:"foo"`   |
+| `viewType`                          | `Plain`    | unquoted: `viewType:x` |
 
 `Verbatim` terms are indexed **as-is**, skipping Icing's normalizer. `Plain`
 terms are put through it, which lower-cases them, splits them on separators and
@@ -79,14 +79,32 @@ Do not hand-roll a property-equality query string. Use
 `build_property_equals_clause()`, passing the `Tokenizer` that matches
 `create_schema()`, and take `enabled_features` from `query_features()`.
 
+### Why ids are `Verbatim`
+
+`memoryId` and `viewId` are opaque strings chosen by the client — the server
+only generates one when the field is left empty. Normalizing them is not just
+unnecessary but actively wrong: two ids differing only in case, or only past
+`max_token_length`, collapse to the same index term, and a lookup for one
+resolves to the **other** memory's blob. Indexing them raw makes them exact byte
+strings, with no length ceiling and no case folding.
+
+`viewType` stays `Plain` because it is a closed set of server-defined lower-case
+identifiers, not client input.
+
 ### `max_token_length`
 
 `MAX_TOKEN_LENGTH` in [`src/icing/lib.rs`](../src/icing/lib.rs) raises the
 normalizer's term limit from Icing's 30-byte default. It only affects `Plain`
-properties, and it is a correctness fix rather than a tuning knob: at 30 bytes,
-two ids sharing a 30-byte prefix normalize to the same term, so a lookup for one
-resolves to the other and returns the **wrong** memory's blob.
+properties, so since ids became `Verbatim` the only property it still covers is
+`viewType`. It is kept as a safety margin for any future `Plain` property.
 
 Note that changing this value does not re-index existing data — it is an
 `IcingSearchEngineOptions` field, not part of the schema — so terms written
 before a change keep their old truncation.
+
+## Cost of a tokenizer change
+
+Changing a property's tokenizer is not an incompatible change — `set_schema`
+accepts it — but it does force Icing to re-index that property. `import()` calls
+`set_schema` on every session load, so the first session a user opens after such
+a change pays a full re-index. It degrades latency, not correctness.

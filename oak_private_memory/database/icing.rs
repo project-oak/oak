@@ -435,7 +435,7 @@ impl IcingMetaDatabase {
                     .set_name(MEMORY_ID_NAME.as_bytes())
                     .set_data_type_string(
                         icing::term_match_type::Code::ExactOnly.into(),
-                        icing::string_indexing_config::tokenizer_type::Code::Plain.into(),
+                        icing::string_indexing_config::tokenizer_type::Code::Verbatim.into(),
                     )
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
@@ -527,7 +527,7 @@ impl IcingMetaDatabase {
                     .set_name(MEMORY_ID_NAME.as_bytes())
                     .set_data_type_string(
                         icing::term_match_type::Code::ExactOnly.into(),
-                        icing::string_indexing_config::tokenizer_type::Code::Plain.into(),
+                        icing::string_indexing_config::tokenizer_type::Code::Verbatim.into(),
                     )
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
@@ -549,7 +549,7 @@ impl IcingMetaDatabase {
                     .set_name(VIEW_ID_NAME.as_bytes())
                     .set_data_type_string(
                         icing::term_match_type::Code::ExactOnly.into(),
-                        icing::string_indexing_config::tokenizer_type::Code::Plain.into(),
+                        icing::string_indexing_config::tokenizer_type::Code::Verbatim.into(),
                     )
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
@@ -899,7 +899,11 @@ impl IcingMetaDatabase {
         const VIEW_PAGE_SIZE: i32 = 1000;
 
         let search_spec = icing::SearchSpecProto {
-            query: Some(build_property_equals_clause(MEMORY_ID_NAME, &memory_id, Tokenizer::Plain)),
+            query: Some(build_property_equals_clause(
+                MEMORY_ID_NAME,
+                &memory_id,
+                Tokenizer::Verbatim,
+            )),
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
             schema_type_filters: vec![LLM_VIEW_SCHEMA_NAME.to_string()],
             enabled_features: query_features(),
@@ -1498,7 +1502,7 @@ impl IcingMetaDatabase {
         };
         match value {
             Value::IdFilter(f) => {
-                self.build_string_filter_spec(MEMORY_ID_NAME, &f.value, Tokenizer::Plain)
+                self.build_string_filter_spec(MEMORY_ID_NAME, &f.value, Tokenizer::Verbatim)
             }
             Value::NameFilter(f) => {
                 self.build_string_filter_spec(NAME_NAME, &f.value, Tokenizer::Verbatim)
@@ -2808,19 +2812,20 @@ mod tests {
         Ok(())
     }
 
-    /// Regression test for `MAX_TOKEN_LENGTH`: `memoryId` is `Plain`-tokenized,
-    /// so it is normalized by Icing's normalizer, which truncates every term to
-    /// `max_token_length` bytes. At the 30-byte default, two client-supplied
-    /// ids sharing a 30-byte prefix collapse to the same index term and a
-    /// lookup for one can resolve to the other — silently returning the wrong
-    /// memory. Both ids below share a 31-byte prefix.
+    /// `memoryId` is `Verbatim`-tokenized, so an id is indexed exactly as the
+    /// client supplied it and is never put through Icing's normalizer. That
+    /// makes ids immune to term truncation: under a `Plain` tokenizer, two ids
+    /// sharing a prefix longer than `max_token_length` collapse to the same
+    /// index term and a lookup for one silently resolves to the other. The two
+    /// ids below share a prefix well past `MAX_TOKEN_LENGTH`.
     #[gtest]
     fn icing_get_blob_id_by_colliding_memory_id_prefix_test() -> anyhow::Result<()> {
         let mut db = IcingMetaDatabase::new(test_config())?;
-        // 31 bytes, so anything past it is lost at the 30-byte default. Dots
-        // and underscores do not split the token, so this stays a single term.
-        let shared_prefix = "memory.id.common.prefix.padding";
-        assert!(shared_prefix.len() > 30);
+        // Longer than `MAX_TOKEN_LENGTH` (4096) in `src/icing/lib.rs`, so a
+        // normalizer would truncate both ids to the same term. Dots and
+        // underscores do not split a token, so this stays a single term.
+        let shared_prefix = "memory.id.common.prefix.padding".repeat(200);
+        assert!(shared_prefix.len() > 4096);
         let id_a = format!("{shared_prefix}_a");
         let id_b = format!("{shared_prefix}_b");
 
@@ -2841,6 +2846,46 @@ mod tests {
         expect_that!(db.delete_memories(std::slice::from_ref(&id_a))?, len(eq(0)));
         expect_that!(db.get_blob_id_by_memory_id(id_a)?, eq(&None));
         expect_that!(db.get_blob_id_by_memory_id(id_b)?, eq(&Some("blob_b".to_string())));
+        Ok(())
+    }
+
+    /// The other half of the `Verbatim` guarantee: the normalizer also
+    /// lower-cases and splits on separators, so under a `Plain` tokenizer two
+    /// ids differing only in case map to the same index term. Clients pick
+    /// their own ids and are entitled to treat them as opaque byte strings,
+    /// so `Alpha-Memory-Id` and `alpha-memory-id` must stay distinct across
+    /// the point lookup, the `LlmView` lookup used by deletion, and the v2
+    /// `IdFilter` search that both are built on.
+    #[gtest]
+    fn icing_memory_ids_are_case_sensitive_test() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        let id_a = "Alpha-Memory-Id".to_string();
+        let id_b = "alpha-memory-id".to_string();
+
+        db.add_memory(
+            &mem_with_view(&id_a, &["tag"], "View-A", &[1.0, 0.0, 0.0]),
+            "blob_a".into(),
+        )?;
+        db.add_memory(
+            &mem_with_view(&id_b, &["tag"], "view-a", &[0.0, 1.0, 0.0]),
+            "blob_b".into(),
+        )?;
+
+        expect_that!(db.get_blob_id_by_memory_id(id_a.clone())?, eq(&Some("blob_a".to_string())));
+        expect_that!(db.get_blob_id_by_memory_id(id_b.clone())?, eq(&Some("blob_b".to_string())));
+
+        // `viewId` is `Verbatim` too, and the views hang off ids that also
+        // differ only in case.
+        expect_that!(db.get_view_ids_by_memory_id(id_a.clone())?, elements_are![eq("View-A")]);
+        expect_that!(db.get_view_ids_by_memory_id(id_b.clone())?, elements_are![eq("view-a")]);
+
+        // Deleting one resolves its views by memoryId and must not take the
+        // other's view with it.
+        expect_that!(db.delete_memories(std::slice::from_ref(&id_a))?, len(eq(0)));
+        expect_that!(db.get_blob_id_by_memory_id(id_a.clone())?, eq(&None));
+        expect_that!(db.get_view_ids_by_memory_id(id_a)?, is_empty());
+        expect_that!(db.get_blob_id_by_memory_id(id_b.clone())?, eq(&Some("blob_b".to_string())));
+        expect_that!(db.get_view_ids_by_memory_id(id_b)?, elements_are![eq("view-a")]);
         Ok(())
     }
 
