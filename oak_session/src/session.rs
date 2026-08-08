@@ -481,6 +481,7 @@ impl ClientSession {
     /// state. The lifetimes of objects within `config` (e.g., keys in
     /// `HandshakeHandlerConfig`) are now managed by the `ClientSession`.
     pub fn create(config: SessionConfig) -> Result<Self, Error> {
+        config.validate_peer_verification()?;
         Ok(Self {
             step: Step::Attestation {
                 attester: ClientAttestationHandler::create(config.attestation_handler_config)?,
@@ -700,6 +701,7 @@ impl ServerSession {
     /// based on `config.attestation_handler_config.attestation_type` for
     /// the `ServerHandshakeHandler`. The configuration is consumed.
     pub fn create(config: SessionConfig) -> Result<Self, Error> {
+        config.validate_peer_verification()?;
         Ok(Self {
             step: Step::Attestation {
                 attester: ServerAttestationHandler::create(config.attestation_handler_config)?,

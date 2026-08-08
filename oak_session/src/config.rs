@@ -40,7 +40,7 @@
 
 use alloc::{boxed::Box, collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 
-use anyhow::Error;
+use anyhow::{Error, anyhow};
 use oak_attestation_types::{attester::Attester, endorser::Endorser};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_crypto::{
@@ -99,6 +99,38 @@ impl SessionConfig {
         handshake_type: HandshakeType,
     ) -> SessionConfigBuilder {
         SessionConfigBuilder::new(attestation_type, handshake_type)
+    }
+
+    /// Fails if a peer-attested type was selected but nothing is configured to
+    /// verify the peer.
+    ///
+    /// With no peer verifier and no peer assertion verifier, the verification
+    /// results handed to the aggregators are empty, an empty result set
+    /// aggregates to `PeerAttestationVerdict::AttestationPassed`, and the
+    /// session reaches `Open` against a peer that presented no evidence and no
+    /// assertion. Either kind of verifier is enough, because a configuration
+    /// may legitimately use only assertions or only [`AttestationVerifier`]s.
+    ///
+    /// This is checked here rather than in the attestation handlers because
+    /// `attestation_type` is not carried into [`AttestationHandlerConfig`], so
+    /// the handlers cannot tell an intentionally unattested session apart from
+    /// an attested one whose verifiers were never added.
+    pub(crate) fn validate_peer_verification(&self) -> Result<(), Error> {
+        match self.attestation_type {
+            AttestationType::Bidirectional | AttestationType::PeerUnidirectional => {}
+            AttestationType::SelfUnidirectional | AttestationType::Unattested => return Ok(()),
+        }
+        if self.attestation_handler_config.peer_verifiers.is_empty()
+            && self.attestation_handler_config.peer_assertion_verifiers.is_empty()
+        {
+            return Err(anyhow!(
+                "attestation type {:?} verifies the peer, but neither a peer verifier nor a \
+                 peer assertion verifier is configured; add one, or use \
+                 AttestationType::Unattested if the peer is not meant to be verified",
+                self.attestation_type
+            ));
+        }
+        Ok(())
     }
 }
 

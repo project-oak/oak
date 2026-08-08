@@ -23,10 +23,13 @@ use jni::{
     objects::{JClass, JObject, JValue},
     sys::{jlong, jobject},
 };
+use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_jni_attestation_publisher::JNIAttestationPublisher;
 use oak_proto_rust::oak::{
     Variant,
-    attestation::v1::{Assertion, Endorsements, EventLog, Evidence},
+    attestation::v1::{
+        Assertion, AttestationResults, Endorsements, EventLog, Evidence, attestation_results,
+    },
     session::v1::SessionBinding,
 };
 use oak_sdk_common::{StaticAttester, StaticEndorser};
@@ -36,7 +39,7 @@ use oak_session::{
     generator::{BindableAssertion, BindableAssertionGenerator, BindableAssertionGeneratorError},
     handshake::HandshakeType,
     session::AttestationPublisher,
-    session_binding::SessionBinder,
+    session_binding::{SessionBinder, SessionBindingVerifier, SessionBindingVerifierProvider},
 };
 
 pub fn new_java_session_config_builder(
@@ -89,6 +92,44 @@ impl SessionBinder for FakeSessionBinder {
     }
 }
 
+/// Accepts the fake server evidence. The client config needs a peer verifier so
+/// that it requests genuine peer attestation; this test is about the publisher,
+/// not about verification policy.
+struct FakePeerVerifier {}
+
+impl AttestationVerifier for FakePeerVerifier {
+    fn verify(
+        &self,
+        _evidence: &Evidence,
+        _endorsements: &Endorsements,
+    ) -> anyhow::Result<AttestationResults> {
+        Ok(AttestationResults {
+            status: attestation_results::Status::Success.into(),
+            ..Default::default()
+        })
+    }
+}
+
+#[derive(Debug)]
+struct FakeSessionBindingVerifier {}
+
+impl SessionBindingVerifier for FakeSessionBindingVerifier {
+    fn verify_binding(&self, _bound_data: &[u8], _binding: &[u8]) -> anyhow::Result<()> {
+        Ok(())
+    }
+}
+
+struct FakeSessionBindingVerifierProvider {}
+
+impl SessionBindingVerifierProvider for FakeSessionBindingVerifierProvider {
+    fn create_session_binding_verifier(
+        &self,
+        _attestation_results: &AttestationResults,
+    ) -> anyhow::Result<Box<dyn SessionBindingVerifier>> {
+        Ok(Box::new(FakeSessionBindingVerifier {}))
+    }
+}
+
 #[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_AttestationPublisherTest_nativeCreateServerConfigBuilder(
     mut env: JNIEnv,
@@ -133,6 +174,11 @@ extern "system" fn Java_com_google_oak_session_AttestationPublisherTest_nativeCr
     new_java_session_config_builder(
         &mut env,
         SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+            .add_peer_verifier_with_binding_verifier_provider(
+                "test id".to_string(),
+                Box::new(FakePeerVerifier {}),
+                Box::new(FakeSessionBindingVerifierProvider {}),
+            )
             .add_attestation_publisher(&publisher),
     )
 }

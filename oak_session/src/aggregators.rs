@@ -61,23 +61,31 @@ pub trait LegacyVerifierResultsAggregator: Send {
 /// A default implementation of the `VerifierResultsAggregator` trait.
 ///
 /// This aggregator requires that:
-/// 1. There is at least one attestation result provided.
-/// 2. All provided attestation results indicate success.
+/// 1. If any peer verifier was configured, at least one of them matched
+///    received evidence.
+/// 2. All matched attestation results indicate success.
 ///
 /// It operates on the principle that only evidence matching a configured peer
 /// verifier is considered, effectively performing an inner join between
 /// expected verifiers and received evidence.
+///
+/// An empty result set is accepted, because it also describes a configuration
+/// that verifies the peer through assertions alone and so has no legacy
+/// verifiers to match. A peer-attested type with no verifier of either kind is
+/// rejected when the session is created; this aggregator cannot distinguish the
+/// two cases, because it never sees the configured `AttestationType`.
 pub struct DefaultLegacyVerifierResultsAggregator {}
 
 impl LegacyVerifierResultsAggregator for DefaultLegacyVerifierResultsAggregator {
-    /// Aggregates results based on the default policy: at least one result, and
-    /// all must be successful.
+    /// Aggregates results based on the default policy: if verifiers were
+    /// configured then at least one must have matched, and every matched result
+    /// must be successful.
     ///
-    /// If `results` is empty, it returns `AttestationFailed` with a reason
-    /// indicating no matching results. If any result in the `results` map
-    /// has a `GenericFailure` status, it returns `AttestationFailed` with
-    /// details of the failures. Otherwise, it returns `AttestationPassed`
-    /// with the original results.
+    /// If a verifier was configured but none matched received evidence, it
+    /// returns `NoMatchedLegacyVerifier`. If any matched result has a
+    /// `GenericFailure` status, it returns `LegacyVerificationFailure` with
+    /// details of the failures. Otherwise it succeeds, which includes the case
+    /// of an empty `results` map.
     fn process_assertion_results(
         &self,
         results: &BTreeMap<String, VerifierResult>,
