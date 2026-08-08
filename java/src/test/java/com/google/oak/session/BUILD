@@ -45,9 +45,11 @@ rust_library(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//java/src/main/java/com/google/oak/session/jni:oak_jni_attestation_publisher",
+        "//oak_attestation_verification_types",
         "//oak_proto_rust",
         "//oak_sdk/common:oak_sdk_common",
         "//oak_session",
+        "@oak_crates_index//:anyhow",
         "@oak_crates_index//:jni",
         "@oak_crates_index//:prost",
     ],

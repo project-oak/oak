@@ -1119,3 +1119,86 @@ async fn channel_pair_test(
 
     server_join.await.context("joining server")?.context("server failing")
 }
+
+// A peer-attested type with no configured peer verification must fail closed.
+// Without this, the empty verification result set aggregates to
+// `AttestationPassed` and the session opens against a peer that presented
+// nothing.
+
+#[googletest::test]
+fn peer_unidirectional_client_without_any_verifier_is_rejected() {
+    let config =
+        SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN).build();
+    let error = ClientSession::create(config).err().expect("expected session creation to fail");
+    assert_that!(error.to_string(), contains_substring("peer assertion verifier"));
+}
+
+#[googletest::test]
+fn bidirectional_client_without_any_verifier_is_rejected() {
+    let config = SessionConfig::builder(AttestationType::Bidirectional, HandshakeType::NoiseNN)
+        .add_self_attester(MATCHED_ATTESTER_ID1.to_string(), create_mock_attester())
+        .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
+        .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
+        .build();
+    let error = ClientSession::create(config).err().expect("expected session creation to fail");
+    assert_that!(error.to_string(), contains_substring("peer assertion verifier"));
+}
+
+#[googletest::test]
+fn peer_unidirectional_server_without_any_verifier_is_rejected() {
+    let config =
+        SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN).build();
+    let error = ServerSession::create(config).err().expect("expected session creation to fail");
+    assert_that!(error.to_string(), contains_substring("peer assertion verifier"));
+}
+
+#[googletest::test]
+fn peer_unidirectional_with_only_a_legacy_verifier_is_accepted() -> anyhow::Result<()> {
+    let config =
+        SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+            .add_peer_verifier_with_key_extractor(
+                MATCHED_ATTESTER_ID1.to_string(),
+                create_passing_mock_verifier(),
+                create_mock_key_extractor(),
+            )
+            .build();
+    ClientSession::create(config)?;
+    Ok(())
+}
+
+#[googletest::test]
+fn peer_unidirectional_with_only_an_assertion_verifier_is_accepted() -> anyhow::Result<()> {
+    let config =
+        SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+            .add_peer_assertion_verifier(
+                MATCHED_ATTESTER_ID1.to_string(),
+                create_passing_mock_session_key_assertion_verifier(),
+            )
+            .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
+            .build();
+    ClientSession::create(config)?;
+    Ok(())
+}
+
+#[googletest::test]
+fn unattested_without_any_verifier_is_accepted() -> anyhow::Result<()> {
+    let client_config =
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
+    let server_config =
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
+    ClientSession::create(client_config)?;
+    ServerSession::create(server_config)?;
+    Ok(())
+}
+
+#[googletest::test]
+fn self_unidirectional_without_any_peer_verifier_is_accepted() -> anyhow::Result<()> {
+    let config =
+        SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
+            .add_self_attester(MATCHED_ATTESTER_ID1.to_string(), create_mock_attester())
+            .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
+            .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
+            .build();
+    ServerSession::create(config)?;
+    Ok(())
+}
