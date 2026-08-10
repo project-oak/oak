@@ -5,7 +5,7 @@ with { linux_version = pkgs.lib.removeSuffix "\n" untrimmed_version; };
   version = linux_version;
   src = builtins.fetchurl {
     url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${linux_version}.tar.xz";
-    sha256 = "0d21cd11933f49f7151b7c9dbb8cc3fddc8c8abe506434b850feecf41fc28a76";
+    sha256 = "f143aaade8877ba5616e788b4482576db28481bcf557ef537f4fcc3938fc3176";
   };
   # To allow reproducibility, the following options need to be configured:
   # - CONFIG_MODULE_SIG is not set

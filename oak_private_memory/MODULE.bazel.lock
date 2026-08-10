@@ -1860,7 +1860,7 @@
     },
     "@@oak+//oak_containers/kernel/internal:extensions.bzl%nix_kernels": {
       "general": {
-        "bzlTransitiveDigest": "NlYK2w2nzKLe2V0adZ4FfERJtffPSykQionDfU5lzsA=",
+        "bzlTransitiveDigest": "7dTqh3sNepq8wh/EJ+p4qwDkQFUyu9JEVdODtsMWWVs=",
         "usagesDigest": "rZqiC8kNUBENTAqDX3b33VZRro7il6QAmY2g9L+fVQQ=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -1884,7 +1884,7 @@
               "nix_file_deps": {
                 "@@oak+//oak_containers/kernel:kernel-common.nix": "//oak_containers/kernel:kernel-common.nix",
                 "@@oak+//oak_containers/kernel:kernel_version.txt": "//oak_containers/kernel:kernel_version.txt",
-                "@@oak+//oak_containers/kernel/configs/6.12.101:minimal.config": "//oak_containers/kernel/configs/6.12.101:minimal.config"
+                "@@oak+//oak_containers/kernel/configs/6.12.103:minimal.config": "//oak_containers/kernel/configs/6.12.103:minimal.config"
               },
               "nix_file_content": "",
               "repository": "@@oak++nix_kernels+nixpkgs//:nixpkgs",
@@ -1904,7 +1904,7 @@
               "nix_file_deps": {
                 "@@oak+//oak_containers/kernel:kernel-common.nix": "//oak_containers/kernel:kernel-common.nix",
                 "@@oak+//oak_containers/kernel:kernel_version.txt": "//oak_containers/kernel:kernel_version.txt",
-                "@@oak+//oak_containers/kernel/configs/6.12.101:minimal.config": "//oak_containers/kernel/configs/6.12.101:minimal.config",
+                "@@oak+//oak_containers/kernel/configs/6.12.103:minimal.config": "//oak_containers/kernel/configs/6.12.103:minimal.config",
                 "@@oak+//oak_containers/kernel/patches:virtio-dma.patch": "//oak_containers/kernel/patches:virtio-dma.patch",
                 "@@oak+//oak_containers/kernel/patches:tdx-probe-roms.patch": "//oak_containers/kernel/patches:tdx-probe-roms.patch",
                 "@@oak+//oak_containers/kernel/patches:rtmr-enable.patch": "//oak_containers/kernel/patches:rtmr-enable.patch"
