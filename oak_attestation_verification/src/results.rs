@@ -22,7 +22,10 @@ extern crate alloc;
 
 use alloc::{string::ToString, vec::Vec};
 
-use oak_proto_rust::oak::attestation::v1::{AttestationResults, EventAttestationResults};
+use oak_proto_rust::oak::{
+    Validity,
+    attestation::v1::{AttestationResults, EventAttestationResults},
+};
 
 /// Key for the initial measurement of stage0.
 const INITIAL_MEASUREMENT_ID: &str = "initial-measurement";
@@ -95,6 +98,22 @@ pub fn get_user_data_payload(results: &EventAttestationResults) -> Option<&Vec<u
 
 pub fn set_user_data_payload(results: &mut EventAttestationResults, payload: &[u8]) {
     results.artifacts.insert(USER_DATA_PAYLOAD_ID.to_string(), payload.to_vec());
+}
+
+/// Returns the validity window attached to the event attestation results, if
+/// set. The validity window reflects the intersection of the endorsement
+/// windows appraised by the policy that produced this result.
+pub fn get_validity(results: &EventAttestationResults) -> Option<&Validity> {
+    results.valid.as_ref()
+}
+
+/// Sets the validity window on the event attestation results.
+///
+/// Policies that verify endorsements should set this to the intersection of
+/// the endorsement validity windows so that consumers know how long the
+/// result can be relied upon.
+pub fn set_validity(results: &mut EventAttestationResults, valid: Validity) {
+    results.valid = Some(valid);
 }
 
 /// Returns a reference to the event artifact in the attestation results
