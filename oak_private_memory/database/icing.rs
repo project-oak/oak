@@ -583,7 +583,7 @@ impl IcingMetaDatabase {
                     .set_name(VIEW_TYPE_NAME.as_bytes())
                     .set_data_type_string(
                         icing::term_match_type::Code::ExactOnly.into(),
-                        icing::string_indexing_config::tokenizer_type::Code::Plain.into(),
+                        icing::string_indexing_config::tokenizer_type::Code::Verbatim.into(),
                     )
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
@@ -922,11 +922,7 @@ impl IcingMetaDatabase {
         const VIEW_PAGE_SIZE: i32 = 1000;
 
         let search_spec = icing::SearchSpecProto {
-            query: Some(build_property_equals_clause(
-                MEMORY_ID_NAME,
-                &memory_id,
-                Tokenizer::Verbatim,
-            )),
+            query: Some(build_property_equals_clause(MEMORY_ID_NAME, &memory_id)),
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
             schema_type_filters: vec![LLM_VIEW_SCHEMA_NAME.to_string()],
             enabled_features: query_features(),
@@ -1401,7 +1397,7 @@ impl IcingMetaDatabase {
         if !sort.view_type.is_empty() {
             query_string = format!(
                 "{} AND {}",
-                build_property_equals_clause(VIEW_TYPE_NAME, &sort.view_type, Tokenizer::Plain),
+                build_property_equals_clause(VIEW_TYPE_NAME, &sort.view_type),
                 query_string
             );
         }
@@ -1421,9 +1417,7 @@ impl IcingMetaDatabase {
                         embedding.model_signature.as_str(),
                         &embedding.values,
                     )],
-                    enabled_features: vec![
-                icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
-            ],
+                    enabled_features: query_features(),
                     ..Default::default()
                 })),
                 scoring_spec: Some(icing::ScoringSpecProto {
@@ -1550,15 +1544,9 @@ impl IcingMetaDatabase {
             }
         };
         match value {
-            Value::IdFilter(f) => {
-                self.build_string_filter_spec(MEMORY_ID_NAME, &f.value, Tokenizer::Verbatim)
-            }
-            Value::NameFilter(f) => {
-                self.build_string_filter_spec(NAME_NAME, &f.value, Tokenizer::Verbatim)
-            }
-            Value::TagsFilter(f) => {
-                self.build_string_filter_spec(TAG_NAME, &f.value, Tokenizer::Verbatim)
-            }
+            Value::IdFilter(f) => self.build_string_filter_spec(MEMORY_ID_NAME, &f.value),
+            Value::NameFilter(f) => self.build_string_filter_spec(NAME_NAME, &f.value),
+            Value::TagsFilter(f) => self.build_string_filter_spec(TAG_NAME, &f.value),
             Value::CreatedTimestampFilter(f) => {
                 self.build_time_filter_spec(CREATED_TIMESTAMP_NAME, f)
             }
@@ -1647,15 +1635,14 @@ impl IcingMetaDatabase {
     /// Build an Icing `SearchSpecProto` for an exact-match string property
     /// filter.
     ///
-    /// `tokenizer` must match how `field_name` is indexed; see
+    /// `field_name` must be indexed `Verbatim`; see
     /// [`build_property_equals_clause`].
     fn build_string_filter_spec(
         &self,
         field_name: &str,
         value: &str,
-        tokenizer: Tokenizer,
     ) -> anyhow::Result<icing::SearchSpecProto> {
-        let query_string = build_property_equals_clause(field_name, value, tokenizer);
+        let query_string = build_property_equals_clause(field_name, value);
         let search_spec = icing::SearchSpecProto {
             query: Some(query_string),
             enabled_features: query_features(),
@@ -1683,7 +1670,7 @@ impl IcingMetaDatabase {
         if !view_type.is_empty() {
             query_string = format!(
                 "{} AND {}",
-                build_property_equals_clause(VIEW_TYPE_NAME, view_type, Tokenizer::Plain),
+                build_property_equals_clause(VIEW_TYPE_NAME, view_type),
                 query_string
             );
         }
@@ -1698,7 +1685,7 @@ impl IcingMetaDatabase {
                 &embedding.values,
             )],
             query: Some(query_string),
-            enabled_features: vec![icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string()],
+            enabled_features: query_features(),
             schema_type_filters: vec![LLM_VIEW_SCHEMA_NAME.to_string()],
             ..Default::default()
         };
@@ -1993,29 +1980,6 @@ fn ensure_query_within_limit(spec: &icing::SearchSpecProto) -> anyhow::Result<()
     check(nested.and_then(|nested| nested.query.as_ref()))
 }
 
-/// How an indexed string property is tokenized by Icing.
-///
-/// This mirrors the `tokenizer_type` passed to `set_data_type_string` in
-/// [`IcingMetaDatabase::create_schema`] and **must** be kept in sync with it:
-/// the tokenizer decides how a query over the property has to be written, and
-/// a query that disagrees with the schema fails *silently*, returning "not
-/// found" rather than an error.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Tokenizer {
-    /// Indexed as-is, skipping the normalizer entirely (`name`, `tag`).
-    ///
-    /// Query values must be quoted, and the search must enable
-    /// `VERBATIM_SEARCH`, so that the query term is left equally untouched.
-    Verbatim,
-    /// Indexed through the plain-text normalizer, which lower-cases the value,
-    /// splits it on separators and truncates it to `max_token_length`
-    /// (`memoryId`, `viewId`, `viewType`).
-    ///
-    /// Query values must be left unquoted so that the query side is normalized
-    /// identically to the index side.
-    Plain,
-}
-
 /// Escapes a value for use inside a quoted Icing query string.
 ///
 /// Inside a string literal Icing's lexer treats `\` as an escape character:
@@ -2035,35 +1999,29 @@ fn escape_query_value(value: &str) -> String {
 
 /// Builds an exact-equality clause for an indexed string property.
 ///
-/// `tokenizer` must match how `property_name` is indexed in
-/// [`IcingMetaDatabase::create_schema`]. Getting it wrong does not raise an
-/// error, it just stops matching: a `Verbatim` property queried unquoted has
-/// its query term lower-cased, split on separators and truncated to 30 bytes,
-/// so it can never equal the untouched index term. That is what broke
-/// `GetMemoryByName` for the 31-byte name `auris.explicit_deletion_tracker` in
-/// <https://b/543257785>.
+/// Every indexed string property is tokenized `Verbatim` — indexed as-is,
+/// skipping Icing's normalizer — so the query value is always quoted and
+/// escaped, which leaves it inert: it cannot terminate its string literal and
+/// be parsed as query syntax.
 ///
-/// Searches containing a [`Tokenizer::Verbatim`] clause must also list
-/// `VERBATIM_SEARCH` in their `enabled_features`; use [`query_features`].
-fn build_property_equals_clause(
-    property_name: &str,
-    property_val: &str,
-    tokenizer: Tokenizer,
-) -> String {
-    match tokenizer {
-        Tokenizer::Verbatim => {
-            format!("({}:\"{}\")", property_name, escape_query_value(property_val))
-        }
-        Tokenizer::Plain => format!("({}:{})", property_name, property_val),
-    }
+/// This relies on `set_data_type_string` in
+/// [`IcingMetaDatabase::create_schema`] passing `Verbatim` for every property
+/// queried through here. A property indexed some other way does not raise an
+/// error, it just stops matching, because the two sides normalize differently.
+/// That is what broke `GetMemoryByName` for the 31-byte name
+/// `auris.explicit_deletion_tracker` in <https://b/543257785>.
+///
+/// Searches built from these clauses must also list `VERBATIM_SEARCH` in their
+/// `enabled_features`; use [`query_features`].
+fn build_property_equals_clause(property_name: &str, property_val: &str) -> String {
+    format!("({}:\"{}\")", property_name, escape_query_value(property_val))
 }
 
 /// The `enabled_features` required by queries built with
 /// [`build_property_equals_clause`] and [`build_non_expired_clause`].
 ///
-/// `VERBATIM_SEARCH` is always enabled: it only changes how *quoted* terms are
-/// interpreted, so it is a no-op for [`Tokenizer::Plain`] clauses and there is
-/// no benefit to omitting it.
+/// `VERBATIM_SEARCH` is required: it is what stops Icing normalizing the
+/// quoted query term, so that it can match an index term written as-is.
 fn query_features() -> Vec<String> {
     vec![
         "NUMERIC_SEARCH".to_string(),
@@ -3129,6 +3087,56 @@ mod tests {
             "secret OR x",
         ] {
             expect_that!(db.get_memory_by_name(injection)?, eq(&None), "injection: {injection:?}");
+        }
+        Ok(())
+    }
+
+    /// `viewType` is client-supplied (`LLMView.type` in sealed_memory.proto),
+    /// so a crafted value must stay inside its string literal rather than
+    /// becoming query syntax. Quoting is only possible because the property is
+    /// indexed `Verbatim`.
+    #[gtest]
+    fn icing_view_type_filter_does_not_allow_query_injection_test() -> anyhow::Result<()> {
+        let db = IcingMetaDatabase::new(test_config())?;
+        let spec = db.build_embedding_filter_spec(&EmbeddingFilter {
+            embedding: Some(Embedding {
+                model_signature: "test_model".to_string(),
+                values: vec![1.0, 0.0],
+            }),
+            view_type: r#"x") OR viewType:("y"#.to_string(),
+            ..Default::default()
+        })?;
+
+        let query = spec.query.context("embedding filter produced no query")?;
+        expect_that!(query, contains_substring(r#"(viewType:"x\") OR viewType:(\"y")"#));
+        // Quoted terms only match a Verbatim index term when this is enabled.
+        expect_that!(spec.enabled_features, contains(eq("VERBATIM_SEARCH")));
+        Ok(())
+    }
+
+    /// Under the `Plain` tokenizer these three view types collapsed onto
+    /// overlapping index terms -- lower-cased and split on `.` -- so a filter
+    /// for one matched the others. `Verbatim` makes the match exact.
+    #[gtest]
+    fn icing_view_type_filter_matches_exactly_test() -> anyhow::Result<()> {
+        let db = IcingMetaDatabase::new(test_config())?;
+        for view_type in ["summary", "Summary", "chat.summary"] {
+            let query = db
+                .build_embedding_filter_spec(&EmbeddingFilter {
+                    embedding: Some(Embedding {
+                        model_signature: "test_model".to_string(),
+                        values: vec![1.0, 0.0],
+                    }),
+                    view_type: view_type.to_string(),
+                    ..Default::default()
+                })?
+                .query
+                .context("embedding filter produced no query")?;
+            expect_that!(
+                query,
+                contains_substring(format!(r#"(viewType:"{view_type}")"#).as_str()),
+                "view_type: {view_type:?}"
+            );
         }
         Ok(())
     }

@@ -51,13 +51,9 @@ Incompatible changes (renaming/removing fields, changing data types) cause
 
 ## Invariant: a query must match its property's tokenizer
 
-Indexed string properties do not all use the same tokenizer, and a query has to
-be written to match the one its property uses:
-
-| Property                            | Tokenizer  | Query form             |
-| ----------------------------------- | ---------- | ---------------------- |
-| `name`, `tag`, `memoryId`, `viewId` | `Verbatim` | quoted: `name:"foo"`   |
-| `viewType`                          | `Plain`    | unquoted: `viewType:x` |
+Every indexed string property — `name`, `tag`, `memoryId`, `viewId`, `viewType`
+— uses the `Verbatim` tokenizer, so every query over one is written the same
+way: quoted, as `name:"foo"`, with `VERBATIM_SEARCH` enabled.
 
 `Verbatim` terms are indexed **as-is**, skipping Icing's normalizer. `Plain`
 terms are put through it, which lower-cases them, splits them on separators and
@@ -76,27 +72,31 @@ returns "not found" rather than an error:
 - A `Plain` property queried quoted has the inverse problem.
 
 Do not hand-roll a property-equality query string. Use
-`build_property_equals_clause()`, passing the `Tokenizer` that matches
-`create_schema()`, and take `enabled_features` from `query_features()`.
+`build_property_equals_clause()` and take `enabled_features` from
+`query_features()`.
 
-### Why ids are `Verbatim`
+### Why every indexed string property is `Verbatim`
 
-`memoryId` and `viewId` are opaque strings chosen by the client — the server
-only generates one when the field is left empty. Normalizing them is not just
-unnecessary but actively wrong: two ids differing only in case, or only past
-`max_token_length`, collapse to the same index term, and a lookup for one
-resolves to the **other** memory's blob. Indexing them raw makes them exact byte
-strings, with no length ceiling and no case folding.
+All of them hold client-supplied values: ids and names are chosen by the caller
+(the server only generates an id when the field is left empty), and `viewType`
+is documented as client-provided in `LLMView.type`. Normalizing such a value is
+not just unnecessary but actively wrong — two values differing only in case, or
+only past a separator or `max_token_length`, collapse to the same index term, so
+a lookup for one resolves to the **other** record.
 
-`viewType` stays `Plain` because it is a closed set of server-defined lower-case
-identifiers, not client input.
+`Verbatim` also makes the values safe to query. A quoted term can be escaped, so
+a client-supplied value stays inside its string literal; an unquoted one cannot
+be escaped at all and is parsed as query syntax.
+
+Adding a `Plain` property would reintroduce both problems, and would need its
+own validation, since `build_property_equals_clause()` always quotes.
 
 ### `max_token_length`
 
 `MAX_TOKEN_LENGTH` in [`src/icing/lib.rs`](../src/icing/lib.rs) raises the
 normalizer's term limit from Icing's 30-byte default. It only affects `Plain`
-properties, so since ids became `Verbatim` the only property it still covers is
-`viewType`. It is kept as a safety margin for any future `Plain` property.
+properties, of which there are now none. It is kept as a safety margin for any
+future `Plain` property.
 
 Note that changing this value does not re-index existing data — it is an
 `IcingSearchEngineOptions` field, not part of the schema — so terms written
