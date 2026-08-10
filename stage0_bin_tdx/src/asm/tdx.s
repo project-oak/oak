@@ -73,8 +73,12 @@ _tdx_64bit_start:
     jnz _park_ap_64bit
 
     # BSP re-creates a set of page table in ram_low
-    # Clear BSS: base address goes to EDI, value (0) goes to EAX,
-    # count goes into ECX. Page tables will be located in BSS
+    # Clear boot data and BSS
+    movl $boot_data_start, %edi
+    movl $boot_data_size,  %ecx
+    xorl %eax, %eax
+    rep stosb
+
     movl $bss_start, %edi
     movl $bss_size,  %ecx
     xorl %eax, %eax

@@ -109,6 +109,12 @@ _protected_mode_start:
     jl 1b                     # if no, go back
     2:
 
+    # Clear boot data: base address goes to EDI, value (0) goes to EAX, count goes into ECX.
+    mov $boot_data_start, %edi
+    mov $boot_data_size, %ecx
+    xor %eax, %eax
+    rep stosb
+
     # Clear BSS: base address goes to EDI, value (0) goes to EAX, count goes into ECX.
     mov $bss_start, %edi
     mov $bss_size, %ecx

@@ -82,6 +82,7 @@ type Measurement = [u8; 32];
 
 // Reserve 128K for boot data structures that will outlive Stage 0.
 pub type BootAllocator = allocator::BumpAllocator<0x20000>;
+#[unsafe(link_section = ".boot_data")]
 pub static BOOT_ALLOC: BootAllocator = BootAllocator::uninit();
 
 // Heap for short-term allocations. These allocations are not expected to

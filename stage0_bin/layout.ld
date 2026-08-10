@@ -69,6 +69,7 @@ PHDRS
     ap_text PT_LOAD;
     ap_bss PT_LOAD;
     snp_hash_table PT_LOAD;
+    boot_data PT_LOAD;
     bss PT_LOAD;
     data PT_LOAD;
     stack PT_LOAD;
@@ -127,6 +128,12 @@ SECTIONS {
        *(.snp_hash_table)
        . += 0x400; /* 1k */
     } > ram_low : snp_hash_table
+
+    .boot_data (NOLOAD) : ALIGN(4K) {
+        boot_data_start = .;
+        *(.boot_data .boot_data.*)
+    } > ram_low : boot_data
+    boot_data_size = SIZEOF(.boot_data);
 
     .bss (NOLOAD) : {
         bss_start = .;

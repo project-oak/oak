@@ -23,6 +23,12 @@ use x86_64::{PhysAddr, VirtAddr};
 use crate::{Measured, fw_cfg::FwCfg};
 
 unsafe extern "C" {
+    #[link_name = "bss_size"]
+    static BSS_SIZE: c_void;
+
+    #[link_name = "bss_start"]
+    static BSS_START_POINTER: c_void;
+
     #[link_name = "stack_end"]
     unsafe static STACK_END_POINTER: c_void;
 
@@ -154,6 +160,10 @@ impl Kernel {
                 "mov %r13, %rcx", // start of stack
                 "sub %r12, %rcx", // size = start - end
                 "rep stosb",
+                // Zero the BSS
+                "mov %r14, %rdi", // start of BSS
+                "mov %r15, %rcx", // size of BSS
+                "rep stosb",
                 // Reset the stack pointer.
                 "mov %r13, %rsp",
                 // Zero page address.
@@ -168,6 +178,8 @@ impl Kernel {
                 in("r11") crate::allocator::HEAP_END.as_u64(),
                 in("r12") &STACK_END_POINTER as *const _ as u64,
                 in("r13") &BOOT_STACK_POINTER as *const _ as u64,
+                in("r14") &BSS_START_POINTER as *const _ as u64,
+                in("r15") &BSS_SIZE as *const _ as u64,
                 options(noreturn, att_syntax)
             );
         }

@@ -64,6 +64,7 @@ HIDDEN(DESCRIPTOR_PRESENT = 1 << 47);
 PHDRS
 {
     bda PT_LOAD;
+    boot_data PT_LOAD;
     bss PT_LOAD;
     data PT_LOAD;
     stack PT_LOAD;
@@ -95,7 +96,13 @@ SECTIONS {
     } > ram_low : bda
     ASSERT(. <= 0x500, "BDA overflow")
 
-    .bss 0x1000 (NOLOAD) : {
+    .boot_data 0x1000 (NOLOAD) : ALIGN(4K) {
+        boot_data_start = .;
+        *(.boot_data .boot_data.*)
+    } > ram_low : boot_data
+    boot_data_size = SIZEOF(.boot_data);
+
+    .bss (NOLOAD) : {
         bss_start = .;
         /* Include large section (.lbss) to support large code model.
          * See <https://lld.llvm.org/ELF/large_sections.html>.

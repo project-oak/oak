@@ -43,12 +43,16 @@ unsafe extern "C" {
 
 /// The root page-map level 4 table coverting virtual memory ranges 0..128TiB
 /// and (16EiB-128TiB)..16EiB.
+#[unsafe(link_section = ".boot_data")]
 pub static mut PML4: PageTable<page_table_level::PML4> = PageTable::new();
 /// The page-directory pointer table covering virtual memory range 0..512GiB.
+#[unsafe(link_section = ".boot_data")]
 pub static mut PDPT: PageTable<page_table_level::PDPT> = PageTable::new();
 /// The page directory covering virtual memory range 0..1GiB.
+#[unsafe(link_section = ".boot_data")]
 pub static mut PD_0: PageTable<page_table_level::PD> = PageTable::new();
 /// The page directory covering virtual memory range 3..4GiB.
+#[unsafe(link_section = ".boot_data")]
 pub static mut PD_3: PageTable<page_table_level::PD> = PageTable::new();
 
 /// Wrapper for the page table references so that we can access them via a mutex
