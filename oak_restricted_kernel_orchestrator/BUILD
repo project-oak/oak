@@ -40,5 +40,31 @@ rust_library(
         "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:zeroize",
+    ],
+)
+
+rust_library(
+    name = "oak_restricted_kernel_orchestrator_fixed_key",
+    testonly = True,
+    srcs = [
+        "src/lib.rs",
+    ],
+    crate_features = ["exchange_evidence"],
+    crate_name = "oak_restricted_kernel_orchestrator",
+    target_compatible_with = [
+        "//:x86_64-none-setting",
+    ],
+    deps = [
+        "//oak_attestation",
+        "//oak_channel",
+        "//oak_dice",
+        "//oak_proto_rust",
+        "//oak_restricted_kernel_dice:oak_restricted_kernel_dice_fixed_key",
+        "//oak_restricted_kernel_interface",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:zeroize",
     ],
 )

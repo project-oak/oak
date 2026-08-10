@@ -19,7 +19,7 @@
 
 use std::{
     io::{BufRead, BufReader, Write},
-    os::unix::net::UnixStream,
+    os::{fd::AsRawFd, unix::net::UnixStream},
     path::PathBuf,
     process::{Command, Stdio},
     sync::{
@@ -31,6 +31,7 @@ use std::{
 };
 
 use anyhow::Context;
+use command_fds::CommandFdExt;
 use sha2::{Digest, Sha256};
 
 use crate::core::Core;
@@ -67,12 +68,32 @@ impl QemuDump {
     }
 }
 
+/// Helper wrapper to implement oak_channel::Channel for UnixStream.
+struct SocketChannel(UnixStream);
+
+impl oak_channel::Write for SocketChannel {
+    fn write_all(&mut self, data: &[u8]) -> anyhow::Result<()> {
+        std::io::Write::write_all(&mut self.0, data).map_err(anyhow::Error::msg)
+    }
+
+    fn flush(&mut self) -> anyhow::Result<()> {
+        std::io::Write::flush(&mut self.0).map_err(anyhow::Error::msg)
+    }
+}
+
+impl oak_channel::Read for SocketChannel {
+    fn read_exact(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
+        std::io::Read::read_exact(&mut self.0, data).map_err(anyhow::Error::msg)
+    }
+}
+
 /// Builder for configuring and executing a QEMU instance for memory-dump
 /// testing.
 pub struct QemuBuilder {
     kernel: PathBuf,
     bios: Option<PathBuf>,
     initrd: Option<PathBuf>,
+    app_binary: Option<PathBuf>,
     machine: String,
     memory: Option<String>,
     extra_args: Vec<String>,
@@ -86,6 +107,7 @@ impl QemuBuilder {
             kernel: kernel.into(),
             bios: None,
             initrd: None,
+            app_binary: None,
             machine: "microvm".to_string(),
             memory: None,
             extra_args: Vec::new(),
@@ -99,9 +121,16 @@ impl QemuBuilder {
         self
     }
 
-    /// Sets the initrd / ramdisk image (e.g. test application).
+    /// Sets the initrd / ramdisk image (e.g. orchestrator or test application).
     pub fn initrd(mut self, initrd: impl Into<PathBuf>) -> Self {
         self.initrd = Some(initrd.into());
+        self
+    }
+
+    /// Sets the application binary to be passed to the orchestrator via the
+    /// communication channel.
+    pub fn app_binary(mut self, app_binary: impl Into<PathBuf>) -> Self {
+        self.app_binary = Some(app_binary.into());
         self
     }
 
@@ -182,11 +211,44 @@ impl QemuBuilder {
         }
         cmd.args(&self.extra_args);
 
+        let comm_channel = if self.app_binary.is_some() {
+            let (guest_socket, host_socket) = UnixStream::pair()?;
+            let guest_socket_fd = guest_socket.as_raw_fd();
+            cmd.preserved_fds(vec![guest_socket.into()]);
+            cmd.args(["-chardev", format!("socket,id=commsock,fd={guest_socket_fd}").as_str()]);
+            cmd.args(["-global", "virtio-mmio.force-legacy=false"]);
+            cmd.args(["-device", "virtio-serial-device,max_ports=1"]);
+            cmd.args(["-device", "virtconsole,chardev=commsock"]);
+            Some(host_socket)
+        } else {
+            None
+        };
+
         cmd.stdin(Stdio::null());
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::inherit());
 
         let mut child = cmd.spawn().map_err(|e| anyhow::anyhow!("spawning qemu: {e}"))?;
+
+        if let Some(ref app_path) = self.app_binary {
+            let host_socket = comm_channel.unwrap();
+            host_socket.set_read_timeout(Some(Duration::from_secs(30)))?;
+            let app_bytes = std::fs::read(app_path)
+                .with_context(|| format!("failed to read app binary {}", app_path.display()))?;
+            let initial_data = oak_proto_rust::oak::restricted_kernel::InitialData {
+                application_bytes: app_bytes,
+                endorsement_bytes: Vec::new(),
+            };
+            let mut initial_data_bytes =
+                oak_restricted_kernel_interface::initial_data::INITIAL_DATA_V1_HEADER.to_vec();
+            prost::Message::encode(&initial_data, &mut initial_data_bytes)
+                .context("failed to encode initial data")?;
+            let mut channel = SocketChannel(host_socket);
+            oak_channel::basic_framed::send_raw(&mut channel, &initial_data_bytes)
+                .context("failed to send initial data to guest")?;
+            let _evidence = oak_channel::basic_framed::receive_raw(&mut channel)
+                .context("failed to receive attestation evidence from orchestrator")?;
+        }
 
         let stdout = child.stdout.take().context("qemu stdout should be piped")?;
         let (tx, rx) = mpsc::channel();

@@ -41,3 +41,26 @@ rust_library(
         "@oak_crates_index//:zeroize",
     ],
 )
+
+rust_library(
+    name = "oak_restricted_kernel_dice_fixed_key",
+    testonly = True,
+    srcs = glob(["src/**"]),
+    crate_features = ["fixed_application_keys"],
+    crate_name = "oak_restricted_kernel_dice",
+    target_compatible_with = any_platform([
+        "//:x86_64-linux-setting",  # Needed to run unit tests.
+        "//:x86_64-none-no_avx-setting",
+        "//:x86_64-none-setting",
+    ]),
+    deps = [
+        "//oak_crypto",
+        "//oak_dice",
+        "@oak_crates_index//:coset",
+        "@oak_crates_index//:hkdf",
+        "@oak_crates_index//:p256",
+        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:zerocopy",
+        "@oak_crates_index//:zeroize",
+    ],
+)

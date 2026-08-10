@@ -18,6 +18,7 @@ use alloc::boxed::Box;
 
 use oak_restricted_kernel_dice::DerivedKey;
 use oak_restricted_kernel_interface::{DERIVED_KEY_FD, Errno};
+use zeroize::Zeroize;
 
 use super::fd::{FileDescriptor, copy_max_slice};
 
@@ -45,6 +46,12 @@ impl FileDescriptor for DerivedKeyDescriptor {
             DerivedKeyDescriptor::Readable(read_state) => {
                 let data_as_slice = read_state.data.as_mut_slice();
                 let length = copy_max_slice(&data_as_slice[read_state.index..], buf);
+
+                // Destroy the data that was read, to ensure that it can only be read once.
+                let slice_to_read =
+                    &mut data_as_slice[read_state.index..(read_state.index + length)];
+                slice_to_read.zeroize();
+
                 read_state.index += length;
                 Ok(length as isize)
             }

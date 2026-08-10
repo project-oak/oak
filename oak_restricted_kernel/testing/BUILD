@@ -42,6 +42,25 @@ rust_binary(
     ],
 )
 
+rust_binary(
+    name = "enclave_app",
+    srcs = [
+        "enclave_app.rs",
+    ],
+    platform = "//:x86_64-unknown-none",
+    rustc_flags = [
+        "--codegen=link-arg=-Wl,-zmax-page-size=0x200000",
+    ],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    deps = [
+        "//oak_dice",
+        "//oak_restricted_kernel_interface",
+        "//oak_restricted_kernel_sdk",
+        "@oak_crates_index//:zerocopy",
+        "@oak_crates_index//:zeroize",
+    ],
+)
+
 rust_test(
     name = "key_handling_test",
     srcs = [
@@ -59,5 +78,28 @@ rust_test(
         "//oak_test_utils",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:googletest",
+    ],
+)
+
+rust_test(
+    name = "orchestrator_key_handling_test",
+    srcs = [
+        "orchestrator_key_handling_test.rs",
+    ],
+    args = ["--test-threads=1"],
+    data = [
+        ":enclave_app",
+        "//enclave_apps/oak_orchestrator:insecure_oak_orchestrator_fixed_key",
+        "//oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin",
+        "//stage0_bin",
+    ],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    deps = [
+        "//oak_crypto",
+        "//oak_file_utils",
+        "//oak_test_utils",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:googletest",
+        "@oak_crates_index//:sha2",
     ],
 )

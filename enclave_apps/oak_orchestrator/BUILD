@@ -39,3 +39,23 @@ rust_binary(
         "@oak_crates_index//:zeroize",
     ],
 )
+
+rust_binary(
+    name = "insecure_oak_orchestrator_fixed_key",
+    testonly = True,
+    srcs = ["src/main.rs"],
+    platform = "//:x86_64-unknown-none",
+    rustc_flags = [
+        "--codegen=link-arg=-Wl,-zmax-page-size=0x200000",
+    ],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    deps = [
+        "//oak_dice",
+        "//oak_restricted_kernel_interface",
+        "//oak_restricted_kernel_orchestrator:oak_restricted_kernel_orchestrator_fixed_key",
+        "//oak_restricted_kernel_sdk",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:zerocopy",
+        "@oak_crates_index//:zeroize",
+    ],
+)

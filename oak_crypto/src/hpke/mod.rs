@@ -42,6 +42,10 @@ pub(crate) fn generate_kem_key_pair() -> (PrivateKey, PublicKey) {
     Kem::gen_keypair(&mut OsRng)
 }
 
+pub(crate) fn derive_kem_key_pair(seed: &[u8]) -> (PrivateKey, PublicKey) {
+    Kem::derive_keypair(seed)
+}
+
 /// Sets up an HPKE sender by generating an ephemeral keypair (and serializing
 /// the corresponding public key) and creating a sender context.
 /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>

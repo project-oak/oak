@@ -26,8 +26,8 @@ extern crate alloc;
 use alloc::{boxed::Box, vec};
 
 use coset::{CborSerializable, cbor::Value, cwt::ClaimName};
+#[cfg(not(feature = "fixed_application_keys"))]
 use hkdf::Hkdf;
-use oak_crypto::encryption_key::generate_encryption_key_pair;
 use oak_dice::cert::SHA2_256_ID;
 use sha2::{Digest, Sha256};
 use zerocopy::IntoBytes;
@@ -43,6 +43,7 @@ pub fn measure_digest_sha2_256(app_bytes: &[u8]) -> DigestSha2_256 {
     Sha256::digest(app_bytes).into()
 }
 
+#[cfg(not(feature = "fixed_application_keys"))]
 pub fn generate_derived_key(
     stage0_dice_data: &oak_dice::evidence::Stage0DiceData,
     app_digest: &DigestSha2_256,
@@ -52,6 +53,61 @@ pub fn generate_derived_key(
     let mut derived_key = DerivedKey::default();
     hkdf.expand(b"CDI_Seal", &mut derived_key).expect("invalid length for derived key");
     derived_key
+}
+
+/// Derives the fixed, predictable derived sealing key for testing.
+#[cfg(feature = "fixed_application_keys")]
+pub fn generate_derived_key(
+    _stage0_dice_data: &oak_dice::evidence::Stage0DiceData,
+    _app_digest: &DigestSha2_256,
+) -> DerivedKey {
+    const ORCHESTRATOR_APPLICATION_DERIVED_KEY_SEED: &[u8] =
+        b"oak orchestrator application derived fixed test key seed v1";
+    let mut hasher = Sha256::new();
+    hasher.update(ORCHESTRATOR_APPLICATION_DERIVED_KEY_SEED);
+    let mut derived_key = DerivedKey::default();
+    hasher.finalize_into((&mut derived_key).into());
+    derived_key
+}
+
+#[cfg(not(feature = "fixed_application_keys"))]
+fn generate_signing_key_pair() -> (p256::ecdsa::SigningKey, p256::ecdsa::VerifyingKey) {
+    oak_dice::cert::generate_ecdsa_key_pair()
+}
+
+/// Derives the fixed, predictable P-256 ECDSA signing key pair for testing.
+#[cfg(feature = "fixed_application_keys")]
+fn generate_signing_key_pair() -> (p256::ecdsa::SigningKey, p256::ecdsa::VerifyingKey) {
+    const ORCHESTRATOR_APPLICATION_SIGNING_KEY_SEED: &[u8] =
+        b"oak orchestrator application signing fixed test key seed v1";
+    let mut hasher = Sha256::new();
+    hasher.update(ORCHESTRATOR_APPLICATION_SIGNING_KEY_SEED);
+    let mut bytes = [0u8; 32];
+    hasher.finalize_into((&mut bytes).into());
+    let key_pair = oak_dice::cert::ecdsa_key_pair_from_bytes(bytes);
+    bytes.zeroize();
+    key_pair
+}
+
+#[cfg(not(feature = "fixed_application_keys"))]
+fn generate_encryption_key_pair() -> (oak_crypto::encryption_key::EncryptionKey, alloc::vec::Vec<u8>)
+{
+    oak_crypto::encryption_key::generate_encryption_key_pair()
+}
+
+/// Derives the fixed, predictable X25519 encryption key pair for testing.
+#[cfg(feature = "fixed_application_keys")]
+fn generate_encryption_key_pair() -> (oak_crypto::encryption_key::EncryptionKey, alloc::vec::Vec<u8>)
+{
+    const ORCHESTRATOR_APPLICATION_ENCRYPTION_KEY_SEED: &[u8] =
+        b"oak orchestrator application encryption fixed test key seed v1";
+    let mut hasher = Sha256::new();
+    hasher.update(ORCHESTRATOR_APPLICATION_ENCRYPTION_KEY_SEED);
+    let mut bytes = [0u8; 32];
+    hasher.finalize_into((&mut bytes).into());
+    let key_pair = oak_crypto::encryption_key::derive_encryption_key_pair(&bytes);
+    bytes.zeroize();
+    key_pair
 }
 
 fn certificate_to_byte_array(cert: coset::CoseSign1) -> [u8; oak_dice::evidence::CERTIFICATE_SIZE] {
@@ -76,6 +132,9 @@ pub fn generate_dice_data(
         )
         .expect("failed to parse the layer1 ECDSA private key bytes");
 
+        stage0_dice_data.layer_1_certificate_authority.zeroize();
+        stage0_dice_data.layer_1_cdi.zeroize();
+
         let kernel_cert_issuer = stage0_dice_data
             .layer_1_evidence
             .claims()
@@ -85,7 +144,7 @@ pub fn generate_dice_data(
             .expect("expected to find the subject");
 
         let (application_private_signing_key, application_public_verifying_key) =
-            oak_dice::cert::generate_ecdsa_key_pair();
+            generate_signing_key_pair();
 
         let additional_claims = vec![(
             ClaimName::PrivateUse(oak_dice::cert::EVENT_ID),

@@ -26,7 +26,7 @@ use crate::{
     encryptor::ClientEncryptor,
     hpke::{
         Deserializable, OAK_HPKE_INFO, PrivateKey, RecipientContext, Serializable,
-        generate_kem_key_pair, setup_base_recipient,
+        derive_kem_key_pair, generate_kem_key_pair, setup_base_recipient,
     },
 };
 
@@ -35,6 +35,12 @@ use crate::{
 /// <https://secg.org/sec1-v2.pdf>
 pub fn generate_encryption_key_pair() -> (EncryptionKey, Vec<u8>) {
     let (private_key, public_key) = generate_kem_key_pair();
+    (EncryptionKey::new(private_key), public_key.to_bytes().to_vec())
+}
+
+/// Derives a deterministic encryption key pair from a seed.
+pub fn derive_encryption_key_pair(seed: &[u8]) -> (EncryptionKey, Vec<u8>) {
+    let (private_key, public_key) = derive_kem_key_pair(seed);
     (EncryptionKey::new(private_key), public_key.to_bytes().to_vec())
 }
 
