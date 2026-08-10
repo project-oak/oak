@@ -339,6 +339,22 @@ impl SealedMemorySessionHandler {
         self.validate_memory_source(memory)?;
         self.validate_expiration_timestamp(memory.expiration_timestamp.as_ref())?;
 
+        if !memory.id.is_empty() {
+            let existing_memory =
+                database.get_memory_by_id(memory.id.clone(), &None).await.map_err(|e| {
+                    tonic::Status::internal(format!(
+                        "failed to check for existing memory by id: {}",
+                        e
+                    ))
+                })?;
+            if existing_memory.is_none() {
+                return Err(tonic::Status::not_found(format!(
+                    "memory id {} was not found. Memory id may only be set for update operations, not for new memories",
+                    memory.id
+                )));
+            }
+        }
+
         if !memory.name.is_empty() {
             let existing_memory =
                 database.get_memory_by_name(&memory.name, &None).await.map_err(|e| {

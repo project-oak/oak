@@ -51,9 +51,8 @@ async fn test_client() {
             ..Default::default()
         }],
     };
-    let memory_id = "test_memory_id";
     let memory_to_add = Memory {
-        id: memory_id.to_string(),
+        id: "".to_string(),
         tags: vec!["test_tag".to_string()],
         views: Some(llm_view),
         expiration_timestamp: Some(system_time_to_timestamp(
@@ -63,9 +62,9 @@ async fn test_client() {
     };
 
     let response = client.add_memory(memory_to_add).await.unwrap();
-    assert_eq!(response.id, memory_id);
+    let memory_id = response.id;
 
-    let response = client.get_memory_by_id(memory_id, None).await.unwrap();
+    let response = client.get_memory_by_id(&memory_id, None).await.unwrap();
     assert!(response.success);
     assert_eq!(response.memory.unwrap().id, memory_id);
 }
@@ -89,9 +88,8 @@ async fn test_client_with_dummy_attestation() {
     .await
     .unwrap();
 
-    let memory_id = "unattested_test_memory";
     let memory_to_add = Memory {
-        id: memory_id.to_string(),
+        id: "".to_string(),
         tags: vec!["test_tag".to_string()],
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(3600),
@@ -100,9 +98,9 @@ async fn test_client_with_dummy_attestation() {
     };
 
     let response = client.add_memory(memory_to_add).await.unwrap();
-    assert_eq!(response.id, memory_id);
+    let memory_id = response.id;
 
-    let response = client.get_memory_by_id(memory_id, None).await.unwrap();
+    let response = client.get_memory_by_id(&memory_id, None).await.unwrap();
     assert!(response.success);
     assert_eq!(response.memory.unwrap().id, memory_id);
 }
@@ -149,11 +147,9 @@ async fn test_client_pagination() {
 
     let tag = "pagination_tag";
     let mut expected_ids = HashSet::new();
-    for i in 0..50 {
-        let memory_id = format!("memory_{}", i);
-        expected_ids.insert(memory_id.clone());
+    for _ in 0..50 {
         let memory_to_add = Memory {
-            id: memory_id,
+            id: "".to_string(),
             tags: vec![tag.to_string()],
             views: Some(LlmViews {
                 llm_views: vec![LlmView {
@@ -169,7 +165,8 @@ async fn test_client_pagination() {
             )),
             ..Default::default()
         };
-        client.add_memory(memory_to_add).await.unwrap();
+        let response = client.add_memory(memory_to_add).await.unwrap();
+        expected_ids.insert(response.id);
     }
 
     // Test GetMemories pagination
@@ -215,13 +212,9 @@ async fn test_get_by_id_with_expired_memories() {
     let mut client =
         PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK).await.unwrap();
 
-    let expired_memory_id = "expired_memory_id";
-    let non_expired_memory_id = "non_expired_memory_id";
-    let no_expiration_memory_id = "no_expiration_memory_id";
-
     // Add memory that will expire in 2 seconds
     let expired_memory_to_add = Memory {
-        id: expired_memory_id.to_string(),
+        id: "".to_string(),
         tags: vec!["expired".to_string()],
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(2),
@@ -231,7 +224,7 @@ async fn test_get_by_id_with_expired_memories() {
 
     // Add memory that will expire in 60 seconds
     let non_expired_memory_to_add = Memory {
-        id: non_expired_memory_id.to_string(),
+        id: "".to_string(),
         tags: vec!["non_expired".to_string()],
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(60),
@@ -239,26 +232,26 @@ async fn test_get_by_id_with_expired_memories() {
         ..Default::default()
     };
 
-    client.add_memory(expired_memory_to_add).await.unwrap();
-    client.add_memory(non_expired_memory_to_add).await.unwrap();
+    let expired_memory_id = client.add_memory(expired_memory_to_add).await.unwrap().id;
+    let non_expired_memory_id = client.add_memory(non_expired_memory_to_add).await.unwrap().id;
 
     // Sleep 3 seconds in real time to let `expired_memory` actually expire
     tokio::time::sleep(Duration::from_secs(3)).await;
 
     // Try to retrieve the expired memory: should not be found
-    let get_response_expired = client.get_memory_by_id(expired_memory_id, None).await.unwrap();
+    let get_response_expired = client.get_memory_by_id(&expired_memory_id, None).await.unwrap();
     assert!(!get_response_expired.success);
     assert!(get_response_expired.memory.is_none());
 
     // Try to retrieve the non-expired memory: should be found
     let get_response_non_expired =
-        client.get_memory_by_id(non_expired_memory_id, None).await.unwrap();
+        client.get_memory_by_id(&non_expired_memory_id, None).await.unwrap();
     assert!(get_response_non_expired.success);
     assert_eq!(get_response_non_expired.memory.unwrap().id, non_expired_memory_id);
 
     // Add a memory with no expiration - should fail and close the stream
     let no_expiration_memory_to_add = Memory {
-        id: no_expiration_memory_id.to_string(),
+        id: "".to_string(),
         tags: vec!["no_expiration".to_string()],
         expiration_timestamp: None,
         ..Default::default()
@@ -278,13 +271,9 @@ async fn test_get_by_tag_with_expired_memories() {
         PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK).await.unwrap();
 
     let tag = "test_expiration_tag";
-    let expired_memory_id = "expired_memory_id";
-    let non_expired_memory_id = "non_expired_memory_id";
-    let no_expiration_memory_id = "no_expiration_memory_id";
-
     // Add memory that will expire in 2 seconds
     let expired_memory_to_add = Memory {
-        id: expired_memory_id.to_string(),
+        id: "".to_string(),
         tags: vec![tag.to_string()],
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(2),
@@ -294,7 +283,7 @@ async fn test_get_by_tag_with_expired_memories() {
 
     // Add memory that will expire in 60 seconds
     let non_expired_memory_to_add = Memory {
-        id: non_expired_memory_id.to_string(),
+        id: "".to_string(),
         tags: vec![tag.to_string()],
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(60),
@@ -302,8 +291,8 @@ async fn test_get_by_tag_with_expired_memories() {
         ..Default::default()
     };
 
-    client.add_memory(expired_memory_to_add).await.unwrap();
-    client.add_memory(non_expired_memory_to_add).await.unwrap();
+    let expired_memory_id = client.add_memory(expired_memory_to_add).await.unwrap().id;
+    let non_expired_memory_id = client.add_memory(non_expired_memory_to_add).await.unwrap().id;
 
     // Sleep 3 seconds in real time to let `expired_memory` actually expire
     tokio::time::sleep(Duration::from_secs(3)).await;
@@ -314,8 +303,8 @@ async fn test_get_by_tag_with_expired_memories() {
     // Check that only non-expired memories are returned
     assert_eq!(response.memories.len(), 1);
     let returned_ids: HashSet<String> = response.memories.into_iter().map(|m| m.id).collect();
-    assert!(returned_ids.contains(non_expired_memory_id));
-    assert!(!returned_ids.contains(expired_memory_id));
+    assert!(returned_ids.contains(&non_expired_memory_id));
+    assert!(!returned_ids.contains(&expired_memory_id));
 
     // Retrieve memories with the empty tag
     let response = client.get_memories("", 10, None, "").await.unwrap();
@@ -323,12 +312,12 @@ async fn test_get_by_tag_with_expired_memories() {
     // Check that only non-expired memories are returned
     assert_eq!(response.memories.len(), 1);
     let returned_ids: HashSet<String> = response.memories.into_iter().map(|m| m.id).collect();
-    assert!(returned_ids.contains(non_expired_memory_id));
-    assert!(!returned_ids.contains(expired_memory_id));
+    assert!(returned_ids.contains(&non_expired_memory_id));
+    assert!(!returned_ids.contains(&expired_memory_id));
 
     // Add a memory with no expiration - should fail and close the stream
     let no_expiration_memory_to_add = Memory {
-        id: no_expiration_memory_id.to_string(),
+        id: "".to_string(),
         tags: vec![tag.to_string()],
         expiration_timestamp: None,
         ..Default::default()
@@ -349,7 +338,7 @@ async fn test_get_memories_by_id() {
 
     // Add three memories
     let memory1 = Memory {
-        id: "memory1".to_string(),
+        id: "".to_string(),
         tags: vec!["tag1".to_string()],
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(3600),
@@ -357,7 +346,7 @@ async fn test_get_memories_by_id() {
         ..Default::default()
     };
     let memory2 = Memory {
-        id: "memory2".to_string(),
+        id: "".to_string(),
         tags: vec!["tag2".to_string()],
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(3600),
@@ -365,7 +354,7 @@ async fn test_get_memories_by_id() {
         ..Default::default()
     };
     let memory3 = Memory {
-        id: "memory3".to_string(),
+        id: "".to_string(),
         tags: vec!["tag3".to_string()],
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(3600),
@@ -373,30 +362,25 @@ async fn test_get_memories_by_id() {
         ..Default::default()
     };
 
-    client.add_memory(memory1).await.unwrap();
-    client.add_memory(memory2).await.unwrap();
-    client.add_memory(memory3).await.unwrap();
+    let id1 = client.add_memory(memory1).await.unwrap().id;
+    let id2 = client.add_memory(memory2).await.unwrap().id;
+    let id3 = client.add_memory(memory3).await.unwrap().id;
 
     // Test fetching multiple memories by ID
-    let response = client
-        .get_memories_by_id(
-            vec!["memory3".to_string(), "memory1".to_string(), "memory2".to_string()],
-            None,
-        )
-        .await
-        .unwrap();
+    let response =
+        client.get_memories_by_id(vec![id3.clone(), id1.clone(), id2.clone()], None).await.unwrap();
 
     assert_eq!(response.memories.len(), 3);
     assert!(response.not_found_ids.is_empty());
     let returned_ids: HashSet<String> = response.memories.iter().map(|m| m.id.clone()).collect();
-    assert!(returned_ids.contains("memory1"));
-    assert!(returned_ids.contains("memory2"));
-    assert!(returned_ids.contains("memory3"));
+    assert!(returned_ids.contains(&id1));
+    assert!(returned_ids.contains(&id2));
+    assert!(returned_ids.contains(&id3));
 
     // Test fetching a single memory by ID
-    let response = client.get_memories_by_id(vec!["memory2".to_string()], None).await.unwrap();
+    let response = client.get_memories_by_id(vec![id2.clone()], None).await.unwrap();
     assert_eq!(response.memories.len(), 1);
-    assert_eq!(response.memories[0].id, "memory2");
+    assert_eq!(response.memories[0].id, id2);
     assert!(response.not_found_ids.is_empty());
 
     // Test fetching with a non-existent ID - should return found ones and report
@@ -404,9 +388,9 @@ async fn test_get_memories_by_id() {
     let response = client
         .get_memories_by_id(
             vec![
-                "memory1".to_string(),
+                id1.clone(),
                 "non_existent_id".to_string(),
-                "memory3".to_string(),
+                id3.clone(),
                 "another_missing".to_string(),
             ],
             None,
@@ -415,8 +399,8 @@ async fn test_get_memories_by_id() {
         .unwrap();
     assert_eq!(response.memories.len(), 2);
     let returned_ids: HashSet<String> = response.memories.iter().map(|m| m.id.clone()).collect();
-    assert!(returned_ids.contains("memory1"));
-    assert!(returned_ids.contains("memory3"));
+    assert!(returned_ids.contains(&id1));
+    assert!(returned_ids.contains(&id3));
     assert_eq!(response.not_found_ids.len(), 2);
     assert!(response.not_found_ids.contains(&"non_existent_id".to_string()));
     assert!(response.not_found_ids.contains(&"another_missing".to_string()));
@@ -594,9 +578,9 @@ fn config_with_memory_source_allowlist(
     config
 }
 
-fn create_memory_with_source(id: &str, source_id: &str) -> Memory {
+fn create_memory_with_source(_id: &str, source_id: &str) -> Memory {
     Memory {
-        id: id.to_string(),
+        id: "".to_string(),
         source: Some(MemorySource { source_id: source_id.to_string() }),
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(3600),
@@ -650,7 +634,7 @@ async fn test_memory_source_allowlist_missing_source() {
             .unwrap();
 
     let memory = Memory {
-        id: "mem_no_source".to_string(),
+        id: "".to_string(),
         source: None,
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(3600),
@@ -702,7 +686,7 @@ async fn test_memory_source_no_allowlist_accepts_any() {
 
     // Memory without a source should also be fine.
     let memory_without = Memory {
-        id: "mem_no_src".to_string(),
+        id: "".to_string(),
         source: None,
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(3600),
@@ -726,10 +710,9 @@ async fn test_invoke_basic() {
     // Add multiple memories through the concurrent dispatch loop.
     let num_memories = 10;
     let mut memory_ids = Vec::new();
-    for i in 0..num_memories {
-        let memory_id = format!("invoke_mem_{i}");
+    for _ in 0..num_memories {
         let memory = Memory {
-            id: memory_id.clone(),
+            id: "".to_string(),
             tags: vec!["invoke_test".to_string()],
             expiration_timestamp: Some(system_time_to_timestamp(
                 SystemTime::now() + Duration::from_secs(3600),
@@ -737,8 +720,7 @@ async fn test_invoke_basic() {
             ..Default::default()
         };
         let response = client.add_memory(memory).await.unwrap();
-        assert_eq!(response.id, memory_id);
-        memory_ids.push(memory_id);
+        memory_ids.push(response.id);
     }
 
     // Read them all back to verify correctness.
@@ -773,42 +755,44 @@ async fn test_invoke_async_pipelining_speedup() {
         PrivateMemoryClient::create_with_invoke(&url, pm_uid, TEST_EK).await.unwrap();
 
     // Seed memories via the sequential Invoke client.
-    for i in 0..num_requests {
+    let mut seq_ids = Vec::new();
+    for _ in 0..num_requests {
         let memory = Memory {
-            id: format!("load_mem_{i}"),
+            id: "".to_string(),
             expiration_timestamp: Some(system_time_to_timestamp(
                 SystemTime::now() + Duration::from_secs(3600),
             )),
             ..Default::default()
         };
-        seq_client.add_memory(memory).await.unwrap();
+        seq_ids.push(seq_client.add_memory(memory).await.unwrap().id);
     }
 
     let seq_start = std::time::Instant::now();
-    for i in 0..num_requests {
-        seq_client.get_memory_by_id(&format!("load_mem_{i}"), None).await.unwrap();
+    for id in &seq_ids {
+        seq_client.get_memory_by_id(id, None).await.unwrap();
     }
     let seq_elapsed = seq_start.elapsed();
 
     // --- Pipelined: InvokeAsync RPC on a single stream ---
     // Seed memories via the async client (so they exist in this session's DB).
     let mut async_client = AsyncPrivateMemoryClient::create(&url, pm_uid, TEST_EK).await.unwrap();
-    for i in 0..num_requests {
+    let mut pipe_ids = Vec::new();
+    for _ in 0..num_requests {
         let memory = Memory {
-            id: format!("load_mem_{i}"),
+            id: "".to_string(),
             expiration_timestamp: Some(system_time_to_timestamp(
                 SystemTime::now() + Duration::from_secs(3600),
             )),
             ..Default::default()
         };
-        async_client.add_memory(memory).await.unwrap();
+        pipe_ids.push(async_client.add_memory(memory).await.unwrap().id);
     }
 
     let pipe_start = std::time::Instant::now();
     // Send all requests without waiting for responses.
-    for i in 0..num_requests {
+    for id in &pipe_ids {
         let request = sealed_memory_request::Request::GetMemoryByIdRequest(GetMemoryByIdRequest {
-            id: format!("load_mem_{i}"),
+            id: id.clone(),
             result_mask: None,
         });
         async_client.send_request(request).await.unwrap();
@@ -837,9 +821,9 @@ async fn test_invoke_async_pipelining_speedup() {
     assert!(speedup > 1.5, "Expected pipelining speedup > 1.5x, got {speedup:.2}x");
 }
 
-fn make_test_memory(id: &str, tag: &str) -> Memory {
+fn make_test_memory(_id: &str, tag: &str) -> Memory {
     Memory {
-        id: id.to_string(),
+        id: "".to_string(),
         tags: vec![tag.to_string()],
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(3600),
@@ -848,9 +832,9 @@ fn make_test_memory(id: &str, tag: &str) -> Memory {
     }
 }
 
-fn make_named_test_memory(id: &str, name: &str, tag: &str) -> Memory {
+fn make_named_test_memory(_id: &str, name: &str, tag: &str) -> Memory {
     Memory {
-        id: id.to_string(),
+        id: "".to_string(),
         name: name.to_string(),
         tags: vec![tag.to_string()],
         expiration_timestamp: Some(system_time_to_timestamp(
@@ -880,7 +864,7 @@ async fn test_add_memories_basic() {
     for (i, result) in response.results.iter().enumerate() {
         match &result.result {
             Some(add_memories_response::add_memory_result::Result::Id(id)) => {
-                assert_eq!(id, &format!("mem_{}", i + 1));
+                assert!(!id.is_empty());
             }
             other => panic!("Expected Id for memory {}, got {:?}", i, other),
         }
@@ -907,9 +891,16 @@ async fn test_add_memories_retrievable() {
     let response = client.add_memories(memories).await.unwrap();
     assert_eq!(response.results.len(), 3);
 
+    let mut added_ids = Vec::new();
+    for result in &response.results {
+        if let Some(add_memories_response::add_memory_result::Result::Id(id)) = &result.result {
+            added_ids.push(id.clone());
+        }
+    }
+
     // Verify each memory is retrievable.
-    for id in ["retrieve_1", "retrieve_2", "retrieve_3"] {
-        let get_response = client.get_memory_by_id(id, None).await.unwrap();
+    for id in added_ids {
+        let get_response = client.get_memory_by_id(&id, None).await.unwrap();
         assert!(get_response.success, "Failed to retrieve memory {}", id);
         assert_eq!(get_response.memory.unwrap().id, id);
     }
@@ -957,13 +948,10 @@ async fn test_add_memories_mixed_valid_invalid() {
     assert_eq!(response.results.len(), 3);
 
     // First should succeed.
-    assert!(
-        matches!(
-            &response.results[0].result,
-            Some(add_memories_response::add_memory_result::Result::Id(_))
-        ),
-        "Expected first memory to succeed"
-    );
+    let id1 = match &response.results[0].result {
+        Some(add_memories_response::add_memory_result::Result::Id(id)) => id.clone(),
+        _ => panic!("Expected first memory to succeed"),
+    };
 
     // Second should fail (name conflict).
     assert!(
@@ -975,18 +963,15 @@ async fn test_add_memories_mixed_valid_invalid() {
     );
 
     // Third should succeed.
-    assert!(
-        matches!(
-            &response.results[2].result,
-            Some(add_memories_response::add_memory_result::Result::Id(_))
-        ),
-        "Expected third memory to succeed"
-    );
+    let id3 = match &response.results[2].result {
+        Some(add_memories_response::add_memory_result::Result::Id(id)) => id.clone(),
+        _ => panic!("Expected third memory to succeed"),
+    };
 
     // Verify the successful ones are retrievable.
-    let get_response = client.get_memory_by_id("batch_ok_1", None).await.unwrap();
+    let get_response = client.get_memory_by_id(&id1, None).await.unwrap();
     assert!(get_response.success);
-    let get_response = client.get_memory_by_id("batch_ok_2", None).await.unwrap();
+    let get_response = client.get_memory_by_id(&id3, None).await.unwrap();
     assert!(get_response.success);
 }
 
@@ -1014,7 +999,7 @@ async fn test_add_memories_with_views() {
 
     let memories = vec![
         Memory {
-            id: "view_mem_1".to_string(),
+            id: "".to_string(),
             tags: vec!["tag_v".to_string()],
             views: Some(llm_views.clone()),
             expiration_timestamp: Some(system_time_to_timestamp(
@@ -1023,7 +1008,7 @@ async fn test_add_memories_with_views() {
             ..Default::default()
         },
         Memory {
-            id: "view_mem_2".to_string(),
+            id: "".to_string(),
             tags: vec!["tag_v".to_string()],
             views: Some(llm_views),
             expiration_timestamp: Some(system_time_to_timestamp(
@@ -1036,16 +1021,18 @@ async fn test_add_memories_with_views() {
     let response = client.add_memories(memories).await.unwrap();
     assert_eq!(response.results.len(), 2);
 
+    let mut added_ids = Vec::new();
     for result in &response.results {
-        assert!(
-            matches!(&result.result, Some(add_memories_response::add_memory_result::Result::Id(_))),
-            "Expected success for memory with views"
-        );
+        if let Some(add_memories_response::add_memory_result::Result::Id(id)) = &result.result {
+            added_ids.push(id.clone());
+        } else {
+            panic!("Expected success for memory with views");
+        }
     }
 
     // Verify retrievable.
-    for id in ["view_mem_1", "view_mem_2"] {
-        let get_response = client.get_memory_by_id(id, None).await.unwrap();
+    for id in added_ids {
+        let get_response = client.get_memory_by_id(&id, None).await.unwrap();
         assert!(get_response.success, "Failed to retrieve {}", id);
     }
 }

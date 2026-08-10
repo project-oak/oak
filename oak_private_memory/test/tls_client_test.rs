@@ -111,9 +111,8 @@ async fn test_tls_session_basic() {
     let mut client =
         PrivateMemoryTlsClient::create(&url, pm_uid, TEST_EK, &client_ctx).await.unwrap();
 
-    let memory_id = "tls_test_memory";
     let memory = Memory {
-        id: memory_id.to_string(),
+        id: "".to_string(),
         tags: vec!["tls_tag".to_string()],
         views: Some(LlmViews {
             llm_views: vec![LlmView {
@@ -131,9 +130,9 @@ async fn test_tls_session_basic() {
     };
 
     let response = client.add_memory(memory).await.unwrap();
-    assert_eq!(response.id, memory_id);
+    let memory_id = response.id;
 
-    let response = client.get_memory_by_id(memory_id, None).await.unwrap();
+    let response = client.get_memory_by_id(&memory_id, None).await.unwrap();
     assert!(response.success);
     assert_eq!(response.memory.unwrap().id, memory_id);
 }
@@ -150,9 +149,8 @@ async fn test_tls_session_delete() {
     let mut client =
         PrivateMemoryTlsClient::create(&url, pm_uid, TEST_EK, &client_ctx).await.unwrap();
 
-    let memory_id = "tls_delete_memory";
     let memory = Memory {
-        id: memory_id.to_string(),
+        id: "".to_string(),
         tags: vec!["tls_delete_tag".to_string()],
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(3600),
@@ -160,14 +158,14 @@ async fn test_tls_session_delete() {
         ..Default::default()
     };
 
-    client.add_memory(memory).await.unwrap();
+    let memory_id = client.add_memory(memory).await.unwrap().id;
 
     // Delete the memory.
-    let delete_response = client.delete_memory(vec![memory_id.to_string()]).await.unwrap();
+    let delete_response = client.delete_memory(vec![memory_id.clone()]).await.unwrap();
     assert!(delete_response.success);
 
     // Verify it's gone.
-    let get_response = client.get_memory_by_id(memory_id, None).await.unwrap();
+    let get_response = client.get_memory_by_id(&memory_id, None).await.unwrap();
     assert!(!get_response.success);
     assert!(get_response.memory.is_none());
 }
@@ -186,20 +184,20 @@ async fn test_tls_session_reset() {
 
     // Add a memory.
     let memory = Memory {
-        id: "tls_reset_memory".to_string(),
+        id: "".to_string(),
         tags: vec!["tls_reset_tag".to_string()],
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(3600),
         )),
         ..Default::default()
     };
-    client.add_memory(memory).await.unwrap();
+    let memory_id = client.add_memory(memory).await.unwrap().id;
 
     // Reset all memories.
     client.reset_memory().await.unwrap();
 
     // Verify it's gone.
-    let get_response = client.get_memory_by_id("tls_reset_memory", None).await.unwrap();
+    let get_response = client.get_memory_by_id(&memory_id, None).await.unwrap();
     assert!(!get_response.success);
 }
 
@@ -218,9 +216,8 @@ async fn test_noise_still_works_with_tls_enabled() {
         .await
         .unwrap();
 
-    let memory_id = "noise_coexist_memory";
     let memory = Memory {
-        id: memory_id.to_string(),
+        id: "".to_string(),
         tags: vec!["noise_tag".to_string()],
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(3600),
@@ -229,8 +226,8 @@ async fn test_noise_still_works_with_tls_enabled() {
     };
 
     let response = client.add_memory(memory).await.unwrap();
-    assert_eq!(response.id, memory_id);
+    let memory_id = response.id;
 
-    let response = client.get_memory_by_id(memory_id, None).await.unwrap();
+    let response = client.get_memory_by_id(&memory_id, None).await.unwrap();
     assert!(response.success);
 }

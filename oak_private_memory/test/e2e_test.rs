@@ -144,9 +144,8 @@ async fn test_concurrent_write_sessions() {
             .await
             .expect("failed to create readback client");
 
-        expect_memory_by_id(&mut client, "memory1").await;
-        expect_memory_by_id(&mut client, "memory2").await;
-        expect_memory_by_id(&mut client, "memory3").await;
+        let response = client.get_memories("tag", 10, None, "").await.unwrap();
+        assert_eq!(response.memories.len(), 3);
     }
     ctx.teardown().await;
 }
@@ -160,7 +159,7 @@ async fn expect_memory_by_id(client: &mut PrivateMemoryClient, id: &str) {
         .unwrap_or_else(|| panic!("{id} was not present"));
 }
 
-fn create_test_memory(id: &str) -> Memory {
+fn create_test_memory(_id: &str) -> Memory {
     let mut contents_map = HashMap::new();
     contents_map.insert(
         "string_data".to_string(),
@@ -170,7 +169,7 @@ fn create_test_memory(id: &str) -> Memory {
         },
     );
     Memory {
-        id: id.to_string(),
+        id: "".to_string(),
         content: Some(MemoryContent { contents: contents_map }),
         tags: vec!["tag".to_string()],
         expiration_timestamp: Some(system_time_to_timestamp(
@@ -191,7 +190,7 @@ async fn test_memory_expiration() {
 
     // Add memory that will expire in 2 seconds
     let memory_expired = Memory {
-        id: "memory_expired".to_string(),
+        id: "".to_string(),
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(2),
         )),
@@ -199,17 +198,16 @@ async fn test_memory_expiration() {
     };
     // Add memory that will expire in 60 seconds (effectively valid during the test)
     let memory_valid = Memory {
-        id: "memory_valid".to_string(),
+        id: "".to_string(),
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(60),
         )),
         ..Default::default()
     };
-    let memory_no_expiration =
-        Memory { id: "memory_no_expiration".to_string(), ..Default::default() };
+    let memory_no_expiration = Memory { id: "".to_string(), ..Default::default() };
 
-    client.add_memory(memory_expired.clone()).await.unwrap();
-    client.add_memory(memory_valid.clone()).await.unwrap();
+    let id_expired = client.add_memory(memory_expired.clone()).await.unwrap().id;
+    let id_valid = client.add_memory(memory_valid.clone()).await.unwrap().id;
     // Adding a memory without expiration should fail.
     let add_no_exp_result = client.add_memory(memory_no_expiration.clone()).await;
     assert!(add_no_exp_result.is_err());
@@ -225,8 +223,8 @@ async fn test_memory_expiration() {
     let mut client2 =
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
-    assert!(!client2.get_memory_by_id("memory_expired", None).await.unwrap().success);
-    assert!(client2.get_memory_by_id("memory_valid", None).await.unwrap().success);
+    assert!(!client2.get_memory_by_id(&id_expired, None).await.unwrap().success);
+    assert!(client2.get_memory_by_id(&id_valid, None).await.unwrap().success);
 
     ctx.teardown().await;
 }
@@ -242,7 +240,7 @@ async fn test_add_memory_expired_throws_error() {
 
     // Expiration in the past (10 seconds ago)
     let memory_expired = Memory {
-        id: "expired_err".to_string(),
+        id: "".to_string(),
         expiration_timestamp: Some(system_time_to_timestamp(
             std::time::SystemTime::now() - Duration::from_secs(10),
         )),
@@ -268,7 +266,7 @@ async fn test_add_memory_too_long_ttl_throws_error() {
 
     // Expiration more than 2 years in the future (2 years + 1 day)
     let too_long_ttl = Memory {
-        id: "too_long_ttl".to_string(),
+        id: "".to_string(),
         expiration_timestamp: Some(system_time_to_timestamp(
             std::time::SystemTime::now() + Duration::from_secs(2 * 365 * 86400 + 86400),
         )),
@@ -299,7 +297,7 @@ async fn test_add_memory_sets_correct_created_timestamp_with_mock_clock() {
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
     let memory = Memory {
-        id: "memory_without_timestamp".to_string(),
+        id: "".to_string(),
         expiration_timestamp: Some(system_time_to_timestamp(mock_time + Duration::from_secs(3600))),
         ..Default::default()
     };
@@ -333,7 +331,7 @@ async fn test_add_memory_overwrites_user_created_timestamp() {
 
     let user_timestamp = prost_types::Timestamp { seconds: 123456789, nanos: 0 };
     let memory = Memory {
-        id: "memory_with_timestamp".to_string(),
+        id: "".to_string(),
         created_timestamp: Some(user_timestamp),
         expiration_timestamp: Some(system_time_to_timestamp(mock_time + Duration::from_secs(3600))),
         ..Default::default()
@@ -365,7 +363,7 @@ async fn test_add_memory_duplicate_name_throws_error() {
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
     let memory1 = Memory {
-        id: "id1".to_string(),
+        id: "".to_string(),
         name: "shared_name".to_string(),
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(3600),
@@ -374,7 +372,7 @@ async fn test_add_memory_duplicate_name_throws_error() {
     };
 
     let memory2 = Memory {
-        id: "id2".to_string(),
+        id: "".to_string(),
         name: "shared_name".to_string(),
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(3600),
@@ -403,7 +401,7 @@ async fn test_add_memory_duplicate_name_no_id_throws_error() {
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
     let memory1 = Memory {
-        id: "id1".to_string(),
+        id: "".to_string(),
         name: "shared_name".to_string(),
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(3600),
@@ -440,7 +438,7 @@ async fn test_add_memory_duplicate_name_same_id_okay() {
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
     let memory1 = Memory {
-        id: "id1".to_string(),
+        id: "".to_string(),
         name: "shared_name".to_string(),
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(3600),
@@ -451,9 +449,12 @@ async fn test_add_memory_duplicate_name_same_id_okay() {
     // Adding first memory should succeed
     let response1 = client.add_memory(memory1.clone()).await;
     assert!(response1.is_ok());
+    let id1 = response1.unwrap().id;
+    let mut memory2 = memory1.clone();
+    memory2.id = id1;
 
     // Adding second memory with same name and same id should succeed
-    let response2 = client.add_memory(memory1.clone()).await;
+    let response2 = client.add_memory(memory2).await;
     assert!(response2.is_ok());
 
     ctx.teardown().await;
@@ -588,27 +589,22 @@ async fn test_delete_memory_concurrent_delete_succeeds_with_not_found() {
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
     let memory = Memory {
-        id: "memory_to_delete".to_string(),
+        id: "".to_string(),
         expiration_timestamp: Some(system_time_to_timestamp(
             SystemTime::now() + Duration::from_secs(3600),
         )),
         ..Default::default()
     };
-    client1.add_memory(memory).await.unwrap();
+    let id = client1.add_memory(memory).await.unwrap().id;
 
     let mut client2 =
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
+    let id_clone1 = id.clone();
     // Spawn two concurrent tasks to delete the same memory.
-    let handle1 =
-        tokio::spawn(
-            async move { client1.delete_memory(vec!["memory_to_delete".to_string()]).await },
-        );
+    let handle1 = tokio::spawn(async move { client1.delete_memory(vec![id_clone1]).await });
 
-    let handle2 =
-        tokio::spawn(
-            async move { client2.delete_memory(vec!["memory_to_delete".to_string()]).await },
-        );
+    let handle2 = tokio::spawn(async move { client2.delete_memory(vec![id]).await });
 
     let (res1, res2) = tokio::join!(handle1, handle2);
     let res1 = res1.unwrap();
@@ -691,7 +687,7 @@ async fn test_sync_database() {
 
     // Add a memory and then sync to force persistence.
     let memory = create_test_memory("sync_test_memory");
-    client.add_memory(memory).await.unwrap();
+    let id = client.add_memory(memory).await.unwrap().id;
 
     client.sync_database().await.unwrap();
 
@@ -702,7 +698,7 @@ async fn test_sync_database() {
     drop(client);
     let mut client2 =
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
-    expect_memory_by_id(&mut client2, "sync_test_memory").await;
+    expect_memory_by_id(&mut client2, &id).await;
 
     ctx.teardown().await;
 }
@@ -717,7 +713,7 @@ async fn test_sync_database_cross_session() {
     let mut client_a =
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
     let memory = create_test_memory("cross_session_mem");
-    client_a.add_memory(memory).await.unwrap();
+    let id = client_a.add_memory(memory).await.unwrap().id;
 
     client_a.sync_database().await.unwrap();
 
@@ -729,7 +725,7 @@ async fn test_sync_database_cross_session() {
     client_b.sync_database().await.unwrap();
 
     // Session B should now see the memory that Session A persisted.
-    expect_memory_by_id(&mut client_b, "cross_session_mem").await;
+    expect_memory_by_id(&mut client_b, &id).await;
 
     ctx.teardown().await;
 }
@@ -750,11 +746,11 @@ async fn test_sync_database_stale_without_sync() {
     let mut client2 =
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
     let memory = create_test_memory("stale_mem");
-    client2.add_memory(memory).await.unwrap();
+    let id = client2.add_memory(memory).await.unwrap().id;
     client2.sync_database().await.unwrap();
 
     // Session 1: read WITHOUT syncing — should NOT see the memory.
-    let response = client1.get_memory_by_id("stale_mem", None).await.unwrap();
+    let response = client1.get_memory_by_id(&id, None).await.unwrap();
     assert!(!response.success, "Session 1 should NOT see Session 2's data without syncing");
 
     ctx.teardown().await;
@@ -776,14 +772,14 @@ async fn test_sync_database_fresh_after_sync() {
     let mut client2 =
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
     let memory = create_test_memory("fresh_mem");
-    client2.add_memory(memory).await.unwrap();
+    let id = client2.add_memory(memory).await.unwrap().id;
     client2.sync_database().await.unwrap();
 
     // Session 1: sync to pull remote changes, then read.
     client1.sync_database().await.unwrap();
 
     // Now Session 1 should see the memory from Session 2.
-    expect_memory_by_id(&mut client1, "fresh_mem").await;
+    expect_memory_by_id(&mut client1, &id).await;
 
     ctx.teardown().await;
 }
@@ -803,33 +799,33 @@ async fn test_sync_database_concurrent_sessions() {
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
     // A adds MemA, B adds MemB.
-    client_a.add_memory(create_test_memory("mem_a")).await.unwrap();
-    client_b.add_memory(create_test_memory("mem_b")).await.unwrap();
+    let id_a = client_a.add_memory(create_test_memory("mem_a")).await.unwrap().id;
+    let id_b = client_b.add_memory(create_test_memory("mem_b")).await.unwrap().id;
 
     // A cannot read MemB, B cannot read MemA.
-    let resp = client_a.get_memory_by_id("mem_b", None).await.unwrap();
+    let resp = client_a.get_memory_by_id(&id_b, None).await.unwrap();
     assert!(!resp.success, "A should NOT see MemB before any sync");
-    let resp = client_b.get_memory_by_id("mem_a", None).await.unwrap();
+    let resp = client_b.get_memory_by_id(&id_a, None).await.unwrap();
     assert!(!resp.success, "B should NOT see MemA before any sync");
 
     // A syncs — persists MemA but still cannot read MemB (B hasn't synced).
     client_a.sync_database().await.unwrap();
-    let resp = client_a.get_memory_by_id("mem_b", None).await.unwrap();
+    let resp = client_a.get_memory_by_id(&id_b, None).await.unwrap();
     assert!(!resp.success, "A should NOT see MemB after A syncs (B hasn't synced yet)");
     // B still cannot read MemA (B hasn't synced).
-    let resp = client_b.get_memory_by_id("mem_a", None).await.unwrap();
+    let resp = client_b.get_memory_by_id(&id_a, None).await.unwrap();
     assert!(!resp.success, "B should NOT see MemA before B syncs");
 
     // B syncs — persists MemB and pulls MemA from durable storage.
     client_b.sync_database().await.unwrap();
-    expect_memory_by_id(&mut client_b, "mem_a").await;
+    expect_memory_by_id(&mut client_b, &id_a).await;
     // A still cannot see MemB (A hasn't re-synced).
-    let resp = client_a.get_memory_by_id("mem_b", None).await.unwrap();
+    let resp = client_a.get_memory_by_id(&id_b, None).await.unwrap();
     assert!(!resp.success, "A should NOT see MemB until A re-syncs");
 
     // A syncs again — now pulls MemB.
     client_a.sync_database().await.unwrap();
-    expect_memory_by_id(&mut client_a, "mem_b").await;
+    expect_memory_by_id(&mut client_a, &id_b).await;
 
     ctx.teardown().await;
 }
@@ -863,8 +859,8 @@ async fn test_disable_persistence_on_close() {
     }
 
     // Add a memory during this non-persisting session.
-    client.add_memory(create_test_memory("ephemeral_mem")).await.unwrap();
-    expect_memory_by_id(&mut client, "ephemeral_mem").await;
+    let id = client.add_memory(create_test_memory("ephemeral_mem")).await.unwrap().id;
+    expect_memory_by_id(&mut client, &id).await;
 
     // Drop triggers the handler's Drop, which should skip persistence.
     drop(client);
@@ -875,7 +871,7 @@ async fn test_disable_persistence_on_close() {
     // Reconnect — memory should NOT be present.
     let mut client2 =
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
-    let resp = client2.get_memory_by_id("ephemeral_mem", None).await.unwrap();
+    let resp = client2.get_memory_by_id(&id, None).await.unwrap();
     assert!(!resp.success, "memory should not persist when disable_persistence_on_close is set");
 
     ctx.teardown().await;
@@ -893,8 +889,8 @@ async fn test_default_persistence_on_close() {
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
 
     // Add a memory with default session config (persistence enabled).
-    client.add_memory(create_test_memory("persistent_mem")).await.unwrap();
-    expect_memory_by_id(&mut client, "persistent_mem").await;
+    let id = client.add_memory(create_test_memory("persistent_mem")).await.unwrap().id;
+    expect_memory_by_id(&mut client, &id).await;
 
     // Drop should trigger persistence.
     drop(client);
@@ -905,7 +901,7 @@ async fn test_default_persistence_on_close() {
     // Reconnect — memory should be present.
     let mut client2 =
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
-    expect_memory_by_id(&mut client2, "persistent_mem").await;
+    expect_memory_by_id(&mut client2, &id).await;
 
     ctx.teardown().await;
 }
@@ -929,13 +925,13 @@ async fn test_deferred_blob_delete_visible_until_sync() {
     // --- Step 1: Session A adds a memory and syncs to persist it. ---
     let mut session_a =
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
-    session_a.add_memory(create_test_memory("deferred_del_mem")).await.unwrap();
+    let id = session_a.add_memory(create_test_memory("deferred_del_mem")).await.unwrap().id;
     session_a.sync_database().await.unwrap();
 
     // --- Step 2: Session A deletes the memory (no sync yet). ---
     // The Icing index is updated locally, but the blob in external
     // storage should NOT be soft-deleted yet.
-    session_a.delete_memory(vec!["deferred_del_mem".to_string()]).await.unwrap();
+    session_a.delete_memory(vec![id.clone()]).await.unwrap();
 
     // --- Step 3: Session B opens fresh — should still see the memory. ---
     // Session B's key_sync loads the last-persisted index (which still
@@ -943,7 +939,7 @@ async fn test_deferred_blob_delete_visible_until_sync() {
     // Session A has not yet synced.
     let mut session_b =
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
-    expect_memory_by_id(&mut session_b, "deferred_del_mem").await;
+    expect_memory_by_id(&mut session_b, &id).await;
 
     // --- Step 4: Session A syncs — persists the delete + flushes blobs. ---
     session_a.sync_database().await.unwrap();
@@ -953,7 +949,7 @@ async fn test_deferred_blob_delete_visible_until_sync() {
     // has been soft-deleted.
     let mut session_c =
         PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK).await.unwrap();
-    let resp = session_c.get_memory_by_id("deferred_del_mem", None).await.unwrap();
+    let resp = session_c.get_memory_by_id(&id, None).await.unwrap();
     assert!(!resp.success, "memory should be gone after Session A synced");
 
     ctx.teardown().await;
