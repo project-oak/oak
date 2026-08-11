@@ -15,9 +15,10 @@
 //
 
 use anyhow::Context;
+use oak_attestation_verification_results::set_validity;
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
-    RawDigest, Variant,
+    RawDigest, Validity, Variant,
     attestation::v1::{
         CbLayer1TransparentEndorsement, CbLayer1TransparentEvent,
         CbLayer1TransparentReferenceValues, CbLayer2TransparentEndorsement,
@@ -34,10 +35,12 @@ use crate::{
         compare_kernel_layer_measurement_digests, compare_measurement_digest, compare_text_value,
     },
     expect::{
-        acquire_expected_digests, acquire_kernel_event_expected_values, acquire_mpm_expected_values,
+        acquire_expected_digests, acquire_kernel_event_expected_values,
+        acquire_mpm_expected_values, expected_digests_validity,
     },
     extract::stage0_transparent_measurements_to_kernel_layer_data,
     util::decode_event_proto,
+    validity::intersect_all_validity,
 };
 
 /// Event policy for transparent stage 0.
@@ -81,7 +84,25 @@ impl Policy<[u8]> for TransparentStage0Policy {
         compare_kernel_layer_measurement_digests(&event, &expected_values)
             .context("comparing kernel event digests")?;
 
-        Ok(EventAttestationResults { ..Default::default() })
+        // The validity of the attestation result is the intersection of the validity of
+        // the reference values and the validity of the endorsements.
+        let validity = intersect_all_validity([
+            expected_values.kernel.as_ref().and_then(|k| {
+                intersect_all_validity([
+                    k.image.as_ref().and_then(expected_digests_validity).cloned(),
+                    k.setup_data.as_ref().and_then(expected_digests_validity).cloned(),
+                ])
+            }),
+            expected_values.init_ram_fs.as_ref().and_then(expected_digests_validity).cloned(),
+            expected_values.memory_map.as_ref().and_then(expected_digests_validity).cloned(),
+            expected_values.acpi.as_ref().and_then(expected_digests_validity).cloned(),
+        ]);
+
+        let mut result = EventAttestationResults::default();
+        if let Some(v) = validity {
+            set_validity(&mut result, v);
+        }
+        Ok(result)
     }
 }
 
@@ -114,6 +135,9 @@ impl Policy<[u8]> for TransparentLayer1Policy {
         let endorsement: Option<CbLayer1TransparentEndorsement> =
             endorsement.try_into().map_err(anyhow::Error::msg)?;
 
+        // Collect endorsement validity windows from all endorsements.
+        let mut endorsement_validities = alloc::vec::Vec::new();
+
         // Verify runtime agent binary measurement
         let runtime_agent_binary_ref_value = self
             .reference_values
@@ -124,30 +148,40 @@ impl Policy<[u8]> for TransparentLayer1Policy {
             sha2_256: event.runtime_agent_binary_measurement.clone(),
             ..Default::default()
         };
-        let expected = acquire_expected_digests(
+        let runtime_expected = acquire_expected_digests(
             verification_time.into_unix_millis(),
             endorsement.as_ref().and_then(|e| e.runtime_agent_binary.as_ref()),
             runtime_agent_binary_ref_value,
         )
         .context("acquiring runtime agent binary expected values")?;
-        compare_measurement_digest(&runtime_agent_binary_measurement, &expected)
+        compare_measurement_digest(&runtime_agent_binary_measurement, &runtime_expected)
             .context("comparing runtime agent binary measurement")?;
+        endorsement_validities.push(expected_digests_validity(&runtime_expected).cloned());
 
         // Verify userspace measurement
         let userspace_ref_value =
             self.reference_values.userspace.as_ref().context("no userspace reference value")?;
         let userspace_measurement =
             RawDigest { sha2_256: event.userspace_measurement.clone(), ..Default::default() };
-        let expected = acquire_expected_digests(
+        let userspace_expected = acquire_expected_digests(
             verification_time.into_unix_millis(),
             endorsement.as_ref().and_then(|e| e.userspace.as_ref()),
             userspace_ref_value,
         )
         .context("acquiring userspace expected values")?;
-        compare_measurement_digest(&userspace_measurement, &expected)
+        compare_measurement_digest(&userspace_measurement, &userspace_expected)
             .context("comparing userspace measurement")?;
+        endorsement_validities.push(expected_digests_validity(&userspace_expected).cloned());
 
-        Ok(EventAttestationResults { ..Default::default() })
+        // The validity of the attestation result is the intersection of the validity of
+        // the reference values and the validity of the endorsements.
+        let validity = intersect_all_validity(endorsement_validities);
+
+        let mut result = EventAttestationResults::default();
+        if let Some(v) = validity {
+            set_validity(&mut result, v);
+        }
+        Ok(result)
     }
 }
 
@@ -224,6 +258,9 @@ impl Policy<[u8]> for TransparentLayer2Policy {
             binary_mpms.resize_with(event.packages.len(), SignedEndorsement::default);
         }
 
+        let mut package_validities: alloc::vec::Vec<Option<Validity>> =
+            alloc::vec::Vec::with_capacity(event.packages.len());
+
         for (i, package) in event.packages.iter().enumerate() {
             // The ordering of the endorsements must match the order of the packages in the
             // attestation evidence.
@@ -243,24 +280,30 @@ impl Policy<[u8]> for TransparentLayer2Policy {
 
             // Iterate over reference values to validate the evidence.
             let mut verified = false;
+            let mut matched_validity: Option<Validity> = None;
             for ref_val in &ref_values {
-                // TODO: b/526968864 - use the validity window returned here in the attestation
-                // results.
-                if let Ok((expected, _validity)) = acquire_mpm_expected_values(
+                if let Ok((expected, validity)) = acquire_mpm_expected_values(
                     verification_time.into_unix_millis(),
                     Some(matching_endorsement),
                     ref_val,
                 ) && compare_text_value(&package.mpm_version_id, &expected).is_ok()
                 {
                     verified = true;
+                    matched_validity = validity;
                     break;
                 }
             }
             anyhow::ensure!(verified, "package {} could not be verified", package.mpm_version_id);
+            package_validities.push(matched_validity);
         }
 
-        // Attestation results are left empty.
-        Ok(EventAttestationResults { ..Default::default() })
+        let validity = intersect_all_validity(package_validities);
+
+        let mut result = EventAttestationResults::default();
+        if let Some(v) = validity {
+            set_validity(&mut result, v);
+        }
+        Ok(result)
     }
 }
 

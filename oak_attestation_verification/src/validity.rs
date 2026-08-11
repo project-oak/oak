@@ -15,10 +15,6 @@
 //
 
 // Utilities for combining endorsement validity windows.
-//
-// TODO: b/526968864 - remove `allow(dead_code)` once the transparent policies
-// consume these helpers in a subsequent step of the endorsement-validity work.
-#![allow(dead_code)]
 
 use oak_proto_rust::oak::Validity;
 use oak_time::Instant;

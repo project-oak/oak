@@ -1114,9 +1114,6 @@ fn to_expected_digests(source: &[RawDigest], claim_validity: Option<&Validity>) 
 // For skipped verification or raw digests without an associated endorsement
 // this returns `None`, meaning the digests impose no constraint on the
 // aggregate validity window of the policy's result.
-// TODO: b/526968864 - remove `allow(dead_code)` once the transparent policies
-// consume this in a subsequent step of the endorsement-validity work.
-#[allow(dead_code)]
 pub(crate) fn expected_digests_validity(
     digests: &ExpectedDigests,
 ) -> Option<&oak_proto_rust::oak::Validity> {
