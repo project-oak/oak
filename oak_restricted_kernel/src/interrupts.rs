@@ -60,8 +60,8 @@ extern "x86-interrupt" fn general_protection_fault_handler_inner(
     shutdown::shutdown();
 }
 
-extern "x86-interrupt" fn breakpoint_handler(stack_frame: InterruptStackFrame) {
-    log::error!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
+extern "x86-interrupt" fn breakpoint_handler(_stack_frame: InterruptStackFrame) {
+    log::error!("EXCEPTION: BREAKPOINT");
 }
 
 extern "x86-interrupt" fn page_fault_handler(
