@@ -55,13 +55,27 @@ pub struct Nonce {
 
 impl Nonce {
     pub fn next_nonce(&mut self) -> Result<[u8; NONCE_LEN], Error> {
+        let ret = self.peek_nonce()?;
+        self.advance();
+        Ok(ret)
+    }
+
+    /// Returns the current nonce without advancing the counter.
+    ///
+    /// Used on the receive path so the counter is only advanced once AEAD
+    /// authentication has actually succeeded -- see `OrderedCrypter::decrypt`.
+    pub fn peek_nonce(&self) -> Result<[u8; NONCE_LEN], Error> {
         if self.nonce > MAX_SEQUENCE {
             return Err(Error::DecryptFailed);
         }
         let mut ret = [0u8; NONCE_LEN];
         ret[NONCE_LEN - 4..].copy_from_slice(self.nonce.to_be_bytes().as_slice());
-        self.nonce += 1;
         Ok(ret)
+    }
+
+    /// Advances the counter past the nonce last returned by `peek_nonce`.
+    pub fn advance(&mut self) {
+        self.nonce += 1;
     }
 
     // Nonce must be `NONCE_LEN` bytes with the last 4 bytes holding the nonce value
@@ -188,7 +202,15 @@ impl OrderedCrypter {
     }
 
     pub fn decrypt(&mut self, ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
-        aes_gcm_256_decrypt(&self.read_key, &self.read_nonce.next_nonce()?, ciphertext)
+        // The nonce is only advanced once the message is known to be
+        // authentic. OrderedCrypter has no reordering or replay-window
+        // tolerance, so advancing on an unauthenticated packet would permanently
+        // desync the channel: the genuine message that should have used this
+        // nonce would then be decrypted against the wrong one and fail forever.
+        let nonce = self.read_nonce.peek_nonce()?;
+        let plaintext = aes_gcm_256_decrypt(&self.read_key, &nonce, ciphertext)?;
+        self.read_nonce.advance();
+        Ok(plaintext)
     }
 }
 
