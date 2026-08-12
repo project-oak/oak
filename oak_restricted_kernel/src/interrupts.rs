@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use core::{arch::naked_asm, ops::Deref};
+use core::ops::Deref;
 
 use log::error;
 use oak_hal::{IoPortFactory, Platform, PortReader, PortWriter};
@@ -28,29 +28,7 @@ use crate::shutdown;
 
 static IDT: Spinlock<InterruptDescriptorTable> = Spinlock::new(InterruptDescriptorTable::new());
 
-#[unsafe(naked)]
-extern "x86-interrupt" fn general_protection_fault_handler(_: InterruptStackFrame, _: u64) {
-    naked_asm! {
-        "push %rax",            // save old rax value
-        "mov 16(%rsp), %rax",   // rax = rsp + 16 (address of the return RIP)
-        "cmpw $0x320F, (%rax)", // is RIP pointing to 0x320F (RDMSR)?
-        "jne 2f",               // if not, jump to label 2
-        "add $2, %rax",         // increment rax by 2 (size of RDMSR instruction)
-        "add $24, %rsp",        // drop the saved RAX, error code, and Return IP
-        "push %rax",            // put Return IP back on the stack for iretq
-        "xor %rax, %rax",       // zero out RAX
-        "xor %rdx, %rdx",       // zero out RDX
-        "iretq",                // and go back claiming we've executed the RDMSR
-        "2:",                   // it wasn't because of `rdmsr`
-        "pop %rax",             // restore old rax value. We're now back at the initial state.
-        "jmp {}",               // Let the Rust code take care of it. We jmp instead of call, as the
-                                // Rust function will call `iretq` instead of `ret` at the end.
-        sym general_protection_fault_handler_inner,
-        options(att_syntax)
-    }
-}
-
-extern "x86-interrupt" fn general_protection_fault_handler_inner(
+extern "x86-interrupt" fn general_protection_fault_handler(
     stack_frame: InterruptStackFrame,
     error_code: u64,
 ) {

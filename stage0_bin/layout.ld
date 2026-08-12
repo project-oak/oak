@@ -273,12 +273,7 @@ SECTIONS {
         QUAD(0) /* 10 - #TS */
         QUAD(0) /* 11 - #NP */
         QUAD(0) /* 12 - #SS */
-        QUAD(   /* 13 - #GP */
-            (gp_handler & 0xFFFF0000) << 32 | /* target offset [31:16] */
-            DESCRIPTOR_PRESENT |
-            DESCRIPTOR_INTERRUPT_GATE |
-            cs32 << 16 |                      /* code segment selector */
-            gp_handler & 0xFFFF)              /* target offset [15:0] */
+        QUAD(0) /* 13 - #GP */
         QUAD(0) /* 14 - #PF */
         QUAD(0) /* 15 - reserved */
         QUAD(0) /* 16 - #MF */

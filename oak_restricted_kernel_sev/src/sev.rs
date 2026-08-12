@@ -26,7 +26,7 @@ use oak_sev_guest::{
     interrupts::{MutableInterruptStackFrame, mutable_interrupt_handler_with_error_code},
     msr::{
         SevStatus, TerminationReason, TerminationRequest, get_cpuid_for_vc_exception,
-        get_sev_status, request_termination,
+        get_sev_status, is_sev_supported, request_termination,
     },
 };
 use x86_64::structures::{
@@ -110,9 +110,12 @@ impl Platform for Sev {
     }
 
     fn early_initialize_platform() {
-        SEV_STATUS
-            .set(get_sev_status().unwrap_or(SevStatus::empty()))
-            .expect("SEV status already set");
+        let status = if is_sev_supported() {
+            get_sev_status().unwrap_or(SevStatus::empty())
+        } else {
+            SevStatus::empty()
+        };
+        SEV_STATUS.set(status).expect("SEV status already set");
         if sev_status().contains(SevStatus::SEV_ES_ENABLED) {
             crate::ghcb::init(sev_status().contains(SevStatus::SNP_ACTIVE));
         }
@@ -144,7 +147,9 @@ impl Platform for Sev {
     }
 
     fn init_memory_encryption() -> bool {
-        if get_sev_status().unwrap_or(SevStatus::empty()).contains(SevStatus::SEV_ENABLED) {
+        if is_sev_supported()
+            && get_sev_status().unwrap_or(SevStatus::empty()).contains(SevStatus::SEV_ENABLED)
+        {
             // Safety: we use the correct encrypted bit location for the platform that we
             // currently support (AMD Arcadia-Milan). All the relevant pages tables are
             // updated after this is set.

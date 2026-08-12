@@ -24,22 +24,9 @@ _start :
 
 .align 16
 .code32
-.global gp_handler
-gp_handler:
-    pop %eax              # ignore the error code for now
-    pop %eax              # pop the return address
-    cmpw $0x320F, (%eax)  # are we trying to execute RDMSR?
-    jne 2f                # if not, skip ahead
-    add $2, %eax          # increment it by 2 (size of the RDMSR instruction)
-    push %eax             # push it back on stack for iret
-    xor %eax, %eax        # zero out RAX
-    xor %edx, %edx        # zero out RDX
-    iret                  # go back
-    2:                    # this wasn't because RDMSR
-    int $8                # trigger a double fault and crash
 .global vc_handler
-# Really limited #VC handler that only knows how to fill in EBX in case of CPUID.
-# As CPUID can alter EAX, EBX, ECX and EDX we zero out the other three registers.
+# Really limited #VC handler that only knows how to fill in EAX and EBX in case of CPUID.
+# As CPUID can alter EAX, EBX, ECX and EDX we zero out the other two registers.
 vc_handler:
     pop %ebx              # get the error code
     cmp $0x72, %ebx       # is this about CPUID?
@@ -49,9 +36,22 @@ vc_handler:
     jne 2f                # if not it might be injected by the hypervisor, skip ahead and crash
     cmp $0x0, %ecx        # are we asked for a CPUID subleaf?
     jne 2f                # if yes, skip ahead, as we don't support subleaves
-    # Use the GHCB MSR protocol to request one page of CPUID information. The protocol itself is
+    # Use the GHCB MSR protocol to request CPUID information. The protocol itself is
     # described in Section 2.3.1 of SEV-ES Guest-Hypervisor Communication Block Standardization spec.
+    # We issue two round-trips: one for EAX and one for EBX.
+    # First, request EAX.
+    push %eax             # save the CPUID function number on the stack
     mov %eax, %edx        # EDX = EAX (move the CPUID function number to GHCBData[63:32])
+    mov $0x00000004, %eax # EAX = Request EAX (0b00 << 30) | CPUID Request (0x004)
+    mov $0xC0010130, %ecx # ECX = 0xC001_0130 -- GHCB MSR
+    wrmsr                 # MSR[ECX] = EDX:EAX
+    rep vmmcall           # VMGEXIT
+    rdmsr                 # EDX:EAX = MSR[ECX]
+    cmp $0x00000005, %eax # EAX should contain EAX data (0b00 << 30) | CPUID Response (0x005)
+    jne 2f                # if not, crash
+    push %edx             # save the CPUID EAX result on the stack
+    # Now request EBX.
+    mov 4(%esp), %edx     # EDX = saved CPUID function number (behind the result we just pushed)
     mov $0x40000004, %eax # EAX = Request EBX (0b01 << 30) | CPUID Request (0x004)
     mov $0xC0010130, %ecx # ECX = 0xC001_0130 -- GHCB MSR
     wrmsr                 # MSR[ECX] = EDX:EAX
@@ -59,9 +59,10 @@ vc_handler:
     rdmsr                 # EDX:EAX = MSR[ECX]
     cmp $0x40000005, %eax # EAX should contain EBX data (0b01 << 30) | CPUID Response (0x005)
     jne 2f                # if not, crash
+    mov %edx, %ebx        # EBX = EDX (that's the CPUID EBX value)
+    pop %eax              # EAX = saved CPUID EAX result
+    pop %edx              # remove saved CPUID function number from the stack
     addl $2, (%esp)       # move return address forward past the CPUID instruction
-    xor %eax, %eax        # EAX = 0
-    mov %edx, %ebx        # EBX = EDX (that's where the cpuid value is)
     xor %ecx, %ecx        # ECX = 0
     xor %edx, %edx        # EDX = 0
     iret                  # go back
@@ -80,9 +81,27 @@ _protected_mode_start:
 
     # Determine if we're running under SEV.
     # Keep track of whether encryption is enabled in %ebp.
+    # First, use CPUID to check whether the SEV_STATUS MSR exists, as reading it on a platform that
+    # doesn't support it (e.g. Intel) would trigger a #GP fault.
+    mov $0x80000000, %eax     # EAX = largest extended function number
+    xor %ecx, %ecx            # ECX = 0 (no subleaf)
+    cpuid                     # EAX = max supported extended leaf
+    cmp $0x8000001F, %eax     # is Fn8000_001F (Encrypted Memory Capabilities) supported?
+    jb no_sev_msr             # if not, this CPU doesn't know about SEV at all
+    mov $0x8000001F, %eax     # EAX = Fn8000_001F - Encrypted Memory Capabilities
+    xor %ecx, %ecx            # ECX = 0 (no subleaf)
+    cpuid                     # EAX = SEV capability bits
+    bt $1, %eax               # bit 1 = SEV supported
+    jnc no_sev_msr            # if not set, SEV_STATUS MSR doesn't exist
+    # CPUID confirms SEV is supported; now safe to read the MSR.
     mov $0xc0010131, %ecx     # SEV_STATUS MSR. See Section 15.34.10 in AMD64 Architecture Programmer's
                               # Manual, Volume 2 for more details.
     rdmsr                     # EDX:EAX <- MSR[ECX]
+    jmp sev_msr_done
+no_sev_msr:
+    xor %eax, %eax            # EAX = 0 (no SEV)
+    xor %edx, %edx            # EDX = 0
+sev_msr_done:
     push %edx                 # Store the raw result for future use on the stack.
     push %eax
     and $0b111, %eax          # eax &= 0b111;

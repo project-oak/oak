@@ -577,7 +577,31 @@ pub enum SevStatusError {
     InvalidValue,
 }
 
-/// Gets the status of SEV features for the current guest.
+/// Checks whether the CPU supports AMD SEV by querying CPUID.
+///
+/// # Important
+///
+/// Under SEV-ES or SEV-SNP, executing `CPUID` triggers a `#VC` exception.
+/// Callers must ensure that a `#VC` handler is installed before calling this
+/// function in an SEV-ES/SNP environment.
+///
+/// See Section 15.34.1 of the [AMD64 Architecture Programmer's Manual, Volume
+/// 2](https://www.amd.com/system/files/TechDocs/24593.pdf).
+pub fn is_sev_supported() -> bool {
+    let max_extended = core::arch::x86_64::__cpuid(0x8000_0000);
+    if max_extended.eax < 0x8000_001F {
+        return false;
+    }
+    let sev_caps = core::arch::x86_64::__cpuid(0x8000_001F);
+    // Bit 1 of EAX indicates SEV is supported.
+    sev_caps.eax & (1 << 1) != 0
+}
+
+/// Gets the status of SEV features for the current guest by reading the
+/// `SEV_STATUS` MSR.
+///
+/// See Section 15.34.10 of the [AMD64 Architecture Programmer's Manual, Volume
+/// 2](https://www.amd.com/system/files/TechDocs/24593.pdf).
 pub fn get_sev_status() -> Result<SevStatus, SevStatusError> {
     SevStatus::from_bits(read_status_msr()).ok_or(SevStatusError::InvalidValue)
 }
