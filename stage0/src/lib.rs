@@ -184,13 +184,6 @@ pub fn rust64_start<P: hal::Platform + hal::FirmwarePlatform>() -> ! {
     let cmdline = kernel::try_load_cmdline(&mut fwcfg).unwrap_or_default();
     let kernel_cmdline = cmdline.kernel_cmdline();
 
-    // Safety: this is the only place where we try to load a kernel, so the backing
-    // memory is unused.
-    let kernel =
-        unsafe { kernel::Kernel::try_load_kernel_image(&mut fwcfg, zero_page.e820_table()) }
-            .unwrap();
-    let kernel_sha2_256_digest = kernel.measure();
-
     // Set up the allocator for ACPI-related memory in the EBDA region.
     acpi::setup_low_allocator(&mut zero_page).unwrap();
 
@@ -209,6 +202,13 @@ pub fn rust64_start<P: hal::Platform + hal::FirmwarePlatform>() -> ! {
     let acpi_digest = acpi_digest.finalize();
     let mut acpi_sha2_256_digest = Measurement::default();
     acpi_sha2_256_digest[..].copy_from_slice(&acpi_digest[..]);
+
+    // Safety: this is the only place where we try to load a kernel, so the backing
+    // memory is unused.
+    let kernel =
+        unsafe { kernel::Kernel::try_load_kernel_image(&mut fwcfg, zero_page.e820_table()) }
+            .unwrap();
+    let kernel_sha2_256_digest = kernel.measure();
 
     let ram_disk_sha2_256_digest =
         initramfs::try_load_initial_ram_disk(&mut fwcfg, zero_page.e820_table(), &kernel)
