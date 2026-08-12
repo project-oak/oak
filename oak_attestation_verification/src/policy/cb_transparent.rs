@@ -309,6 +309,7 @@ impl Policy<[u8]> for TransparentLayer2Policy {
 
 #[cfg(test)]
 mod tests {
+    use oak_attestation_verification_results::get_validity;
     use oak_digest::{Sha256, raw_to_hex_digest};
     use oak_proto_rust::oak::attestation::v1::{Event, MpmAttachment, MpmPackage};
     use oak_time::make_instant;
@@ -320,6 +321,14 @@ mod tests {
     use crate::test_util;
 
     const TEST_TIME: Instant = Instant::from_unix_millis(1_000_000);
+
+    /// Constructs an `oak::Validity` proto from two [`Instant`] values.
+    fn make_expected_validity(not_before: Instant, not_after: Instant) -> Validity {
+        Validity {
+            not_before: Some(not_before.into_timestamp()),
+            not_after: Some(not_after.into_timestamp()),
+        }
+    }
 
     /// Helper to encode a proto as a serialized [`Event`], the format expected
     /// by [`decode_event_proto`].
@@ -367,7 +376,8 @@ mod tests {
 
         let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
 
-        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+        let result = result.expect("verification should succeed");
+        assert!(get_validity(&result).is_none(), "skip-only policy should not set validity");
     }
 
     #[test]
@@ -395,7 +405,8 @@ mod tests {
 
         let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
 
-        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+        let result = result.expect("verification should succeed");
+        assert!(get_validity(&result).is_none(), "skip-only policy should not set validity");
     }
 
     #[test]
@@ -576,7 +587,9 @@ mod tests {
 
         let result = policy.verify(verify_time, &evidence, &endorsement_variant);
 
-        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+        let result = result.expect("verification should succeed");
+        let expected_validity = make_expected_validity(not_before, not_after);
+        assert_eq!(get_validity(&result), Some(&expected_validity));
     }
 
     #[test]
@@ -634,7 +647,75 @@ mod tests {
 
         let result = policy.verify(verify_time, &evidence, &endorsement_variant);
 
-        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+        let result = result.expect("verification should succeed");
+        let expected_validity = make_expected_validity(not_before, not_after);
+        assert_eq!(get_validity(&result), Some(&expected_validity));
+    }
+
+    /// When endorsements carry different validity windows, the result should
+    /// contain the intersection: the latest not_before and the earliest
+    /// not_after.
+    #[test]
+    fn transparent_layer1_validity_is_intersection_of_endorsement_windows() {
+        let runtime_not_before = make_instant!("2025-08-01T00:00:00Z");
+        let runtime_not_after = make_instant!("2025-12-01T00:00:00Z");
+        let userspace_not_before = make_instant!("2025-09-15T00:00:00Z");
+        let userspace_not_after = make_instant!("2025-11-01T00:00:00Z");
+        let verify_time = make_instant!("2025-10-15T00:00:00Z");
+        let (signing_key, public_key) = test_util::new_random_signing_keypair();
+
+        let runtime_agent_binary_measurement = Sha256::from([11u8; 32]);
+        let userspace_measurement = Sha256::from([12u8; 32]);
+
+        let event = CbLayer1TransparentEvent {
+            runtime_agent_binary_measurement: Vec::from(runtime_agent_binary_measurement),
+            userspace_measurement: Vec::from(userspace_measurement),
+            ..Default::default()
+        };
+        let evidence = encode_event_proto(
+            "type.googleapis.com/oak.attestation.v1.CbLayer1TransparentEvent",
+            &event,
+        );
+
+        let runtime_agent_binary_signed = test_util::make_signed_endorsement_for_digest(
+            &RawDigest {
+                sha2_256: Vec::from(runtime_agent_binary_measurement),
+                ..Default::default()
+            },
+            runtime_not_before,
+            runtime_not_after,
+            &signing_key,
+            vec![],
+        );
+        let userspace_signed = test_util::make_signed_endorsement_for_digest(
+            &RawDigest { sha2_256: Vec::from(userspace_measurement), ..Default::default() },
+            userspace_not_before,
+            userspace_not_after,
+            &signing_key,
+            vec![],
+        );
+
+        let layer1_endorsement = CbLayer1TransparentEndorsement {
+            runtime_agent_binary: Some(runtime_agent_binary_signed),
+            userspace: Some(userspace_signed),
+            ..Default::default()
+        };
+        let endorsement_variant: Variant = layer1_endorsement.into();
+
+        let ref_value = test_util::binary_reference_value_for_endorser_pk(public_key);
+        let reference_values = CbLayer1TransparentReferenceValues {
+            runtime_agent_binary: Some(ref_value.clone()),
+            userspace: Some(ref_value),
+            ..Default::default()
+        };
+        let policy = TransparentLayer1Policy::new(&reference_values);
+
+        let result = policy.verify(verify_time, &evidence, &endorsement_variant);
+
+        let result = result.expect("verification should succeed");
+        // Intersection: max(not_before) = 2025-09-15, min(not_after) = 2025-11-01.
+        let expected_validity = make_expected_validity(userspace_not_before, userspace_not_after);
+        assert_eq!(get_validity(&result), Some(&expected_validity));
     }
 
     #[test]
@@ -716,7 +797,9 @@ mod tests {
 
         let result = policy.verify(verify_time, &evidence, &endorsement_variant);
 
-        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+        let result = result.expect("verification should succeed");
+        let expected_validity = make_expected_validity(not_before, not_after);
+        assert_eq!(get_validity(&result), Some(&expected_validity));
     }
 
     #[test]
@@ -984,6 +1067,7 @@ mod tests {
 
         let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
 
-        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+        let result = result.expect("verification should succeed");
+        assert!(get_validity(&result).is_none(), "skip-only policy should not set validity");
     }
 }

@@ -96,6 +96,30 @@ mechanisms internal to the `AttestationVerifier` implementation (such as
 [DICE](https://trustedcomputinggroup.org/work-groups/dice-architectures/)
 mechanism).
 
+### Endorsement Validity
+
+Each endorsement carries a validity window (`not_before` … `not_after`)
+indicating the period during which the endorsement is considered trustworthy.
+When a policy verifies an event against multiple endorsements, the returned
+`EventAttestationResults` includes a `valid` field containing the
+**intersection** of all individual endorsement validity windows:
+
+- `not_before` = the **latest** (maximum) of all endorsement `not_before`
+  values.
+- `not_after` = the **earliest** (minimum) of all endorsement `not_after`
+  values.
+
+This means the result is only valid while **all** underlying endorsements are
+valid. If an endorsement is absent (e.g. `Skip` reference values or raw digests
+without an associated endorsement), it contributes no validity constraint and is
+ignored in the intersection. If no endorsement carries a validity window, the
+`valid` field is left unset.
+
+The intersection logic lives in [`validity.rs`](src/validity.rs)
+(`intersect_validity` / `intersect_all_validity`), and the `valid` field can be
+read or written via the `get_validity` / `set_validity` accessors in
+[`oak_attestation_verification_results`](../oak_attestation_verification_results/src/lib.rs).
+
 ## Example
 
 This example shows how to perform attestation verification for
