@@ -49,6 +49,16 @@ fn test_service_unsupported() {
     assert_eq!(response.status, BenchmarkError::UnsupportedBenchmark.as_status_code());
 }
 
+#[test]
+fn test_service_rejects_zero_iterations() {
+    let mut svc = BenchmarkService::<NativeTimer>::new(0);
+    let mut request = request_for(BenchmarkType::Sha256);
+    request.iterations = 0;
+
+    let response = svc.handle_request(request);
+    assert_ne!(response.status, 0, "zero iterations must be rejected");
+}
+
 /// Every benchmark type the service claims to support must run end to end.
 ///
 /// This is deliberately a smoke test: it asserts success and a non-zero
@@ -79,4 +89,52 @@ fn test_service_supports_all_benchmark_types() {
         );
         assert!(response.elapsed_tsc > 0, "{benchmark_type:?} reported zero elapsed TSC");
     }
+}
+
+/// The same seed must produce the same checksum, otherwise cross-platform
+/// comparisons are meaningless.
+#[test]
+fn test_service_is_deterministic_across_runs() {
+    let types = [BenchmarkType::Sha256];
+
+    for benchmark_type in types {
+        let request = request_for(benchmark_type);
+
+        let mut first_svc = BenchmarkService::<NativeTimer>::new(0);
+        let first = first_svc.handle_request(request);
+        let mut second_svc = BenchmarkService::<NativeTimer>::new(0);
+        let second = second_svc.handle_request(request);
+
+        assert_eq!(first.status, 0);
+        assert_eq!(second.status, 0);
+        // Without this the assertion below holds trivially for any benchmark
+        // that does not compute a checksum at all.
+        assert_ne!(first.checksum, 0, "{benchmark_type:?} reported no checksum");
+        assert_eq!(
+            first.checksum, second.checksum,
+            "{benchmark_type:?} is not deterministic for a fixed seed"
+        );
+    }
+}
+
+/// A later request that changes the seed must not reuse the earlier seed's
+/// data, which is what makes `--seed` meaningful within a single session.
+#[test]
+fn test_service_honours_a_changed_seed() {
+    let mut svc = BenchmarkService::<NativeTimer>::new(0);
+
+    let mut first = request_for(BenchmarkType::Sha256);
+    first.seed = Some(1);
+    let first = svc.handle_request(first);
+
+    let mut second = request_for(BenchmarkType::Sha256);
+    second.seed = Some(2);
+    let second = svc.handle_request(second);
+
+    assert_eq!(first.status, 0);
+    assert_eq!(second.status, 0);
+    assert_ne!(
+        first.checksum, second.checksum,
+        "the second request reused the data generated for the first seed"
+    );
 }

@@ -24,7 +24,10 @@ use sha2::{Digest, Sha256, Sha512};
 use sha3::{Sha3_256, Sha3_512};
 
 use super::CpuBenchmark;
-use crate::{BenchmarkError, BenchmarkResult, generate_benchmark_data, timer::BenchmarkTimer};
+use crate::{
+    BenchmarkError, BenchmarkResult, CHECKSUM_INIT, checksum_update, fold_sample,
+    generate_benchmark_data, timer::BenchmarkTimer,
+};
 
 /// Maximum data buffer size (1 MB).
 pub const MAX_DATA_SIZE: usize = 1024 * 1024;
@@ -81,6 +84,9 @@ impl HashingBenchmark {
         if data_size > MAX_DATA_SIZE {
             return Err(BenchmarkError::DataSizeTooLarge);
         }
+        if iterations == 0 {
+            return Err(BenchmarkError::InvalidParameter);
+        }
 
         let data = &self.data_buffer[..data_size];
 
@@ -104,35 +110,46 @@ impl HashingBenchmark {
 
     /// Run a hash benchmark using any Digest-compatible hasher.
     ///
-    /// If `warmup_iterations > 0`, those iterations are run first without
-    /// timing to warm up the CPU caches and branch predictor.
+    /// Each digest goes through [`core::hint::black_box`] so the optimiser
+    /// cannot discard the hashing. The comparable checksum is computed once
+    /// after the timer stops, since [`checksum_update`] over a 32-byte digest
+    /// costs about as much as SHA-256 itself at the short end of the sweep.
     fn run_hash<D: Digest, T: BenchmarkTimer>(
         data: &[u8],
         iterations: u32,
         warmup_iterations: u32,
     ) -> BenchmarkResult {
         // Warmup phase: run iterations WITHOUT timing.
+        let mut warmup_acc = CHECKSUM_INIT;
         for _ in 0..warmup_iterations {
             let mut hasher = D::new();
-            hasher.update(data);
-            let result = hasher.finalize();
-            core::hint::black_box(&result);
+            hasher.update(core::hint::black_box(data));
+            warmup_acc = fold_sample(warmup_acc, core::hint::black_box(&hasher.finalize()));
         }
+        core::hint::black_box(warmup_acc);
 
         // Measurement phase: run iterations WITH timing.
+        let mut acc = CHECKSUM_INIT;
         let timer = T::start();
 
         for _ in 0..iterations {
             let mut hasher = D::new();
-            hasher.update(data);
-            let result = hasher.finalize();
-            core::hint::black_box(&result);
+            hasher.update(core::hint::black_box(data));
+            acc = fold_sample(acc, core::hint::black_box(&hasher.finalize()));
         }
 
         let timing = timer.stop();
+        core::hint::black_box(acc);
+
+        // Hashing is deterministic, so one extra digest outside the timed region
+        // reproduces what the loop computed, independently of `iterations`.
+        let mut hasher = D::new();
+        hasher.update(data);
+        let checksum = checksum_update(CHECKSUM_INIT, &hasher.finalize());
+
         let bytes_processed = data.len() as u64 * iterations as u64;
 
-        BenchmarkResult::new(timing, iterations, bytes_processed, 0)
+        BenchmarkResult::new(timing, iterations, bytes_processed, checksum)
     }
 }
 
