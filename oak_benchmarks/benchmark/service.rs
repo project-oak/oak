@@ -138,7 +138,13 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
 
             // ── Memory ──
             BenchmarkType::ArrayUpdate => {
-                self.array_update_bench(seed).run::<T>(iterations, warmup)
+                let size = if request.working_set_size != 0 {
+                    request.working_set_size as usize
+                } else {
+                    crate::memory::array_update::DEFAULT_WORKING_SET_SIZE
+                };
+                let b = self.array_update_bench(size, seed)?;
+                b.run::<T>(iterations, warmup)
             }
             BenchmarkType::MemoryInsert => {
                 let b = self.hashmap_insert_bench(seed);
@@ -175,11 +181,22 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
         self.hashing.as_mut().unwrap()
     }
 
-    fn array_update_bench(&mut self, seed: u64) -> &mut ArrayUpdateBenchmark {
-        if self.array_update.is_none() {
-            self.array_update = Some(Box::new(ArrayUpdateBenchmark::with_defaults(seed)));
+    fn array_update_bench(
+        &mut self,
+        working_set_size: usize,
+        seed: u64,
+    ) -> Result<&mut ArrayUpdateBenchmark, BenchmarkError> {
+        match self.array_update.as_mut() {
+            Some(_) => {
+                let b = self.array_update.as_mut().unwrap();
+                b.reconfigure(working_set_size, seed)?;
+            }
+            None => {
+                self.array_update =
+                    Some(Box::new(ArrayUpdateBenchmark::new(working_set_size, seed)?));
+            }
         }
-        self.array_update.as_mut().unwrap()
+        Ok(self.array_update.as_mut().unwrap())
     }
 
     fn hashmap_insert_bench(&mut self, seed: u64) -> &mut HashMapBenchmark {

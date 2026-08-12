@@ -109,6 +109,23 @@ impl BenchmarkResult {
 /// <https://nuclear.llnl.gov/CNP/rng/rngman/node4.html>.
 pub const LCG_MULTIPLIER: u64 = 6364136223846793005;
 
+/// XORed into a seed to move a generator off a sequence already walked.
+///
+/// A benchmark that warms up and then measures must not replay the warmup's
+/// access sequence, or the measured loop finds lines the warmup left in
+/// cache. XORing this into the seed offsets the measured stream instead,
+/// while keeping it a function of the seed alone, so the number of warmup
+/// iterations does not change what gets measured.
+///
+/// The value carries no meaning and the ascending nibbles are there to say
+/// so. Only two properties matter. It must be non-zero, or the two streams
+/// are the same. It must be odd, because the low bits of a linear
+/// congruential generator modulo 2^64 form a self-contained generator
+/// modulo 2^k: two seeds that agree in their low k bits produce streams
+/// that agree there for ever. Differing in bit 0 rules that out at every
+/// width.
+pub const MEASURED_SEED_OFFSET: u64 = 0x0123_4567_89AB_CDEF;
+
 /// Fill a buffer with deterministic pseudo-random data.
 ///
 /// Zeroed or constant buffers let hash implementations and the hardware take

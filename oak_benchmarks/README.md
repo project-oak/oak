@@ -85,7 +85,7 @@ sizes and iterations.
 
 | Benchmark     | What it measures                                               |
 | ------------- | -------------------------------------------------------------- |
-| Array Update  | Random writes to 256MB buffer — raw memory access latency      |
+| Array Update  | Random writes to a caller-sized buffer — memory access latency |
 | Memory Insert | HashMap insert (key + alloc value) — allocator + hashing       |
 | Memory Lookup | HashMap lookup (read-only) — hash + memory-read, no allocation |
 | Alloc Churn   | Alloc/dealloc 4KB vectors — pure allocator throughput          |

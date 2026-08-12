@@ -79,7 +79,9 @@ fn test_service_supports_all_benchmark_types() {
 
     for benchmark_type in types {
         let mut svc = BenchmarkService::<NativeTimer>::new(0);
-        let request = request_for(benchmark_type);
+        let mut request = request_for(benchmark_type);
+        // Keep the memory benchmarks small so the test stays fast.
+        request.working_set_size = 1 << 20;
 
         let response = svc.handle_request(request);
         assert_eq!(response.status, 0, "{benchmark_type:?} returned a non-zero status");
@@ -95,10 +97,11 @@ fn test_service_supports_all_benchmark_types() {
 /// comparisons are meaningless.
 #[test]
 fn test_service_is_deterministic_across_runs() {
-    let types = [BenchmarkType::Sha256];
+    let types = [BenchmarkType::Sha256, BenchmarkType::ArrayUpdate];
 
     for benchmark_type in types {
-        let request = request_for(benchmark_type);
+        let mut request = request_for(benchmark_type);
+        request.working_set_size = 1 << 20;
 
         let mut first_svc = BenchmarkService::<NativeTimer>::new(0);
         let first = first_svc.handle_request(request);
