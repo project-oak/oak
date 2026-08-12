@@ -21,27 +21,48 @@ use std::fmt;
 use clap::ValueEnum;
 use oak_benchmark_proto_rust::oak::benchmark::BenchmarkType;
 
+/// Every benchmark type selectable from the command line, with its canonical
+/// CLI spelling.
+///
+/// Kept as a single table so that the parser, the `--help` text and the error
+/// message cannot drift apart.
+pub const BENCHMARK_TYPE_NAMES: &[(&str, BenchmarkType)] = &[
+    ("sha256", BenchmarkType::Sha256),
+    ("sha512", BenchmarkType::Sha512),
+    ("sha3-256", BenchmarkType::Sha3256),
+    ("sha3-512", BenchmarkType::Sha3512),
+    ("p256-sign", BenchmarkType::P256Sign),
+    ("memory-insert", BenchmarkType::MemoryInsert),
+    ("memory-lookup", BenchmarkType::MemoryLookup),
+    ("array-update", BenchmarkType::ArrayUpdate),
+    ("alloc-churn", BenchmarkType::AllocChurn),
+    ("debug", BenchmarkType::Debug),
+];
+
+/// Normalise a CLI spelling: lowercase, and treat `-` and `_` as equivalent.
+fn normalize(s: &str) -> String {
+    s.to_lowercase().replace('-', "_")
+}
+
 /// Parse a benchmark type from a CLI string.
 ///
 /// Supports kebab-case and snake_case variants for convenience.
 pub fn parse_benchmark_type(s: &str) -> Result<BenchmarkType, String> {
-    match s.to_lowercase().replace('-', "_").as_str() {
-        "sha256" => Ok(BenchmarkType::Sha256),
-        "sha512" => Ok(BenchmarkType::Sha512),
-        "sha3_256" | "sha3256" => Ok(BenchmarkType::Sha3256),
-        "sha3_512" | "sha3512" => Ok(BenchmarkType::Sha3512),
-        "p256_sign" | "p256sign" => Ok(BenchmarkType::P256Sign),
-        "memory_insert" => Ok(BenchmarkType::MemoryInsert),
-        "memory_lookup" => Ok(BenchmarkType::MemoryLookup),
-        "array_update" => Ok(BenchmarkType::ArrayUpdate),
-        "alloc_churn" => Ok(BenchmarkType::AllocChurn),
-        "debug" => Ok(BenchmarkType::Debug),
-        _ => Err(format!(
-            "Unknown benchmark type: '{}'. Valid options: sha256, sha512, sha3-256, sha3-512, \
-             p256-sign, memory-insert, memory-lookup, array-update, alloc-churn, debug",
-            s
-        )),
+    let wanted = normalize(s);
+    for (name, benchmark_type) in BENCHMARK_TYPE_NAMES {
+        if normalize(name) == wanted {
+            return Ok(*benchmark_type);
+        }
     }
+    // A few extra spellings that do not deserve their own table entry.
+    match wanted.as_str() {
+        "sha3256" => return Ok(BenchmarkType::Sha3256),
+        "sha3512" => return Ok(BenchmarkType::Sha3512),
+        _ => {}
+    }
+
+    let valid: Vec<&str> = BENCHMARK_TYPE_NAMES.iter().map(|(name, _)| *name).collect();
+    Err(format!("unknown benchmark type '{}'; valid options: {}", s, valid.join(", ")))
 }
 
 /// Display wrapper for BenchmarkType with human-readable names.
