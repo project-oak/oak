@@ -29,8 +29,8 @@ use std::{
 use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use cli_common::{
-    BenchmarkMetrics, BenchmarkResult, DisplayBenchmarkType, OutputFormat, format_result,
-    parse_benchmark_type,
+    BenchmarkMetrics, BenchmarkResult, DisplayBenchmarkType, OutputFormat, check_status,
+    format_result, parse_benchmark_type,
 };
 use oak_benchmark_grpc::oak::benchmark::benchmark_client::BenchmarkClient;
 use oak_benchmark_proto_rust::oak::benchmark::{
@@ -181,6 +181,16 @@ async fn main() -> Result<()> {
     let timeout = Duration::from_secs(args.boot_timeout);
 
     let (response, host_elapsed) = run_benchmark(&addr, request, timeout).await?;
+
+    // Abort before formatting: a failed benchmark returns an all-zero
+    // response, which would otherwise print as a plausible row of zeros. Shut
+    // the VM down first so we do not leak a QEMU process.
+    if let Err(message) = check_status(response.status) {
+        if !args.keep_vm {
+            vm.shutdown().context("shutting down VM after a failed benchmark")?;
+        }
+        return Err(anyhow!(message));
+    }
 
     // Calculate metrics. The Linux runner provides elapsed_ns directly,
     // so tsc_freq is not needed (pass 0 as unused fallback).

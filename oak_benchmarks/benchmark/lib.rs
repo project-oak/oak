@@ -114,11 +114,30 @@ pub enum BenchmarkError {
     DataSizeTooLarge = 3,
     /// Invalid parameter (e.g. iterations exceed pre-generated indices).
     InvalidParameter = 4,
+    /// A cryptographic operation failed unexpectedly.
+    CryptoFailure = 5,
+    /// Allocation of the requested working set failed.
+    AllocationFailure = 6,
 }
 
 impl BenchmarkError {
     /// Convert to a status code for proto serialization.
     pub fn as_status_code(&self) -> u32 {
         *self as u32
+    }
+
+    /// Human-readable description, used by the host CLIs when reporting a
+    /// failed run.
+    pub fn describe(status: u32) -> &'static str {
+        match status {
+            0 => "ok",
+            1 => "generic error",
+            2 => "unsupported benchmark",
+            3 => "data size too large",
+            4 => "invalid parameter",
+            5 => "crypto failure",
+            6 => "allocation failure",
+            _ => "unknown status",
+        }
     }
 }

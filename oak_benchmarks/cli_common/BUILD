@@ -31,6 +31,7 @@ rust_library(
     ],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
+        "//oak_benchmarks/benchmark:benchmark_std",
         "//oak_benchmarks/proto:oak_benchmark_proto_rust",
         "@oak_crates_index//:clap",
     ],

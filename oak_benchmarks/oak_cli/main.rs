@@ -21,11 +21,11 @@
 
 use std::time::Instant;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
 use cli_common::{
-    BenchmarkMetrics, DisplayBenchmarkType, OutputFormat, detect_tsc_freq, format_result,
-    parse_benchmark_type,
+    BenchmarkMetrics, DisplayBenchmarkType, OutputFormat, check_status, detect_tsc_freq,
+    format_result, parse_benchmark_type,
 };
 use oak_benchmark_proto_rust::oak::benchmark::{BenchmarkType, RunBenchmarkRequest};
 use oak_launcher_utils::launcher;
@@ -123,6 +123,14 @@ async fn main() -> Result<()> {
         }
         detected.hz()
     });
+    // Abort before formatting: a failed benchmark returns an all-zero
+    // response, which would otherwise be printed as a plausible-looking row of
+    // zeros. Tear the enclave down first so we do not leak a QEMU process.
+    if let Err(message) = check_status(response.status) {
+        guest_instance.kill().await.context("terminating enclave after a failed benchmark")?;
+        anyhow::bail!(message);
+    }
+
     let metrics = BenchmarkMetrics::calculate(
         response.elapsed_tsc,
         response.elapsed_ns,

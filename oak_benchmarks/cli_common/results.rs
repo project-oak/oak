@@ -82,6 +82,27 @@ pub struct BenchmarkResult {
     pub status: u32,
 }
 
+/// Human-readable description of a guest status code.
+///
+/// Delegates to the benchmark crate so the mapping has a single definition.
+pub fn describe_status(status: u32) -> &'static str {
+    benchmark::BenchmarkError::describe(status)
+}
+
+/// Convert a guest status code into a `Result`.
+///
+/// The host CLIs must call this before formatting a response. A failed
+/// benchmark returns an all-zero response, and treating that as a real
+/// measurement produced both nonsense results and, previously, a
+/// divide-by-zero panic that hid the underlying error entirely.
+pub fn check_status(status: u32) -> Result<(), String> {
+    if status == 0 {
+        Ok(())
+    } else {
+        Err(format!("guest benchmark failed with status {status}: {}", describe_status(status)))
+    }
+}
+
 /// Format benchmark results for output.
 pub fn format_result(
     result: &BenchmarkResult,
