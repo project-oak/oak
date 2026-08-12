@@ -120,17 +120,14 @@ impl AttestedApp {
 /// and no more is the *default* behavior when the interpretation header doesn't
 /// match any known values.
 pub fn interpret_initial_data(data: &[u8]) -> InitialData {
-    let header: [u8; INITIAL_DATA_HEADER_SIZE] =
-        data[0..INITIAL_DATA_HEADER_SIZE].try_into().expect("Not enough data in initial frame");
-
-    if header == INITIAL_DATA_V1_HEADER {
+    if data.first_chunk::<INITIAL_DATA_HEADER_SIZE>() == Some(&INITIAL_DATA_V1_HEADER) {
         InitialData::decode(&data[INITIAL_DATA_HEADER_SIZE..])
             .expect("Could not interpret V1 payload as proto")
     } else {
         // For backwards compatibility, when the payload starts with anything
-        // else (most likely an ELF header), then we synthesize the initial
-        // configuration data with the application binary and empty
-        // endorsements.
+        // else (most likely an ELF header) or is shorter than the header, then
+        // we synthesize the initial configuration data with the application
+        // binary and empty endorsements.
         InitialData { application_bytes: data.to_vec(), endorsement_bytes: alloc::vec::Vec::new() }
     }
 }
