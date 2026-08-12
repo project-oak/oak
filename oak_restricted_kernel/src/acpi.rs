@@ -24,7 +24,7 @@ use aml::{
     value::Args,
 };
 use anyhow::{Result, anyhow, bail};
-use oak_linux_boot_params::BootParams;
+use oak_linux_boot_params::{BootE820Entry, BootParams, E820EntryType};
 use x86_64::PhysAddr;
 
 use crate::{PAGE_TABLES, mm::Translator};
@@ -51,14 +51,42 @@ fn description(hid: &str) -> &str {
     }
 }
 
-#[derive(Copy, Clone)]
-struct Handler {}
-impl AcpiHandler for Handler {
+#[derive(Clone, Copy)]
+struct Handler<'a> {
+    e820_table: &'a [BootE820Entry],
+}
+
+impl<'a> Handler<'a> {
+    fn new(params: &'a BootParams) -> Self {
+        Self { e820_table: params.e820_table() }
+    }
+
+    /// Checks that the given physical memory range is fully contained within an
+    /// E820 entry containing ACPI data.
+    fn is_acpi_memory(&self, physical_address: usize, size: usize) -> bool {
+        let Some(end) = physical_address.checked_add(size) else {
+            return false;
+        };
+        self.e820_table.iter().any(|entry| {
+            matches!(entry.entry_type(), Some(E820EntryType::ACPI) | Some(E820EntryType::NVS))
+                && entry.addr() <= physical_address
+                && end <= entry.end()
+        })
+    }
+}
+
+impl<'a> AcpiHandler for Handler<'a> {
     unsafe fn map_physical_region<T>(
         &self,
         physical_address: usize,
         size: usize,
     ) -> PhysicalMapping<Self, T> {
+        assert!(
+            self.is_acpi_memory(physical_address, size),
+            "physical address {:#x} (size {}) is not in ACPI memory according to E820 table",
+            physical_address,
+            size
+        );
         unsafe {
             PhysicalMapping::new(
                 physical_address,
@@ -84,7 +112,9 @@ impl AcpiHandler for Handler {
     }
 }
 
-impl aml::Handler for Handler {
+struct AmlHandler;
+
+impl aml::Handler for AmlHandler {
     fn read_u8(&self, _address: usize) -> u8 {
         unimplemented!()
     }
@@ -214,10 +244,16 @@ impl aml::Handler for Handler {
 }
 
 trait TableContents<'a> {
-    fn contents(&self) -> &'a [u8];
+    fn contents(&self, handler: &Handler<'_>) -> &'a [u8];
 }
 impl<'a> TableContents<'a> for AmlTable {
-    fn contents(&self) -> &'a [u8] {
+    fn contents(&self, handler: &Handler<'_>) -> &'a [u8] {
+        assert!(
+            handler.is_acpi_memory(self.address, self.length as usize),
+            "physical address {:#x} (size {}) is not in ACPI memory according to E820 table",
+            self.address,
+            self.length
+        );
         let virt_addr = PAGE_TABLES
             .lock()
             .get()
@@ -225,7 +261,7 @@ impl<'a> TableContents<'a> for AmlTable {
             .translate_physical(PhysAddr::new(self.address as u64))
             .unwrap();
         // Safety: this address was specified in the ACPI tables by the firmware, so if
-        // the tables are correct, this is safe.
+        // the tables are correct and verified to be within ACPI memory, this is safe.
         unsafe { core::slice::from_raw_parts(virt_addr.as_ptr(), self.length as usize) }
     }
 }
@@ -316,29 +352,30 @@ impl AcpiDevice {
     }
 }
 
-pub struct Acpi {
-    tables: AcpiTables<Handler>,
+pub struct Acpi<'a> {
+    tables: AcpiTables<Handler<'a>>,
     pub aml: AmlContext,
 }
 
-impl Acpi {
-    pub fn new(params: &BootParams) -> Result<Self> {
+impl<'a> Acpi<'a> {
+    pub fn new(params: &'a BootParams) -> Result<Self> {
+        let handler = Handler::new(params);
         let mut acpi = Self {
             tables: find_acpi_tables(params)?,
-            aml: AmlContext::new(Box::new(Handler {}), aml::DebugVerbosity::None),
+            aml: AmlContext::new(Box::new(AmlHandler), aml::DebugVerbosity::None),
         };
 
         // Parse the DSDT and all SSDTs.
         if let Ok(ref dsdt) = acpi.tables.dsdt() {
             acpi.aml
-                .parse_table(dsdt.contents())
+                .parse_table(dsdt.contents(&handler))
                 .map_err(|err| anyhow!("failed to parse ACPI DSDT: {:?}", err))?;
         } else {
             bail!("no DSDT found in ACPI tables");
         }
 
         for ssdt in acpi.tables.ssdts() {
-            acpi.aml.parse_table(ssdt.contents()).map_err(|err| {
+            acpi.aml.parse_table(ssdt.contents(&handler)).map_err(|err| {
                 anyhow!("failed to parse ACPI SSDT at address {}: {:?}", ssdt.address, err)
             })?;
         }
@@ -410,23 +447,75 @@ impl Acpi {
     }
 }
 
-fn find_acpi_tables(params: &BootParams) -> Result<AcpiTables<Handler>> {
+fn find_acpi_tables<'a>(params: &'a BootParams) -> Result<AcpiTables<Handler<'a>>> {
+    let handler = Handler::new(params);
     let acpi_rsdp_addr = params.acpi_rsdp_addr;
     if acpi_rsdp_addr > 0 {
         // Safety: we trust the boot params to be correct.
-        return unsafe { AcpiTables::from_rsdp(Handler {}, params.acpi_rsdp_addr as usize) }
-            .map_err(|err| {
+        return unsafe { AcpiTables::from_rsdp(handler, params.acpi_rsdp_addr as usize) }.map_err(
+            |err| {
                 anyhow!(
                     "failed to load ACPI tables from address {:#x} specified in boot params: {:?}",
                     acpi_rsdp_addr,
                     err
                 )
-            });
+            },
+        );
     }
 
     // Safety: the EBDA area will be mapped and valid, so this is memory-safe, but
     // we're still searching 1 KiB of memory for the signature that may not be
     // there or match some random garbage.
-    unsafe { AcpiTables::search_for_rsdp_bios(Handler {}) }
+    unsafe { AcpiTables::search_for_rsdp_bios(handler) }
         .map_err(|err| anyhow!("failed to load ACPI tables from EBDA: {:?}", err))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn is_acpi_memory_valid() {
+        let mut params = BootParams::zeroed();
+        params.append_e820_entry(BootE820Entry::new(0x1000, 0x1000, E820EntryType::RAM));
+        params.append_e820_entry(BootE820Entry::new(0x2000, 0x2000, E820EntryType::ACPI));
+        params.append_e820_entry(BootE820Entry::new(0x4000, 0x1000, E820EntryType::NVS));
+        let handler = Handler::new(&params);
+
+        assert!(handler.is_acpi_memory(0x2000, 0x2000));
+        assert!(handler.is_acpi_memory(0x2000, 0x1000));
+        assert!(handler.is_acpi_memory(0x2500, 0x500));
+        assert!(handler.is_acpi_memory(0x4000, 0x1000));
+    }
+
+    #[test]
+    fn is_acpi_memory_invalid_type() {
+        let mut params = BootParams::zeroed();
+        params.append_e820_entry(BootE820Entry::new(0x1000, 0x1000, E820EntryType::RAM));
+        params.append_e820_entry(BootE820Entry::new(0x2000, 0x1000, E820EntryType::RESERVED));
+        let handler = Handler::new(&params);
+
+        assert!(!handler.is_acpi_memory(0x1000, 0x1000));
+        assert!(!handler.is_acpi_memory(0x2000, 0x1000));
+    }
+
+    #[test]
+    fn is_acpi_memory_out_of_bounds() {
+        let mut params = BootParams::zeroed();
+        params.append_e820_entry(BootE820Entry::new(0x2000, 0x1000, E820EntryType::ACPI));
+        let handler = Handler::new(&params);
+
+        assert!(!handler.is_acpi_memory(0x1FFF, 0x1000));
+        assert!(!handler.is_acpi_memory(0x2000, 0x1001));
+        assert!(!handler.is_acpi_memory(0x3000, 0x100));
+    }
+
+    #[test]
+    fn is_acpi_memory_overflow() {
+        let mut params = BootParams::zeroed();
+        params.append_e820_entry(BootE820Entry::new(0x2000, 0x1000, E820EntryType::ACPI));
+        let handler = Handler::new(&params);
+
+        assert!(!handler.is_acpi_memory(usize::MAX, 0x1000));
+    }
 }
