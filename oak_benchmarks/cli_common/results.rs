@@ -16,6 +16,8 @@
 
 //! Benchmark result metrics and formatting.
 
+pub use benchmark::cpu::CpuFeatures;
+
 use crate::{cli::OutputFormat, tsc::tsc_to_nanos};
 
 /// Calculated metrics from a benchmark response.

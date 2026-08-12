@@ -27,6 +27,6 @@ pub mod tsc;
 // Re-export commonly used items at crate root.
 pub use cli::{BENCHMARK_TYPE_NAMES, DisplayBenchmarkType, OutputFormat, parse_benchmark_type};
 pub use results::{
-    BenchmarkMetrics, BenchmarkResult, check_status, describe_status, format_result,
+    BenchmarkMetrics, BenchmarkResult, CpuFeatures, check_status, describe_status, format_result,
 };
 pub use tsc::{DEFAULT_TSC_FREQ_HZ, TscFreq, detect_tsc_freq, tsc_to_nanos};

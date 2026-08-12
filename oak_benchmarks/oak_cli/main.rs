@@ -24,8 +24,8 @@ use std::time::Instant;
 use anyhow::{Context, Result};
 use clap::Parser;
 use cli_common::{
-    BenchmarkMetrics, DisplayBenchmarkType, OutputFormat, check_status, detect_tsc_freq,
-    format_result, parse_benchmark_type,
+    BenchmarkMetrics, CpuFeatures, DisplayBenchmarkType, OutputFormat, check_status,
+    detect_tsc_freq, format_result, parse_benchmark_type,
 };
 use oak_benchmark_proto_rust::oak::benchmark::{BenchmarkType, RunBenchmarkRequest};
 use oak_launcher_utils::launcher;
@@ -149,6 +149,7 @@ async fn main() -> Result<()> {
         bytes_processed: response.bytes_processed,
         status: response.status,
     };
+    log::info!("guest CPU features: {}", CpuFeatures::from_wire(response.cpu_features));
     let output = format_result(&result, &metrics, args.output);
     print!("{}", output);
 

@@ -16,6 +16,8 @@
 
 //! CPU-bound benchmarks.
 
+use core::fmt;
+
 use bitflags::bitflags;
 
 pub mod hashing;
@@ -220,9 +222,62 @@ impl CpuFeatures {
     }
 }
 
+/// Write a feature set, or `none` if it is empty.
+///
+/// `bitflags` writes an empty string for an empty set, and a blank field in a
+/// report cannot be told apart from a missing one. Everything else is left to
+/// the crate, so a newly added flag cannot go unprinted.
+fn write_set(f: &mut fmt::Formatter<'_>, set: FeatureSet) -> fmt::Result {
+    if set.is_empty() {
+        return f.write_str("none");
+    }
+    bitflags::parser::to_writer(&set, f)
+}
+
+/// `{}` prints the effective feature set, which is the value to compare
+/// between two runs. `{:#}` adds the compile-time and `CPUID` sets it was
+/// derived from, for logs and methodology notes.
+impl fmt::Display for CpuFeatures {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if !f.alternate() {
+            return write_set(f, self.effective());
+        }
+        f.write_str("effective=")?;
+        write_set(f, self.effective())?;
+        f.write_str(" (compiled=")?;
+        write_set(f, self.compiled)?;
+        f.write_str(", cpuid=")?;
+        write_set(f, self.available)?;
+        write!(f, ", runtime_dispatch={})", self.runtime_dispatch)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The names travel into reports, so pin them rather than let a rename of
+    /// the flag constants change what a recorded run says.
+    #[test]
+    fn display_lists_the_flag_names() {
+        let show = |bits| CpuFeatures::from_wire(bits).to_string();
+        assert_eq!(show(0), "none");
+        assert_eq!(show(0b1111), "SHA_NI | AES_NI | PCLMULQDQ | AVX2");
+        assert_eq!(show(0b1000), "AVX2");
+        assert_eq!(show(0b11_0000), "AVX512IFMA | AVX512VL");
+
+        // The alternate form is what the human-readable report prints.
+        assert_eq!(
+            format!("{:#}", CpuFeatures::from_wire(0b11 | (1 << 16))),
+            "effective=SHA_NI | AES_NI (compiled=SHA_NI | AES_NI, cpuid=none, runtime_dispatch=true)"
+        );
+    }
+
+    /// Without dispatch the `CPUID` half is unreachable and must not appear.
+    #[test]
+    fn display_hides_undispatchable_features() {
+        assert_eq!(CpuFeatures::from_wire(0b11_1111 << 8).to_string(), "none");
+    }
 
     #[test]
     fn bits_round_trip() {

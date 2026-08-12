@@ -29,8 +29,8 @@ use std::{
 use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use cli_common::{
-    BenchmarkMetrics, BenchmarkResult, DisplayBenchmarkType, OutputFormat, check_status,
-    format_result, parse_benchmark_type,
+    BenchmarkMetrics, BenchmarkResult, CpuFeatures, DisplayBenchmarkType, OutputFormat,
+    check_status, format_result, parse_benchmark_type,
 };
 use oak_benchmark_grpc::oak::benchmark::benchmark_client::BenchmarkClient;
 use oak_benchmark_proto_rust::oak::benchmark::{
@@ -211,6 +211,7 @@ async fn main() -> Result<()> {
         status: response.status,
     };
     print!("{}", format_result(&result, &metrics, args.output));
+    println!("Guest CPU features: {}", CpuFeatures::from_wire(response.cpu_features));
 
     // Print host timing for Human format.
     if matches!(args.output, OutputFormat::Human) {

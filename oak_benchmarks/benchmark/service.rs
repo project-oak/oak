@@ -29,7 +29,10 @@ use oak_benchmark_proto_rust::oak::benchmark::{
 
 use crate::{
     BenchmarkError, BenchmarkResult,
-    cpu::hashing::{HashAlgorithm, HashingBenchmark},
+    cpu::{
+        CpuFeatures,
+        hashing::{HashAlgorithm, HashingBenchmark},
+    },
     memory::{
         AllocChurnBenchmark, ArrayUpdateBenchmark,
         hashmap::{HashMapBenchmark, HashMapMode},
@@ -134,6 +137,7 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
                     iterations_completed: request.iterations,
                     bytes_processed: (request.iterations as u64) * (request.data_size as u64),
                     status: status::OK,
+                    cpu_features: CpuFeatures::detect().to_wire(),
                     ..Default::default()
                 };
             }
@@ -146,6 +150,7 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
     }
 
     fn result_to_response(result: Result<BenchmarkResult, BenchmarkError>) -> RunBenchmarkResponse {
+        let cpu_features = CpuFeatures::detect().to_wire();
         match result {
             Ok(result) => RunBenchmarkResponse {
                 elapsed_tsc: result.timing.elapsed_tsc,
@@ -155,9 +160,13 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
                 status: status::OK,
                 working_set_size: 0,
                 checksum: 0,
-                cpu_features: 0,
+                cpu_features,
             },
-            Err(e) => RunBenchmarkResponse { status: e.as_status_code(), ..Default::default() },
+            Err(e) => RunBenchmarkResponse {
+                status: e.as_status_code(),
+                cpu_features,
+                ..Default::default()
+            },
         }
     }
 }
