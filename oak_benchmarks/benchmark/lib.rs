@@ -184,6 +184,11 @@ impl BenchmarkError {
 /// This is an FNV-1a variant. It is not cryptographic; its only purpose is to
 /// make benchmark output observable so the optimiser cannot discard it, and to
 /// let the host verify that both platforms computed the same thing.
+///
+/// The prime below and the offset basis in [`CHECKSUM_INIT`] are the 64-bit
+/// parameters given by the FNV specification,
+/// <http://www.isthe.com/chongo/tech/comp/fnv/>. XORing before multiplying,
+/// rather than after, is what makes it FNV-1a rather than FNV-1.
 #[inline]
 pub fn checksum_update(acc: u64, bytes: &[u8]) -> u64 {
     const FNV_PRIME: u64 = 1099511628211;
@@ -196,6 +201,10 @@ pub fn checksum_update(acc: u64, bytes: &[u8]) -> u64 {
 }
 
 /// Initial value for [`checksum_update`] chains.
+///
+/// The FNV-1a 64-bit offset basis, `0xcbf2_9ce4_8422_2325`. Starting from zero
+/// instead would be a mistake: zero is a fixed point of the multiply, so a
+/// chain begun there stays zero until the first non-zero byte arrives.
 pub const CHECKSUM_INIT: u64 = 14695981039346656037;
 
 /// Fold the endpoints of a byte slice into a running value in constant time.

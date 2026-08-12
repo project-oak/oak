@@ -65,8 +65,7 @@ pub struct BenchmarkService<T: BenchmarkTimer> {
     seed: u64,
     hashing: Option<Box<HashingBenchmark>>,
     array_update: Option<Box<ArrayUpdateBenchmark>>,
-    hashmap_insert: Option<Box<HashMapBenchmark>>,
-    hashmap_lookup: Option<Box<HashMapBenchmark>>,
+    hashmap: Option<Box<HashMapBenchmark>>,
     alloc_churn: AllocChurnBenchmark,
     _timer: PhantomData<T>,
 }
@@ -81,8 +80,7 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
             seed,
             hashing: None,
             array_update: None,
-            hashmap_insert: None,
-            hashmap_lookup: None,
+            hashmap: None,
             alloc_churn: AllocChurnBenchmark::with_defaults(),
             _timer: PhantomData,
         }
@@ -147,12 +145,14 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
                 b.run::<T>(iterations, warmup)
             }
             BenchmarkType::MemoryInsert => {
-                let b = self.hashmap_insert_bench(seed);
-                b.map_clear();
+                let entries = Self::hashmap_entries(request);
+                let b = self.hashmap_bench(entries, seed)?;
                 b.run::<T>(HashMapMode::Insert, iterations, warmup)
             }
             BenchmarkType::MemoryLookup => {
-                self.hashmap_lookup_bench(seed).run::<T>(HashMapMode::Lookup, iterations, warmup)
+                let entries = Self::hashmap_entries(request);
+                let b = self.hashmap_bench(entries, seed)?;
+                b.run::<T>(HashMapMode::Lookup, iterations, warmup)
             }
             BenchmarkType::AllocChurn => self.alloc_churn.run::<T>(iterations, warmup),
 
@@ -165,6 +165,17 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
             )),
 
             BenchmarkType::Unspecified => Err(BenchmarkError::UnsupportedBenchmark),
+        }
+    }
+
+    fn hashmap_entries(request: &RunBenchmarkRequest) -> u32 {
+        if request.working_set_size != 0 {
+            HashMapBenchmark::entries_for_working_set(
+                request.working_set_size,
+                crate::memory::hashmap::DEFAULT_VALUE_SIZE,
+            )
+        } else {
+            DEFAULT_HASHMAP_ENTRIES
         }
     }
 
@@ -199,21 +210,21 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
         Ok(self.array_update.as_mut().unwrap())
     }
 
-    fn hashmap_insert_bench(&mut self, seed: u64) -> &mut HashMapBenchmark {
-        if self.hashmap_insert.is_none() {
-            self.hashmap_insert =
-                Some(Box::new(HashMapBenchmark::with_defaults(DEFAULT_HASHMAP_ENTRIES, seed)));
+    fn hashmap_bench(
+        &mut self,
+        entries: u32,
+        seed: u64,
+    ) -> Result<&mut HashMapBenchmark, BenchmarkError> {
+        match self.hashmap.as_mut() {
+            Some(_) => {
+                let b = self.hashmap.as_mut().unwrap();
+                b.reconfigure(entries, seed)?;
+            }
+            None => {
+                self.hashmap = Some(Box::new(HashMapBenchmark::with_defaults(entries, seed)?));
+            }
         }
-        self.hashmap_insert.as_mut().unwrap()
-    }
-
-    fn hashmap_lookup_bench(&mut self, seed: u64) -> &mut HashMapBenchmark {
-        if self.hashmap_lookup.is_none() {
-            let mut b = HashMapBenchmark::with_defaults(DEFAULT_HASHMAP_ENTRIES, seed);
-            b.populate();
-            self.hashmap_lookup = Some(Box::new(b));
-        }
-        self.hashmap_lookup.as_mut().unwrap()
+        Ok(self.hashmap.as_mut().unwrap())
     }
 
     fn result_to_response(result: Result<BenchmarkResult, BenchmarkError>) -> RunBenchmarkResponse {

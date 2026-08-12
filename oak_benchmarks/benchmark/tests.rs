@@ -97,7 +97,7 @@ fn test_service_supports_all_benchmark_types() {
 /// comparisons are meaningless.
 #[test]
 fn test_service_is_deterministic_across_runs() {
-    let types = [BenchmarkType::Sha256, BenchmarkType::ArrayUpdate];
+    let types = [BenchmarkType::Sha256, BenchmarkType::ArrayUpdate, BenchmarkType::MemoryInsert];
 
     for benchmark_type in types {
         let mut request = request_for(benchmark_type);
