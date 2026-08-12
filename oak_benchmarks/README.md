@@ -83,12 +83,12 @@ sizes and iterations.
 
 ### Memory-Bound
 
-| Benchmark     | What it measures                                               |
-| ------------- | -------------------------------------------------------------- |
-| Array Update  | Random writes to a caller-sized buffer — memory access latency |
-| Memory Insert | HashMap insert (key + alloc value) — allocator + hashing       |
-| Memory Lookup | HashMap lookup (read-only) — hash + memory-read, no allocation |
-| Alloc Churn   | Alloc/dealloc 4KB vectors — pure allocator throughput          |
+| Benchmark     | What it measures                                                |
+| ------------- | --------------------------------------------------------------- |
+| Array Update  | Random writes to a caller-sized buffer — memory access latency  |
+| Memory Insert | HashMap insert (key + alloc value) — allocator + hashing        |
+| Memory Lookup | HashMap lookup (read-only) — hash + memory-read, no allocation  |
+| Alloc Churn   | Alloc/dealloc at a fixed or cycling size — allocator throughput |
 
 Available benchmarks: `sha256`, `sha512`, `sha3-256`, `sha3-512`,
 `array-update`, `memory-insert`, `memory-lookup`, `alloc-churn`, `debug`.

@@ -39,7 +39,7 @@ use crate::{
         hashing::{HashAlgorithm, HashingBenchmark},
     },
     memory::{
-        AllocChurnBenchmark, ArrayUpdateBenchmark,
+        AllocChurnBenchmark, AllocSizeMode, ArrayUpdateBenchmark,
         hashmap::{HashMapBenchmark, HashMapMode},
     },
     timer::BenchmarkTimer,
@@ -154,7 +154,16 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
                 let b = self.hashmap_bench(entries, seed)?;
                 b.run::<T>(HashMapMode::Lookup, iterations, warmup)
             }
-            BenchmarkType::AllocChurn => self.alloc_churn.run::<T>(iterations, warmup),
+            BenchmarkType::AllocChurn => {
+                // `data_size` selects the allocation size; 0 selects the
+                // variable-size schedule.
+                if request.data_size == 0 {
+                    self.alloc_churn.set_mode(AllocSizeMode::Variable);
+                } else {
+                    self.alloc_churn.set_mode(AllocSizeMode::Fixed(request.data_size as usize));
+                }
+                self.alloc_churn.run::<T>(iterations, warmup)
+            }
 
             // ── Connectivity check ──
             BenchmarkType::Debug => Ok(BenchmarkResult::new(

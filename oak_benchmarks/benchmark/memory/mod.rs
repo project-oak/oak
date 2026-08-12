@@ -23,7 +23,7 @@ pub mod alloc_churn;
 pub mod array_update;
 pub mod hashmap;
 
-pub use alloc_churn::AllocChurnBenchmark;
+pub use alloc_churn::{AllocChurnBenchmark, AllocSizeMode};
 pub use array_update::ArrayUpdateBenchmark;
 pub use hashmap::{HashMapBenchmark, HashMapMode};
 
