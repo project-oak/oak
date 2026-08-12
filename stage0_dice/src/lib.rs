@@ -171,6 +171,12 @@ pub fn derive_sealing_cdi(
         salt.extend_from_slice(shorten_cmdline(&measurements.kernel_cmdline).as_bytes());
         salt.extend_from_slice(&measurements.setup_data_digest);
         salt.extend_from_slice(&measurements.ram_disk_digest);
+        // Ideally we'd also add the `memory_map_digest` and `acpi_digest` to the salt,
+        // but this may break users who depend on the sealing key being consistent.
+        // In any case, as the memory map and ACPI tables are data, all the executable
+        // code we load is correctly included in the salt above (with the caveat that
+        // e.g. Linux kernel may interpret AML in ACPI tables so that needs to be
+        // sandboxed properly; Restricted Kernel doesn't interpret AML at all).
         salt
     };
 
