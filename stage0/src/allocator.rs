@@ -230,7 +230,7 @@ pub fn init_global_allocator(e820_table: &[BootE820Entry]) {
     if !e820_table.iter().any(|entry| {
         entry.entry_type() == Some(E820EntryType::RAM)
             && entry.addr() as u64 <= HEAP_START.as_u64()
-            && (entry.addr() + entry.size()) as u64 >= HEAP_END.as_u64()
+            && entry.end() as u64 >= HEAP_END.as_u64()
     }) {
         panic!("heap is not backed by physical memory");
     }

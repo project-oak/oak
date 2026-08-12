@@ -340,7 +340,7 @@ impl SensitiveDiceDataMemory {
         assert!(info.e820_table().iter().any(|entry| {
             let dice_data_fully_contained_in_segment = {
                 let range = PhysAddr::new(entry.addr().try_into().unwrap())
-                    ..=PhysAddr::new((entry.addr() + entry.size()).try_into().unwrap());
+                    ..=PhysAddr::new(entry.end().try_into().unwrap());
                 range.contains(&dice_data_phys_addr)
                     && range.contains(&end)
                     && range.contains(&eventlog_phys_addr)
@@ -362,7 +362,7 @@ impl SensitiveDiceDataMemory {
             if let Some(dice_data_attestation_addr) = dice_data_attestation_addr {
                 assert!(info.e820_table().iter().any(|entry| {
                     let range = PhysAddr::new(entry.addr().try_into().unwrap())
-                        ..=PhysAddr::new((entry.addr() + entry.size()).try_into().unwrap());
+                        ..=PhysAddr::new(entry.end().try_into().unwrap());
                     range.contains(&dice_data_attestation_addr) && range.contains(&end)
                 }));
                 let dice_data_attestation_virt_address =
