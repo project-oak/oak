@@ -5,7 +5,7 @@
 # Note; if you change this version, you should change the sysroot version in
 # oak_containers/sysroot/sysroot.yaml and the app_base version  in
 # oak_containers/app_base/app_base.yaml to match.
-ARG debian_snapshot=sha256:34363c20bd149e41365fc77b086da067ed13ab2dff4cd0612788e12e6d52c44c
+ARG debian_snapshot=sha256:1710bde34461551a19a47c787885ec9ad7058d9a5bead2affb8d088fa2f8502b
 FROM debian@${debian_snapshot}
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
