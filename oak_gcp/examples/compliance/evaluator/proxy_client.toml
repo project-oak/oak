@@ -1,0 +1,22 @@
+# Oak Proxy Client Configuration for Party B (Evaluator Enclave)
+#
+# Configures the local Oak Proxy Client to establish an attested, encrypted
+# Noise handshake tunnel with the Confidential Space Evaluator workload.
+
+listen_address = "127.0.0.1:8082"
+mode = "http"
+
+attestation_generators = []
+
+[[attestation_verifiers]]
+type = "confidential_space"
+# Path to the Google Cloud Confidential Space root certificate.
+# Pre-packaged in the Oak repository under oak_attestation_gcp/data/
+root_certificate_pem_path = "oak_attestation_gcp/data/confidential_space_root.pem"
+
+# Authorized sha256 container image digest of the compliance-evaluator image.
+# Replace with the digest published by terraform or docker build/push.
+# Example:
+# authorized_image_digests = [
+#     "f396d33389aad72d8098d9fcfdf544e32d00de04c2179952ca9760a3c18c35f5"
+# ]

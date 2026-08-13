@@ -1,0 +1,7 @@
+# Local secrets and environment
+.env
+terraform/terraform.tfvars
+_scratch/
+*.pyc
+__pycache__/
+.adk/

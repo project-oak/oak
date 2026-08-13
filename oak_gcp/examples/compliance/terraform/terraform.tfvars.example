@@ -1,0 +1,21 @@
+# GCP Project ID where Confidential Space enclaves are provisioned
+gcp_project_id = "my-gcp-project-id"
+
+# Region and Zone
+region = "europe-west1"
+zone   = "europe-west1-b"
+
+# Artifact Registry Docker repository name
+repo_name = "compliance-enclaves"
+
+# Container image references
+anonymizer_image = "europe-west1-docker.pkg.dev/my-gcp-project-id/compliance-enclaves/compliance-anonymizer:latest"
+evaluator_image  = "europe-west1-docker.pkg.dev/my-gcp-project-id/compliance-enclaves/compliance-evaluator:latest"
+
+# Machine types (AMD SEV-SNP compatible)
+anonymizer_machine_type = "n2d-standard-4"
+evaluator_machine_type  = "n2d-standard-32"
+
+
+# Set to true to use confidential-space-debug image family for development/troubleshooting
+allow_debug = false

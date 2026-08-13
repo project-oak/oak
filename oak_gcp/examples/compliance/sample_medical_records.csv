@@ -1,0 +1,51 @@
+patient_id,visit_id,visit_date,primary_condition,all_conditions,treatment,systolic_bp,diastolic_bp,heart_rate,temperature,weight_kg,height_cm,bmi,glucose_mg_dl,cholesterol_mg_dl,hemoglobin_g_dl,physician,hospital
+EU-NE-001805,V-EU-NE-001805-001,2024-08-20,Routine checkup,Routine checkup,,137,89,78,37.5,76.2,182,23.0,75,187,14.0,Dr. Brown,Amsterdam General Hospital
+EU-PO-000503,V-EU-PO-000503-001,2025-05-03,Routine checkup,Routine checkup,,126,81,63,37.6,101.3,197,26.1,199,280,13.2,Dr. Johnson,Unknown General Hospital
+EU-GE-000794,V-EU-GE-000794-002,2025-08-22,Cancer,"Asthma, Obesity, Cancer",,127,80,74,36.3,104.0,160,40.6,152,161,12.4,Dr. Miller,Frankfurt General Hospital
+EU-IT-000430,V-EU-IT-000430-001,2024-06-13,Hypertension,"Diabetes Type 2, Hypertension",Beta blockers,135,69,63,36.1,98.6,170,34.1,161,250,14.8,Dr. Davis,Naples General Hospital
+EU-GR-001959,V-EU-GR-001959-004,2024-06-06,COPD,COPD,,178,61,95,36.3,97.9,172,33.1,79,279,17.0,Dr. Miller,Unknown General Hospital
+EU-IT-001335,V-EU-IT-001335-001,2025-01-07,Arthritis,"Depression, Arthritis",,152,63,96,37.2,82.6,160,32.3,171,185,10.9,Dr. Brown,Milan General Hospital
+EU-NE-001375,V-EU-NE-001375-001,2023-10-21,Hypertension,"Hypertension, Depression, Asthma, Obesity",ACE inhibitors,157,92,85,37.3,62.2,156,25.6,169,192,11.7,Dr. Miller,Rotterdam General Hospital
+EU-IT-000143,V-EU-IT-000143-002,2024-09-04,Arthritis,"Hypertension, Obesity, Arthritis",,170,67,65,37.8,54.4,170,18.8,75,227,10.9,Dr. Miller,Milan General Hospital
+EU-FR-000006,V-EU-FR-000006-001,2024-09-19,Hypertension,"Hypertension, Asthma, Obesity",Diuretics,101,79,87,36.4,111.5,150,49.6,70,151,14.3,Dr. Davis,Toulouse General Hospital
+EU-CZ-001087,V-EU-CZ-001087-004,2023-10-04,Routine checkup,Routine checkup,,120,103,87,37.5,100.7,187,28.8,197,265,14.7,Dr. Johnson,Unknown General Hospital
+EU-SP-000457,V-EU-SP-000457-002,2025-09-13,Routine checkup,Routine checkup,,166,73,61,37.3,72.4,178,22.9,178,172,12.3,Dr. Brown,Valencia General Hospital
+EU-GE-000380,V-EU-GE-000380-001,2023-12-31,Arthritis,Arthritis,,148,89,79,36.2,85.6,156,35.2,106,247,12.0,Dr. Miller,Hamburg General Hospital
+EU-NE-000869,V-EU-NE-000869-003,2024-05-14,Obesity,"Asthma, Obesity",,179,72,61,37.5,83.5,173,27.9,197,300,12.1,Dr. Davis,Utrecht General Hospital
+EU-BE-001497,V-EU-BE-001497-001,2025-04-03,Diabetes Type 2,"Diabetes Type 2, Hypertension, Obesity",Metformin,129,62,84,37.3,114.0,188,32.3,122,264,14.0,Dr. Miller,Unknown General Hospital
+EU-FR-000646,V-EU-FR-000646-001,2023-10-04,Arthritis,Arthritis,,137,101,82,37.3,62.9,182,19.0,88,225,16.0,Dr. Miller,Lyon General Hospital
+EU-FR-001363,V-EU-FR-001363-001,2024-03-25,Hypertension,"Hypertension, Asthma, Stroke",Beta blockers,170,100,97,36.4,116.7,180,36.0,71,155,15.2,Dr. Johnson,Lyon General Hospital
+EU-PO-001484,V-EU-PO-001484-001,2025-08-08,Hypertension,"Hypertension, Cancer, COPD",Diuretics,106,111,91,36.7,50.7,176,16.4,190,158,12.1,Dr. Johnson,Unknown General Hospital
+EU-PO-001649,V-EU-PO-001649-004,2025-03-30,Arthritis,"Hypertension, Arthritis",,91,103,88,36.2,55.2,162,21.0,188,180,16.2,Dr. Davis,Unknown General Hospital
+EU-SP-000385,V-EU-SP-000385-003,2024-06-10,Arthritis,Arthritis,,149,78,70,37.3,87.5,191,24.0,137,198,13.8,Dr. Miller,Bilbao General Hospital
+EU-PO-000309,V-EU-PO-000309-004,2024-04-21,COPD,COPD,,96,106,71,36.9,54.9,164,20.4,178,192,16.6,Dr. Brown,Unknown General Hospital
+EU-FR-001952,V-EU-FR-001952-001,2023-10-01,Obesity,Obesity,,117,91,77,37.8,115.1,200,28.8,85,182,15.3,Dr. Davis,Nice General Hospital
+EU-PO-000210,V-EU-PO-000210-001,2024-06-21,Asthma,"Hypertension, Asthma",Corticosteroids,90,101,79,37.3,78.7,151,34.5,91,253,12.7,Dr. Miller,Unknown General Hospital
+EU-NE-001713,V-EU-NE-001713-001,2023-10-16,Diabetes Type 2,"Diabetes Type 2, Heart Disease",Metformin,151,98,86,36.6,105.1,162,40.0,93,194,10.0,Dr. Smith,Rotterdam General Hospital
+EU-BE-000328,V-EU-BE-000328-003,2024-03-27,Hypertension,Hypertension,Diuretics,119,83,61,36.8,74.1,166,26.9,88,198,16.3,Dr. Smith,Unknown General Hospital
+EU-IT-001054,V-EU-IT-001054-002,2025-01-18,Routine checkup,Routine checkup,,122,96,98,37.5,105.5,193,28.3,195,185,13.3,Dr. Davis,Turin General Hospital
+EU-PO-000174,V-EU-PO-000174-005,2025-05-15,Obesity,"Hypertension, Obesity, Arthritis",,109,112,75,37.0,58.7,155,24.4,195,221,17.1,Dr. Miller,Unknown General Hospital
+EU-PO-001040,V-EU-PO-001040-002,2025-09-04,Routine checkup,Routine checkup,,136,100,90,37.1,80.5,165,29.6,116,289,11.3,Dr. Johnson,Unknown General Hospital
+EU-BE-001405,V-EU-BE-001405-001,2024-11-22,Obesity,"Obesity, Arthritis",,168,101,61,37.2,110.3,196,28.7,87,206,11.3,Dr. Davis,Unknown General Hospital
+EU-GE-000204,V-EU-GE-000204-001,2024-01-31,Arthritis,"Hypertension, Arthritis",,164,77,96,37.8,118.5,167,42.5,87,249,10.7,Dr. Davis,Cologne General Hospital
+EU-FR-000015,V-EU-FR-000015-001,2025-03-30,Depression,Depression,Exercise therapy,157,96,63,37.2,68.6,175,22.4,153,224,12.3,Dr. Brown,Lyon General Hospital
+EU-FR-000876,V-EU-FR-000876-003,2024-12-20,Arthritis,"Heart Disease, Arthritis, COPD",,104,78,63,37.7,62.8,188,17.8,159,258,16.4,Dr. Miller,Lyon General Hospital
+EU-GE-001404,V-EU-GE-001404-001,2024-06-28,Routine checkup,Routine checkup,,120,75,85,37.4,53.1,162,20.2,141,215,12.5,Dr. Johnson,Munich General Hospital
+EU-GR-001942,V-EU-GR-001942-001,2025-06-28,Arthritis,"Depression, Arthritis",,124,106,84,37.0,54.7,168,19.4,122,188,10.1,Dr. Smith,Unknown General Hospital
+EU-SP-000420,V-EU-SP-000420-004,2023-11-16,Hypertension,"Hypertension, Depression, Obesity, Arthritis",Beta blockers,171,118,72,36.5,51.2,175,16.7,88,211,11.1,Dr. Johnson,Valencia General Hospital
+EU-GE-001008,V-EU-GE-001008-002,2024-04-04,Routine checkup,Routine checkup,,169,78,92,36.5,60.8,194,16.2,166,226,15.5,Dr. Davis,Munich General Hospital
+EU-FR-001174,V-EU-FR-001174-001,2024-04-19,Hypertension,Hypertension,Beta blockers,163,73,71,37.7,112.1,185,32.8,133,259,16.1,Dr. Smith,Marseille General Hospital
+EU-GE-001527,V-EU-GE-001527-001,2023-10-29,Diabetes Type 2,Diabetes Type 2,Insulin,146,71,90,36.4,106.9,156,43.9,144,157,14.2,Dr. Miller,Munich General Hospital
+EU-PO-000498,V-EU-PO-000498-001,2025-08-21,Obesity,"Diabetes Type 2, Hypertension, Obesity",,169,88,67,37.3,110.4,155,46.0,138,286,13.0,Dr. Smith,Unknown General Hospital
+EU-SP-001783,V-EU-SP-001783-001,2025-01-18,Obesity,"Obesity, Arthritis, COPD",,171,113,89,36.6,89.9,164,33.4,104,219,16.0,Dr. Miller,Seville General Hospital
+EU-FR-001508,V-EU-FR-001508-001,2025-02-27,Routine checkup,Routine checkup,,114,80,69,36.7,62.8,154,26.5,151,297,14.4,Dr. Smith,Nice General Hospital
+EU-NE-001462,V-EU-NE-001462-001,2025-04-25,Depression,Depression,Exercise therapy,152,120,89,37.3,64.4,193,17.3,104,201,17.4,Dr. Smith,Amsterdam General Hospital
+EU-CZ-000254,V-EU-CZ-000254-004,2024-10-11,Routine checkup,Routine checkup,,180,116,66,37.7,101.9,173,34.0,145,248,12.2,Dr. Davis,Unknown General Hospital
+EU-CZ-000346,V-EU-CZ-000346-002,2025-07-06,Arthritis,Arthritis,,94,65,60,37.0,53.8,173,18.0,119,237,16.0,Dr. Johnson,Unknown General Hospital
+EU-GR-001317,V-EU-GR-001317-001,2024-08-13,Obesity,Obesity,,177,85,87,37.4,63.8,177,20.4,185,199,14.1,Dr. Brown,Unknown General Hospital
+EU-CZ-000247,V-EU-CZ-000247-002,2023-12-13,Routine checkup,Routine checkup,,127,73,69,37.7,100.4,150,44.6,110,273,14.5,Dr. Smith,Unknown General Hospital
+EU-GE-001819,V-EU-GE-001819-003,2025-07-11,Hypertension,Hypertension,Diuretics,95,82,70,37.0,66.6,189,18.6,175,212,11.6,Dr. Davis,Cologne General Hospital
+EU-GE-000063,V-EU-GE-000063-001,2025-09-05,Hypertension,Hypertension,Diuretics,108,85,65,36.8,77.3,183,23.1,135,231,15.5,Dr. Smith,Berlin General Hospital
+EU-BE-000378,V-EU-BE-000378-002,2025-06-05,Asthma,Asthma,Lifestyle changes,117,103,87,37.5,80.3,189,22.5,142,220,17.5,Dr. Brown,Unknown General Hospital
+EU-GE-000041,V-EU-GE-000041-003,2024-01-25,Obesity,Obesity,,177,97,88,36.9,99.1,151,43.5,139,176,12.0,Dr. Smith,Cologne General Hospital
+EU-CZ-000254,V-EU-CZ-000254-001,2024-10-11,Routine checkup,Routine checkup,,137,115,76,37.3,82.5,194,21.9,184,173,15.2,Dr. Smith,Unknown General Hospital

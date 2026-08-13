@@ -1,0 +1,16 @@
+listen_address = "0.0.0.0:8080"
+backend_address = "127.0.0.1:8081"
+mode = "http"
+attestation_verifiers = []
+
+[[attestation_generators]]
+type = "confidential_space"
+
+[backend_command]
+cmd = "/opt/venv/bin/uvicorn"
+args = [
+    "server:app",
+    "--host=127.0.0.1",
+    "--port=8081",
+]
+restart_policy = "always"
