@@ -160,12 +160,25 @@ impl SealedMemorySessionHandler {
         Ok(())
     }
 
-    /// Validates the memory's source against the configured allowlist.
+    /// Validates the memory's source.
     ///
-    /// When `allowed_memory_sources` is non-empty, every memory must have a
-    /// `source` with a `source_id` that appears in the allowlist. Returns
-    /// `InvalidArgument` if the source is missing or not in the list.
+    /// A `source` with a non-empty `source_id` is required when
+    /// `memory.text_views` is non-empty or when `allowed_memory_sources` is
+    /// configured. When `allowed_memory_sources` is non-empty, `source_id`
+    /// must also appear in the allowlist. Returns `InvalidArgument` on failure.
     fn validate_memory_source(&self, memory: &Memory) -> tonic::Result<()> {
+        if memory.text_views.as_ref().is_some_and(|tv| !tv.text_views.is_empty()) {
+            let source = memory.source.as_ref().ok_or_else(|| {
+                tonic::Status::invalid_argument(
+                    "memory source is required when text_views is non-empty",
+                )
+            })?;
+
+            if source.source_id.is_empty() {
+                return Err(tonic::Status::invalid_argument("memory source_id must not be empty"));
+            }
+        }
+
         if self.allowed_memory_sources.is_empty() {
             return Ok(());
         }

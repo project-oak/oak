@@ -27,7 +27,10 @@ use client::{PrivateMemoryAppClient, PrivateMemoryClient};
 use oak_session::{attestation::AttestationType, config::SessionConfig, handshake::HandshakeType};
 use private_memory_test_utils::{start_server, start_server_with_config, system_time_to_timestamp};
 use sealed_memory_rust_proto::{
-    oak::private_memory::{LlmView, LlmViews, MemorySource},
+    oak::private_memory::{
+        LlmView, LlmViews, MemorySource, TextView, TextViewSort, TextViews,
+        search_memories_sort::Sort as SortValue,
+    },
     prelude::v1::*,
 };
 
@@ -603,6 +606,75 @@ async fn test_memory_source_no_allowlist_accepts_any() {
     client.add_memory(memory_without).await.expect("no source accepted without allowlist");
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn test_memory_with_text_views_requires_source() {
+    let (addr, _server, _db, _persist) = start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(&url, "text_views_source_user", TEST_EK)
+            .await
+            .unwrap();
+
+    let text_views = TextViews {
+        text_views: vec![TextView {
+            view_type: "notes".to_string(),
+            text: vec!["some text".to_string()],
+            ..Default::default()
+        }],
+    };
+
+    // Missing source with non-empty text_views should be rejected.
+    let memory_no_source = Memory {
+        id: "".to_string(),
+        source: None,
+        text_views: Some(text_views.clone()),
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    };
+    let result = client.add_memory(memory_no_source).await;
+    assert!(result.is_err(), "missing source with text_views should be rejected");
+    let err = result.unwrap_err();
+    assert!(
+        format!("{:?}", err).contains("source is required"),
+        "error should mention required source, got: {err:?}"
+    );
+
+    // Empty source_id with non-empty text_views should be rejected.
+    let memory_empty_source_id = Memory {
+        id: "".to_string(),
+        source: Some(MemorySource { source_id: "".to_string() }),
+        text_views: Some(text_views),
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    };
+    let result = client.add_memory(memory_empty_source_id).await;
+    assert!(result.is_err(), "empty source_id with text_views should be rejected");
+    let err = result.unwrap_err();
+    assert!(
+        format!("{:?}", err).contains("source_id must not be empty"),
+        "error should mention empty source_id, got: {err:?}"
+    );
+
+    // Empty text_views list without source should still be accepted.
+    let memory_empty_text_views = Memory {
+        id: "".to_string(),
+        source: None,
+        text_views: Some(TextViews { text_views: vec![] }),
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    };
+    client
+        .add_memory(memory_empty_text_views)
+        .await
+        .expect("empty text_views without source should succeed");
+}
+
 /// Verifies the Invoke RPC path: handshake, key sync, add multiple
 /// memories, retrieve them all.
 #[tokio::test(flavor = "multi_thread")]
@@ -1059,4 +1131,131 @@ async fn test_add_memories_rejects_duplicate_name_within_batch_without_ids() {
 
     let by_name = get_memory_by_name(&mut client, "unassigned_name").await;
     assert!(by_name.success, "Expected the name to still resolve");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_add_memories_with_text_views() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_add_memories_text_views_user";
+
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK).await.unwrap();
+
+    let text_views = TextViews {
+        text_views: vec![TextView {
+            view_type: "notes".to_string(),
+            text: vec!["meeting notes regarding project oak".to_string()],
+            ..Default::default()
+        }],
+    };
+
+    let memories = vec![Memory {
+        id: "".to_string(),
+        tags: vec!["tag_tv".to_string()],
+        source: Some(MemorySource { source_id: "test_src".to_string() }),
+        text_views: Some(text_views),
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    }];
+
+    let response = client.add_memories(memories).await.unwrap();
+    assert_eq!(response.results.len(), 1);
+
+    let id = match &response.results[0].result {
+        Some(add_memories_response::add_memory_result::Result::Id(id)) => id.clone(),
+        _ => panic!("Expected success for memory with text views"),
+    };
+
+    // Verify retrievable and text_views present.
+    let get_response = client.get_memory_by_id(&id, None).await.unwrap();
+    assert!(get_response.success, "Failed to retrieve {}", id);
+    let retrieved_mem = get_response.memory.unwrap();
+    assert!(retrieved_mem.text_views.is_some());
+    let tv = &retrieved_mem.text_views.unwrap().text_views[0];
+    assert!(!tv.id.is_empty());
+    assert_eq!(tv.view_type, "notes");
+    assert_eq!(tv.text, vec!["meeting notes regarding project oak"]);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_search_memories_text_view_sort_client() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_search_text_views_user";
+
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK).await.unwrap();
+
+    let mem1 = Memory {
+        id: "".to_string(),
+        tags: vec!["search_test".to_string()],
+        source: Some(MemorySource { source_id: "app_src".to_string() }),
+        text_views: Some(TextViews {
+            text_views: vec![TextView {
+                view_type: "article".to_string(),
+                text: vec!["quantum computing advances".to_string()],
+                ..Default::default()
+            }],
+        }),
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    };
+
+    let mem2 = Memory {
+        id: "".to_string(),
+        tags: vec!["search_test".to_string()],
+        source: Some(MemorySource { source_id: "app_src".to_string() }),
+        text_views: Some(TextViews {
+            text_views: vec![TextView {
+                view_type: "article".to_string(),
+                text: vec!["classical computing history".to_string()],
+                ..Default::default()
+            }],
+        }),
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
+    };
+
+    let response = client.add_memories(vec![mem1, mem2]).await.unwrap();
+    assert_eq!(response.results.len(), 2);
+
+    let search_req = SearchMemoriesRequest {
+        sort: vec![SearchMemoriesSort {
+            sort: Some(SortValue::TextViewSort(TextViewSort {
+                keywords: vec!["quantum".to_string()],
+                view_type: "".to_string(),
+            })),
+        }],
+        page_size: 10,
+        ..Default::default()
+    };
+
+    let search_resp = client
+        .invoke(sealed_memory_request::Request::SearchMemoriesRequest(search_req))
+        .await
+        .unwrap();
+
+    match search_resp {
+        sealed_memory_response::Response::SearchMemoriesResponse(resp) => {
+            assert_eq!(resp.results.len(), 2);
+
+            let mem1 = resp.results[0].memory.as_ref().unwrap();
+            let tv1 = &mem1.text_views.as_ref().unwrap().text_views[0];
+            assert_eq!(tv1.text, vec!["quantum computing advances"]);
+
+            let mem2 = resp.results[1].memory.as_ref().unwrap();
+            let tv2 = &mem2.text_views.as_ref().unwrap().text_views[0];
+            assert_eq!(tv2.text, vec!["classical computing history"]);
+        }
+        other => panic!("unexpected response: {other:?}"),
+    }
 }

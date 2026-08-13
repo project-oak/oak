@@ -77,6 +77,7 @@ message LLMViewContent {
   repeated LLMViewValue values = 1;
 }
 
+// An embedding-specific view for sorting memories by embedding search
 message LLMView {
   // Optional client-provided view type, used to differentiate categories.
   // e.g. for a chat: 'summary', 'conversation_slice', 'participants'
@@ -108,6 +109,24 @@ message LLMViews {
   repeated LLMView llm_views = 1;
 }
 
+// A text-specific view for sorting memories by keyword search
+message TextView {
+  // Optional client-provided view type, used to differentiate categories.
+  // e.g. for a chat: 'summary', 'conversation_slice', 'participants'
+  string view_type = 1;
+
+  // For the purposes of keyword search, the provided text will be treated as
+  // keywords separated by whitespace, punctuation, and special characters.
+  repeated string text = 2;
+
+  // The unique identifier of the view. This is not exposed in the client proto
+  string id = 3;
+}
+
+message TextViews {
+  repeated TextView text_views = 1;
+}
+
 message MemorySource {
   // Required. The identifier of the source for DMA compliance.
   string source_id = 1;
@@ -133,11 +152,13 @@ message Memory {
 
   LLMViews views = 8;
 
+  TextViews text_views = 12;
+
   // Information about how/where the memory was created.
   MemorySource source = 11;
 
   reserved 2, 4;
-  // next_id: 12
+  // next_id: 13
 }
 
 enum MemoryField {
@@ -150,6 +171,7 @@ enum MemoryField {
   EXPIRATION_TIMESTAMP = 7;  // The 'expiration_timestamp' field.
   NAME = 8;                  // The 'name' field.
   VIEWS = 9;                 // The 'views' field.
+  TEXT_VIEWS = 10;           // The 'text_views' field.
   reserved 3;                // Reserved 3.
 }
 
@@ -406,11 +428,12 @@ enum ComparisonType {
 message SearchMemoriesSort {
   oneof sort {
     // Memories that have no scores (e.g. b/c there is no timestamp or
-    // embedding) will be sorted at the end.
+    // embedding or text match) will be sorted at the end.
     TimeSort created_timestamp_sort = 1;
     TimeSort event_timestamp_sort = 2;
     TimeSort expiration_timestamp_sort = 3;
     EmbeddingSort embedding_sort = 4;
+    TextViewSort text_view_sort = 5;
   }
 }
 
@@ -423,6 +446,21 @@ message EmbeddingSort {
   Embedding embedding = 2;  // The embedding being compared to.
   // If set, only embeddings for this type of LLMView will be considered.
   string view_type = 3;
+}
+
+// Sorts memories based on the relevance of their text views given a set of
+// keywords.
+message TextViewSort {
+  // A set of distinct keywords. Each keyword must be a single alphabetic or
+  // numeric token with no whitespace, punctuation, or special characters.
+  // Memories are scored and sorted based on the frequency of these keywords in
+  // their text views according to the Okapi BM25 algorithm. If a memory has
+  // multiple text views, the max score is used.
+  repeated string keywords = 1;
+
+  // If set, only text views of this type are considered for scoring and
+  // sorting.
+  string view_type = 2;
 }
 
 enum SortOrder {

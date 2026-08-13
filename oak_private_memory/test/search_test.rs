@@ -17,8 +17,8 @@ use oak_private_memory_database::icing::{IcingDatabaseConfig, IcingMetaDatabase,
 use prost_types::Timestamp;
 use sealed_memory_rust_proto::{
     oak::private_memory::{
-        LlmView, LlmViews, search_memories_filter::Value as FilterValue,
-        search_memories_sort::Sort as SortValue,
+        LlmView, LlmViews, MemorySource, SortOrder, TextView, TextViewSort, TextViews,
+        search_memories_filter::Value as FilterValue, search_memories_sort::Sort as SortValue,
     },
     prelude::v1::*,
 };
@@ -30,6 +30,55 @@ use sealed_memory_rust_proto::{
 /// Shorthand for `Some(Timestamp { seconds, nanos: 0 })`.
 fn ts(seconds: i64) -> Option<Timestamp> {
     Some(Timestamp { seconds, nanos: 0 })
+}
+
+/// Creates a single `TextView`.
+fn text_view(id: &str, view_type: &str, text: &[&str]) -> TextView {
+    TextView {
+        id: id.to_string(),
+        view_type: view_type.to_string(),
+        text: text.iter().map(|s| s.to_string()).collect(),
+    }
+}
+
+/// Creates a `Memory` with a single `TextView`.
+fn mem_with_text_view(id: &str, source_id: &str, text: &[&str]) -> Memory {
+    Memory {
+        id: id.to_string(),
+        source: Some(MemorySource { source_id: source_id.to_string() }),
+        text_views: Some(TextViews {
+            text_views: vec![text_view(&format!("{id}_view"), "", text)],
+        }),
+        ..Default::default()
+    }
+}
+
+/// Creates a `Memory` with multiple typed `TextView`s.
+fn mem_with_typed_text_views(id: &str, source_id: &str, views: &[(&str, &[&str])]) -> Memory {
+    let text_views = views
+        .iter()
+        .enumerate()
+        .map(|(i, (view_type, text))| text_view(&format!("{id}_view_{i}"), view_type, text))
+        .collect();
+    Memory {
+        id: id.to_string(),
+        source: Some(MemorySource { source_id: source_id.to_string() }),
+        text_views: Some(TextViews { text_views }),
+        ..Default::default()
+    }
+}
+
+fn text_view_sort_request(keywords: &[&str], view_type: &str) -> SearchMemoriesRequest {
+    SearchMemoriesRequest {
+        sort: vec![SearchMemoriesSort {
+            sort: Some(SortValue::TextViewSort(TextViewSort {
+                keywords: keywords.iter().map(|s| s.to_string()).collect(),
+                view_type: view_type.to_string(),
+            })),
+        }],
+        page_size: 10,
+        ..Default::default()
+    }
 }
 
 /// Creates a single `LlmView` with a "test_model" embedding.
@@ -1478,6 +1527,226 @@ fn test_search_memories_v2_tag_with_double_quote() -> anyhow::Result<()> {
 
     let req = filter_request(tag_filter("tag_with_\"_quote"), 10);
     expect_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob1")]);
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_text_view_sort_basic() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-text-view-basic"),
+        enable_int8_embedding: false,
+    })?;
+
+    let m1 = mem_with_text_view("m1", "src_test", &["quick brown fox"]);
+    let m2 = mem_with_text_view("m2", "src_test", &["lazy brown dog"]);
+    let m3 = mem_with_text_view("m3", "src_test", &["unrelated elephant"]);
+
+    db.add_memory(&m1, "blob1".into())?;
+    db.add_memory(&m2, "blob2".into())?;
+    db.add_memory(&m3, "blob3".into())?;
+
+    // Search for "fox" -> only m1 matches, m2 and m3 sorted at the end
+    let req = text_view_sort_request(&["fox"], "");
+    let blob_ids = search_blob_ids(&db, &req)?;
+    expect_that!(blob_ids, len(eq(3)));
+    expect_that!(blob_ids[0], eq("blob1"));
+    expect_that!(&blob_ids[1..], unordered_elements_are![eq("blob2"), eq("blob3")]);
+
+    // Search for "brown" -> m1 and m2 match, m3 sorted at the end
+    let req = text_view_sort_request(&["brown"], "");
+    let blob_ids = search_blob_ids(&db, &req)?;
+    expect_that!(blob_ids, len(eq(3)));
+    expect_that!(&blob_ids[0..2], unordered_elements_are![eq("blob1"), eq("blob2")]);
+    expect_that!(blob_ids[2], eq("blob3"));
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_text_view_sort_multiple_keywords() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-text-view-multi-kw"),
+        enable_int8_embedding: false,
+    })?;
+
+    // m1 matches both keywords ("apple" and "banana"), m2 matches only "apple", m3
+    // matches neither
+    let m1 = mem_with_text_view("m1", "src_test", &["apple banana salad"]);
+    let m2 = mem_with_text_view("m2", "src_test", &["apple pie"]);
+    let m3 = mem_with_text_view("m3", "src_test", &["cherry tart"]);
+
+    db.add_memory(&m1, "blob1".into())?;
+    db.add_memory(&m2, "blob2".into())?;
+    db.add_memory(&m3, "blob3".into())?;
+
+    let req = text_view_sort_request(&["apple", "banana"], "");
+    expect_that!(search_blob_ids(&db, &req)?, elements_are![eq("blob1"), eq("blob2"), eq("blob3")]);
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_text_view_sort_max_score_across_views() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-text-view-max-score"),
+        enable_int8_embedding: false,
+    })?;
+
+    // m1 has one view matching both keywords ("alpha" and "beta") -> high max score
+    let m1 = mem_with_typed_text_views(
+        "m1",
+        "src_test",
+        &[("summary", &["alpha beta"]), ("notes", &["none"])],
+    );
+    // m2 has two views that each only match "alpha" once -> lower max score per
+    // view
+    let m2 = mem_with_typed_text_views(
+        "m2",
+        "src_test",
+        &[("summary", &["alpha one"]), ("notes", &["alpha two"])],
+    );
+
+    db.add_memory(&m1, "blob1".into())?;
+    db.add_memory(&m2, "blob2".into())?;
+
+    let req = text_view_sort_request(&["alpha", "beta"], "");
+    expect_that!(search_blob_ids(&db, &req)?, elements_are![eq("blob1"), eq("blob2")]);
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_text_view_sort_view_type_filter() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-text-view-type-filter"),
+        enable_int8_embedding: false,
+    })?;
+
+    let m1 = mem_with_typed_text_views(
+        "m1",
+        "src_test",
+        &[("summary", &["urgent action required"]), ("participants", &["alice bob"])],
+    );
+    let m2 = mem_with_typed_text_views(
+        "m2",
+        "src_test",
+        &[("summary", &["casual update"]), ("participants", &["urgent charlie"])],
+    );
+
+    db.add_memory(&m1, "blob1".into())?;
+    db.add_memory(&m2, "blob2".into())?;
+
+    // Restrict to view_type = "summary": only m1 matches "urgent"
+    let req_summary = text_view_sort_request(&["urgent"], "summary");
+    expect_that!(search_blob_ids(&db, &req_summary)?, elements_are![eq("blob1"), eq("blob2")]);
+
+    // Restrict to view_type = "participants": only m2 matches "urgent"
+    let req_participants = text_view_sort_request(&["urgent"], "participants");
+    expect_that!(search_blob_ids(&db, &req_participants)?, elements_are![eq("blob2"), eq("blob1")]);
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_text_view_sort_combined_with_parent_filter() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-text-view-combined-filter"),
+        enable_int8_embedding: false,
+    })?;
+
+    let mut m1 = mem_with_text_view("m1", "src_test", &["searchable topic"]);
+    m1.tags = vec!["active".to_string()];
+    let mut m2 = mem_with_text_view("m2", "src_test", &["searchable topic"]);
+    m2.tags = vec!["archived".to_string()];
+
+    db.add_memory(&m1, "blob1".into())?;
+    db.add_memory(&m2, "blob2".into())?;
+
+    let mut req = text_view_sort_request(&["searchable"], "");
+    req.filter = Some(tag_filter("active"));
+
+    expect_that!(search_blob_ids(&db, &req)?, elements_are![eq("blob1")]);
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_text_view_sort_invalid_keywords_throws_error() -> anyhow::Result<()> {
+    let db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-text-view-invalid-kw"),
+        enable_int8_embedding: false,
+    })?;
+
+    // Empty keywords list
+    let req_empty = text_view_sort_request(&[], "");
+    expect_that!(db.search_memories(&req_empty), err(anything()));
+
+    // Empty string keyword
+    let req_blank = text_view_sort_request(&[""], "");
+    expect_that!(db.search_memories(&req_blank), err(anything()));
+
+    // Multi-word or non-alphabetic/numeric keyword
+    let req_multi = text_view_sort_request(&["two words"], "");
+    expect_that!(db.search_memories(&req_multi), err(anything()));
+
+    let req_punct = text_view_sort_request(&["foo:bar"], "");
+    expect_that!(db.search_memories(&req_punct), err(anything()));
+
+    // Mixed alphanumeric keyword should fail
+    let req_alphanumeric = text_view_sort_request(&["abc123"], "");
+    expect_that!(db.search_memories(&req_alphanumeric), err(anything()));
+
+    // Purely numeric, accented, and non-Latin alphabet keywords should succeed
+    let req_valid = text_view_sort_request(&["12345", "café", "日本語", "αβγ"], "");
+    expect_that!(db.search_memories(&req_valid), ok(anything()));
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_text_view_sort_and_embedding_filter_throws_error() -> anyhow::Result<()>
+{
+    let db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-text-view-emb-filter-err"),
+        enable_int8_embedding: false,
+    })?;
+
+    let mut req = text_view_sort_request(&["keyword"], "");
+    req.filter = Some(SearchMemoriesFilter {
+        value: Some(FilterValue::EmbeddingFilter(EmbeddingFilter {
+            embedding: Some(Embedding {
+                model_signature: "test_model".to_string(),
+                values: vec![1.0, 0.0, 0.0],
+            }),
+            minimum_score: 0.5,
+            view_type: "".to_string(),
+        })),
+    });
+
+    expect_that!(db.search_memories(&req), err(anything()));
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_text_view_sort_delete_memory_removes_text_views() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingDatabaseConfig {
+        base_dir: IcingTempDir::new("v2-text-view-delete-test"),
+        enable_int8_embedding: false,
+    })?;
+
+    let m1 = mem_with_text_view("m1", "src_test", &["ephemeral content"]);
+    db.add_memory(&m1, "blob1".into())?;
+
+    let req = text_view_sort_request(&["ephemeral"], "");
+    expect_that!(search_blob_ids(&db, &req)?, elements_are![eq("blob1")]);
+
+    // Delete m1
+    let not_found = db.delete_memories(&["m1".to_string()])?;
+    expect_that!(not_found, is_empty());
+
+    // Searching now should return no results
+    expect_that!(search_blob_ids(&db, &req)?, is_empty());
 
     Ok(())
 }

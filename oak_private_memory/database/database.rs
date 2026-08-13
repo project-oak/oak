@@ -150,6 +150,16 @@ impl Database {
         }
     }
 
+    fn add_text_view_ids(&mut self, memory: &mut Memory) {
+        if let Some(text_views) = memory.text_views.as_mut() {
+            for view in text_views.text_views.iter_mut() {
+                if view.id.is_empty() {
+                    view.id = rand::rng().random::<u64>().to_string();
+                }
+            }
+        }
+    }
+
     fn add_created_timestamp(&mut self, memory: &mut Memory) {
         memory.created_timestamp = Some(system_time_to_timestamp(self.clock.now()));
     }
@@ -220,6 +230,7 @@ impl Database {
     fn prepare_memory(&mut self, memory: &mut Memory) -> anyhow::Result<usize> {
         self.add_memory_id(memory);
         self.add_llm_view_ids(memory);
+        self.add_text_view_ids(memory);
         self.add_created_timestamp(memory);
 
         let size = crate::icing::calculate_memory_icing_size(memory)?;
@@ -438,6 +449,9 @@ impl Database {
             if !mask.include_fields.contains(&(MemoryField::Views as i32)) {
                 memory.views = None;
             }
+            if !mask.include_fields.contains(&(MemoryField::TextViews as i32)) {
+                memory.text_views = None;
+            }
 
             if !mask.include_fields.contains(&(MemoryField::Content as i32)) {
                 memory.content = None;
@@ -469,7 +483,7 @@ mod tests {
     use std::collections::HashMap;
 
     use sealed_memory_rust_proto::{
-        oak::private_memory::{LlmView, LlmViews},
+        oak::private_memory::{LlmView, LlmViews, TextView, TextViews},
         prelude::v1::{Memory, MemoryContent, MemoryField, MemoryValue, ResultMask},
     };
 
@@ -491,6 +505,7 @@ mod tests {
             event_timestamp: Some(prost_types::Timestamp::default()),
             expiration_timestamp: Some(prost_types::Timestamp::default()),
             views: Some(LlmViews { llm_views: vec![LlmView::default()] }),
+            text_views: Some(TextViews { text_views: vec![TextView::default()] }),
             source: None,
         }
     }
@@ -518,6 +533,7 @@ mod tests {
         assert!(memory.event_timestamp.is_none());
         assert!(memory.expiration_timestamp.is_none());
         assert!(memory.views.is_none());
+        assert!(memory.text_views.is_none());
     }
 
     #[test]
@@ -536,6 +552,7 @@ mod tests {
         assert!(memory.event_timestamp.is_none());
         assert!(memory.expiration_timestamp.is_none());
         assert!(memory.views.is_none());
+        assert!(memory.text_views.is_none());
     }
 
     #[test]
@@ -555,6 +572,7 @@ mod tests {
         assert!(memory.event_timestamp.is_none());
         assert!(memory.expiration_timestamp.is_none());
         assert!(memory.views.is_none());
+        assert!(memory.text_views.is_none());
     }
 
     #[test]
@@ -577,5 +595,44 @@ mod tests {
         assert!(memory.event_timestamp.is_some());
         assert!(memory.expiration_timestamp.is_some());
         assert!(memory.views.is_none());
+        assert!(memory.text_views.is_none());
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_apply_mask_to_memory_include_views() {
+        let mut memory = create_memory_for_mask_test();
+        let mask = Some(ResultMask {
+            include_fields: vec![MemoryField::Views as i32],
+            ..Default::default()
+        });
+        Database::apply_mask_to_memory(&mut memory, &mask);
+        assert!(memory.id.is_empty());
+        assert!(memory.tags.is_empty());
+        assert!(memory.content.is_none());
+        assert!(memory.created_timestamp.is_none());
+        assert!(memory.event_timestamp.is_none());
+        assert!(memory.expiration_timestamp.is_none());
+        assert!(memory.views.is_some());
+        assert!(memory.text_views.is_none());
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_apply_mask_to_memory_include_text_views() {
+        let mut memory = create_memory_for_mask_test();
+        let mask = Some(ResultMask {
+            include_fields: vec![MemoryField::TextViews as i32],
+            ..Default::default()
+        });
+        Database::apply_mask_to_memory(&mut memory, &mask);
+        assert!(memory.id.is_empty());
+        assert!(memory.tags.is_empty());
+        assert!(memory.content.is_none());
+        assert!(memory.created_timestamp.is_none());
+        assert!(memory.event_timestamp.is_none());
+        assert!(memory.expiration_timestamp.is_none());
+        assert!(memory.views.is_none());
+        assert!(memory.text_views.is_some());
     }
 }
