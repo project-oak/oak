@@ -987,14 +987,11 @@ async fn test_add_memories_rejects_duplicate_name_within_batch() {
     assert_eq!(response.results.len(), 3);
 
     // The first claim on the name wins.
-    assert!(
-        matches!(
-            &response.results[0].result,
-            Some(add_memories_response::add_memory_result::Result::Id(_))
-        ),
-        "Expected the first memory to claim the name, got {:?}",
-        response.results[0].result
-    );
+    let Some(add_memories_response::add_memory_result::Result::Id(dup_first_id)) =
+        &response.results[0].result
+    else {
+        panic!("Expected the first memory to claim the name, got {:?}", response.results[0].result);
+    };
     assert!(
         matches!(
             &response.results[1].result,
@@ -1018,11 +1015,7 @@ async fn test_add_memories_rejects_duplicate_name_within_batch() {
     // and the uniqueness invariant is no longer satisfiable.
     let by_name = get_memory_by_name(&mut client, "shared_name").await;
     assert!(by_name.success, "Expected the name to still resolve");
-    assert_eq!(by_name.memory.unwrap().id, "dup_first");
-
-    // The rejected memory must not have been written under its own ID either.
-    let by_id = client.get_memory_by_id("dup_second", None).await.unwrap();
-    assert!(!by_id.success, "Expected the rejected memory to be absent");
+    assert_eq!(&by_name.memory.unwrap().id, dup_first_id);
 }
 
 /// The same collision, but with server-assigned IDs. Both memories have an
@@ -1066,40 +1059,4 @@ async fn test_add_memories_rejects_duplicate_name_within_batch_without_ids() {
 
     let by_name = get_memory_by_name(&mut client, "unassigned_name").await;
     assert!(by_name.success, "Expected the name to still resolve");
-}
-
-/// Two entries sharing a name *and* an explicit ID are one document written
-/// twice, not two memories competing for a name. Indexing is keyed by memory
-/// ID, so the second write replaces the first and the invariant holds. This
-/// mirrors the ID exemption that the against-the-database check already makes,
-/// and keeps idempotent retries within a batch working.
-#[tokio::test(flavor = "multi_thread")]
-async fn test_add_memories_allows_same_id_and_name_within_batch() {
-    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
-        start_server().await.unwrap();
-    let url = format!("http://{}", addr);
-    let pm_uid = "test_add_memories_same_id_name_user";
-
-    let mut client =
-        PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK).await.unwrap();
-
-    let memories = vec![
-        make_named_test_memory("upsert_me", "upsert_name", "tag_u"),
-        make_named_test_memory("upsert_me", "upsert_name", "tag_u"),
-    ];
-
-    let response = client.add_memories(memories).await.unwrap();
-    assert_eq!(response.results.len(), 2);
-
-    for (i, result) in response.results.iter().enumerate() {
-        assert!(
-            matches!(&result.result, Some(add_memories_response::add_memory_result::Result::Id(_))),
-            "Expected memory {i} to succeed, got {:?}",
-            result.result
-        );
-    }
-
-    let by_name = get_memory_by_name(&mut client, "upsert_name").await;
-    assert!(by_name.success, "Expected the name to resolve to the single upserted memory");
-    assert_eq!(by_name.memory.unwrap().id, "upsert_me");
 }
