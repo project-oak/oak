@@ -49,12 +49,6 @@ pub type DerivedKey = [u8; 32];
 const STAGE0_TAG: &str = "Stage0";
 const STAGE0_TRANSPARENT_TAG: &str = "Stage0Transparent";
 
-// TODO: b/331252282 - Remove temporary workaround for cmd line length.
-fn shorten_cmdline(cmdline: &str) -> String {
-    let max_length: usize = 256;
-    if cmdline.len() > max_length { cmdline[..max_length].to_string() } else { cmdline.to_string() }
-}
-
 pub fn dice_data_proto_to_stage0_dice_data(
     attestation_data: &DiceData,
 ) -> Result<Stage0DiceData, &'static str> {
@@ -168,7 +162,7 @@ pub fn derive_sealing_cdi(
     let salt: Vec<u8> = {
         let mut salt = Vec::with_capacity(128);
         salt.extend_from_slice(&measurements.kernel_measurement);
-        salt.extend_from_slice(shorten_cmdline(&measurements.kernel_cmdline).as_bytes());
+        salt.extend_from_slice(measurements.kernel_cmdline.as_bytes());
         salt.extend_from_slice(&measurements.setup_data_digest);
         salt.extend_from_slice(&measurements.ram_disk_digest);
         // Ideally we'd also add the `memory_map_digest` and `acpi_digest` to the salt,
@@ -266,5 +260,22 @@ mod tests {
         let (signing_key, _verifying_key) = generate_ecdsa_key_pair();
 
         verify_that!(signing_key.to_bytes().as_slice(), eq(expected.as_slice()))
+    }
+
+    #[googletest::test]
+    fn derive_sealing_cdi_with_long_cmdline() {
+        let uds = [1u8; 32];
+
+        let measurements = oak_proto_rust::oak::attestation::v1::Stage0Measurements {
+            kernel_cmdline: "a".repeat(300),
+            kernel_measurement: alloc::vec![2u8; 32],
+            setup_data_digest: alloc::vec![3u8; 32],
+            ram_disk_digest: alloc::vec![4u8; 32],
+            memory_map_digest: alloc::vec![5u8; 32],
+            acpi_digest: alloc::vec![6u8; 32],
+        };
+
+        let cdi = derive_sealing_cdi(&uds, &measurements);
+        assert_that!(cdi, not(eq([0u8; 32])));
     }
 }
