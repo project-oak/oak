@@ -283,6 +283,9 @@ fn enforce_required_claims(
     }
     Ok(())
 }
+/// Maximum acceptable clock skew leeway applied to certificate and token
+/// validity checks.
+const CLOCK_SKEW_LEEWAY: oak_time::Duration = oak_time::Duration::from_seconds(60);
 
 fn verify_certificate_validity(
     certificate: &Certificate,
@@ -301,12 +304,12 @@ fn verify_certificate_validity(
         i128::try_from(not_after_nanos).expect("failed to convert u128 to i128"),
     );
 
-    if not_before > *current_time {
+    if not_before > *current_time + CLOCK_SKEW_LEEWAY {
         Err(AttestationVerificationError::X509ValidityNotBefore {
             not_before,
             current_time: *current_time,
         })
-    } else if *current_time > not_after {
+    } else if *current_time > not_after + CLOCK_SKEW_LEEWAY {
         Err(AttestationVerificationError::X509ValidityNotAfter {
             not_after,
             current_time: *current_time,
@@ -330,12 +333,12 @@ fn verify_token_validity(
 ) -> Result<(), AttestationVerificationError> {
     let claims = token.claims();
 
-    if &claims.not_before > current_time {
+    if claims.not_before > *current_time + CLOCK_SKEW_LEEWAY {
         Err(AttestationVerificationError::JWTValidityNotBefore {
             nbf: claims.not_before,
             current_time: *current_time,
         })
-    } else if current_time > &claims.not_after {
+    } else if *current_time > claims.not_after + CLOCK_SKEW_LEEWAY {
         Err(AttestationVerificationError::JWTValidityExpiration {
             exp: claims.not_after,
             current_time: *current_time,
@@ -488,10 +491,11 @@ mod tests {
         let unverified_token: Token<Header, Claims, Unverified> =
             Token::parse_unverified(&token_str)?;
 
+        let expired_time = current_time() + Duration::from_seconds(120);
         let result = verify_attestation_token(
             unverified_token,
             &root,
-            &current_time(),
+            &expired_time,
             OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
         );
         let err = unsafe { result.unwrap_err_unchecked() };
@@ -509,8 +513,9 @@ mod tests {
         let unverified_token: Token<Header, Claims, Unverified> =
             Token::parse_unverified(&token_str)?;
 
+        let expired_time = current_time() + Duration::from_seconds(120);
         assert_matches!(
-            report_attestation_token(unverified_token, &root, &current_time(), OAK_SESSION_NOISE_V1_AUDIENCE.to_string()),
+            report_attestation_token(unverified_token, &root, &expired_time, OAK_SESSION_NOISE_V1_AUDIENCE.to_string()),
             AttestationTokenVerificationReport {
                 has_required_claims: Ok(()),
                 validity: Err(AttestationVerificationError::JWTValidityExpiration { .. }),
