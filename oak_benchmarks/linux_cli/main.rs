@@ -30,7 +30,7 @@ use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use cli_common::{
     BenchmarkMetrics, BenchmarkResult, CpuFeatures, DEFAULT_BENCHMARK_SEED, DisplayBenchmarkType,
-    OutputFormat, check_status, format_result, parse_benchmark_type,
+    OutputFormat, check_status, csv_header, format_result, parse_benchmark_type,
 };
 use oak_benchmark_grpc::oak::benchmark::benchmark_client::BenchmarkClient;
 use oak_benchmark_proto_rust::oak::benchmark::{
@@ -94,6 +94,10 @@ struct Args {
     /// Working set size in bytes for the memory benchmarks (0 = guest default).
     #[arg(long, default_value = "0")]
     working_set_size: u64,
+
+    /// Emit a CSV header line before the result row.
+    #[arg(long, default_value = "false")]
+    csv_header: bool,
 
     /// Output format.
     #[arg(long, value_enum, default_value = "human")]
@@ -224,6 +228,9 @@ async fn main() -> Result<()> {
         checksum: response.checksum,
         cpu_features: response.cpu_features,
     };
+    if args.csv_header && matches!(args.output, OutputFormat::Csv) {
+        print!("{}", csv_header());
+    }
     print!("{}", format_result(&result, &metrics, args.output));
 
     // Print host timing for Human format.

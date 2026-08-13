@@ -103,6 +103,7 @@ request.
 | -------------------- | ------------------------------------------------------------- |
 | `--seed`             | Fixes the pseudo-random input; both sides need the same value |
 | `--working-set-size` | Working set in bytes for the memory benchmarks (0 = default)  |
+| `--csv-header`       | Emits a header row before the CSV result row                  |
 
 Results carry a `checksum` over each benchmark's output and the `cpu_features`
 the guest was built with and found at runtime. Treat a comparison as invalid

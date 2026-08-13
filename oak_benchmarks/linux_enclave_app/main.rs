@@ -28,7 +28,7 @@ use benchmark::{BenchmarkService, DEFAULT_BENCHMARK_SEED, NativeTimer};
 use clap::Parser;
 use cli_common::{
     BenchmarkMetrics, BenchmarkResult, CpuFeatures, DisplayBenchmarkType, OutputFormat,
-    check_status, format_result, parse_benchmark_type,
+    check_status, csv_header, format_result, parse_benchmark_type,
 };
 use oak_benchmark_proto_rust::oak::benchmark::{BenchmarkType, RunBenchmarkRequest};
 
@@ -64,6 +64,10 @@ struct Args {
     /// Output format (standalone mode only).
     #[arg(long, value_enum, default_value = "human")]
     output: OutputFormat,
+
+    /// Emit a CSV header line before the result row.
+    #[arg(long, default_value = "false")]
+    csv_header: bool,
 
     /// Seed for deterministic benchmark data.
     ///
@@ -181,6 +185,10 @@ fn run_standalone(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
         checksum: response.checksum,
         cpu_features: response.cpu_features,
     };
+
+    if args.csv_header && matches!(args.output, OutputFormat::Csv) {
+        print!("{}", csv_header());
+    }
     print!("{}", format_result(&result, &metrics, args.output));
 
     if matches!(args.output, OutputFormat::Human) {

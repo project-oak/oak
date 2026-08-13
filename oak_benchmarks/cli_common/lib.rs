@@ -30,6 +30,7 @@ pub use cli::{
     parse_benchmark_type,
 };
 pub use results::{
-    BenchmarkMetrics, BenchmarkResult, CpuFeatures, check_status, describe_status, format_result,
+    BenchmarkMetrics, BenchmarkResult, CpuFeatures, check_status, csv_header, describe_status,
+    format_result,
 };
 pub use tsc::{DEFAULT_TSC_FREQ_HZ, TscFreq, detect_tsc_freq, tsc_to_nanos};

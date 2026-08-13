@@ -25,7 +25,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use cli_common::{
     BenchmarkMetrics, CpuFeatures, DEFAULT_BENCHMARK_SEED, DisplayBenchmarkType, OutputFormat,
-    check_status, detect_tsc_freq, format_result, parse_benchmark_type,
+    check_status, csv_header, detect_tsc_freq, format_result, parse_benchmark_type,
 };
 use oak_benchmark_proto_rust::oak::benchmark::{BenchmarkType, RunBenchmarkRequest};
 use oak_launcher_utils::launcher;
@@ -72,6 +72,10 @@ struct Args {
     /// If not specified, it is measured against the monotonic clock.
     #[arg(long)]
     tsc_freq: Option<u64>,
+
+    /// Emit a CSV header line before the result row.
+    #[arg(long, default_value = "false")]
+    csv_header: bool,
 
     /// Output format.
     #[arg(long, value_enum, default_value = "human")]
@@ -141,7 +145,7 @@ async fn main() -> Result<()> {
         if !detected.is_trustworthy() {
             log::warn!(
                 "TSC frequency was not measured directly ({}); nanosecond and MB/s figures may \
-                 be scaled incorrectly",
+                 be scaled incorrectly, prefer the cycles/op column",
                 detected.source_description()
             );
         }
@@ -170,6 +174,9 @@ async fn main() -> Result<()> {
         checksum: response.checksum,
         cpu_features: response.cpu_features,
     };
+    if args.csv_header && matches!(args.output, OutputFormat::Csv) {
+        print!("{}", csv_header());
+    }
     let output = format_result(&result, &metrics, args.output);
     print!("{}", output);
 

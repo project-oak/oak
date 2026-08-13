@@ -32,6 +32,14 @@ pub struct BenchmarkMetrics {
     pub throughput_bps: f64,
     /// Operations (hashes, signatures, lookups, ...) per second.
     pub ops_per_sec: f64,
+    /// TSC ticks per operation.
+    ///
+    /// This is the headline cross-platform metric. Unlike every other field
+    /// here it is computed purely from `elapsed_tsc` and the iteration count,
+    /// so it does not depend on the TSC frequency being calibrated correctly
+    /// and can be compared between the enclave and the Linux baseline without
+    /// any conversion. `None` when the guest reported no TSC reading.
+    pub cycles_per_op: Option<f64>,
 }
 
 impl BenchmarkMetrics {
@@ -64,7 +72,13 @@ impl BenchmarkMetrics {
             0.0
         };
 
-        Self { elapsed_ns, throughput_bps, ops_per_sec }
+        let cycles_per_op = if elapsed_tsc > 0 && iterations_completed > 0 {
+            Some(elapsed_tsc as f64 / iterations_completed as f64)
+        } else {
+            None
+        };
+
+        Self { elapsed_ns, throughput_bps, ops_per_sec, cycles_per_op }
     }
 
     /// Get throughput in MB/s for display purposes.
@@ -118,12 +132,20 @@ pub fn check_status(status: u32) -> Result<(), String> {
     }
 }
 
+/// CSV header matching the column order produced by [`format_result`].
+pub fn csv_header() -> String {
+    "benchmark,data_size,iterations,elapsed_tsc,elapsed_ns,bytes_processed,throughput_bps,\
+     ops_per_sec,cycles_per_op,working_set_size,checksum,cpu_features,status\n"
+        .to_string()
+}
+
 /// Format benchmark results for output.
 pub fn format_result(
     result: &BenchmarkResult,
     metrics: &BenchmarkMetrics,
     format: OutputFormat,
 ) -> String {
+    let cycles_per_op = metrics.cycles_per_op.unwrap_or(f64::NAN);
     match format {
         OutputFormat::Human => {
             format!(
@@ -135,6 +157,7 @@ pub fn format_result(
                  Guest elapsed (TSC): {} ticks\n\
                  Guest elapsed:       {:.3} ms\n\
                  Bytes processed:     {}\n\
+                 Cycles/op:           {:.1}\n\
                  Throughput:          {:.2} MB/s\n\
                  Operations/sec:      {:.0}\n\
                  Checksum:            0x{:016x}\n\
@@ -147,6 +170,7 @@ pub fn format_result(
                 result.elapsed_tsc,
                 metrics.elapsed_ns as f64 / 1_000_000.0,
                 result.bytes_processed,
+                cycles_per_op,
                 metrics.throughput_mbps(),
                 metrics.ops_per_sec,
                 result.checksum,
@@ -157,7 +181,7 @@ pub fn format_result(
         OutputFormat::Csv => {
             // Use base units (bytes/s) in machine-readable formats.
             format!(
-                "{},{},{},{},{},{},{:.0},{:.0},{},{},{},{}\n",
+                "{},{},{},{},{},{},{:.0},{:.0},{:.3},{},{},{},{}\n",
                 result.benchmark_name,
                 result.data_size,
                 result.iterations_completed,
@@ -166,6 +190,7 @@ pub fn format_result(
                 result.bytes_processed,
                 metrics.throughput_bps,
                 metrics.ops_per_sec,
+                cycles_per_op,
                 result.working_set_size,
                 result.checksum,
                 result.cpu_features,
@@ -174,8 +199,14 @@ pub fn format_result(
         }
         OutputFormat::Json => {
             // Use base units (bytes/s) in machine-readable formats.
+            // `cycles_per_op` is emitted as null rather than NaN when absent,
+            // because NaN is not valid JSON.
+            let cycles_json = match metrics.cycles_per_op {
+                Some(v) => format!("{v:.3}"),
+                None => "null".to_string(),
+            };
             format!(
-                r#"{{"benchmark":"{}","data_size":{},"iterations":{},"elapsed_tsc":{},"elapsed_ns":{},"bytes_processed":{},"throughput_bps":{:.0},"ops_per_sec":{:.0},"working_set_size":{},"checksum":{},"cpu_features":{},"status":{}}}"#,
+                r#"{{"benchmark":"{}","data_size":{},"iterations":{},"elapsed_tsc":{},"elapsed_ns":{},"bytes_processed":{},"throughput_bps":{:.0},"ops_per_sec":{:.0},"cycles_per_op":{},"working_set_size":{},"checksum":{},"cpu_features":{},"status":{}}}"#,
                 result.benchmark_name,
                 result.data_size,
                 result.iterations_completed,
@@ -184,6 +215,7 @@ pub fn format_result(
                 result.bytes_processed,
                 metrics.throughput_bps,
                 metrics.ops_per_sec,
+                cycles_json,
                 result.working_set_size,
                 result.checksum,
                 result.cpu_features,
@@ -196,6 +228,23 @@ pub fn format_result(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cycles_per_op_is_frequency_independent() {
+        // Same ticks and iterations, wildly different assumed frequencies.
+        let a = BenchmarkMetrics::calculate(1_000_000, 0, 1_000, 0, 1_000_000_000);
+        let b = BenchmarkMetrics::calculate(1_000_000, 0, 1_000, 0, 5_000_000_000);
+        assert_eq!(a.cycles_per_op, b.cycles_per_op);
+        assert_eq!(a.cycles_per_op, Some(1_000.0));
+        // ...whereas the nanosecond figure does depend on it.
+        assert_ne!(a.elapsed_ns, b.elapsed_ns);
+    }
+
+    #[test]
+    fn cycles_per_op_absent_without_tsc() {
+        let m = BenchmarkMetrics::calculate(0, 1_000_000, 1_000, 0, 1_000_000_000);
+        assert_eq!(m.cycles_per_op, None);
+    }
 
     #[test]
     fn elapsed_ns_is_preferred_over_conversion() {
@@ -211,5 +260,29 @@ mod tests {
         assert_eq!(m.elapsed_ns, 0);
         assert_eq!(m.throughput_bps, 0.0);
         assert_eq!(m.ops_per_sec, 0.0);
+        assert_eq!(m.cycles_per_op, None);
+    }
+
+    #[test]
+    fn csv_header_matches_row_column_count() {
+        let result = BenchmarkResult {
+            benchmark_name: "x".to_string(),
+            data_size: 1,
+            iterations_completed: 1,
+            elapsed_tsc: 1,
+            elapsed_ns: 1,
+            bytes_processed: 1,
+            status: 0,
+            working_set_size: 1,
+            checksum: 1,
+            cpu_features: 1,
+        };
+        let metrics = BenchmarkMetrics::calculate(1, 1, 1, 1, 1_000_000_000);
+        let row = format_result(&result, &metrics, OutputFormat::Csv);
+        assert_eq!(
+            csv_header().trim_end().split(',').count(),
+            row.trim_end().split(',').count(),
+            "CSV header and row column counts disagree"
+        );
     }
 }
