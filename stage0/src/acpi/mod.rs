@@ -137,6 +137,17 @@ pub fn build_acpi_tables<P: crate::Platform + crate::FirmwarePlatform>(
     let buf = fwcfg.read_file_vec(&file)?;
     acpi_digest.update(&buf);
 
+    // If we have `pci_windows`, mix them into the digest as well as they may come
+    // from the hypervisor under some circumstances.
+    if let Some(ref pci_windows) = pci_windows {
+        acpi_digest.update(pci_windows.pci_window_16.start.as_bytes());
+        acpi_digest.update(pci_windows.pci_window_16.end.as_bytes());
+        acpi_digest.update(pci_windows.pci_window_32.start.as_bytes());
+        acpi_digest.update(pci_windows.pci_window_32.end.as_bytes());
+        acpi_digest.update(pci_windows.pci_window_64.start.as_bytes());
+        acpi_digest.update(pci_windows.pci_window_64.end.as_bytes());
+    }
+
     let commands = <[RomfileCommand]>::try_ref_from_bytes(&buf[..])
         .map_err(|_| "invalid 'etc/table-loader'")?;
 
