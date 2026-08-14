@@ -53,25 +53,6 @@ these two proxies.
 - **Shared Library (`//oak_proxy/lib`)**: A shared Rust library containing the
   common logic for proxying, used by both the client and server binaries.
 
-### L7 HTTP Mode & Attestation Observability (`--http`)
-
-In addition to default L4 TCP tunneling, `oak_proxy` (`client` and `server`)
-supports an optional **Layer 7 HTTP Mode** enabled via the `--http` CLI flag
-(`mode = "http"` in config). When `--http` is enabled, `oak_proxy` intercepts
-initial request and response chunks to splice an
-`X-Oak-Attestation: <base64url>` header containing verified attestation claims
-(`OakAttestationFeedback`), enabling in-band peer identity verification for web
-servers and HTTP clients. Upon connection or verification failures, `--http`
-mode emits structured `HTTP/1.1 502 Bad Gateway` JSON error responses
-(`OakProxyFailureResponse`) for detailed observability.
-
-**Independent Configuration**: Both proxies do not need to enable `--http`
-simultaneously. You can enable `--http` strictly on `oak_proxy server` if only
-the backend HTTP service requires `X-Oak-Attestation` headers, or strictly on
-`oak_proxy client` if only the local HTTP client application requires
-verification feedback. For full semantics, schemas, and mechanics, see the
-[L7 HTTP Mode Documentation](docs/http-mode.md).
-
 ### How It Works
 
 1. **Connection Start**: The client application is configured to connect to the

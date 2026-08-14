@@ -85,10 +85,6 @@ pub struct Claims {
     pub submods: Submods,
     #[serde(rename = "swname")]
     pub software_name: String,
-    /// Hardware model claim (`hwmodel`) defined in
-    /// <https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims>.
-    #[serde(rename = "hwmodel", default, skip_serializing_if = "Option::is_none")]
-    pub hardware_model: Option<String>,
 }
 
 impl Claims {
@@ -101,30 +97,15 @@ impl Claims {
     }
 }
 
-/// Claims about GCE VM instance (`submods.gce`) defined in
-/// <https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims>.
-#[derive(Debug, Default, Deserialize, PartialEq, Serialize, Clone)]
-pub struct GceClaims {
-    #[serde(default)]
-    pub project_id: String,
-    #[serde(default)]
-    pub instance_name: String,
-    #[serde(default)]
-    pub zone: String,
-}
-
 /// Nested claims about sub-modules.
 ///
-/// Some fields have been omitted: confidential_space
+/// Some fields have been omitted: confidential_space, gce
 #[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct Submods {
     /// Claims about Confidential Space.
     pub confidential_space: ConfidentialSpaceClaims,
     /// Claims about the container.
     pub container: ContainerClaims,
-    /// Claims about GCE VM instance.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub gce: Option<GceClaims>,
 }
 
 /// Claims about Confidential Space.

@@ -68,17 +68,9 @@ async fn run_proxy(app_stream: TcpStream, config: &ClientConfig) -> anyhow::Resu
 
     match setup_result {
         Ok((session, stream)) => {
-            proxy(
-                PeerRole::Client,
-                session,
-                app_stream,
-                stream,
-                config.keep_alive_interval,
-                config.mode,
-            )
-            .await
+            proxy(PeerRole::Client, session, app_stream, stream, config.keep_alive_interval).await
         }
-        Err(err) => Err(crate::write_http_502(app_stream, &err, config.mode).await),
+        Err(err) => Err(crate::write_http_502(app_stream, &err).await),
     }
 }
 

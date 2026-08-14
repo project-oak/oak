@@ -40,10 +40,6 @@ struct Args {
     /// Address of the backend application.
     #[arg(long, env = "OAK_PROXY_SERVER_BACKEND_ADDRESS")]
     backend_address: Option<SocketAddr>,
-
-    /// Enable L7 HTTP inspection and header splicing.
-    #[arg(long, default_value_t = false)]
-    http: bool,
 }
 
 impl Args {
@@ -54,9 +50,6 @@ impl Args {
         }
         if let Some(backend_address) = self.backend_address {
             self.config.backend_address = Some(backend_address);
-        }
-        if self.http {
-            self.config.mode = oak_proxy_lib::config::ProxyMode::Http;
         }
 
         self.config

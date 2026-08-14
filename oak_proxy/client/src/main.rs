@@ -57,10 +57,6 @@ struct Args {
     /// This will override the value in the config file.
     #[arg(long, env = "OAK_PROXY_ATTESTATION_OUTPUT_FILE")]
     attestation_output_file: Option<PathBuf>,
-
-    /// Enable L7 HTTP inspection, header splicing, and 502 error responses.
-    #[arg(long, default_value_t = false)]
-    http: bool,
 }
 
 /// An `AttestationPublisher` that serializes received attestation evidence
@@ -128,9 +124,6 @@ impl Args {
         if let Some(attestation_output_file) = self.attestation_output_file {
             self.config.attestation_output_file = Some(attestation_output_file);
         }
-        if self.http {
-            self.config.mode = oak_proxy_lib::config::ProxyMode::Http;
-        }
 
         self.config
             .listen_address
@@ -165,28 +158,18 @@ async fn main() -> anyhow::Result<()> {
 pub(crate) async fn write_http_502(
     mut app_stream: TcpStream,
     err: &anyhow::Error,
-    mode: oak_proxy_lib::config::ProxyMode,
 ) -> anyhow::Error {
-    if mode == oak_proxy_lib::config::ProxyMode::Http {
-        let failure_response = oak_proxy_lib::http::OakProxyFailureResponse {
-            error_code: oak_proxy_lib::http::categorize_proxy_error(err),
-            handshake_handle: None,
-            details: oak_proxy_lib::http::ProxyFailureDetails {
-                failure_reason: format!("{:#}", err),
-                ..Default::default()
-            },
-            timestamp: humantime_serde::re::humantime::format_rfc3339_seconds(SystemTime::now())
-                .to_string(),
-        };
-        let response_bytes = oak_proxy_lib::http::format_502_error_response(&failure_response);
-        if let Err(write_err) = app_stream.write_all(&response_bytes).await {
-            log::warn!("Failed to write HTTP 502 error response: {:?}", write_err);
-        }
-        let _ = app_stream.flush().await;
-        let _ = app_stream.shutdown().await;
-        anyhow::anyhow!("Handshake/attestation failed (sent HTTP 502 to client): {:#}", err)
-    } else {
-        let _ = app_stream.shutdown().await;
-        anyhow::anyhow!("Handshake/attestation failed (TCP connection closed): {:#}", err)
+    let error_msg = format!("Attestation/Handshake Failed: {:#}", err);
+    let body = format!("[Oak-Proxy] {}\n", error_msg);
+    let response = format!(
+        "HTTP/1.1 502 Bad Gateway\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        body.len(),
+        body
+    );
+    if let Err(write_err) = app_stream.write_all(response.as_bytes()).await {
+        log::warn!("Failed to write HTTP 502 error response: {:?}", write_err);
     }
+    let _ = app_stream.flush().await;
+    let _ = app_stream.shutdown().await;
+    anyhow::anyhow!("Handshake/attestation failed (sent HTTP 502 to client): {:#}", err)
 }

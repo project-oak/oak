@@ -39,7 +39,6 @@ rust_test_suite(
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:log",
         "@oak_crates_index//:serde",
-        "@oak_crates_index//:serde_json",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:toml",
     ],

@@ -59,15 +59,8 @@ async fn run_proxy(
         .context(format!("error connecting to backend {}", backend_address))?;
     log::info!("[Server] Connected to backend server at {}", backend_address);
 
-    proxy(
-        PeerRole::Server,
-        session,
-        backend_stream,
-        client_stream,
-        config.keep_alive_interval,
-        config.mode,
-    )
-    .await
+    proxy(PeerRole::Server, session, backend_stream, client_stream, config.keep_alive_interval)
+        .await
 }
 
 async fn establish_noise_session(

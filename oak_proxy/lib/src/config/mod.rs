@@ -43,18 +43,8 @@ where
     Ok(config)
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, Copy, Default, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum ProxyMode {
-    #[default]
-    Tcp,
-    Http,
-}
-
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ClientConfig {
-    #[serde(default)]
-    pub mode: ProxyMode,
     #[serde(default)]
     pub listen_address: Option<SocketAddr>,
     #[serde(default)]
@@ -77,8 +67,6 @@ pub struct ClientConfig {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ServerConfig {
-    #[serde(default)]
-    pub mode: ProxyMode,
     #[serde(default)]
     pub listen_address: Option<SocketAddr>,
     #[serde(default)]
