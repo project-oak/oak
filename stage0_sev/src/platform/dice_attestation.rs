@@ -18,7 +18,7 @@ use oak_attestation::dice::DiceAttester;
 use oak_sev_guest::{
     crypto::GuestMessageEncryptor,
     guest::{
-        GuestFieldFlags, GuestMessage, Message, ReportStatus,
+        GuestFieldFlags, GuestMessage, KeyStatus, Message, ReportStatus,
         v1::{AttestationRequest, AttestationResponse, KeyRequest, KeyResponse},
     },
     msr::SevStatus,
@@ -108,6 +108,10 @@ pub fn get_derived_key() -> Result<DerivedKey, &'static str> {
         let selected_fields = GuestFieldFlags::MEASUREMENT | GuestFieldFlags::GUEST_POLICY;
         key_request.guest_field_select = selected_fields.bits();
         let key_response: KeyResponse = send_guest_message_request(key_request)?;
+        key_response.validate()?;
+        if key_response.get_status() != Some(KeyStatus::Success) {
+            return Err("key derivation request failed");
+        }
         Ok(key_response.derived_key)
     } else {
         oak_stage0::hal::Base::get_derived_key()
