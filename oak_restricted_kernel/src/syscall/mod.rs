@@ -204,6 +204,8 @@ impl GsData {
     }
 }
 
+static USERSPACE_VIRT_END: u64 = mm::USERSPACE_VIRT_END;
+
 /// Main entry point for system calls in the Oak Restricted Kernel.
 ///
 /// As we only support x86-64, we rely on the `SYSCALL`/`SYSRET` mechanism to
@@ -242,6 +244,13 @@ extern "C" fn syscall_entrypoint() {
     // See SYSCALL and SYSRET in AMD64 Architecture Programmer's Manual, Volume 3
     // for more details.
     naked_asm! {
+        // Check that RSP is in the lower half of memory (user space) and is large enough to
+        // hold the saved register frame without underflowing.
+        "cmp rsp, {USER_STACK_FRAME_SIZE}",
+        "jb 2f",
+        "cmp rsp, [rip + {USERSPACE_VIRT_END}]",
+        "jae 2f",
+
         // Switch to kernel GS.
         "swapgs",
 
@@ -357,10 +366,21 @@ extern "C" fn syscall_entrypoint() {
 
         // Back to user code in Ring 3.
         "sysretq",
+
+        // RSP was not valid.
+        "2:",
+        "mov rax, {EFAULT}",
+        "sysretq",
+
         HANDLER = sym syscall_handler,
         OFFSET_KERNEL_STACK_POINTER = const(offset_of!(GsData, kernel_sp)),
         OFFSET_USER_STACK_POINTERS = const(offset_of!(GsData, user_stack_pointers)),
         OFFSET_CURRENT_PID = const(offset_of!(GsData, current_pid)),
         POINTER_SIZE_SHIFT = const(core::mem::size_of::<VirtAddr>().trailing_zeros()),
+        // Frame size needed to save 14 general-purpose registers (14 * 8 = 112 bytes)
+        // and 16 AVX registers (16 * 32 = 512 bytes).
+        USER_STACK_FRAME_SIZE = const(14 * 8 + 512),
+        USERSPACE_VIRT_END = sym USERSPACE_VIRT_END,
+        EFAULT = const(Errno::EFAULT as isize),
     }
 }
