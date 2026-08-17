@@ -22,7 +22,7 @@ use core::mem::size_of;
 use aes_gcm::{AeadInPlace, Aes256Gcm, KeyInit, Nonce, Tag};
 use zerocopy::{FromBytes, IntoBytes};
 
-use crate::guest::{GuestMessage, Message};
+use crate::guest::{GuestMessage, GuestMessageHeader, Message};
 
 /// The size of initialization vector/nonce for AES-GCM
 const IV_SIZE: usize = 12;
@@ -90,23 +90,29 @@ impl GuestMessageEncryptor {
         destination: &mut GuestMessage,
     ) -> Result<(), &'static str> {
         let buffer = message.as_mut_bytes();
-        destination.header.auth_header.message_type = M::MESSAGE_TYPE as u8;
-        destination.header.auth_header.message_version = M::MESSAGE_VERSION;
         let message_size = buffer.len();
-        destination.header.auth_header.message_size = message_size as u16;
-        destination.header.sequence_number = self.sequence_number + 1;
-        let mut iv_bytes = [0u8; IV_SIZE];
-        iv_bytes[0..size_of::<u64>()]
-            .copy_from_slice(destination.header.sequence_number.as_bytes());
-        let nonce = Nonce::from_slice(&iv_bytes[..]);
-        let associated_data = destination.header.auth_header.as_bytes();
-        let auth_tag = self
-            .cipher
-            .encrypt_in_place_detached(nonce, associated_data, buffer)
-            .map_err(|aes_gcm::Error| "message encryption failed")?;
+
+        let header = {
+            let mut header = GuestMessageHeader::new();
+            header.auth_header.message_type = M::MESSAGE_TYPE as u8;
+            header.auth_header.message_version = M::MESSAGE_VERSION;
+            header.auth_header.message_size = message_size as u16;
+            header.sequence_number = self.sequence_number + 1;
+            let mut iv_bytes = [0u8; IV_SIZE];
+            iv_bytes[0..size_of::<u64>()].copy_from_slice(header.sequence_number.as_bytes());
+            let nonce = Nonce::from_slice(&iv_bytes[..]);
+            let associated_data = header.auth_header.as_bytes();
+            let auth_tag = self
+                .cipher
+                .encrypt_in_place_detached(nonce, associated_data, buffer)
+                .map_err(|aes_gcm::Error| "message encryption failed")?;
+            header.auth_tag[0..auth_tag.len()].copy_from_slice(auth_tag.as_slice());
+            header
+        };
+
         // Only write the payload once we are sure the encryption succeeded.
+        destination.header = header;
         destination.payload[0..message_size].copy_from_slice(buffer);
-        destination.header.auth_tag[0..auth_tag.len()].copy_from_slice(auth_tag.as_slice());
 
         self.sequence_number += 1;
         Ok(())
