@@ -122,8 +122,8 @@ impl super::FirmwarePlatform for Base {
         .map_err(|_| "couldn't convert initial DICE evidence to an attester")
     }
 
-    fn get_derived_key() -> Result<DerivedKey, &'static str> {
-        oak_stage0_dice::mock_derived_key()
+    fn get_derived_key() -> Result<Option<DerivedKey>, &'static str> {
+        oak_stage0_dice::mock_derived_key().map(Some)
     }
 
     fn tee_platform() -> TeePlatform {
@@ -148,5 +148,16 @@ impl oak_hal::MsrAccess for Base {
 
     unsafe fn write_msr(msr: u32, value: u64) {
         unsafe { Msr::new(msr).write(value) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::hal::FirmwarePlatform;
+
+    #[test]
+    fn get_derived_key_returns_some() {
+        assert!(Base::get_derived_key().unwrap().is_some());
     }
 }

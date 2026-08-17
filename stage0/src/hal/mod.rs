@@ -123,7 +123,9 @@ pub trait FirmwarePlatform {
     /// We use this key as the unique device secret for deriving compound
     /// devices identifiers for each layer, and eventually a sealing key in
     /// the last layer.
-    fn get_derived_key() -> Result<DerivedKey, &'static str>;
+    ///
+    /// Returns `None` if the platform does not support a unique device secret.
+    fn get_derived_key() -> Result<Option<DerivedKey>, &'static str>;
 
     fn tee_platform() -> TeePlatform;
 

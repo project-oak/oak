@@ -102,7 +102,7 @@ fn get_attestation(report_data: [u8; REPORT_DATA_SIZE]) -> Result<AttestationRep
     }
 }
 
-pub fn get_derived_key() -> Result<DerivedKey, &'static str> {
+pub fn get_derived_key() -> Result<Option<DerivedKey>, &'static str> {
     if super::sev_status().contains(SevStatus::SNP_ACTIVE) {
         let mut key_request = KeyRequest::new();
         let selected_fields = GuestFieldFlags::MEASUREMENT | GuestFieldFlags::GUEST_POLICY;
@@ -112,7 +112,7 @@ pub fn get_derived_key() -> Result<DerivedKey, &'static str> {
         if key_response.get_status() != Some(KeyStatus::Success) {
             return Err("key derivation request failed");
         }
-        Ok(key_response.derived_key)
+        Ok(Some(key_response.derived_key))
     } else {
         oak_stage0::hal::Base::get_derived_key()
     }

@@ -35,7 +35,7 @@ use oak_dice::evidence::{
 };
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_proto_rust::oak::attestation::v1::DiceData;
-use oak_stage0_dice::{DerivedKey, derive_sealing_cdi};
+use oak_stage0_dice::derive_sealing_cdi;
 use sha2::{Digest, Sha256};
 use x86_64::{
     PhysAddr, VirtAddr,
@@ -262,12 +262,13 @@ pub fn rust64_start<P: hal::Platform + hal::FirmwarePlatform>() -> ! {
         };
 
     // Use the root derived key as the UDS (unique device secret) for deriving
-    // sealing keys.
-    let mut uds: DerivedKey = P::get_derived_key().expect("couldn't get derived key");
-
-    let mut cdi = derive_sealing_cdi(&uds, &stage0_event_proto);
-    // Zero out the UDS.
-    uds.zeroize();
+    // sealing keys, if supported by the platform.
+    let cdi = P::get_derived_key().expect("couldn't get derived key").map(|mut uds| {
+        let cdi = derive_sealing_cdi(&uds, &stage0_event_proto);
+        // Zero out the UDS.
+        uds.zeroize();
+        cdi
+    });
 
     // Generate Stage0 Event Log data.
     let stage0_event = oak_stage0_dice::encode_stage0_event(stage0_event_proto);
@@ -316,9 +317,11 @@ pub fn rust64_start<P: hal::Platform + hal::FirmwarePlatform>() -> ! {
         certificate_authority.eca_private_key.zeroize()
     };
 
-    attestation_data_struct.layer_1_cdi.cdi[..].copy_from_slice(&cdi[..]);
-    // Zero out the copy of the sealing CDIs.
-    cdi.zeroize();
+    if let Some(mut cdi) = cdi {
+        attestation_data_struct.layer_1_cdi.cdi[..].copy_from_slice(&cdi[..]);
+        // Zero out the copy of the sealing CDIs.
+        cdi.zeroize();
+    }
 
     let attestation_data = Box::leak(Box::new_in(attestation_data_struct, &crate::BOOT_ALLOC));
 

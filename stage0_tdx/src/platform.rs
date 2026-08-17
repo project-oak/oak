@@ -469,9 +469,8 @@ impl FirmwarePlatform for Tdx {
         Ok(crate::attestation::RtmrAttester::default())
     }
 
-    fn get_derived_key() -> Result<[u8; 32], &'static str> {
-        // TODO: b/360488668 - impl get_derived_key
-        Ok([0; 32])
+    fn get_derived_key() -> Result<Option<[u8; 32]>, &'static str> {
+        Ok(None)
     }
 
     fn tee_platform() -> oak_dice::evidence::TeePlatform {
@@ -495,5 +494,15 @@ impl MsrAccess for Tdx {
     }
     unsafe fn write_msr(msr: u32, value: u64) {
         unsafe { msr_write(msr, value).unwrap() }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn get_derived_key_returns_none() {
+        assert_eq!(Tdx::get_derived_key(), Ok(None));
     }
 }

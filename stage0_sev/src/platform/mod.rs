@@ -347,7 +347,7 @@ impl FirmwarePlatform for Sev {
         dice_attestation::get_attester()
     }
 
-    fn get_derived_key() -> Result<oak_stage0_dice::DerivedKey, &'static str> {
+    fn get_derived_key() -> Result<Option<oak_stage0_dice::DerivedKey>, &'static str> {
         dice_attestation::get_derived_key()
     }
 
