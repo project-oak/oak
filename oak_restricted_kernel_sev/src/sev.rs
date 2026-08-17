@@ -138,6 +138,10 @@ impl Platform for Sev {
         }
     }
 
+    fn invalidate_page(_page: Page<Size4KiB>) {
+        todo!();
+    }
+
     fn revalidate_page(_page: Page<Size4KiB>) {
         todo!();
     }

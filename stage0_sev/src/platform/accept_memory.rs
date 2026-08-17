@@ -500,6 +500,22 @@ pub fn change_frame_state(
     Ok(())
 }
 
+/// Rescinds validation for a 4 KiB page in the RMP when transitioning from
+/// Private to Shared under SEV-SNP.
+pub fn invalidate_page(page: Page<Size4KiB>) -> Result<(), &'static str> {
+    if sev_status().contains(SevStatus::SNP_ACTIVE) {
+        match pvalidate(
+            page.start_address().as_u64() as usize,
+            SevPageSize::Page4KiB,
+            Validation::Unvalidated,
+        ) {
+            Ok(()) | Err(InstructionError::ValidationStatusNotUpdated) => {}
+            Err(_) => return Err("shared page invalidation failed"),
+        }
+    }
+    Ok(())
+}
+
 pub fn revalidate_page(page: Page<Size4KiB>) -> Result<(), &'static str> {
     if sev_status().contains(SevStatus::SNP_ACTIVE) {
         let counter = AtomicUsize::new(0);

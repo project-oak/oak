@@ -75,6 +75,8 @@ impl crate::Platform for Base {
 
     fn change_frame_state(_frame: PhysFrame<Size4KiB>, _state: PageAssignment) {}
 
+    fn invalidate_page(_page: Page<Size4KiB>) {}
+
     fn revalidate_page(_page: Page<Size4KiB>) {}
 
     fn wbvind() {

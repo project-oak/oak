@@ -219,6 +219,12 @@ impl Platform for Sev {
         accept_memory::change_frame_state(frame, state).expect("failed to change page state");
     }
 
+    fn invalidate_page(
+        page: x86_64::structures::paging::Page<x86_64::structures::paging::Size4KiB>,
+    ) {
+        accept_memory::invalidate_page(page).expect("failed to invalidate memory");
+    }
+
     fn revalidate_page(
         page: x86_64::structures::paging::Page<x86_64::structures::paging::Size4KiB>,
     ) {

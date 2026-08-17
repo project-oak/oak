@@ -50,6 +50,7 @@ pub mod test_mocks {
             fn port_factory() -> PortFactory;
             fn early_initialize_platform();
             fn change_frame_state(frame: PhysFrame<Size4KiB>, state: PageAssignment);
+            fn invalidate_page(page: Page<Size4KiB>);
             fn revalidate_page(page: Page<Size4KiB>);
             fn wbvind();
             fn guest_phys_addr_size() -> u8;

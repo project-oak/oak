@@ -295,6 +295,12 @@ impl Platform for Tdx {
 
     fn change_frame_state(_: PhysFrame<Size4KiB>, _: PageAssignment) {}
 
+    fn invalidate_page(_: x86_64::structures::paging::Page) {
+        // TDX does not have an RMP or page invalidation instruction. Memory
+        // transitions to shared are handled entirely by the hypervisor via the
+        // MapGPA hypercall (TDG.VP.VMCALL<MapGPA>).
+    }
+
     fn revalidate_page(_: x86_64::structures::paging::Page) {
         // TODO: b/360488924 - impl revalidate_page
     }

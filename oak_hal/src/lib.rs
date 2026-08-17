@@ -146,6 +146,13 @@ pub trait Platform: MsrAccess {
     /// Ask for the page state to be changed by the hypervisor.
     fn change_frame_state(frame: PhysFrame<Size4KiB>, state: PageAssignment);
 
+    /// Invalidate one page of memory.
+    ///
+    /// This operation is required for SEV-SNP before going from a PRIVATE state
+    /// to a SHARED state. For TDX, this is a no-op as memory sharing is handled
+    /// entirely via the MapGPA hypercall.
+    fn invalidate_page(page: Page<Size4KiB>);
+
     /// Validate one page of memory.
     ///
     /// This operation is required for SEV after going from a SHARED state to a

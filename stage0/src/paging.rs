@@ -375,6 +375,15 @@ pub fn share_page<P: Platform>(page: Page<Size4KiB>) {
     // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that
     // range.
     assert!(page_start < Size2MiB::SIZE);
+
+    // We have to invalidate the page in the RMP before sharing it.
+    P::invalidate_page(page);
+
+    // In stage0 we use identity mapping, so the page's virtual start address
+    // corresponds directly to a physical frame at the same address.
+    let frame = PhysFrame::<Size4KiB>::from_start_address(PhysAddr::new(page_start)).unwrap();
+    P::change_frame_state(frame, PageAssignment::Shared);
+
     // Remove the ENCRYPTED bit from the entry that maps the page.
     {
         let mut page_tables = crate::paging::PAGE_TABLE_REFS.get().unwrap().lock();
@@ -386,11 +395,6 @@ pub fn share_page<P: Platform>(page: Page<Size4KiB>) {
         );
     }
     flush_all();
-
-    // In stage0 we use identity mapping, so the page's virtual start address
-    // corresponds directly to a physical frame at the same address.
-    let frame = PhysFrame::<Size4KiB>::from_start_address(PhysAddr::new(page_start)).unwrap();
-    P::change_frame_state(frame, PageAssignment::Shared);
 }
 
 /// Stops sharing a single 4KiB page with the hypervisor when running with AMD

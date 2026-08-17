@@ -116,6 +116,12 @@ impl Platform for Tdx {
         }
     }
 
+    fn invalidate_page(_page: Page<Size4KiB>) {
+        // TDX does not have an RMP or page invalidation instruction. Memory
+        // transitions to shared are handled entirely by the hypervisor via the
+        // MapGPA hypercall (TDG.VP.VMCALL<MapGPA>).
+    }
+
     fn revalidate_page(page: Page<Size4KiB>) {
         let mut pt_guard = PAGE_TABLES.lock();
         let mapper = pt_guard.get_mut().unwrap();
