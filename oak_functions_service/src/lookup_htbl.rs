@@ -466,10 +466,12 @@ pub fn hash(v: &[u8], hash_secret: u64) -> u64 {
         i += 8;
     }
     if i < v.len() {
+        bytes = [0u8; 8];
         bytes[0..v.len() - i].copy_from_slice(&v[i..v.len()]);
         let digit: u64 = u64::from_le_bytes(bytes);
         val = hash_u64(val ^ digit, hash_secret);
     }
+    val = hash_u64(val ^ v.len() as u64, hash_secret);
     val
 }
 
