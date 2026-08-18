@@ -385,6 +385,7 @@ TEST(OakSessionTlsTest,
             EXPECT_EQ(err, X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT);
             return absl::OkStatus();
           },
+      .expected_server_name = "untrusted.example.com",
   };
   auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
   ASSERT_THAT(client_ctx, IsOk());
@@ -659,6 +660,51 @@ TEST(OakSessionTlsTest, CustomServerNameMismatchFails) {
 
   // Client should reject due to mismatch (standard verification failure and
   // custom verifier returning error).
+  auto result = (*client_initializer)->PutTLSFrame(*server_hello);
+  EXPECT_THAT(result, StatusIs(absl::StatusCode::kFailedPrecondition));
+}
+
+TEST(OakSessionTlsTest, CustomServerNameMismatchFailsEvenWithCustomOk) {
+  const std::string custom_name = "service.example.com";
+
+  // Server generates a self-signed cert with the custom SAN.
+  auto server_provider = util::CreateSelfSigned({}, custom_name);
+  ASSERT_THAT(server_provider, IsOk());
+  ServerContextConfig server_config{
+      .tls_identity_provider = std::move(*server_provider),
+  };
+  auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
+  ASSERT_THAT(server_ctx, IsOk());
+
+  // Client sets a mismatched expected_server_name.
+  // Even if the custom verifier returns absl::OkStatus(), the hostname mismatch
+  // error MUST NOT be overridden and the handshake MUST fail.
+  ClientContextConfig client_config{
+      .custom_cert_verifier =
+          [](const std::vector<std::string>& chain, int err) {
+            EXPECT_EQ(err, X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT);
+            return absl::OkStatus();
+          },
+      .expected_server_name = "wrong-name.example.com",
+  };
+  auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
+  ASSERT_THAT(client_ctx, IsOk());
+
+  auto server_initializer = (*server_ctx)->NewSession();
+  ASSERT_THAT(server_initializer, IsOk());
+  auto client_initializer = (*client_ctx)->NewSession();
+  ASSERT_THAT(client_initializer, IsOk());
+
+  auto client_hello = (*client_initializer)->GetTLSFrame();
+  ASSERT_THAT(client_hello, IsOk());
+
+  ASSERT_THAT((*server_initializer)->PutTLSFrame(*client_hello), IsOk());
+
+  auto server_hello = (*server_initializer)->GetTLSFrame();
+  ASSERT_THAT(server_hello, IsOk());
+
+  // Client should reject due to hostname mismatch even though custom verifier
+  // returned OK.
   auto result = (*client_initializer)->PutTLSFrame(*server_hello);
   EXPECT_THAT(result, StatusIs(absl::StatusCode::kFailedPrecondition));
 }

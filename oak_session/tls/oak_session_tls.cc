@@ -94,6 +94,34 @@ int VerifyCallback(X509_STORE_CTX* ctx, void* arg) {
     return 0;
   }
 
+  // Custom verifier returned OK. However, critical verification errors
+  // (such as hostname mismatch, expired cert, or invalid signature) must not
+  // be overridden by custom verification.
+  if (err == X509_V_ERR_HOSTNAME_MISMATCH ||
+      err == X509_V_ERR_CERT_HAS_EXPIRED ||
+      err == X509_V_ERR_CERT_NOT_YET_VALID ||
+      err == X509_V_ERR_CERT_SIGNATURE_FAILURE ||
+      err == X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE) {
+    return 0;
+  }
+
+  // If client mode has an expected server name (SNI), verify that the leaf
+  // certificate matches the expected server name.
+  if (!SSL_is_server(ssl)) {
+    const char* expected_host =
+        SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
+    if (expected_host != nullptr && strlen(expected_host) > 0) {
+      X509* leaf_cert = sk_X509_value(chain, 0);
+      if (leaf_cert != nullptr) {
+        if (X509_check_host(leaf_cert, expected_host, strlen(expected_host), 0,
+                            nullptr) <= 0) {
+          X509_STORE_CTX_set_error(ctx, X509_V_ERR_HOSTNAME_MISMATCH);
+          return 0;
+        }
+      }
+    }
+  }
+
   return 1;
 }
 
