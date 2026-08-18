@@ -536,6 +536,48 @@ async fn test_custom_server_name_mismatch_fails() -> Result<(), Box<dyn std::err
     Ok(())
 }
 
+#[tokio::test]
+async fn test_custom_server_name_mismatch_fails_even_when_custom_ok()
+-> Result<(), Box<dyn std::error::Error>> {
+    // Server cert has SAN "oak-session-tls" (default).
+    let server_provider = utils::create_self_signed()?;
+    let server_identity = server_provider.get_identity()?;
+
+    let server_ctx = OakSessionTlsServerContext::create(ServerContextConfig {
+        tls_identity_provider: utils::create_static_cert_identity_provider(
+            server_identity.key_der.clone_key(),
+            server_identity.certs.clone(),
+        ),
+        client_trust_anchor_provider: None,
+        custom_cert_verifier: None,
+    })?;
+
+    // Client expects a different server name → SAN mismatch.
+    // Even if custom verifier returns Ok(()), SAN mismatch must surface and fail.
+    let client_ctx = OakSessionTlsClientContext::create(ClientContextConfig {
+        server_trust_anchor_provider: None,
+        tls_identity_provider: None,
+        custom_cert_verifier: Some(Box::new(MockVerifier { fail: false, expect_inner_fail: None })),
+        expected_server_name: Some("wrong-name.example.com".to_string()),
+    })?;
+
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let mut server = AsyncServer::spawn(server_ctx);
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(async {
+                do_handshake(&mut server, &client_ctx).await;
+            })
+        });
+    }));
+
+    assert!(
+        result.is_err(),
+        "Handshake should have failed due to SAN mismatch even when custom verifier returns OK"
+    );
+
+    Ok(())
+}
+
 #[test]
 fn test_create_self_signed_for_custom_name() {
     let custom_name = "my-custom-service.example.com";

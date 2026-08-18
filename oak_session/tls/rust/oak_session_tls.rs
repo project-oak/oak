@@ -234,6 +234,14 @@ impl ServerCertVerifier for DelegatingServerCertVerifier {
             now,
         );
 
+        if let Err(rustls::Error::InvalidCertificate(rustls::CertificateError::NotValidForName)) =
+            verified_res
+        {
+            return Err(rustls::Error::InvalidCertificate(
+                rustls::CertificateError::NotValidForName,
+            ));
+        }
+
         let verify_result = verified_res.as_ref().map(|_| ());
 
         let custom_result = self.custom.verify(end_entity, intermediates, verify_result);
@@ -339,13 +347,14 @@ impl ClientCertVerifier for DelegatingClientCertVerifier {
     }
 }
 
-/// A standalone server certificate verifier that delegates entirely to a
-/// [`CustomCertVerifier`], without performing any standard WebPKI validation.
+/// A standalone server certificate verifier that delegates to a
+/// [`CustomCertVerifier`] while still enforcing SAN verification.
 ///
 /// Used when no trust anchors are configured but custom verification (such as
 /// attestation-based checks) is desired.
 #[derive(Debug)]
 struct CustomOnlyServerCertVerifier {
+    inner: Arc<dyn ServerCertVerifier>,
     custom: Arc<dyn CustomCertVerifier>,
 }
 
@@ -354,13 +363,27 @@ impl ServerCertVerifier for CustomOnlyServerCertVerifier {
         &self,
         end_entity: &CertificateDer<'_>,
         intermediates: &[CertificateDer<'_>],
-        _server_name: &ServerName<'_>,
-        _ocsp_response: &[u8],
-        _now: UnixTime,
+        server_name: &ServerName<'_>,
+        ocsp_response: &[u8],
+        now: UnixTime,
     ) -> Result<ServerCertVerified, rustls::Error> {
-        // No standard verification was performed, so pass Err to the custom
-        // verifier indicating that standard verification is not available.
-        let verify_result = Err(&rustls::Error::UnsupportedNameType);
+        let verified_res = self.inner.verify_server_cert(
+            end_entity,
+            intermediates,
+            server_name,
+            ocsp_response,
+            now,
+        );
+
+        if let Err(rustls::Error::InvalidCertificate(rustls::CertificateError::NotValidForName)) =
+            verified_res
+        {
+            return Err(rustls::Error::InvalidCertificate(
+                rustls::CertificateError::NotValidForName,
+            ));
+        }
+
+        let verify_result = verified_res.as_ref().map(|_| ());
         self.custom
             .verify(end_entity, intermediates, verify_result)
             .map(|_| ServerCertVerified::assertion())
@@ -373,12 +396,7 @@ impl ServerCertVerifier for CustomOnlyServerCertVerifier {
         cert: &CertificateDer<'_>,
         dss: &DigitallySignedStruct,
     ) -> Result<HandshakeSignatureValid, rustls::Error> {
-        rustls::crypto::verify_tls12_signature(
-            message,
-            cert,
-            dss,
-            &rustls::crypto::ring::default_provider().signature_verification_algorithms,
-        )
+        self.inner.verify_tls12_signature(message, cert, dss)
     }
 
     fn verify_tls13_signature(
@@ -387,18 +405,11 @@ impl ServerCertVerifier for CustomOnlyServerCertVerifier {
         cert: &CertificateDer<'_>,
         dss: &DigitallySignedStruct,
     ) -> Result<HandshakeSignatureValid, rustls::Error> {
-        rustls::crypto::verify_tls13_signature(
-            message,
-            cert,
-            dss,
-            &rustls::crypto::ring::default_provider().signature_verification_algorithms,
-        )
+        self.inner.verify_tls13_signature(message, cert, dss)
     }
 
     fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
-        rustls::crypto::ring::default_provider()
-            .signature_verification_algorithms
-            .supported_schemes()
+        self.inner.supported_verify_schemes()
     }
 }
 
@@ -528,7 +539,21 @@ impl OakSessionTlsClientContext {
                     }
                 }
                 (None, Some(custom)) => {
-                    Arc::new(CustomOnlyServerCertVerifier { custom: custom.clone() })
+                    let dummy_cert =
+                        rcgen::generate_simple_self_signed(vec!["dummy-root".to_string()])
+                            .map_err(|e| {
+                                InitializationError::Tls(rustls::Error::General(e.to_string()))
+                            })?;
+                    let cert_der = CertificateDer::from(dummy_cert.cert.der().to_vec());
+                    let mut root_store = RootCertStore::empty();
+                    root_store.add(cert_der).map_err(|e| {
+                        InitializationError::Tls(rustls::Error::General(e.to_string()))
+                    })?;
+                    let inner =
+                        WebPkiServerVerifier::builder(Arc::new(root_store)).build().map_err(
+                            |e| InitializationError::Tls(rustls::Error::General(e.to_string())),
+                        )?;
+                    Arc::new(CustomOnlyServerCertVerifier { inner, custom: custom.clone() })
                 }
                 (None, None) => {
                     let root_store = RootCertStore::empty();
