@@ -20,7 +20,7 @@ Install Nix in single-user mode
 ```console
 sudo install -d -m755 -o $(id -u) -g $(id -g) /nix
 curl --location https://releases.nixos.org/nix/nix-2.34.3/install > /tmp/install_nix \
-  && echo '15af988e88ffc16d5d4abd6e1d100eba8b0dff6a41c6e03a7718c2b4a87e0cd6/tmp/install_nix' > /tmp/install_nix.sha256 \
+  && echo '15af988e88ffc16d5d4abd6e1d100eba8b0dff6a41c6e03a7718c2b4a87e0cd6  /tmp/install_nix' > /tmp/install_nix.sha256 \
   && sha256sum --check /tmp/install_nix.sha256 \
   && sh /tmp/install_nix
 ```
