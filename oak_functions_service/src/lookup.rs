@@ -23,6 +23,7 @@ use alloc::{
 use core::array;
 
 use log::{Level, info};
+use rand_core::{OsRng, RngCore};
 
 use crate::{logger::OakLogger, lookup_htbl::LookupHtbl};
 
@@ -99,12 +100,12 @@ mod mutexes {
 /// In the future we may replace both the mutex and the hash map with something
 /// like RCU.
 pub struct LookupDataManager<const S: usize> {
-    data: mutexes::RwLock<Arc<[Data; S]>>,
+    data: mutexes::RwLock<(u64, Arc<[Data; S]>)>,
     // The outer RwLock guards the DataBuilder-s themselves; while inserting data you need a read
     // lock on the outer RwLock, but when finalizing lookup data you need to grab a write lock.
     // The inner lock guards the contents of the DataBuilder, ensuring that we add data from only
     // one thread at a time.
-    data_builder: mutexes::RwLock<[mutexes::Mutex<DataBuilder>; S]>,
+    data_builder: mutexes::RwLock<(u64, [mutexes::Mutex<DataBuilder>; S])>,
     logger: Arc<dyn OakLogger>,
 }
 
@@ -115,12 +116,16 @@ impl<const S: usize> LookupDataManager<S> {
             info!("Splitting lookup data hashmap into {}.", S);
         }
         Self {
-            data: mutexes::RwLock::new(Arc::new(array::from_fn(|_| Data::default()))),
+            data: mutexes::RwLock::new((
+                OsRng.next_u64(),
+                Arc::new(array::from_fn(|_| Data::default())),
+            )),
             // Incrementally builds the backing data that will be used by new `LookupData`
             // instances when finished.
-            data_builder: mutexes::RwLock::new(array::from_fn(|_| {
-                mutexes::Mutex::new(DataBuilder::default())
-            })),
+            data_builder: mutexes::RwLock::new((
+                OsRng.next_u64(),
+                array::from_fn(|_| mutexes::Mutex::new(DataBuilder::default())),
+            )),
             logger,
         }
     }
@@ -137,13 +142,14 @@ impl<const S: usize> LookupDataManager<S> {
     pub fn reserve(&self, additional_entries: u64) -> anyhow::Result<()> {
         // We're assuming uniform distribution here.
         let entries_per_shard = additional_entries as usize / S;
-        self.data_builder.read().iter().for_each(|db| db.lock().reserve(entries_per_shard));
+        self.data_builder.read().1.iter().for_each(|db| db.lock().reserve(entries_per_shard));
         Ok(())
     }
 
     pub fn insert(&self, key: &[u8], val: &[u8]) {
-        let index = crate::lookup_htbl::hash(key, 0) as usize % S;
-        self.data_builder.read()[index].lock().insert(key, val);
+        let builder = self.data_builder.read();
+        let index = crate::lookup_htbl::hash(key, builder.0) as usize % S;
+        builder.1[index].lock().insert(key, val);
     }
 
     pub fn extend_next_lookup_data<'a, T: IntoIterator<Item = (&'a [u8], &'a [u8])>>(
@@ -153,8 +159,8 @@ impl<const S: usize> LookupDataManager<S> {
         info!("Start extending next lookup data");
         let builder = self.data_builder.read();
         for (k, v) in new_data {
-            let index = crate::lookup_htbl::hash(k, 0) as usize % S;
-            builder[index].lock().insert(k, v);
+            let index = crate::lookup_htbl::hash(k, builder.0) as usize % S;
+            builder.1[index].lock().insert(k, v);
         }
         info!("Finish extending next lookup data");
     }
@@ -167,11 +173,12 @@ impl<const S: usize> LookupDataManager<S> {
         info!("Start replacing lookup data by next lookup data");
         {
             let mut data_builder = self.data_builder.write();
-            let next_data = data_builder.each_mut().map(|builder| builder.lock().build());
+            let next_data = data_builder.1.each_mut().map(|builder| builder.lock().build());
             next_data_len = next_data.iter().map(|htbl| htbl.len()).sum();
             let mut data = self.data.write();
-            data_len = data.iter().map(|htbl| htbl.len()).sum();
-            *data = Arc::new(next_data);
+            data_len = data.1.iter().map(|htbl| htbl.len()).sum();
+            *data = (data_builder.0, Arc::new(next_data));
+            data_builder.0 = OsRng.next_u64();
         }
         info!(
             "Finished replacing lookup data with len {} by next lookup data with len {}",
@@ -184,7 +191,8 @@ impl<const S: usize> LookupDataManager<S> {
         {
             let mut data_builder = self.data_builder.write();
             // Clear the builder throwing away the intermediate result.
-            let _ = data_builder.each_mut().map(|builder| builder.lock().build());
+            let _ = data_builder.1.each_mut().map(|builder| builder.lock().build());
+            data_builder.0 = OsRng.next_u64();
         }
         info!("Finish aborting next lookup data");
     }
@@ -195,8 +203,8 @@ impl<const S: usize> LookupDataManager<S> {
         let keys: usize;
         let data = {
             let data = self.data.read().clone();
-            keys = data.iter().map(|data| data.len()).sum();
-            LookupData::new(data, self.logger.clone())
+            keys = data.1.iter().map(|data| data.len()).sum();
+            LookupData::new(data.1, data.0, self.logger.clone())
         };
         info!("Created lookup data with len: {}", keys);
         data
@@ -207,17 +215,18 @@ impl<const S: usize> LookupDataManager<S> {
 #[derive(Clone)]
 pub struct LookupData<const S: usize> {
     data: Arc<[Data; S]>,
+    hash_secret: u64,
     logger: Arc<dyn OakLogger>,
 }
 
 impl<const S: usize> LookupData<S> {
-    fn new(data: Arc<[Data; S]>, logger: Arc<dyn OakLogger>) -> Self {
-        Self { data, logger }
+    fn new(data: Arc<[Data; S]>, hash_secret: u64, logger: Arc<dyn OakLogger>) -> Self {
+        Self { data, hash_secret, logger }
     }
 
     /// Gets an individual entry from the backing data.
     pub fn get(&self, key: &[u8]) -> Option<&[u8]> {
-        let index = crate::lookup_htbl::hash(key, 0) as usize % S;
+        let index = crate::lookup_htbl::hash(key, self.hash_secret) as usize % S;
         self.data[index].get(key)
     }
 
