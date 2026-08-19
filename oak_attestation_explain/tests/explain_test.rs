@@ -69,6 +69,7 @@ sev_snp:
   product: 1
   hardware_id: 6c65aee8a139e984657ee8bfe50cbdc39067e3a99da09bba4e948236c91df95baa7bbd233fa56b101b90d136c7a78091013a7ce62c31fc25be1c6ca87da31a5a
   vmpl: 0
+  alias_check_complete: true
 "
                     );
                     assert_eq!(

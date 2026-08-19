@@ -2074,7 +2074,7 @@ pub mod root_layer_data {
     }
 }
 /// Values extracted from an AMD SEV-SNP attestation report.
-/// NEXT_ID: 9
+/// NEXT_ID: 12
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct AmdAttestationReport {
     /// The custom bytes that were passed to the report when it was requested.
@@ -2113,6 +2113,18 @@ pub struct AmdAttestationReport {
     /// was generated.
     #[prost(uint32, tag = "6")]
     pub vmpl: u32,
+    /// Whether ALIAS_CHECK_COMPLETE was set in PLATFORM_INFO of the attestation
+    /// report. This field may not be populated on older hardware.
+    #[prost(bool, optional, tag = "9")]
+    pub alias_check_complete: ::core::option::Option<bool>,
+    /// Verified mitigation vector value at the time the guest was launched.
+    /// This field may not be populated on older hardware.
+    #[prost(uint64, optional, tag = "10")]
+    pub launch_mit_vector: ::core::option::Option<u64>,
+    /// Current verified mitigation vector value.
+    /// This field may not be populated on older hardware.
+    #[prost(uint64, optional, tag = "11")]
+    pub current_mit_vector: ::core::option::Option<u64>,
 }
 /// Values extracted from an Intel TDX attestation report.
 /// NEXT_ID: 5

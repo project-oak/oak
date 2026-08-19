@@ -94,6 +94,9 @@ pub fn serialize_amd_attestation_report(instance: &AmdAttestationReport) -> serd
         product,
         hardware_id,
         vmpl,
+        alias_check_complete,
+        launch_mit_vector,
+        current_mit_vector,
     } = instance;
 
     json!({
@@ -105,6 +108,9 @@ pub fn serialize_amd_attestation_report(instance: &AmdAttestationReport) -> serd
         "product": product,
         "hardware_id": hex::encode(hardware_id),
         "vmpl": vmpl,
+        "alias_check_complete": alias_check_complete,
+        "launch_mit_vector": launch_mit_vector,
+        "current_mit_vector": current_mit_vector,
     })
 }
 

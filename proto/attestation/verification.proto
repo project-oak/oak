@@ -145,7 +145,7 @@ enum AmdProduct {
 }
 
 // Values extracted from an AMD SEV-SNP attestation report.
-// NEXT_ID: 9
+// NEXT_ID: 12
 message AmdAttestationReport {
   // The custom bytes that were passed to the report when it was requested.
   bytes report_data = 1;
@@ -182,6 +182,18 @@ message AmdAttestationReport {
   // The VM Protection Leve (VMPL) that was active when the attestation report
   // was generated.
   uint32 vmpl = 6;
+
+  // Whether ALIAS_CHECK_COMPLETE was set in PLATFORM_INFO of the attestation
+  // report. This field may not be populated on older hardware.
+  optional bool alias_check_complete = 9;
+
+  // Verified mitigation vector value at the time the guest was launched.
+  // This field may not be populated on older hardware.
+  optional uint64 launch_mit_vector = 10;
+
+  // Current verified mitigation vector value.
+  // This field may not be populated on older hardware.
+  optional uint64 current_mit_vector = 11;
 }
 
 // Values extracted from an Intel TDX attestation report.

@@ -28,7 +28,7 @@ use oak_proto_rust::oak::{
         TdxTcbSvn, TeePlatform, tcb_version_expected_value, tdx_tcb_svn_expected_value,
     },
 };
-use oak_sev_snp_attestation_report::{AmdProduct, AttestationReport};
+use oak_sev_snp_attestation_report::{AmdProduct, AttestationReport, PlatformInfo};
 use oak_tdx_quote::{ParsedTdxQuote, TdAttributes};
 use oak_time::Instant;
 use x509_cert::{
@@ -241,6 +241,10 @@ pub fn convert_amd_sev_snp_attestation_report(
     let initial_measurement = report.data.measurement.as_ref().to_vec();
     let report_data = report.data.report_data.as_ref().to_vec();
     let vmpl = report.data.vmpl;
+    let alias_check_complete = (report.data.version >= 3)
+        .then_some(report.data.get_platform_info().contains(PlatformInfo::ALIAS_CHECK_COMPLETE));
+    let launch_mit_vector = (report.data.version >= 5).then_some(report.data.launch_mit_vector);
+    let current_mit_vector = (report.data.version >= 5).then_some(report.data.current_mit_vector);
 
     Ok(AmdAttestationReport {
         report_data,
@@ -251,6 +255,9 @@ pub fn convert_amd_sev_snp_attestation_report(
         initial_measurement,
         hardware_id,
         vmpl,
+        alias_check_complete,
+        launch_mit_vector,
+        current_mit_vector,
     })
 }
 
