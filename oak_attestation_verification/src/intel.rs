@@ -20,6 +20,7 @@
 use core::convert::Into;
 
 use anyhow::{Context, anyhow};
+use const_oid::AssociatedOid;
 use oak_digest::{Sha256, Sha384};
 use oak_tdx_quote::{QeCertificationData, TdxQuoteWrapper};
 use oak_time::Instant;
@@ -29,7 +30,8 @@ use p256::{
 };
 use x509_cert::{
     Certificate,
-    der::{DecodePem, referenced::OwnedToRef},
+    der::{Decode, DecodePem, referenced::OwnedToRef},
+    ext::pkix::{BasicConstraints, KeyUsage},
 };
 
 use crate::x509::{check_certificate_validity, verify_cert_signature};
@@ -131,12 +133,49 @@ pub fn verify_quote_cert_chain_and_extract_leaf(
     check_certificate_validity(verification_time, &leaf)?;
     // Each certificate must be signed by the next one in the chain and the signer
     // must be valid.
-    for signer in chain {
+    for (intermediate_count, signer) in chain.enumerate() {
         check_certificate_validity(verification_time, signer)?;
+        anyhow::ensure!(
+            signee.tbs_certificate.issuer == signer.tbs_certificate.subject,
+            "certificate issuer does not match signer subject"
+        );
+        let basic_constraints = get_extension::<BasicConstraints>(signer)?
+            .ok_or_else(|| anyhow!("signer certificate is missing basic constraints"))?;
+        anyhow::ensure!(basic_constraints.ca, "signer certificate is not a CA");
+        if let Some(path_len) = basic_constraints.path_len_constraint {
+            anyhow::ensure!(
+                intermediate_count <= path_len as usize,
+                "certificate path length constraint exceeded"
+            );
+        }
+        if let Some(key_usage) = get_extension::<KeyUsage>(signer)? {
+            anyhow::ensure!(
+                key_usage.key_cert_sign(),
+                "signer certificate key usage does not permit certificate signing"
+            );
+        }
         verify_cert_signature(signer, signee).context("verifying cert signature")?;
         signee = signer;
     }
     Ok(leaf)
+}
+
+fn get_extension<'a, T: AssociatedOid + Decode<'a>>(
+    cert: &'a Certificate,
+) -> anyhow::Result<Option<T>> {
+    let Some(extensions) = &cert.tbs_certificate.extensions else {
+        return Ok(None);
+    };
+    for ext in extensions {
+        if ext.extn_id == T::OID {
+            return Ok(Some(
+                T::from_der(ext.extn_value.as_bytes())
+                    .map_err(anyhow::Error::msg)
+                    .context("parsing certificate extension")?,
+            ));
+        }
+    }
+    Ok(None)
 }
 
 /// Software implementation of the RTMR logic that can be used to replay a

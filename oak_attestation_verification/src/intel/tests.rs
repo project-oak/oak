@@ -18,11 +18,16 @@ extern crate std;
 
 use core::assert_eq;
 
+use const_oid::AssociatedOid;
 use oak_digest::Sha384;
 use oak_tdx_quote::{QeCertificationData, TdxQuoteWrapper};
 use oak_time::{Duration, Instant};
 use test_util::AttestationData;
-use x509_cert::{Certificate, der::DecodePem};
+use x509_cert::{
+    Certificate,
+    der::{DecodePem, Encode, EncodePem, asn1::OctetString, pem::LineEnding},
+    ext::pkix::{BasicConstraints, KeyUsage, KeyUsages},
+};
 
 use super::{
     PCK_ROOT, RtmrEmulator, verify_intel_tdx_quote_validity,
@@ -110,6 +115,126 @@ fn pck_chain_validation_passes() {
     assert_eq!(
         leaf.tbs_certificate.subject.to_string(),
         "C=US,ST=CA,L=Santa Clara,O=Intel Corporation,CN=Intel SGX PCK Certificate"
+    );
+}
+
+fn get_pck_cert_chain_from_evidence() -> Vec<Certificate> {
+    let quote_buffer = get_evidence_quote_bytes();
+    let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
+    let signature_data = wrapper.parse_signature_data().expect("signature data parsing failed");
+    let report_certification =
+        if let QeCertificationData::QeReportCertificationData(report_certification) =
+            signature_data.certification_data
+        {
+            report_certification
+        } else {
+            panic!("signature data contains the wrong type of certification data");
+        };
+    if let QeCertificationData::PckCertChain(chain) = report_certification.certification_data {
+        Certificate::load_pem_chain(chain).expect("error parsing certificate chain")
+    } else {
+        panic!("certification data is not a PCK certificate chain");
+    }
+}
+
+fn certs_to_pem_chain(certs: &[Certificate]) -> alloc::string::String {
+    let mut pem = alloc::string::String::new();
+    for cert in certs {
+        pem.push_str(&cert.to_pem(LineEnding::LF).expect("failed to encode cert to PEM"));
+    }
+    pem
+}
+
+#[test]
+fn pck_chain_validation_fails_if_issuer_does_not_match_subject() {
+    let mut certs = get_pck_cert_chain_from_evidence();
+    // Tamper with the intermediate CA subject so it does not match leaf's issuer.
+    certs[1].tbs_certificate.subject = certs[0].tbs_certificate.subject.clone();
+    let pem = certs_to_pem_chain(&certs);
+    let cert_data = QeCertificationData::PckCertChain(pem.as_bytes());
+    let err = verify_quote_cert_chain_and_extract_leaf(get_valid_time(), &cert_data).unwrap_err();
+    assert!(
+        err.to_string().contains("certificate issuer does not match signer subject"),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
+fn pck_chain_validation_fails_if_signer_is_not_ca() {
+    let mut certs = get_pck_cert_chain_from_evidence();
+    // Replace intermediate CA's BasicConstraints with ca = false.
+    let bc = BasicConstraints { ca: false, path_len_constraint: None };
+    let bc_der = bc.to_der().expect("failed to encode BasicConstraints");
+    if let Some(ref mut extensions) = certs[1].tbs_certificate.extensions {
+        for ext in extensions.iter_mut() {
+            if ext.extn_id == BasicConstraints::OID {
+                ext.extn_value = OctetString::new(bc_der.clone()).unwrap();
+            }
+        }
+    }
+    let pem = certs_to_pem_chain(&certs);
+    let cert_data = QeCertificationData::PckCertChain(pem.as_bytes());
+    let err = verify_quote_cert_chain_and_extract_leaf(get_valid_time(), &cert_data).unwrap_err();
+    assert!(err.to_string().contains("signer certificate is not a CA"), "unexpected error: {err}");
+}
+
+#[test]
+fn pck_chain_validation_fails_if_signer_key_usage_lacks_key_cert_sign() {
+    let mut certs = get_pck_cert_chain_from_evidence();
+    // Replace intermediate CA's KeyUsage with DigitalSignature only (no
+    // KeyCertSign).
+    let ku = KeyUsage(KeyUsages::DigitalSignature.into());
+    let ku_der = ku.to_der().expect("failed to encode KeyUsage");
+    if let Some(ref mut extensions) = certs[1].tbs_certificate.extensions {
+        for ext in extensions.iter_mut() {
+            if ext.extn_id == KeyUsage::OID {
+                ext.extn_value = OctetString::new(ku_der.clone()).unwrap();
+            }
+        }
+    }
+    let pem = certs_to_pem_chain(&certs);
+    let cert_data = QeCertificationData::PckCertChain(pem.as_bytes());
+    let err = verify_quote_cert_chain_and_extract_leaf(get_valid_time(), &cert_data).unwrap_err();
+    assert!(
+        err.to_string()
+            .contains("signer certificate key usage does not permit certificate signing"),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
+fn pck_chain_validation_fails_if_path_len_exceeded() {
+    let mut certs = get_pck_cert_chain_from_evidence();
+    // Set path_len_constraint = Some(0) on intermediate CA.
+    let bc = BasicConstraints { ca: true, path_len_constraint: Some(0) };
+    let bc_der = bc.to_der().expect("failed to encode BasicConstraints");
+    if let Some(ref mut extensions) = certs[1].tbs_certificate.extensions {
+        for ext in extensions.iter_mut() {
+            if ext.extn_id == BasicConstraints::OID {
+                ext.extn_value = OctetString::new(bc_der.clone()).unwrap();
+            }
+        }
+    }
+    // Insert a sub-CA between leaf and intermediate CA whose issuer matches
+    // intermediate CA.
+    let mut sub_ca = certs[1].clone();
+    sub_ca.tbs_certificate.issuer = certs[1].tbs_certificate.subject.clone();
+    let sub_bc = BasicConstraints { ca: true, path_len_constraint: None };
+    let sub_bc_der = sub_bc.to_der().expect("failed to encode BasicConstraints");
+    if let Some(ref mut extensions) = sub_ca.tbs_certificate.extensions {
+        for ext in extensions.iter_mut() {
+            if ext.extn_id == BasicConstraints::OID {
+                ext.extn_value = OctetString::new(sub_bc_der.clone()).unwrap();
+            }
+        }
+    }
+    certs.insert(1, sub_ca);
+    let pem = certs_to_pem_chain(&certs);
+    let cert_data = QeCertificationData::PckCertChain(pem.as_bytes());
+    let err = verify_quote_cert_chain_and_extract_leaf(get_valid_time(), &cert_data).unwrap_err();
+    assert!(
+        err.to_string().contains("certificate path length constraint exceeded"),
+        "unexpected error: {err}"
     );
 }
 
