@@ -266,6 +266,9 @@ pub(crate) fn get_root_layer_expected_values(
             turin: tcb_version_rv_to_ev(rvs.turin),
             allow_debug: rvs.allow_debug,
             check_vcek_cert_expiry: rvs.check_vcek_cert_expiry,
+            require_alias_check_complete: rvs.require_alias_check_complete,
+            launch_mit_vector: rvs.launch_mit_vector,
+            current_mit_vector: rvs.current_mit_vector,
         })
     } else {
         None
@@ -295,6 +298,9 @@ pub(crate) fn get_amd_sev_snp_expected_values(
         turin: tcb_version_rv_to_ev(reference_values.turin),
         allow_debug: reference_values.allow_debug,
         check_vcek_cert_expiry: reference_values.check_vcek_cert_expiry,
+        require_alias_check_complete: reference_values.require_alias_check_complete,
+        launch_mit_vector: reference_values.launch_mit_vector,
+        current_mit_vector: reference_values.current_mit_vector,
     })
 }
 

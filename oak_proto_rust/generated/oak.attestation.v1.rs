@@ -1352,7 +1352,7 @@ pub mod tdx_tcb_svn_reference_value {
     }
 }
 /// Collection of reference values for an AMD SEV-SNP hardware root.
-/// NEXT_ID: 10
+/// NEXT_ID: 13
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AmdSevReferenceValues {
     /// Deprecated: Minimum accepted versions of all TCB components.
@@ -1389,6 +1389,18 @@ pub struct AmdSevReferenceValues {
     /// Versioned Chip Endorsement Key (VCEK) certificate.
     #[prost(bool, tag = "9")]
     pub check_vcek_cert_expiry: bool,
+    /// Whether to require ALIAS_CHECK_COMPLETE to be true.
+    /// Defaults to false for backward compatibility.
+    #[prost(bool, tag = "10")]
+    pub require_alias_check_complete: bool,
+    /// Minimum acceptable launch verified mitigation vector value.
+    /// Not available on older hardware; 0 accepts missing values.
+    #[prost(uint64, tag = "11")]
+    pub launch_mit_vector: u64,
+    /// Minimum acceptable current verified mitigation vector value.
+    /// Not available on older hardware; 0 accepts missing values.
+    #[prost(uint64, tag = "12")]
+    pub current_mit_vector: u64,
 }
 /// Collection of reference values for an Intel TDX Attestation Quote.
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -1727,7 +1739,7 @@ pub struct KernelExpectedValues {
     #[prost(message, optional, tag = "2")]
     pub setup_data: ::core::option::Option<ExpectedDigests>,
 }
-/// NEXT_ID: 8
+/// NEXT_ID: 11
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AmdSevExpectedValues {
     #[prost(message, optional, tag = "1")]
@@ -1753,6 +1765,18 @@ pub struct AmdSevExpectedValues {
     /// Versioned Chip Endorsement Key (VCEK) certificate.
     #[prost(bool, tag = "7")]
     pub check_vcek_cert_expiry: bool,
+    /// Whether to require ALIAS_CHECK_COMPLETE to be true.
+    /// Defaults to false for backward compatibility.
+    #[prost(bool, tag = "8")]
+    pub require_alias_check_complete: bool,
+    /// Minimum acceptable launch verified mitigation vector value.
+    /// Not available on older hardware; 0 accepts missing values.
+    #[prost(uint64, tag = "9")]
+    pub launch_mit_vector: u64,
+    /// Minimum acceptable current verified mitigation vector value.
+    /// Not available on older hardware; 0 accepts missing values.
+    #[prost(uint64, tag = "10")]
+    pub current_mit_vector: u64,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct IntelTdxExpectedValues {

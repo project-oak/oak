@@ -347,7 +347,7 @@ message TdxTcbSvnReferenceValue {
 }
 
 // Collection of reference values for an AMD SEV-SNP hardware root.
-// NEXT_ID: 10
+// NEXT_ID: 13
 message AmdSevReferenceValues {
   reserved 1, 2;
 
@@ -383,6 +383,18 @@ message AmdSevReferenceValues {
   // Whether the current time should be used when checking the validity of the
   // Versioned Chip Endorsement Key (VCEK) certificate.
   bool check_vcek_cert_expiry = 9;
+
+  // Whether to require ALIAS_CHECK_COMPLETE to be true.
+  // Defaults to false for backward compatibility.
+  bool require_alias_check_complete = 10;
+
+  // Minimum acceptable launch verified mitigation vector value.
+  // Not available on older hardware; 0 accepts missing values.
+  uint64 launch_mit_vector = 11;
+
+  // Minimum acceptable current verified mitigation vector value.
+  // Not available on older hardware; 0 accepts missing values.
+  uint64 current_mit_vector = 12;
 }
 
 // Collection of reference values for an Intel TDX Attestation Quote.

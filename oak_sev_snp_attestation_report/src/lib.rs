@@ -62,6 +62,11 @@ impl AttestationReport {
 
         Ok(policy_flags.contains(PolicyFlags::DEBUG))
     }
+
+    pub fn alias_check_complete(&self) -> Option<bool> {
+        (self.data.version >= 3)
+            .then_some(self.data.get_platform_info().contains(PlatformInfo::ALIAS_CHECK_COMPLETE))
+    }
 }
 
 /// The number of bytes of custom data that can be included in the attestation

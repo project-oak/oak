@@ -232,6 +232,9 @@ fn create_oc_endorsements_reference_values(
                         allow_debug: false,
                         check_vcek_cert_expiry: true,
                         stage0: Some(skip.clone()),
+                        require_alias_check_complete: true,
+                        launch_mit_vector: 0,
+                        current_mit_vector: 0,
                     }),
                     ..Default::default()
                 }),
@@ -355,6 +358,9 @@ fn create_rk_endorsements_reference_values(
                             allow_debug: false,
                             check_vcek_cert_expiry: true,
                             stage0: Some(skip.clone()),
+                            require_alias_check_complete: true,
+                            launch_mit_vector: 0,
+                            current_mit_vector: 0,
                         }),
                         ..Default::default()
                     }),

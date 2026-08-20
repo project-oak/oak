@@ -174,6 +174,31 @@ pub fn verify_amd_sev_attestation_report_values(
         anyhow::bail!("debug mode not allowed");
     }
 
+    if expected_values.require_alias_check_complete
+        && !attestation_report_values.alias_check_complete.unwrap_or(false)
+    {
+        anyhow::bail!("alias check not complete");
+    }
+
+    if expected_values.launch_mit_vector > attestation_report_values.launch_mit_vector.unwrap_or(0)
+    {
+        anyhow::bail!(
+            "launch MIT vector not supported: expected {} < attested {}",
+            expected_values.launch_mit_vector,
+            attestation_report_values.launch_mit_vector.unwrap_or(0)
+        );
+    }
+
+    if expected_values.current_mit_vector
+        > attestation_report_values.current_mit_vector.unwrap_or(0)
+    {
+        anyhow::bail!(
+            "current MIT vector not supported: expected {} < attested {}",
+            expected_values.current_mit_vector,
+            attestation_report_values.current_mit_vector.unwrap_or(0)
+        );
+    }
+
     // Legacy TCB version comparison (deprecated).
     // TODO: b/433225656 - Remove this block.
     #[allow(deprecated)]

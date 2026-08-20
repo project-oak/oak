@@ -110,6 +110,9 @@ pub fn create_oc_reference_values() -> ReferenceValues {
         allow_debug: false,
         check_vcek_cert_expiry: true,
         stage0: Some(skip.clone()),
+        require_alias_check_complete: true,
+        launch_mit_vector: 0,
+        current_mit_vector: 0,
     };
 
     let root_layer = RootLayerReferenceValues { amd_sev: Some(amd_sev), ..Default::default() };
@@ -164,6 +167,9 @@ pub fn create_rk_reference_values() -> ReferenceValues {
         allow_debug: false,
         check_vcek_cert_expiry: true,
         stage0: Some(skip.clone()),
+        require_alias_check_complete: true,
+        launch_mit_vector: 0,
+        current_mit_vector: 0,
     };
 
     let root_layer = RootLayerReferenceValues { amd_sev: Some(amd_sev), ..Default::default() };
@@ -311,6 +317,9 @@ fn root_layer_reference_values_from_evidence(
                 }),
                 allow_debug: r.debug,
                 check_vcek_cert_expiry: true,
+                require_alias_check_complete: r.alias_check_complete.unwrap_or(false),
+                launch_mit_vector: r.launch_mit_vector.unwrap_or(0),
+                current_mit_vector: r.current_mit_vector.unwrap_or(0),
             })
         }
         _ => None,

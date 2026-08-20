@@ -83,7 +83,7 @@ message KernelExpectedValues {
   ExpectedDigests setup_data = 2;
 }
 
-// NEXT_ID: 8
+// NEXT_ID: 11
 message AmdSevExpectedValues {
   ExpectedDigests stage0_expected = 1;
 
@@ -106,6 +106,18 @@ message AmdSevExpectedValues {
   // Whether the current time should be used when checking the validity of the
   // Versioned Chip Endorsement Key (VCEK) certificate.
   bool check_vcek_cert_expiry = 7;
+
+  // Whether to require ALIAS_CHECK_COMPLETE to be true.
+  // Defaults to false for backward compatibility.
+  bool require_alias_check_complete = 8;
+
+  // Minimum acceptable launch verified mitigation vector value.
+  // Not available on older hardware; 0 accepts missing values.
+  uint64 launch_mit_vector = 9;
+
+  // Minimum acceptable current verified mitigation vector value.
+  // Not available on older hardware; 0 accepts missing values.
+  uint64 current_mit_vector = 10;
 }
 
 message IntelTdxExpectedValues {

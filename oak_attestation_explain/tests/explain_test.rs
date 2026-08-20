@@ -162,6 +162,9 @@ amd_sev:
   stage0:
     digests:
     - sha2_384: 0a3c0fa3f1558a883660cb3f37491e6da05e3445dc0f517ab5f9b8f7be6dc2ae2fa46a23b501d66d1d7e24796d1c2e20
+  require_alias_check_complete: true
+  launch_mit_vector: 0
+  current_mit_vector: 0
 
 
 _____ Kernel Layer _____

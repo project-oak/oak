@@ -78,6 +78,9 @@ impl AmdSevSnpPolicy {
                 .map_err(|err| anyhow::anyhow!("failed to get debug flag: {}", err))?,
             check_vcek_cert_expiry: false,
             stage0: None,
+            require_alias_check_complete: report.alias_check_complete().unwrap_or(false),
+            launch_mit_vector: report.data.launch_mit_vector,
+            current_mit_vector: report.data.current_mit_vector,
         };
         let tcb_version = report.data.get_reported_tcb_version();
         let product = match report.data.get_product() {

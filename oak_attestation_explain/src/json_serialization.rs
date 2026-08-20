@@ -765,6 +765,9 @@ pub fn serialize_amd_sev_reference_values(instance: &AmdSevReferenceValues) -> s
         allow_debug,
         stage0,
         check_vcek_cert_expiry,
+        require_alias_check_complete,
+        launch_mit_vector,
+        current_mit_vector,
     } = instance;
     json!({
         "min_tcb_version": min_tcb_version.as_ref().map(serialize_tcb_version),
@@ -774,6 +777,9 @@ pub fn serialize_amd_sev_reference_values(instance: &AmdSevReferenceValues) -> s
         "allow_debug": allow_debug,
         "check_vcek_cert_expiry": check_vcek_cert_expiry,
         "stage0": stage0.as_ref().map(serialize_binary_reference_value),
+        "require_alias_check_complete": require_alias_check_complete,
+        "launch_mit_vector": launch_mit_vector,
+        "current_mit_vector": current_mit_vector,
     })
 }
 
