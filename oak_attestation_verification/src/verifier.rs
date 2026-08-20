@@ -22,7 +22,10 @@ use anyhow::Context;
 use coset::{CborSerializable, CoseKey, cwt::ClaimsSet};
 use ecdsa::{Signature, signature::Verifier};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
-use oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
+use oak_dice::cert::{
+    APPLICATION_KEYS_ADDITIONAL_DATA, DICE_LAYER_ADDITIONAL_DATA, LEGACY_ADDITIONAL_DATA,
+    USER_DATA_ADDITIONAL_DATA, cose_key_to_verifying_key, get_public_key_from_claims_set,
+};
 use oak_digest::Sha256;
 use oak_proto_rust::oak::attestation::v1::{
     ApplicationKeys, AttestationResults, Endorsements, EventAttestationResults, EventLog, Evidence,
@@ -40,8 +43,34 @@ use crate::{
     results::set_user_data_payload,
 };
 
-// We don't use additional authenticated data.
-const ADDITIONAL_DATA: &[u8] = b"";
+/// Verifies a COSE_Sign1 signature against `verifying_key` using
+/// `expected_aad`, falling back to `LEGACY_ADDITIONAL_DATA` (`b""`) if needed
+/// for backward compatibility.
+fn verify_cose_sign1_signature(
+    cert: &coset::CoseSign1,
+    verifying_key: &VerifyingKey,
+    expected_aad: &[u8],
+) -> anyhow::Result<()> {
+    let sig_verifier = |signature: &[u8], contents: &[u8]| -> Result<(), ecdsa::Error> {
+        let sig = Signature::from_slice(signature)?;
+        verifying_key.verify(contents, &sig)
+    };
+
+    // 1. Try with the expected domain-separated AAD.
+    if cert.verify_signature(expected_aad, sig_verifier).is_ok() {
+        return Ok(());
+    }
+
+    // 2. Fall back to legacy empty AAD for backward compatibility.
+    if !expected_aad.is_empty()
+        && cert.verify_signature(LEGACY_ADDITIONAL_DATA, sig_verifier).is_ok()
+    {
+        return Ok(());
+    }
+
+    // 3. If both failed, return an error from verifying with expected_aad.
+    cert.verify_signature(expected_aad, sig_verifier).map_err(|error| anyhow::anyhow!(error))
+}
 
 pub fn to_attestation_results(
     verify_result: &anyhow::Result<ExtractedEvidence>,
@@ -134,11 +163,12 @@ pub fn verify_software_rooted_dice_chain(evidence: &Evidence) -> anyhow::Result<
         .try_fold(root_layer_verifying_key, |previous_layer_verifying_key, current_layer| {
             let cert = coset::CoseSign1::from_slice(&current_layer.eca_certificate)
                 .map_err(|_cose_err| anyhow::anyhow!("couldn't parse certificate"))?;
-            cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
-                let sig = Signature::from_slice(signature)?;
-                previous_layer_verifying_key.verify(contents, &sig)
-            })
-            .map_err(|error| anyhow::anyhow!(error))?;
+            verify_cose_sign1_signature(
+                &cert,
+                &previous_layer_verifying_key,
+                DICE_LAYER_ADDITIONAL_DATA,
+            )
+            .context("verifying layer certificate signature")?;
             let payload = cert.payload.ok_or_else(|| anyhow::anyhow!("no cert payload"))?;
             let claims = ClaimsSet::from_slice(&payload)
                 .map_err(|_cose_err| anyhow::anyhow!("couldn't parse claims set"))?;
@@ -295,24 +325,14 @@ fn verify_application_keys(
     let encryption_cert =
         coset::CoseSign1::from_slice(&application_keys.encryption_public_key_certificate)
             .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption certificate"))?;
-    encryption_cert
-        .verify_signature(ADDITIONAL_DATA, |signature, contents| {
-            let sig = Signature::from_slice(signature)?;
-            verifying_key.verify(contents, &sig)
-        })
-        .map_err(|error| anyhow::anyhow!(error))
+    verify_cose_sign1_signature(&encryption_cert, verifying_key, APPLICATION_KEYS_ADDITIONAL_DATA)
         .context("verifying encryption certificate CWT signature")?;
 
     // Verify signing certificate.
     let signing_cert =
         coset::CoseSign1::from_slice(&application_keys.signing_public_key_certificate)
             .map_err(|_cose_err| anyhow::anyhow!("could not parse signing certificate"))?;
-    signing_cert
-        .verify_signature(ADDITIONAL_DATA, |signature, contents| {
-            let sig = Signature::from_slice(signature)?;
-            verifying_key.verify(contents, &sig)
-        })
-        .map_err(|error| anyhow::anyhow!(error))
+    verify_cose_sign1_signature(&signing_cert, verifying_key, APPLICATION_KEYS_ADDITIONAL_DATA)
         .context("verifying signing certificate CWT signature")?;
 
     Ok(())
@@ -345,11 +365,12 @@ pub fn verify_dice_chain(
         .try_fold(root_layer_verifying_key, |previous_layer_verifying_key, current_layer| {
             let cert = coset::CoseSign1::from_slice(&current_layer.eca_certificate)
                 .map_err(|_cose_err| anyhow::anyhow!("couldn't parse certificate"))?;
-            cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
-                let sig = Signature::from_slice(signature)?;
-                previous_layer_verifying_key.verify(contents, &sig)
-            })
-            .map_err(|error| anyhow::anyhow!(error))?;
+            verify_cose_sign1_signature(
+                &cert,
+                &previous_layer_verifying_key,
+                DICE_LAYER_ADDITIONAL_DATA,
+            )
+            .context("verifying layer certificate signature")?;
             let payload = cert.payload.ok_or_else(|| anyhow::anyhow!("no cert payload"))?;
             let claims = ClaimsSet::from_slice(&payload)
                 .map_err(|_cose_err| anyhow::anyhow!("couldn't parse claims set"))?;
@@ -435,11 +456,12 @@ pub fn verify_dice_chain_and_extract_evidence(
         .try_fold(root_layer_verifying_key, |previous_layer_verifying_key, current_layer| {
             let cert = coset::CoseSign1::from_slice(&current_layer.eca_certificate)
                 .map_err(|_cose_err| anyhow::anyhow!("could not parse certificate"))?;
-            cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
-                let sig = Signature::from_slice(signature)?;
-                previous_layer_verifying_key.verify(contents, &sig)
-            })
-            .map_err(|error| anyhow::anyhow!(error))?;
+            verify_cose_sign1_signature(
+                &cert,
+                &previous_layer_verifying_key,
+                DICE_LAYER_ADDITIONAL_DATA,
+            )
+            .context("verifying layer certificate signature")?;
             let payload = cert.payload.ok_or_else(|| anyhow::anyhow!("no cert payload"))?;
             let claims = ClaimsSet::from_slice(&payload)
                 .map_err(|_cose_err| anyhow::anyhow!("could not parse claims set"))?;
@@ -491,12 +513,7 @@ pub fn verify_user_data_certificate(
         .map_err(|_cose_err| anyhow::anyhow!("could not parse signed user data certificate"))?;
 
     // Verify the signature using the provided verification key.
-    user_data_cert
-        .verify_signature(ADDITIONAL_DATA, |signature, contents| {
-            let sig = Signature::from_slice(signature)?;
-            verifying_key.verify(contents, &sig)
-        })
-        .map_err(|error| anyhow::anyhow!(error))
+    verify_cose_sign1_signature(&user_data_cert, verifying_key, USER_DATA_ADDITIONAL_DATA)
         .context("verifying signed user data certificate signature")?;
 
     // Extract the payload bytes and wrap in an EventAttestationResults.

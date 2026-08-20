@@ -155,11 +155,12 @@ pub fn generate_dice_data(
         )];
 
         let application_signing_public_key_certificate =
-            oak_dice::cert::generate_signing_certificate(
+            oak_dice::cert::generate_signing_certificate_with_aad(
                 &kernel_signing_key,
                 kernel_cert_issuer.clone(),
                 &application_public_verifying_key,
                 additional_claims.clone(),
+                oak_dice::cert::APPLICATION_KEYS_ADDITIONAL_DATA,
             )
             .expect("couldn't generate signing certificate");
 

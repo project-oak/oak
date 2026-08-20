@@ -20,6 +20,7 @@
 // endorsements are created and signed on the fly. For other tests (in
 // particular negative ones) see verifier_tests.rs.
 
+use coset::CborSerializable;
 use oak_digest::raw_to_hex_digest;
 use oak_proto_rust::oak::{
     RawDigest,
@@ -387,4 +388,255 @@ fn create_rk_endorsements_reference_values(
             )),
         },
     )
+}
+
+fn create_user_data_cert(
+    signing_key: &p256::ecdsa::SigningKey,
+    payload: &[u8],
+    aad: &[u8],
+) -> alloc::vec::Vec<u8> {
+    use coset::{CborSerializable, CoseSign1Builder, HeaderBuilder, iana};
+    use ecdsa::signature::Signer;
+
+    let protected = HeaderBuilder::new().algorithm(iana::Algorithm::ES256).build();
+    let sign1 = CoseSign1Builder::new()
+        .protected(protected)
+        .payload(payload.to_vec())
+        .create_signature(aad, |data| {
+            let signature: p256::ecdsa::Signature = signing_key.sign(data);
+            signature.to_bytes().as_slice().into()
+        })
+        .build();
+    sign1.to_vec().expect("failed to serialize CoseSign1")
+}
+
+#[test]
+fn test_user_data_certificate_backward_compatibility() {
+    let (signing_key, verifying_key) = oak_dice::cert::generate_ecdsa_key_pair();
+    let payload = b"test-user-data-payload";
+
+    // 1. Certificate signed with legacy empty AAD (b"") must be accepted for
+    //    backward compatibility.
+    let legacy_cert =
+        create_user_data_cert(&signing_key, payload, oak_dice::cert::LEGACY_ADDITIONAL_DATA);
+    let results = super::verify_user_data_certificate(&legacy_cert, &verifying_key)
+        .expect("legacy empty AAD user data certificate should verify");
+    assert_eq!(
+        results.artifacts.get("user-data-payload").map(|v| v.as_slice()),
+        Some(payload.as_slice())
+    );
+
+    // 2. Certificate signed with distinct USER_DATA_ADDITIONAL_DATA must be
+    //    accepted.
+    let domain_sep_cert =
+        create_user_data_cert(&signing_key, payload, oak_dice::cert::USER_DATA_ADDITIONAL_DATA);
+    let results = super::verify_user_data_certificate(&domain_sep_cert, &verifying_key)
+        .expect("domain-separated user data certificate should verify");
+    assert_eq!(
+        results.artifacts.get("user-data-payload").map(|v| v.as_slice()),
+        Some(payload.as_slice())
+    );
+
+    // 3. Cross-context replay: certificate signed with
+    //    APPLICATION_KEYS_ADDITIONAL_DATA must be rejected.
+    let app_keys_cert = create_user_data_cert(
+        &signing_key,
+        payload,
+        oak_dice::cert::APPLICATION_KEYS_ADDITIONAL_DATA,
+    );
+    assert!(
+        super::verify_user_data_certificate(&app_keys_cert, &verifying_key).is_err(),
+        "application keys certificate replayed as user data certificate must be rejected"
+    );
+
+    // 4. Cross-context replay: certificate signed with DICE_LAYER_ADDITIONAL_DATA
+    //    must be rejected.
+    let dice_layer_cert =
+        create_user_data_cert(&signing_key, payload, oak_dice::cert::DICE_LAYER_ADDITIONAL_DATA);
+    assert!(
+        super::verify_user_data_certificate(&dice_layer_cert, &verifying_key).is_err(),
+        "DICE layer certificate replayed as user data certificate must be rejected"
+    );
+}
+
+#[test]
+fn test_application_keys_backward_compatibility_and_domain_separation() {
+    use oak_proto_rust::oak::attestation::v1::ApplicationKeys;
+
+    let (eca_key, eca_verifying_key) = oak_dice::cert::generate_ecdsa_key_pair();
+    let (_, app_verifying_key) = oak_dice::cert::generate_ecdsa_key_pair();
+    let app_kem_public_key = [1u8; 32];
+    let issuer_id = "test_issuer".to_string();
+
+    // 1. Application keys generated with legacy empty AAD (b"") must be accepted.
+    let legacy_signing_cert = oak_dice::cert::generate_signing_certificate_with_aad(
+        &eca_key,
+        issuer_id.clone(),
+        &app_verifying_key,
+        vec![],
+        oak_dice::cert::LEGACY_ADDITIONAL_DATA,
+    )
+    .unwrap()
+    .to_vec()
+    .unwrap();
+    let legacy_encryption_cert = oak_dice::cert::generate_kem_certificate_with_aad(
+        &eca_key,
+        issuer_id.clone(),
+        &app_kem_public_key,
+        vec![],
+        oak_dice::cert::LEGACY_ADDITIONAL_DATA,
+    )
+    .unwrap()
+    .to_vec()
+    .unwrap();
+
+    let legacy_app_keys = ApplicationKeys {
+        signing_public_key_certificate: legacy_signing_cert,
+        encryption_public_key_certificate: legacy_encryption_cert,
+        ..Default::default()
+    };
+    assert!(
+        super::verify_application_keys(&legacy_app_keys, &eca_verifying_key).is_ok(),
+        "legacy empty AAD application keys must be accepted"
+    );
+
+    // 2. Application keys generated with distinct APPLICATION_KEYS_ADDITIONAL_DATA
+    //    must be accepted.
+    let domain_sep_signing_cert = oak_dice::cert::generate_signing_certificate_with_aad(
+        &eca_key,
+        issuer_id.clone(),
+        &app_verifying_key,
+        vec![],
+        oak_dice::cert::APPLICATION_KEYS_ADDITIONAL_DATA,
+    )
+    .unwrap()
+    .to_vec()
+    .unwrap();
+    let domain_sep_encryption_cert = oak_dice::cert::generate_kem_certificate_with_aad(
+        &eca_key,
+        issuer_id.clone(),
+        &app_kem_public_key,
+        vec![],
+        oak_dice::cert::APPLICATION_KEYS_ADDITIONAL_DATA,
+    )
+    .unwrap()
+    .to_vec()
+    .unwrap();
+
+    let domain_sep_app_keys = ApplicationKeys {
+        signing_public_key_certificate: domain_sep_signing_cert,
+        encryption_public_key_certificate: domain_sep_encryption_cert,
+        ..Default::default()
+    };
+    assert!(
+        super::verify_application_keys(&domain_sep_app_keys, &eca_verifying_key).is_ok(),
+        "domain-separated application keys must be accepted"
+    );
+
+    // 3. Cross-context replay: cert signed with USER_DATA_ADDITIONAL_DATA must be
+    //    rejected as application keys.
+    let user_data_signed_cert = oak_dice::cert::generate_signing_certificate_with_aad(
+        &eca_key,
+        issuer_id,
+        &app_verifying_key,
+        vec![],
+        oak_dice::cert::USER_DATA_ADDITIONAL_DATA,
+    )
+    .unwrap()
+    .to_vec()
+    .unwrap();
+    let invalid_app_keys = ApplicationKeys {
+        signing_public_key_certificate: user_data_signed_cert.clone(),
+        encryption_public_key_certificate: user_data_signed_cert,
+        ..Default::default()
+    };
+    assert!(
+        super::verify_application_keys(&invalid_app_keys, &eca_verifying_key).is_err(),
+        "user data certificate replayed as application key certificate must be rejected"
+    );
+}
+
+#[test]
+fn test_dice_layer_signature_backward_compatibility_and_domain_separation() {
+    let (layer0_key, layer0_verifying_key) = oak_dice::cert::generate_ecdsa_key_pair();
+    let (_, layer1_verifying_key) = oak_dice::cert::generate_ecdsa_key_pair();
+
+    // 1. Layer signed with legacy empty AAD (b"") must be accepted when verifying
+    //    with DICE_LAYER_ADDITIONAL_DATA.
+    let legacy_layer_cert = oak_dice::cert::generate_signing_certificate_with_aad(
+        &layer0_key,
+        "layer0".to_string(),
+        &layer1_verifying_key,
+        vec![],
+        oak_dice::cert::LEGACY_ADDITIONAL_DATA,
+    )
+    .unwrap();
+    assert!(
+        super::verify_cose_sign1_signature(
+            &legacy_layer_cert,
+            &layer0_verifying_key,
+            oak_dice::cert::DICE_LAYER_ADDITIONAL_DATA,
+        )
+        .is_ok(),
+        "legacy empty AAD DICE layer certificate signature must be accepted"
+    );
+
+    // 2. Layer signed with distinct DICE_LAYER_ADDITIONAL_DATA must be accepted.
+    let domain_sep_layer_cert = oak_dice::cert::generate_signing_certificate_with_aad(
+        &layer0_key,
+        "layer0".to_string(),
+        &layer1_verifying_key,
+        vec![],
+        oak_dice::cert::DICE_LAYER_ADDITIONAL_DATA,
+    )
+    .unwrap();
+    assert!(
+        super::verify_cose_sign1_signature(
+            &domain_sep_layer_cert,
+            &layer0_verifying_key,
+            oak_dice::cert::DICE_LAYER_ADDITIONAL_DATA,
+        )
+        .is_ok(),
+        "domain-separated DICE layer certificate signature must be accepted"
+    );
+
+    // 3. Cross-context replay: cert signed with USER_DATA_ADDITIONAL_DATA must be
+    //    rejected.
+    let user_data_signed_cert = oak_dice::cert::generate_signing_certificate_with_aad(
+        &layer0_key,
+        "layer0".to_string(),
+        &layer1_verifying_key,
+        vec![],
+        oak_dice::cert::USER_DATA_ADDITIONAL_DATA,
+    )
+    .unwrap();
+    assert!(
+        super::verify_cose_sign1_signature(
+            &user_data_signed_cert,
+            &layer0_verifying_key,
+            oak_dice::cert::DICE_LAYER_ADDITIONAL_DATA,
+        )
+        .is_err(),
+        "user data certificate replayed as DICE layer certificate must be rejected"
+    );
+
+    // 4. Cross-context replay: cert signed with APPLICATION_KEYS_ADDITIONAL_DATA
+    //    must be rejected.
+    let app_keys_signed_cert = oak_dice::cert::generate_signing_certificate_with_aad(
+        &layer0_key,
+        "layer0".to_string(),
+        &layer1_verifying_key,
+        vec![],
+        oak_dice::cert::APPLICATION_KEYS_ADDITIONAL_DATA,
+    )
+    .unwrap();
+    assert!(
+        super::verify_cose_sign1_signature(
+            &app_keys_signed_cert,
+            &layer0_verifying_key,
+            oak_dice::cert::DICE_LAYER_ADDITIONAL_DATA,
+        )
+        .is_err(),
+        "application keys certificate replayed as DICE layer certificate must be rejected"
+    );
 }

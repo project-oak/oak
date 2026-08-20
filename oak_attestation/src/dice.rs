@@ -26,8 +26,9 @@ use oak_attestation_types::{
 };
 use oak_dice::{
     cert::{
-        SHA2_256_ID, cose_key_to_verifying_key, derive_verifying_key_id, generate_ecdsa_key_pair,
-        generate_kem_certificate, generate_signing_certificate,
+        APPLICATION_KEYS_ADDITIONAL_DATA, SHA2_256_ID, cose_key_to_verifying_key,
+        derive_verifying_key_id, generate_ecdsa_key_pair, generate_kem_certificate,
+        generate_signing_certificate, generate_signing_certificate_with_aad,
         get_claims_set_from_certificate_bytes,
     },
     evidence::Stage0DiceData,
@@ -103,11 +104,12 @@ impl ApplicationKeysAttester for DiceAttester {
         .to_vec()
         .map_err(anyhow::Error::msg)?;
 
-        let signing_public_key_certificate = generate_signing_certificate(
+        let signing_public_key_certificate = generate_signing_certificate_with_aad(
             &self.signing_key,
             issuer_id.clone(),
             verifying_key,
             layer_data.additional_claims,
+            APPLICATION_KEYS_ADDITIONAL_DATA,
         )
         .map_err(anyhow::Error::msg)
         .context("couldn't generate signing public key certificate")?
@@ -133,11 +135,12 @@ impl ApplicationKeysAttester for DiceAttester {
 
         let group_signing_public_key_certificate =
             if let Some(group_verifying_key) = group_verifying_key {
-                generate_signing_certificate(
+                generate_signing_certificate_with_aad(
                     &self.signing_key,
                     issuer_id.clone(),
                     group_verifying_key,
                     vec![],
+                    APPLICATION_KEYS_ADDITIONAL_DATA,
                 )
                 .map_err(anyhow::Error::msg)
                 .context("couldn't generate signing public key certificate")?

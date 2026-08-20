@@ -84,8 +84,17 @@ pub const TRANSPARENT_EVENT_ID: i64 = -4670575;
 const ID_SALT: &[u8] = b"DICE_ID_SALT";
 /// Info string for HKDF generator.
 const INFO_STR: &[u8] = b"ID";
+/// Additional Authenticated Data (AAD) for DICE layer certificates.
+pub const DICE_LAYER_ADDITIONAL_DATA: &[u8] = b"oak-dice-layer-v1";
+/// Additional Authenticated Data (AAD) for application and group key
+/// certificates.
+pub const APPLICATION_KEYS_ADDITIONAL_DATA: &[u8] = b"oak-application-keys-v1";
+/// Additional Authenticated Data (AAD) for signed user data certificates.
+pub const USER_DATA_ADDITIONAL_DATA: &[u8] = b"oak-user-data-v1";
+/// Legacy empty additional data for backward compatibility.
+pub const LEGACY_ADDITIONAL_DATA: &[u8] = b"";
 /// Empty additional data.
-const EMPTY_ADDITIONAL_DATA: &[u8] = b"";
+pub const EMPTY_ADDITIONAL_DATA: &[u8] = LEGACY_ADDITIONAL_DATA;
 
 bitflags::bitflags! {
     /// Intended usage of a key.
@@ -292,12 +301,31 @@ pub fn generate_signing_certificate(
     verifying_key: &VerifyingKey,
     additional_claims: Vec<(ClaimName, Value)>,
 ) -> Result<CoseSign1, CoseError> {
+    generate_signing_certificate_with_aad(
+        issuer_eca_key,
+        issuer_id,
+        verifying_key,
+        additional_claims,
+        DICE_LAYER_ADDITIONAL_DATA,
+    )
+}
+
+/// Generates a CWT certificate representing an ECDSA signing key with custom
+/// AAD.
+pub fn generate_signing_certificate_with_aad(
+    issuer_eca_key: &SigningKey,
+    issuer_id: String,
+    verifying_key: &VerifyingKey,
+    additional_claims: Vec<(ClaimName, Value)>,
+    additional_data: &[u8],
+) -> Result<CoseSign1, CoseError> {
     generate_certificate(
         issuer_eca_key,
         issuer_id,
         verifying_key_to_cose_key(verifying_key),
         hex::encode(derive_verifying_key_id(verifying_key)),
         additional_claims,
+        additional_data,
     )
 }
 
@@ -321,12 +349,30 @@ pub fn generate_kem_certificate(
     kem_public_key: &[u8],
     additional_claims: Vec<(ClaimName, Value)>,
 ) -> Result<CoseSign1, CoseError> {
+    generate_kem_certificate_with_aad(
+        issuer_eca_key,
+        issuer_id,
+        kem_public_key,
+        additional_claims,
+        APPLICATION_KEYS_ADDITIONAL_DATA,
+    )
+}
+
+/// Generates a CWT certificate representing a KEM with custom AAD.
+pub fn generate_kem_certificate_with_aad(
+    issuer_eca_key: &SigningKey,
+    issuer_id: String,
+    kem_public_key: &[u8],
+    additional_claims: Vec<(ClaimName, Value)>,
+    additional_data: &[u8],
+) -> Result<CoseSign1, CoseError> {
     generate_certificate(
         issuer_eca_key,
         issuer_id,
         hpke_public_key_to_cose_key(kem_public_key),
         hex::encode(derive_kem_public_key_id(kem_public_key)),
         additional_claims,
+        additional_data,
     )
 }
 
@@ -336,6 +382,7 @@ fn generate_certificate(
     public_key: CoseKey,
     public_key_id: String,
     additional_claims: Vec<(ClaimName, Value)>,
+    additional_data: &[u8],
 ) -> Result<CoseSign1, CoseError> {
     let mut claim_builder = ClaimsSetBuilder::new()
         .issuer(issuer_id)
@@ -360,7 +407,7 @@ fn generate_certificate(
         .protected(protected)
         .unprotected(unprotected)
         .payload(claim_builder.build().to_vec()?)
-        .create_signature(EMPTY_ADDITIONAL_DATA, |data| {
+        .create_signature(additional_data, |data| {
             let signature: Signature = issuer_eca_key.sign(data);
             signature.to_bytes().as_slice().into()
         })
