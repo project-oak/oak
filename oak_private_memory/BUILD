@@ -118,6 +118,7 @@ rust_library(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//proto:sealed_memory_rust_proto",
+        "//src/icing",
         "@oak//oak_containers/agent:oak_containers_agent",
         "@oak_crates_index//:lazy_static",
         "@oak_crates_index//:opentelemetry",

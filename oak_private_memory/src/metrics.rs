@@ -89,6 +89,18 @@ pub struct Metrics {
     orphaned_blob_deletes: Counter<u64>,
     // Number of sessions rejected due to low memory.
     session_rejected_low_memory: Counter<u64>,
+
+    // Icing initialization stats
+    icing_init_status: Counter<u64>,
+    icing_init_latency_ms: Histogram<u64>,
+
+    // Recovery stats (labelled by component)
+    icing_recovery_cause: Counter<u64>,
+    icing_recovery_latency_ms: Histogram<u64>,
+
+    // Failure counting distributions
+    icing_num_previous_init_failures: Histogram<u64>,
+    icing_num_failed_reindexed_documents: Histogram<u64>,
 }
 
 /// The possible metrics request types.
@@ -368,6 +380,38 @@ impl Metrics {
             .u64_counter("orphaned_blob_deletes")
             .with_description("Number of blobs that should have been soft-deleted but were not.")
             .build();
+
+        let icing_init_status = observer
+            .meter
+            .u64_counter("icing_init_status")
+            .with_description("Icing init status code.")
+            .build();
+        let icing_init_latency_ms = observer
+            .meter
+            .u64_histogram("icing_init_latency_ms")
+            .with_description("Latency in ms.")
+            .build();
+        let icing_recovery_cause = observer
+            .meter
+            .u64_counter("icing_recovery_cause")
+            .with_description("Icing recovery causes.")
+            .build();
+        let icing_recovery_latency_ms = observer
+            .meter
+            .u64_histogram("icing_recovery_latency_ms")
+            .with_description("Latency by recovery phase.")
+            .build();
+        let icing_num_previous_init_failures = observer
+            .meter
+            .u64_histogram("icing_num_previous_init_failures")
+            .with_description("Previous failure count.")
+            .build();
+        let icing_num_failed_reindexed_documents = observer
+            .meter
+            .u64_histogram("icing_num_failed_reindexed_documents")
+            .with_description("Failed reindex count.")
+            .build();
+
         orphaned_blob_deletes.add(0, &[]);
         let session_rejected_low_memory = observer
             .meter
@@ -401,6 +445,14 @@ impl Metrics {
         observer.register_metric(persistence_enqueue_failures.clone());
         observer.register_metric(orphaned_blob_deletes.clone());
         observer.register_metric(session_rejected_low_memory.clone());
+
+        observer.register_metric(icing_init_status.clone());
+        observer.register_metric(icing_init_latency_ms.clone());
+        observer.register_metric(icing_recovery_cause.clone());
+        observer.register_metric(icing_recovery_latency_ms.clone());
+        observer.register_metric(icing_num_previous_init_failures.clone());
+        observer.register_metric(icing_num_failed_reindexed_documents.clone());
+
         Self {
             rpc_count,
             rpc_failure_count,
@@ -430,6 +482,12 @@ impl Metrics {
             persistence_enqueue_failures,
             orphaned_blob_deletes,
             session_rejected_low_memory,
+            icing_init_status,
+            icing_init_latency_ms,
+            icing_recovery_cause,
+            icing_recovery_latency_ms,
+            icing_num_previous_init_failures,
+            icing_num_failed_reindexed_documents,
         }
     }
 
@@ -484,9 +542,8 @@ impl Metrics {
         self.db_size.record(size, &[]);
     }
 
-    pub fn record_db_init_latency(&self, latency: u64, db_size_bucket: &str) {
-        self.db_init_latency
-            .record(latency, &[KeyValue::new("db_size_bucket", db_size_bucket.to_string())]);
+    pub fn record_db_init_latency(&self, latency: u64, db_size_bucket: &'static str) {
+        self.db_init_latency.record(latency, &[KeyValue::new("db_size_bucket", db_size_bucket)]);
     }
 
     pub fn record_db_cleanup_latency(&self, latency: u64) {
@@ -567,6 +624,67 @@ impl Metrics {
 
     pub fn inc_session_rejected_low_memory(&self) {
         self.session_rejected_low_memory.add(1, &[]);
+    }
+
+    pub fn record_icing_initialization_stats(&self, result: &icing::InitializeResultProto) {
+        // Record Overall Execution Status
+        let status_code = result.status.as_ref().and_then(|s| s.code).unwrap_or_default();
+        let status_str = icing::status_proto::Code::try_from(status_code)
+            .map(|c| c.as_str_name())
+            .unwrap_or("UNKNOWN");
+        self.icing_init_status.add(1, &[KeyValue::new("status_code", status_str)]);
+
+        if let Some(stats) = &result.initialize_stats {
+            // Overall Initialization Latency
+            if let Some(lat) = stats.latency_ms {
+                self.icing_init_latency_ms.record(lat as u64, &[]);
+            }
+
+            // 1. Centralized Recovery Cause tracking
+            let record_cause = |component: &'static str, cause: Option<i32>| {
+                if let Some(c) = cause {
+                    let cause_str = icing::initialize_stats_proto::RecoveryCause::try_from(c)
+                        .map(|eval| eval.as_str_name())
+                        .unwrap_or("UNKNOWN");
+
+                    self.icing_recovery_cause.add(
+                        1,
+                        &[KeyValue::new("component", component), KeyValue::new("cause", cause_str)],
+                    );
+                }
+            };
+            record_cause("document_store", stats.document_store_recovery_cause);
+            record_cause("index", stats.index_restoration_cause);
+            record_cause("schema_store", stats.schema_store_recovery_cause);
+            record_cause("integer_index", stats.integer_index_restoration_cause);
+            record_cause(
+                "qualified_id_join_index",
+                stats.qualified_id_join_index_restoration_cause,
+            );
+            record_cause("embedding_index", stats.embedding_index_restoration_cause);
+
+            // 2. Centralized Recovery Latency tracking
+            if let Some(lat) = stats.document_store_recovery_latency_ms {
+                self.icing_recovery_latency_ms
+                    .record(lat as u64, &[KeyValue::new("component", "document_store")]);
+            }
+            if let Some(lat) = stats.index_restoration_latency_ms {
+                self.icing_recovery_latency_ms
+                    .record(lat as u64, &[KeyValue::new("component", "index")]);
+            }
+            if let Some(lat) = stats.schema_store_recovery_latency_ms {
+                self.icing_recovery_latency_ms
+                    .record(lat as u64, &[KeyValue::new("component", "schema_store")]);
+            }
+
+            // 3. Failure & Reindex Distributions
+            if let Some(failures) = stats.num_previous_init_failures {
+                self.icing_num_previous_init_failures.record(failures as u64, &[]);
+            }
+            if let Some(failed_docs) = stats.num_failed_reindexed_documents {
+                self.icing_num_failed_reindexed_documents.record(failed_docs as u64, &[]);
+            }
+        }
     }
 }
 
@@ -663,5 +781,52 @@ impl RequestMetricName {
             sealed_memory_request::Request::GetDatabaseMetricsRequest(r) => get_name(r),
             sealed_memory_request::Request::SyncDatabaseRequest(r) => get_name(r),
         }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_record_icing_initialization_stats() {
+        let (_observer, metrics) = create_metrics();
+        let mut result_proto = icing::InitializeResultProto::default();
+        result_proto.status = Some(icing::status_proto::StatusProto {
+            code: Some(icing::status_proto::Code::Ok as i32),
+            message: Some("OK".to_string()),
+        });
+
+        // This is a mockup; testing that it doesn't panic.
+        metrics.record_icing_initialization_stats(&result_proto);
+    }
+
+    #[test]
+    fn test_record_icing_initialization_stats_with_full_stats() {
+        let (_observer, metrics) = create_metrics();
+        let mut result_proto = icing::InitializeResultProto::default();
+        result_proto.status = Some(icing::status_proto::StatusProto {
+            code: Some(icing::status_proto::Code::Ok as i32),
+            message: Some("OK".to_string()),
+        });
+
+        result_proto.initialize_stats = Some(icing::InitializeStatsProto {
+            latency_ms: Some(150),
+            document_store_recovery_cause: Some(1),
+            index_restoration_cause: Some(2),
+            schema_store_recovery_cause: Some(3),
+            integer_index_restoration_cause: Some(4),
+            qualified_id_join_index_restoration_cause: Some(0),
+            embedding_index_restoration_cause: Some(999),
+            document_store_recovery_latency_ms: Some(50),
+            index_restoration_latency_ms: Some(25),
+            schema_store_recovery_latency_ms: Some(15),
+            num_previous_init_failures: Some(2),
+            num_failed_reindexed_documents: Some(10),
+            ..Default::default()
+        });
+
+        // This should not panic and should record UNKNOWN for the unsupported code.
+        metrics.record_icing_initialization_stats(&result_proto);
     }
 }

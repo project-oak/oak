@@ -694,6 +694,9 @@ impl IcingMetaDatabase {
         let options_bytes = icing::get_default_icing_options(base_dir_str).encode_to_vec();
         let icing_search_engine = icing::create_icing_search_engine(&options_bytes);
         let result_proto = icing_search_engine.initialize()?;
+
+        metrics::get_global_metrics().record_icing_initialization_stats(&result_proto);
+
         ensure!(
             result_proto.status.context("initialize returned no status")?.code
                 == Some(icing::status_proto::Code::Ok.into())

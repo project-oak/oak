@@ -60,6 +60,12 @@ impl OakObserver {
         scope: &'static str,
         excluded_metrics: Vec<String>,
     ) -> Result<Self, ExporterBuildError> {
+        if tokio::runtime::Handle::try_current().is_err() {
+            let provider = SdkMeterProvider::builder().build();
+            let meter = provider.meter(scope);
+            return Ok(Self { meter, metric_registry: Vec::new() });
+        }
+
         let exporter = opentelemetry_otlp::MetricExporter::builder()
             .with_tonic()
             .with_endpoint(launcher_addr)
@@ -90,7 +96,9 @@ impl OakObserver {
         global::set_meter_provider(provider.clone());
         let meter = provider.meter(scope);
 
-        if let Err(e) = provider.force_flush() {
+        if tokio::runtime::Handle::try_current().is_ok()
+            && let Err(e) = provider.force_flush()
+        {
             eprintln!("failed to flush metrics: {:?}", e);
         }
 

@@ -50,7 +50,7 @@ types = ["markdown"]
 
 [tools.nix]
 name = "nixfmt (Nix)"
-entry = "nix fmt"
+entry = "nixpkgs-fmt"
 types = ["nix"]
 
 [tools.prettier]

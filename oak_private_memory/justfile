@@ -18,12 +18,12 @@ format-rust:
 # Run the oak_lint_runner on changed files in this directory.
 [working-directory: '..']
 format base="main":
-    nix develop --command ./tools/lint-runner/scripts/format_changed {{base}}
+    nix develop --impure path:. --command ./tools/lint-runner/scripts/format_changed {{base}}
 
 # Run the oak_lint_runner on all files in this directory.
 [working-directory: '..']
 format-all:
-    nix develop --command ./tools/lint-runner/scripts/format_all
+    nix develop --impure path:. --command ./tools/lint-runner/scripts/format_all
 
 # Run the oak_lint_runner tool from the root directory.
 # Note: file paths should be relative to the root directory (e.g., oak_private_memory/src/main.rs).

@@ -52,6 +52,7 @@ rust_library(
     deps = [
         "//:encryption",
         "//:external_db_client",
+        "//:metrics",
         "//proto:sealed_memory_rust_proto",
         "//src/icing",
         "@oak_crates_index//:anyhow",

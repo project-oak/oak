@@ -209,11 +209,11 @@ build-clients:
 
 [working-directory: 'oak_private_memory']
 private_memory_presubmit:
-    nix develop --command just presubmit
+    nix develop --impure path:.. --command just presubmit
 
 [working-directory: 'oak_private_memory']
 private-memory-build-and-copy:
-    nix develop --command just build-and-test-and-copy
+    nix develop --impure path:.. --command just build-and-test-and-copy
 
 
 # Update Oak's bazel lockfile
