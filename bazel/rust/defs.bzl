@@ -16,6 +16,15 @@ SUPPORTED_HOST_TRIPLES = [
     "aarch64-apple-darwin",
 ]
 
+# The instruction set the bare-metal targets are compiled for. Shared so that
+# the Linux baseline in //oak_benchmarks can be built to match; a benchmark
+# comparing the two is only meaningful if both were compiled the same way.
+# The bare-metal toolchain appends -soft-float, which is a linking concern
+# rather than an instruction set one and does not apply to hosted targets.
+ENCLAVE_TARGET_FEATURES = "+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,+aes,+pclmulqdq"
+
+ENCLAVE_TARGET_CPU = "x86-64-v3"
+
 SUPPORTED_TARGET_TRIPLES = [
     "x86_64-unknown-linux-gnu",
     "aarch64-apple-darwin",

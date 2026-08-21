@@ -538,7 +538,7 @@
     },
     "//bazel/rust:extensions.bzl%rust_toolchains": {
       "general": {
-        "bzlTransitiveDigest": "B4QBAsCKhMOVDpd1r7Ij+Hlv0qF5+PzxGGdDaR0+Sd0=",
+        "bzlTransitiveDigest": "g+OrHziHnCRfsNMSvD7bex1mvbRB9L4QlaZw5k9Q/2k=",
         "usagesDigest": "leIZNOhFDn0iyu6LcoD56P4NzpsrGs5AuKtwDdwV3xo=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},

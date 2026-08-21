@@ -818,7 +818,7 @@
     },
     "@@oak+//bazel/rust:extensions.bzl%rust_toolchains": {
       "general": {
-        "bzlTransitiveDigest": "B4QBAsCKhMOVDpd1r7Ij+Hlv0qF5+PzxGGdDaR0+Sd0=",
+        "bzlTransitiveDigest": "g+OrHziHnCRfsNMSvD7bex1mvbRB9L4QlaZw5k9Q/2k=",
         "usagesDigest": "uNiaPp88A8jrL954jEEsWczSFPET6LjmeKGCGh8x/pM=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},

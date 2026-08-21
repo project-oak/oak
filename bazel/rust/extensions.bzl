@@ -17,7 +17,7 @@
 """Module extensions for Rust toolchains."""
 
 load("@rules_rust//rust:repositories.bzl", "rust_repository_set")
-load("//bazel/rust:defs.bzl", "RUST_EDITION", "RUST_NIGHTLY_DATE", "RUST_SHA256S", "RUST_VERSIONS", "STDLIBS_SHA256", "SUPPORTED_HOST_TRIPLES", "SUPPORTED_RUST_COMPONENTS", "SUPPORTED_TARGET_TRIPLES")
+load("//bazel/rust:defs.bzl", "ENCLAVE_TARGET_CPU", "ENCLAVE_TARGET_FEATURES", "RUST_EDITION", "RUST_NIGHTLY_DATE", "RUST_SHA256S", "RUST_VERSIONS", "STDLIBS_SHA256", "SUPPORTED_HOST_TRIPLES", "SUPPORTED_RUST_COMPONENTS", "SUPPORTED_TARGET_TRIPLES")
 load("//bazel/rust:stdlibs.bzl", "stdlibs")
 
 def _ensure_hashes():
@@ -118,8 +118,8 @@ def _rust_toolchains_impl(_ctx):
             "x86_64-unknown-none": [
                 "--codegen=linker-flavor=gcc",
                 "--codegen=relocation-model=static",
-                "--codegen=target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,+aes,+pclmulqdq,-soft-float",
-                "--codegen=target-cpu=x86-64-v3",
+                "--codegen=target-feature=" + ENCLAVE_TARGET_FEATURES + ",-soft-float",
+                "--codegen=target-cpu=" + ENCLAVE_TARGET_CPU,
                 "--codegen=link-arg=-Wl,-zmax-page-size=0x200000",
             ],
         },
@@ -144,8 +144,8 @@ def _rust_toolchains_impl(_ctx):
         extra_rustc_flags = {
             "x86_64-unknown-none": [
                 "--codegen=relocation-model=static",
-                "--codegen=target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,+aes,+pclmulqdq,-soft-float",
-                "--codegen=target-cpu=x86-64-v3",
+                "--codegen=target-feature=" + ENCLAVE_TARGET_FEATURES + ",-soft-float",
+                "--codegen=target-cpu=" + ENCLAVE_TARGET_CPU,
             ],
         },
         extra_target_triples = {

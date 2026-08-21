@@ -16,6 +16,7 @@
 
 load("@rules_rust//rust:defs.bzl", "rust_binary")
 load("//oak_benchmarks/linux_vm:defs.bzl", "vm_disk_image")
+load(":defs.bzl", "matched_isa_binary")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -23,7 +24,7 @@ package(
 )
 
 rust_binary(
-    name = "linux_enclave_app",
+    name = "linux_enclave_app_base",
     srcs = ["main.rs"],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
@@ -35,6 +36,11 @@ rust_binary(
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",
     ],
+)
+
+matched_isa_binary(
+    name = "linux_enclave_app",
+    binary = ":linux_enclave_app_base",
 )
 
 vm_disk_image(
