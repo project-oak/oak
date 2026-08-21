@@ -25,7 +25,7 @@ use test_util::AttestationData;
 use x509_cert::{Certificate, der::DecodePem};
 
 use super::{
-    PCK_ROOT, RtmrEmulator, verify_intel_tdx_quote_validity,
+    PCK_ROOT, RtmrEmulator, verify_intel_tdx_quote_validity, verify_qe_report_identity,
     verify_quote_cert_chain_and_extract_leaf,
 };
 use crate::x509::verify_cert_signature;
@@ -177,6 +177,68 @@ fn tdx_quote_with_invalid_attestation_signature_fails() {
     quote_buffer[637] = 0;
     let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
     assert!(verify_intel_tdx_quote_validity(get_valid_time(), &wrapper).is_err());
+}
+
+fn verify_qe_report_identity_from_quote(quote_buffer: &[u8]) -> anyhow::Result<()> {
+    let wrapper = TdxQuoteWrapper::new(quote_buffer);
+    let signature_data = wrapper.parse_signature_data().expect("signature data parsing failed");
+    let report_certification =
+        if let QeCertificationData::QeReportCertificationData(report_certification) =
+            signature_data.certification_data
+        {
+            report_certification
+        } else {
+            panic!("signature data contains the wrong type of certification data");
+        };
+    let qe_report =
+        report_certification.parse_enclave_report_body().expect("QE report parsing failed");
+    verify_qe_report_identity(&qe_report)
+}
+
+#[test]
+fn valid_qe_report_identity_passes() {
+    let quote_buffer = get_evidence_quote_bytes();
+    assert!(verify_qe_report_identity_from_quote(&quote_buffer).is_ok());
+}
+
+#[test]
+fn qe_report_with_unexpected_mr_signer_fails() {
+    let mut quote_buffer = get_evidence_quote_bytes();
+    // Change a byte in the QE report MRSIGNER
+    // (`oak_tdx_quote::EnclaveReportBody::mr_signer` which will be parsed from
+    // bytes 898..930 of the evidence).
+    quote_buffer[899] = 0;
+    assert!(verify_qe_report_identity_from_quote(&quote_buffer).is_err());
+}
+
+#[test]
+fn qe_report_with_unexpected_isv_prod_id_fails() {
+    let mut quote_buffer = get_evidence_quote_bytes();
+    // Change the QE report ISVPRODID
+    // (`oak_tdx_quote::EnclaveReportBody::isv_prod_id` which will be parsed from
+    // bytes 1026..1028 of the evidence).
+    quote_buffer[1026] = 1;
+    assert!(verify_qe_report_identity_from_quote(&quote_buffer).is_err());
+}
+
+#[test]
+fn qe_report_with_debug_attribute_fails() {
+    let mut quote_buffer = get_evidence_quote_bytes();
+    // Set the DEBUG flag in the QE report ATTRIBUTES
+    // (`oak_tdx_quote::EnclaveReportBody::attributes` which will be parsed from
+    // bytes 818..834 of the evidence).
+    quote_buffer[818] |= 0x02;
+    assert!(verify_qe_report_identity_from_quote(&quote_buffer).is_err());
+}
+
+#[test]
+fn qe_report_with_unexpected_misc_select_fails() {
+    let mut quote_buffer = get_evidence_quote_bytes();
+    // Change a byte in the QE report MISCSELECT
+    // (`oak_tdx_quote::EnclaveReportBody::misc_select` which will be parsed from
+    // bytes 786..790 of the evidence).
+    quote_buffer[786] = 1;
+    assert!(verify_qe_report_identity_from_quote(&quote_buffer).is_err());
 }
 
 #[test]
