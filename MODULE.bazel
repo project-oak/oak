@@ -612,6 +612,13 @@ crate.spec(
     version = "0.10.3",
 )
 crate.spec(
+    default_features = False,
+    features = [],
+    package = "ahash",
+    repositories = ALL_REPOSITORIES,
+    version = "0.8.12",
+)
+crate.spec(
     default_features = True,
     features = [],
     package = "aml",
