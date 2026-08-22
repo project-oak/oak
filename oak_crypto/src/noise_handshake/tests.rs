@@ -18,8 +18,8 @@ use alloc::{boxed::Box, vec};
 use crate::{
     identity_key::{IdentityKey, IdentityKeyHandle},
     noise_handshake::{
-        NONCE_LEN, SYMMETRIC_KEY_LEN, UnorderedCrypter, client::HandshakeInitiator, error::Error,
-        respond_kk, respond_nk, respond_nn,
+        NONCE_LEN, OrderedCrypter, SYMMETRIC_KEY_LEN, UnorderedCrypter,
+        client::HandshakeInitiator, error::Error, respond_kk, respond_nk, respond_nn,
     },
 };
 
@@ -270,4 +270,45 @@ fn unordered_crypter_forged_message_does_not_advance_window() {
             .expect("genuine message dropped after a forged message moved the window");
         assert_eq!(&plaintext, message);
     }
+}
+
+/// Regression test: `OrderedCrypter` must not advance its receive-side nonce
+/// counter from a message it has not authenticated.
+///
+/// `OrderedCrypter` allows no reordering or replay-window tolerance by
+/// design: it expects consecutive nonces with no drop or reordering. Before
+/// the fix, `decrypt` advanced the nonce counter before
+/// `aes_gcm_256_decrypt` ran, so a single forged or corrupted packet reaching
+/// the receiver first consumed the nonce the genuine sender's next message
+/// was going to use. Because the counter never moves backward, every
+/// subsequent genuine message then failed to decrypt too: the channel was
+/// permanently desynced.
+#[test]
+fn ordered_crypter_forged_message_does_not_desync_channel() {
+    let key_1 = &[42u8; SYMMETRIC_KEY_LEN];
+    let key_2 = &[52u8; SYMMETRIC_KEY_LEN];
+    let mut sender = OrderedCrypter::new(key_2, key_1);
+    let mut receiver = OrderedCrypter::new(key_1, key_2);
+
+    // Genuine message encrypted but not yet delivered (e.g. reordered/delayed
+    // in transit behind the attacker's packet).
+    let genuine_ciphertext = sender.encrypt(b"genuine payload").unwrap();
+
+    // A forged packet, with no knowledge of the key, reaches the receiver first.
+    let forged = vec![0u8; genuine_ciphertext.len()];
+    assert!(matches!(receiver.decrypt(&forged), Err(Error::DecryptFailed)));
+
+    // The genuine message, produced by the real sender and untampered, must
+    // still be accepted -- the forged packet must not have consumed its nonce.
+    let plaintext = receiver
+        .decrypt(&genuine_ciphertext)
+        .expect("genuine message rejected after a forged message reused its nonce");
+    assert_eq!(plaintext, b"genuine payload");
+
+    // The channel must also still be usable for subsequent messages.
+    let next_ciphertext = sender.encrypt(b"second genuine payload").unwrap();
+    let next_plaintext = receiver
+        .decrypt(&next_ciphertext)
+        .expect("channel remained desynced after the genuine message was correctly accepted");
+    assert_eq!(next_plaintext, b"second genuine payload");
 }
