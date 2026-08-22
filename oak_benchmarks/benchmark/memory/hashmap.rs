@@ -199,3 +199,26 @@ impl MemoryBenchmark for HashMapBenchmark {
         self.working_set_bytes
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_map_clear() {
+        let mut benchmark = HashMapBenchmark::with_defaults(10u32, 42u64);
+
+        // Initially empty
+        assert!(benchmark.map.is_empty());
+
+        // Populate the map
+        benchmark.populate();
+        assert_eq!(benchmark.map.len(), 10);
+
+        // Clear the map
+        benchmark.map_clear();
+
+        // Verify it's empty
+        assert!(benchmark.map.is_empty());
+    }
+}
