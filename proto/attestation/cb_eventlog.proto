@@ -53,4 +53,5 @@ message CbLayer2TransparentEvent {
 // Mpm package information (executables and static data).
 message MpmPackage {
   string mpm_version_id = 1;
+  bytes mpm_package_name_digest = 2;
 }
