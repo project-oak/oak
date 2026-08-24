@@ -419,8 +419,8 @@ mod tests {
         let skip_ref = MpmReferenceValue { r#type: Some(MrvType::Skip(SkipVerification {})) };
         let event = CbLayer2TransparentEvent {
             packages: vec![
-                MpmPackage { mpm_version_id: "other/2.0".into() },
-                MpmPackage { mpm_version_id: "test/1.0".into() },
+                MpmPackage { mpm_version_id: "other/2.0".into(), ..Default::default() },
+                MpmPackage { mpm_version_id: "test/1.0".into(), ..Default::default() },
             ],
         };
         let evidence = encode_event_proto(
@@ -770,8 +770,8 @@ mod tests {
 
         let event = CbLayer2TransparentEvent {
             packages: vec![
-                MpmPackage { mpm_version_id: "test/1.0".into() },
-                MpmPackage { mpm_version_id: "test/1.0".into() },
+                MpmPackage { mpm_version_id: "test/1.0".into(), ..Default::default() },
+                MpmPackage { mpm_version_id: "test/1.0".into(), ..Default::default() },
             ],
         };
         let evidence = encode_event_proto(
@@ -833,7 +833,7 @@ mod tests {
         let endorsement_variant: Variant = layer2_endorsement.into();
 
         let event = CbLayer2TransparentEvent {
-            packages: vec![MpmPackage { mpm_version_id: "not_endorsed/1.0".into() }],
+            packages: vec![MpmPackage { mpm_version_id: "not_endorsed/1.0".into(), ..Default::default() }],
         };
         let evidence = encode_event_proto(
             "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
@@ -879,8 +879,8 @@ mod tests {
         // One package matches the endorsement, but the other does not.
         let event = CbLayer2TransparentEvent {
             packages: vec![
-                MpmPackage { mpm_version_id: "test/1.0".into() },
-                MpmPackage { mpm_version_id: "unendorsed/2.0".into() },
+                MpmPackage { mpm_version_id: "test/1.0".into(), ..Default::default() },
+                MpmPackage { mpm_version_id: "unendorsed/2.0".into(), ..Default::default() },
             ],
         };
         let evidence = encode_event_proto(
@@ -939,7 +939,7 @@ mod tests {
         );
 
         let event = CbLayer2TransparentEvent {
-            packages: vec![MpmPackage { mpm_version_id: "test/1.0".into() }],
+            packages: vec![MpmPackage { mpm_version_id: "test/1.0".into(), ..Default::default() }],
         };
         let evidence = encode_event_proto(
             "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
@@ -1003,7 +1003,7 @@ mod tests {
         );
 
         let event = CbLayer2TransparentEvent {
-            packages: vec![MpmPackage { mpm_version_id: "test/1.0".into() }],
+            packages: vec![MpmPackage { mpm_version_id: "test/1.0".into(), ..Default::default() }],
         };
         let evidence = encode_event_proto(
             "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
@@ -1049,8 +1049,8 @@ mod tests {
         let skip_ref = MpmReferenceValue { r#type: Some(MrvType::Skip(SkipVerification {})) };
         let event = CbLayer2TransparentEvent {
             packages: vec![
-                MpmPackage { mpm_version_id: "pkg_a/1.0".into() },
-                MpmPackage { mpm_version_id: "pkg_b/2.0".into() },
+                MpmPackage { mpm_version_id: "pkg_a/1.0".into(), ..Default::default() },
+                MpmPackage { mpm_version_id: "pkg_b/2.0".into(), ..Default::default() },
             ],
         };
         let evidence = encode_event_proto(

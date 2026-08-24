@@ -880,6 +880,9 @@ pub struct CbLayer2TransparentEvent {
 pub struct MpmPackage {
     #[prost(string, tag = "1")]
     pub mpm_version_id: ::prost::alloc::string::String,
+    #[prost(bytes = "vec", tag = "2")]
+    #[serde(with = "crate::base64data")]
+    pub name_digest: ::prost::alloc::vec::Vec<u8>,
 }
 /// Message for passing embedded certificate authority information between
 /// layers. Will never appear in the evidence that is sent to the client.
