@@ -77,3 +77,62 @@ genrule(
     """,
     target_compatible_with = ["@platforms//os:linux"],
 )
+
+# Test-only variant of stage1 that leaks key material for testing memory erasure.
+# Never use in production.
+rust_binary(
+    name = "insecure_oak_containers_stage1_bin",
+    testonly = True,
+    srcs = glob(["src/**"]),
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        "//oak_containers/attester",
+        "//oak_containers/stage1:oak_containers_stage1_insecure",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:tokio",
+    ],
+)
+
+genrule(
+    name = "insecure_stage1_cpio",
+    testonly = True,
+    srcs = [
+        ":insecure_oak_containers_stage1_bin",
+        "@e2fsprogs//:mke2fs",
+        "@oak_cc_toolchain_sysroot//:linker_library",
+        "@oak_cc_toolchain_sysroot//:stage1_shared_libraries",
+    ],
+    outs = [
+        "insecure_stage1.cpio",
+    ],
+    cmd = """
+        # Copy linker.
+        mkdir --parents $(RULEDIR)/insecure_root/lib64
+        cp $(location @oak_cc_toolchain_sysroot//:linker_library) $(RULEDIR)/insecure_root/lib64/
+
+        # Copy shared libraries.
+        mkdir --parents $(RULEDIR)/insecure_root/usr/lib/x86_64-linux-gnu
+        cp $(locations @oak_cc_toolchain_sysroot//:stage1_shared_libraries) $(RULEDIR)/insecure_root/usr/lib/x86_64-linux-gnu/
+
+        # Copy the mke2fs binary.
+        cp --dereference --recursive $(locations @e2fsprogs//:mke2fs) $(RULEDIR)/insecure_root/
+
+        # Strip and rename the insecure_oak_containers_stage1 binary.
+        strip $(location :insecure_oak_containers_stage1_bin) -o $(RULEDIR)/insecure_root/init
+
+        # Create the compressed CPIO archive.
+        (cd $(RULEDIR)/insecure_root && find .) | sort | \
+            cpio --create --owner=root:root --format=newc --verbose --reproducible \
+            --directory=$(RULEDIR)/insecure_root > $(RULEDIR)/insecure_stage1.cpio.tmp
+        strip-nondeterminism --type=cpio --timestamp=0 $(RULEDIR)/insecure_stage1.cpio.tmp
+        gzip --best --no-name $(RULEDIR)/insecure_stage1.cpio.tmp
+        mv $(RULEDIR)/insecure_stage1.cpio.tmp.gz $(RULEDIR)/insecure_stage1.cpio
+    """,
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+alias(
+    name = "insecure_stage1_bin",
+    testonly = True,
+    actual = ":insecure_stage1_cpio",
+)

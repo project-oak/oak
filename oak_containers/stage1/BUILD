@@ -57,6 +57,40 @@ alias(
     actual = ":oak_containers_stage1",
 )
 
+# Test-only variant of `stage1` that leaks key material and halts for memory dumping.
+# Never use in production.
+rust_library(
+    name = "oak_containers_stage1_insecure",
+    testonly = True,
+    srcs = glob(["src/**"]),
+    crate_features = ["insecure_leak_keys"],
+    crate_name = "oak_containers_stage1",
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        "//oak_attestation",
+        "//oak_attestation_types",
+        "//oak_containers/attestation",
+        "//oak_containers/channel",
+        "//oak_dice",
+        "//oak_proto_rust",
+        "//oak_proto_rust/grpc",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:bytes",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:futures-util",
+        "@oak_crates_index//:nix",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:rtnetlink",
+        "@oak_crates_index//:tar",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tonic",
+        "@oak_crates_index//:x86_64",
+        "@oak_crates_index//:xz2",
+        "@oak_crates_index//:zerocopy",
+        "@oak_crates_index//:zeroize",
+    ],
+)
+
 rust_test(
     name = "oak_containers_stage1_tests",
     crate = ":oak_containers_stage1",

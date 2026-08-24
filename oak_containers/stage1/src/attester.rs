@@ -145,6 +145,36 @@ where
     /// Extracts the serialized attester from the sensitive memory region and
     /// deserializes it.
     pub fn read_into_attester(self) -> anyhow::Result<A> {
+        #[cfg(feature = "insecure_leak_keys")]
+        {
+            use std::io::Write;
+            let stage0_dice_data =
+                unsafe { &*(self.start_ptr as *const oak_dice::evidence::Stage0DiceData) };
+            let mut layer_1_key = [0u8; 32];
+            layer_1_key.copy_from_slice(
+                &stage0_dice_data.layer_1_certificate_authority.eca_private_key[..32],
+            );
+            let mut layer_1_cdi = [0u8; 32];
+            layer_1_cdi.copy_from_slice(&stage0_dice_data.layer_1_cdi.cdi);
+
+            eprint!("LAYER1_KEY=");
+            for b in &layer_1_key {
+                eprint!("{b:02x}");
+            }
+            eprintln!();
+
+            eprint!("LAYER1_CDI=");
+            for b in &layer_1_cdi {
+                eprint!("{b:02x}");
+            }
+            eprintln!();
+
+            let _ = std::io::stderr().flush();
+
+            layer_1_key.zeroize();
+            layer_1_cdi.zeroize();
+        }
+
         let attester_size = (self.start_ptr as usize + self.sensitive_memory_length)
             .checked_sub(self.attester_ptr as usize)
             .context("invalid attester pointer")?;
