@@ -833,7 +833,10 @@ mod tests {
         let endorsement_variant: Variant = layer2_endorsement.into();
 
         let event = CbLayer2TransparentEvent {
-            packages: vec![MpmPackage { mpm_version_id: "not_endorsed/1.0".into(), ..Default::default() }],
+            packages: vec![MpmPackage {
+                mpm_version_id: "not_endorsed/1.0".into(),
+                ..Default::default()
+            }],
         };
         let evidence = encode_event_proto(
             "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
