@@ -18,8 +18,8 @@ use alloc::{boxed::Box, vec};
 use crate::{
     identity_key::{IdentityKey, IdentityKeyHandle},
     noise_handshake::{
-        NONCE_LEN, OrderedCrypter, SYMMETRIC_KEY_LEN, UnorderedCrypter,
-        client::HandshakeInitiator, error::Error, respond_kk, respond_nk, respond_nn,
+        NONCE_LEN, OrderedCrypter, SYMMETRIC_KEY_LEN, UnorderedCrypter, client::HandshakeInitiator,
+        error::Error, respond_kk, respond_nk, respond_nn,
     },
 };
 
