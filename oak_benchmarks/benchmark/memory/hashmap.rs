@@ -56,18 +56,25 @@ pub const MAX_VALUE_SIZE: usize = 4096;
 /// Upper bound on entries, to avoid an accidental multi-gigabyte allocation.
 pub const MAX_NUM_ENTRIES: u32 = 40_000_000;
 
-/// Approximate per-entry overhead of the hash table itself, on top of the key
-/// and value bytes: one control byte plus the load factor headroom hashbrown
-/// keeps. Used only to translate a requested working set size into an entry
-/// count.
-const TABLE_OVERHEAD_PER_ENTRY: usize = 24;
-
-/// Bytes one entry occupies: the `u64` key, the value, and the table's own
-/// per-entry overhead. Used for both the reported working set and the
-/// translation from a requested working set back to an entry count, so the
-/// two cannot disagree.
+/// Bytes one entry occupies, to within the factor documented below.
+///
+/// A bucket holds the key and the `Vec` header inline, so the value's pointer,
+/// length and capacity are table rather than value, and one control byte sits
+/// alongside. `capacity_to_buckets` allocates `next_power_of_two(ceil(8n/7))`
+/// buckets for `n` entries, so the ratio runs from 8/7, reached at
+/// `n = 7 * 2^k` when the table is one insert short of doubling, to just under
+/// 16/7 straight after. The factor below is the low end, so the bucket term is
+/// a lower bound and can be twice this; at a 64-byte value that is 101 bytes
+/// per entry rather than 139, since only the bucket term moves.
+///
+/// Outside it: the allocator's rounding on the value block, which `rlsf` and
+/// glibc do differently, and the `keys` array, another 8 bytes per entry that
+/// the lookup mode reads at random every iteration.
+///
+/// <https://docs.rs/hashbrown/0.14.5/src/hashbrown/raw/mod.rs.html>
 fn bytes_per_entry(value_size: usize) -> usize {
-    size_of::<u64>() + value_size + TABLE_OVERHEAD_PER_ENTRY
+    let bucket = size_of::<(u64, Vec<u8>)>() + 1;
+    bucket * 8 / 7 + value_size
 }
 
 /// How many keys the post-run checksums fold.
@@ -605,9 +612,19 @@ mod tests {
 
     #[test]
     fn entries_for_working_set_scales() {
-        let e = HashMapBenchmark::entries_for_working_set(1024 * 1024 * 1024, 64);
-        // 1 GB / (8 + 64 + 24) bytes per entry.
-        assert!(e > 10_000_000, "expected >10M entries, got {e}");
+        // 33-byte bucket scaled by 8/7, truncated, plus a 64-byte value. The
+        // literal is here rather than derived so that changing bytes_per_entry
+        // has to show up in this diff.
+        assert_eq!(bytes_per_entry(64), 101);
+        assert_eq!(HashMapBenchmark::entries_for_working_set(1024 * 1024 * 1024, 64), 10_631_107);
+    }
+
+    #[test]
+    fn bytes_per_entry_counts_the_vec_header() {
+        // The header lives in the bucket, not in the value's allocation, so a
+        // 64-byte value costs more than 64 bytes plus a key. Understating it
+        // understates every reported working set.
+        assert!(bytes_per_entry(64) > 64 + size_of::<u64>() + size_of::<Vec<u8>>());
     }
 
     #[test]
