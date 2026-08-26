@@ -58,23 +58,18 @@ iterations_for() {
   esac
 }
 
-# The hash-map benchmarks size their table as
-# min(iterations, working_set_size / bytes_per_entry), and fall back to a
-# hundred thousand entries when working_set_size is zero. Leaving the flag at
-# its default therefore caps the table at 100k entries no matter how many
-# iterations are asked for, and every iteration past that is an overwrite of a
-# key already present rather than an insert. It is visible in the result:
-# at 100k, 1M and 2M iterations the checksum is byte-identical and the
-# reported cost per operation falls from 448 to 120 ticks, because overwriting
-# is cheaper than inserting.
+# memory-lookup and memory-churn run against a map built before the clock
+# starts, and this flag is what sizes it. 256 MB is comfortably past this
+# host's 32 MiB L3 slice, so both are memory benchmarks rather than cache
+# benchmarks.
 #
-# So the two flags have to be set together, with the working set large enough
-# not to be the binding constraint. 1M entries at 96 bytes is 96 MB, which is
-# larger than this host's 32 MiB L3 slice and is a memory benchmark rather
-# than a cache benchmark.
+# memory-insert builds its map inside the timed loop, one distinct key per
+# iteration, so its footprint follows iterations_for. The service gives it a
+# one-entry pre-built map whatever this flag says, so passing a size would
+# change nothing.
 working_set_for() {
   case "$1" in
-    memory-insert | memory-lookup | memory-churn) echo 268435456 ;;
+    memory-lookup | memory-churn) echo 268435456 ;;
     *) echo 0 ;;
   esac
 }

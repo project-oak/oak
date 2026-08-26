@@ -194,11 +194,13 @@ choices affect the absolute numbers and neither is guessable from the output:
 | Page Touch    | Cost of provisioning fresh memory — see below                     |
 
 The three hash map modes are meant to be read together. Insert only ever grows
-the heap: it covers the table's growth and rehash path, but every key lands in a
-bucket that was empty and the allocator's free path is never used. Churn evicts
-a resident key and inserts one that has never been in the map, holding the size
-constant, so it covers the free path and the deleted-slot bookkeeping that goes
-with it. Lookup allocates nothing at all.
+the heap: it covers the table's growth and rehash path, and every key lands in a
+bucket that was empty. It does reach the allocator's free path, but only where
+the table doubles and the old bucket array is released, which is a handful of
+times across a run and never for a value. Churn evicts a resident key and
+inserts one that has never been in the map, holding the size constant, so it
+frees on every iteration and covers the deleted-slot bookkeeping that goes with
+it. Lookup allocates nothing at all.
 
 Two caveats before reading churn as an allocator result. The value size is
 fixed, so the allocator only ever sees one size class and the block it frees is
@@ -217,13 +219,28 @@ L3 cache so both cache-resident and DRAM-resident behaviour are covered. Alloc
 churn takes its allocation size from `--data-size`, where `0` selects a rotating
 schedule of size classes that exercises allocator size-class boundaries.
 
+`memory-insert` is the exception. Its map is the thing the timed loop builds, so
+it ends up holding exactly `--iterations` entries and its footprint is set by
+that flag. `--working-set-size` sizes the pre-built map that `memory-lookup` and
+`memory-churn` run against; insert never reads that map, and the service asks
+for the smallest one it can rather than leaving an unread one resident while the
+measurement runs.
+
+Insert used to draw keys modulo the pre-built map's size, so every iteration
+past the entry count overwrote a key already present. Three things change at
+once when that happens — the table stops growing, the rehash path stops running,
+and the footprint stops growing with it — so the cost per operation falls
+sharply, and how much of that is the rehash rather than the smaller footprint
+has not been separated.
+
 > [!IMPORTANT] The enclave needs a guest large enough to hold the working set.
 > Pass `--memory-size` to `oak_cli` accordingly, with headroom: `pointer-chase`
 > peaks at nine eighths of its working set during setup, because the permutation
 > is built in a separate dense array before being scattered, and the hash map
 > modes need about half as much again for the key array and the table's
-> load-factor headroom. These benchmarks allocate with `try_reserve`, so an
-> undersized guest reports `allocation failure` rather than aborting.
+> load-factor headroom. `pointer-chase` and `page-touch` allocate with
+> `try_reserve`, so an undersized guest reports `allocation failure` rather than
+> aborting; the hash map modes do not, and abort.
 
 ### Memory-Bound: Latency and Page Size
 
@@ -349,7 +366,9 @@ and third quartiles and the sample count, and lists every sample in run order.
 The enclave or VM is started once and each repetition is a separate request
 against it, so only the first repetition sees a cold heap; the samples are
 listed individually because for `alloc-churn` and `page-touch` that difference
-is the effect under study rather than noise.
+is the effect under study rather than noise. `memory-insert` now shares it: each
+request builds and drops its own map, so every repetition after the first starts
+against a heap the previous one just churned with up to a million entries.
 
 Results carry a `checksum` over each benchmark's output and the `cpu_features`
 the guest was built with and found at runtime. Treat a comparison as invalid

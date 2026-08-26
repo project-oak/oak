@@ -125,9 +125,9 @@ pub enum HashMapMode {
 
 /// HashMap benchmark.
 pub struct HashMapBenchmark {
-    /// Populated map, used by the lookup mode.
+    /// Populated map, used by the lookup and churn modes.
     populated: BenchMap,
-    /// Pre-generated keys.
+    /// Pre-generated keys, one per entry of [`Self::populated`].
     keys: Vec<u64>,
     /// Value template cloned on each insert.
     value_template: Vec<u8>,
@@ -190,6 +190,10 @@ impl HashMapBenchmark {
     }
 
     /// Translate a target working set size in bytes into an entry count.
+    ///
+    /// This sizes the map the lookup and churn modes run against. The insert
+    /// mode builds its own map inside the timed loop, so its footprint follows
+    /// the iteration count; see [`Self::run_insert`].
     pub fn entries_for_working_set(working_set_bytes: u64, value_size: usize) -> u32 {
         let per_entry = bytes_per_entry(value_size) as u64;
         let entries = (working_set_bytes / per_entry).max(1);
@@ -229,47 +233,70 @@ impl HashMapBenchmark {
     /// expected to differ from glibc's. That allocator is `rlsf`'s TLSF behind
     /// a spinlock (`oak_enclave_runtime_support::heap`), so the difference to
     /// expect is the lock and the coalescing, not a missing free list.
+    ///
+    /// Keys come from the generator a step at a time, the way
+    /// [`Self::run_churn`] draws its fresh ones, rather than from
+    /// [`Self::keys`]. Indexing that array modulo its length, which is what
+    /// this used to do, turned every iteration past the entry count into an
+    /// overwrite of a key already present, and an overwrite neither grows the
+    /// table nor rehashes it.
+    ///
+    /// The map is what the timed loop builds, so its footprint follows
+    /// `--iterations`. `--working-set-size` sizes the pre-built map that the
+    /// other two modes run against, and this mode does not read it.
     fn run_insert<T: BenchmarkTimer>(
-        &mut self,
+        &self,
         iterations: u32,
         warmup_iterations: u32,
     ) -> Result<BenchmarkResult, BenchmarkError> {
         let n = iterations as usize;
 
-        // Warmup inserts into a throwaway map, then drops it. Using a separate
-        // map keeps the measured run starting from a genuinely empty,
-        // unreserved table, matching what the lookup path does (it never
-        // benefits from the warmup having touched its data either).
+        // Warmup inserts into a throwaway map, then drops it, so the measured
+        // run starts from a genuinely empty, unreserved table but from an
+        // allocator that has already reached steady state. The measured loop
+        // is offset past the warmup's key stream for the reason
+        // [`MEASURED_SEED_OFFSET`] gives.
         {
             let mut scratch = BenchMap::with_hasher(HASH_STATE);
-            for i in 0..warmup_iterations as usize {
-                let key = self.keys[i % self.keys.len()];
+            let mut key = self.seed;
+            for _ in 0..warmup_iterations {
+                key = key.wrapping_mul(LCG_MULTIPLIER).wrapping_add(1);
                 scratch.insert(key, self.value_template.clone());
             }
             core::hint::black_box(&scratch);
         }
 
         let mut map = BenchMap::with_hasher(HASH_STATE);
+        let mut key = self.seed ^ MEASURED_SEED_OFFSET;
 
         let timer = T::start();
 
-        for i in 0..n {
-            let key = self.keys[i % self.keys.len()];
+        for _ in 0..n {
+            key = key.wrapping_mul(LCG_MULTIPLIER).wrapping_add(1);
             map.insert(core::hint::black_box(key), self.value_template.clone());
         }
 
         let timing = timer.stop();
 
-        // Checksum over the resulting map proves the same entries were
-        // inserted on both platforms, and forces the map to be materialised.
-        let mut checksum = CHECKSUM_INIT;
-        checksum = checksum_update(checksum, &(map.len() as u64).to_le_bytes());
-        for i in 0..n.min(CHECKSUM_SAMPLE_KEYS) {
-            let key = self.keys[i % self.keys.len()];
-            if let Some(v) = map.get(&key) {
-                checksum = checksum_update(checksum, &key.to_le_bytes());
-                checksum = checksum_update(checksum, &v[..1]);
-            }
+        // The generator has full period, so every key was distinct and the map
+        // must hold one entry per iteration. Checked for the same reason
+        // `run_lookup` checks its hit count and `run_churn` its removal count.
+        if map.len() != n {
+            return Err(BenchmarkError::Generic);
+        }
+
+        // Replay the first keys outside the timed region and read each one
+        // back, which is what forces the map to have been materialised. A miss
+        // is an error rather than a skipped fold, the way `run_churn` treats
+        // one: a checksum that quietly folds fewer keys than it was asked to
+        // would still match across platforms.
+        let mut checksum = checksum_update(CHECKSUM_INIT, &(map.len() as u64).to_le_bytes());
+        let mut key = self.seed ^ MEASURED_SEED_OFFSET;
+        for _ in 0..n.min(CHECKSUM_SAMPLE_KEYS) {
+            key = key.wrapping_mul(LCG_MULTIPLIER).wrapping_add(1);
+            let value = map.get(&key).ok_or(BenchmarkError::Generic)?;
+            checksum = checksum_update(checksum, &key.to_le_bytes());
+            checksum = checksum_update(checksum, &value[..1]);
         }
 
         let bytes_processed = iterations as u64 * (8 + self.value_template.len() as u64);
@@ -510,6 +537,17 @@ mod tests {
         let a = bench.run::<NativeTimer>(HashMapMode::Insert, 1_500, 0).unwrap().checksum;
         let b = bench.run::<NativeTimer>(HashMapMode::Insert, 1_500, 0).unwrap().checksum;
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn insert_grows_the_map_past_the_entry_count() {
+        // Iterations beyond the entry count used to wrap around the key array
+        // and overwrite entries already present, so the table stopped growing
+        // and the working set stopped following the iteration count.
+        let mut bench = HashMapBenchmark::with_defaults(64, 7).unwrap();
+        let small = bench.run::<NativeTimer>(HashMapMode::Insert, 64, 0).unwrap();
+        let large = bench.run::<NativeTimer>(HashMapMode::Insert, 8_192, 0).unwrap();
+        assert_eq!(large.working_set_size, 128 * small.working_set_size);
     }
 
     #[test]

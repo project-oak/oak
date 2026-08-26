@@ -222,8 +222,13 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
                 b.run::<T>(iterations, warmup)
             }
             BenchmarkType::MemoryInsert => {
-                let entries = Self::hashmap_entries(request);
-                let b = self.hashmap_bench(entries, seed)?;
+                // Insert builds its own map inside the timed loop and reads no
+                // pre-built one, so it gets a throwaway rather than the cached
+                // instance. Sizing the cached one from the request would hold
+                // a map the run never touches in guest memory, and shrinking
+                // the cached one to fit insert would make the next lookup or
+                // churn request rebuild its own.
+                let mut b = HashMapBenchmark::with_defaults(1, seed)?;
                 b.run::<T>(HashMapMode::Insert, iterations, warmup)
             }
             BenchmarkType::MemoryLookup => {
