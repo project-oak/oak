@@ -74,6 +74,12 @@ impl HashingBenchmark {
     }
 
     /// Run the benchmark with a specific algorithm and timer type.
+    ///
+    /// A zero-byte payload is legal. The checksum still witnesses the loop,
+    /// but it stops distinguishing seeds, because every seed then hashes the
+    /// same empty message. That is a property of the input, not a defect in
+    /// the checksum, and it is why a cross-platform match at this size says
+    /// less than it does elsewhere.
     pub fn run<T: BenchmarkTimer>(
         &self,
         algorithm: HashAlgorithm,

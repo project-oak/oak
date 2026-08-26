@@ -41,6 +41,13 @@ is quoted:
      agree on to fold; they return checksums identical to _each other_. See
      [Kernel Boundary](#kernel-boundary). `alloc-churn` takes no seed and folds
      a closed form in the iteration count.
+   - A zero-byte payload is legal, and is the intercept of a size sweep, but it
+     narrows what a match proves. The hashes then hash the same empty message
+     whatever the seed, so their checksums agree across seeds as well as across
+     platforms. `aes256gcm-open` recovers an empty plaintext, and folds the
+     ciphertext for that reason: the tag is seed-derived and 16 bytes wide at
+     every size, so the checksum keeps its dependence on the seed where a fold
+     over the plaintext alone would have lost it.
    - `pointer-chase` rounds `--iterations` up to a whole lap of its buffer, so
      two counts inside the same lap walk the same nodes and agree. It is the
      only exception to the iteration half.

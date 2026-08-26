@@ -104,6 +104,11 @@ impl AeadBenchmark {
     }
 
     /// Run the benchmark for the requested mode.
+    ///
+    /// A zero-byte payload is legal, and useful: it is the intercept of a size
+    /// sweep, which is what separates the fixed per-call cost from the
+    /// throughput. `bytes_processed` is then zero and the per-byte figures are
+    /// suppressed rather than divided.
     pub fn run<T: BenchmarkTimer>(
         &mut self,
         mode: AeadMode,
@@ -216,7 +221,14 @@ impl AeadBenchmark {
             .cipher
             .decrypt(nonce, Payload { msg: ct, aad: &[] })
             .map_err(|_| BenchmarkError::CryptoFailure)?;
-        let checksum = checksum_with_witness(checksum_update(CHECKSUM_INIT, &pt), acc);
+        // The ciphertext is folded as well as the recovered plaintext, because
+        // it is what this direction consumed and it is the only one of the two
+        // that cannot be empty: at `data_size` 0 the plaintext is zero bytes,
+        // and a checksum over it alone would be a function of the iteration
+        // count with no dependence on the seed at all. The tag is derived from
+        // the seed through the key and the nonce, so folding it restores that.
+        let checksum =
+            checksum_with_witness(checksum_update(checksum_update(CHECKSUM_INIT, ct), &pt), acc);
 
         let bytes_processed = data_size as u64 * iterations as u64;
         Ok(BenchmarkResult::new(timing, iterations, bytes_processed, checksum))
@@ -269,6 +281,29 @@ mod tests {
         let mut bench = AeadBenchmark::new(2);
         let r = bench.run::<NativeTimer>(AeadMode::Open, 4096, 4, 1).unwrap();
         assert_eq!(r.bytes_processed, 4096 * 4);
+    }
+
+    #[test]
+    fn an_empty_payload_still_distinguishes_seeds() {
+        // The recovered plaintext is empty here, so the checksum rests
+        // entirely on the ciphertext fold.
+        for mode in [AeadMode::Open, AeadMode::Seal] {
+            let mut a = AeadBenchmark::new(5);
+            let mut b = AeadBenchmark::new(6);
+            let ra = a.run::<NativeTimer>(mode, 0, 16, 0).unwrap();
+            let rb = b.run::<NativeTimer>(mode, 0, 16, 0).unwrap();
+            assert_ne!(ra.checksum, rb.checksum, "{mode:?} at a zero-byte payload");
+        }
+    }
+
+    #[test]
+    fn an_empty_payload_still_witnesses_the_loop() {
+        for mode in [AeadMode::Open, AeadMode::Seal] {
+            let mut bench = AeadBenchmark::new(5);
+            let short = bench.run::<NativeTimer>(mode, 0, 8, 0).unwrap();
+            let long = bench.run::<NativeTimer>(mode, 0, 640, 0).unwrap();
+            assert_ne!(short.checksum, long.checksum, "{mode:?} at a zero-byte payload");
+        }
     }
 
     #[test]
