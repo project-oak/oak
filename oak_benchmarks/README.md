@@ -29,10 +29,22 @@ is quoted:
    different data.
 2. **Same result.** Every response carries a `checksum` over the benchmark
    output. For a given benchmark, seed and parameter set it **must** be
-   identical on both platforms. A mismatch means the comparison is invalid, not
-   merely noisy. `null-syscall` is the exception: the two platforms call
-   different syscalls, so its checksum can only count successful returns and
-   matches for free. See [Kernel Boundary](#kernel-boundary).
+   identical on both platforms, and a mismatch means the comparison is invalid
+   rather than merely noisy. Read it as a witness that both sides were handed
+   the same inputs and produced the same answer — **not**, in general, as proof
+   that the timed loop ran. Comparing checksums at 8 and at 1000 iterations
+   sorts the suite into three groups:
+   - **Unchanged by `--iterations`**, so a witness of the inputs alone: the four
+     hashes, both AEAD directions, `p256-verify` and `ed25519-verify`. Their
+     checksummed value is established during setup.
+   - **A function of the iteration count alone**, so a witness of nothing:
+     `null-syscall` and `syscall-control`, which return checksums identical to
+     _each other_ at equal iteration counts. See
+     [Kernel Boundary](#kernel-boundary).
+   - **Varying with the timed loop**: everything else. That is necessary for
+     witnessing the loop but not sufficient, since a fold over the loop index
+     also varies. `pointer-chase` belongs here only above one full lap of its
+     buffer, because `--iterations` is rounded up to a lap.
 3. **Same instruction set.** Every response carries `cpu_features`, reporting
    the compile-time target features, the `CPUID` features, and whether the
    crypto crates can dispatch on the latter at runtime. The _effective_ sets

@@ -33,6 +33,11 @@ pub struct VmConfig<'a> {
     pub memory_size: &'a str,
     /// Port for benchmark server.
     pub port: u16,
+    /// Number of vCPUs to give the VM.
+    ///
+    /// The restricted kernel runs on a single vCPU and cannot be given more,
+    /// so a comparison is only matched when the VM gets one as well.
+    pub cpus: u8,
     /// Enable AMD SEV-SNP.
     pub enable_snp: bool,
 }
@@ -58,6 +63,7 @@ impl LinuxVm {
             &format!("--image={}", config.image.display()),
             &format!("--port={}", config.port),
             &format!("--memory={}", config.memory_size),
+            &format!("--cpus={}", config.cpus),
             "--headless",
         ]);
 

@@ -30,17 +30,30 @@
 //! 1. **Identical work.** The enclave and the baseline must execute the same
 //!    operations over the same inputs. All pseudo-random data is derived from a
 //!    caller-supplied seed, never from a clock or the TSC.
-//! 2. **Verifiable work.** Each benchmark returns a checksum over its output,
-//!    and that checksum must be a function of the data the benchmark actually
-//!    touched — not only of the request parameters. Matching checksums across
-//!    platforms then demonstrate that the same work was performed and that the
-//!    optimiser did not elide it.
+//! 2. **Verifiable inputs.** Each benchmark returns a checksum over its output,
+//!    and that checksum must be a function of the data the benchmark touched
+//!    rather than only of the request parameters. Matching checksums across
+//!    platforms show that both sides were handed the same inputs and computed
+//!    the same answer from them.
 //! 3. **Untimed setup.** Allocation and input generation happen outside the
 //!    timed region.
 //!
-//! Property 2 is easy to break by accident: three benchmarks have shipped with
-//! a checksum that a fold had cancelled the data out of, leaving a function of
-//! the iteration count alone. Prefer a multiply-XOR fold.
+//! Property 2 is narrower than it looks, and the gap matters when quoting a
+//! number. Comparing a benchmark's checksum at 8 and at 1000 iterations sorts
+//! the suite into three groups. For the four hashes, both AEAD directions and
+//! the two verify benchmarks the checksum is byte-identical, because the
+//! value it folds is established during setup: it witnesses the inputs, not
+//! the loop. For [`syscall`] it is worse than that, since `null-syscall` and
+//! `syscall-control` return checksums identical to *each other* at equal
+//! iteration counts, so theirs is a function of the count and witnesses
+//! nothing. Everything else varies with the loop, which is necessary but not
+//! sufficient, because a fold over the loop index varies too.
+//! [`memory::pointer_chase`] varies only above one full lap of its buffer,
+//! since its iteration count is rounded up to a lap.
+//!
+//! Property 2 is also easy to break outright: three benchmarks have shipped
+//! with a checksum that a fold had cancelled the data out of, leaving a
+//! function of the iteration count alone. Prefer a multiply-XOR fold.
 //! `test_checksums_witness_the_seed` in `tests.rs` catches this class, at a
 //! working set size the suite really runs at, since all three bugs were
 //! invisible at the sizes the unit tests happened to use.

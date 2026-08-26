@@ -60,6 +60,15 @@ struct Args {
     #[arg(long, default_value = "5000")]
     port: u16,
 
+    /// Number of vCPUs for the VM.
+    ///
+    /// Defaults to one, matching the restricted kernel, which is
+    /// single-vCPU and cannot be given more. A VM with more vCPUs can run
+    /// its background services alongside the benchmark instead of competing
+    /// with it, so the counts have to match for the comparison to hold.
+    #[arg(long, default_value = "1")]
+    vm_cpus: u8,
+
     /// Enable AMD SEV-SNP for the VM.
     #[arg(long)]
     enable_snp: bool,
@@ -201,6 +210,7 @@ async fn main() -> Result<()> {
         run_vm_script: &args.run_vm_script,
         memory_size: &args.memory_size,
         port: args.port,
+        cpus: args.vm_cpus,
         enable_snp: args.enable_snp,
     };
     let vm = LinuxVm::boot(&vm_config)?;
