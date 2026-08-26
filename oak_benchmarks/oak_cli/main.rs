@@ -25,7 +25,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use cli_common::{
     BenchmarkMetrics, CpuFeatures, DEFAULT_BENCHMARK_SEED, DisplayBenchmarkType, OutputFormat,
-    check_status, csv_header, detect_tsc_freq, format_result, parse_benchmark_type,
+    byte_semantics, check_status, csv_header, detect_tsc_freq, format_result, parse_benchmark_type,
     sanitize_detail,
 };
 use oak_benchmark_proto_rust::oak::benchmark::{BenchmarkType, RunBenchmarkRequest};
@@ -177,12 +177,14 @@ async fn main() -> Result<()> {
         }
         detected.hz()
     });
+    let bytes = byte_semantics(args.benchmark);
     let metrics = BenchmarkMetrics::calculate(
         response.elapsed_tsc,
         response.elapsed_ns,
         response.iterations_completed,
         response.bytes_processed,
         tsc_freq,
+        bytes,
     );
 
     log::info!("guest CPU features: {}", CpuFeatures::from_wire(response.cpu_features));
@@ -196,6 +198,7 @@ async fn main() -> Result<()> {
         elapsed_ns: metrics.elapsed_ns,
         bytes_processed: response.bytes_processed,
         status: response.status,
+        bytes,
         working_set_size: response.working_set_size,
         checksum: response.checksum,
         cpu_features: response.cpu_features,

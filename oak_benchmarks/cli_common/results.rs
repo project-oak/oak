@@ -18,9 +18,28 @@
 
 pub use benchmark::cpu::CpuFeatures;
 
-use crate::{cli::OutputFormat, tsc::tsc_to_nanos};
+use crate::{
+    cli::{ByteSemantics, OutputFormat},
+    tsc::tsc_to_nanos,
+};
 
 /// Calculated metrics from a benchmark response.
+///
+/// Two conventions are worth stating, because published tables differ on both.
+///
+/// The tick figures are **invariant-TSC ticks, not retired core cycles.** The
+/// TSC advances at a fixed rate regardless of the frequency the core is
+/// actually running at, so these are wall time in disguise, expressed in a unit
+/// that happens to be comparable across the two platforms without calibrating
+/// anything. Retired cycles would need a performance counter, which the enclave
+/// cannot reach. Naming the field for what it measures is deliberate: it used
+/// to be called `cycles_per_op`, which claimed more than it delivered.
+///
+/// Per-operation cost is reported in **both** ticks and nanoseconds, following
+/// the form used by Unikraft's syscall table (EuroSys 2021, Table 1), which
+/// prints `#Cycles` and `nsecs` in adjacent columns. Ticks are the honest
+/// cross-platform comparison; nanoseconds are what a reader can sanity-check
+/// against their own intuition.
 #[derive(Debug, Clone, Copy)]
 pub struct BenchmarkMetrics {
     /// Elapsed time in nanoseconds.
@@ -28,33 +47,53 @@ pub struct BenchmarkMetrics {
     /// Taken directly from the guest where a clock exists, otherwise derived
     /// from `elapsed_tsc` using the calibrated frequency.
     pub elapsed_ns: u64,
-    /// Throughput in bytes per second (base unit).
+    /// Byte rate, in bytes per second.
+    ///
+    /// Only comparable between benchmarks whose [`ByteSemantics`] agree; see
+    /// that type for why the same field counts different things.
     pub throughput_bps: f64,
     /// Operations (hashes, signatures, lookups, ...) per second.
     pub ops_per_sec: f64,
-    /// TSC ticks per operation.
+    /// Invariant-TSC ticks per operation.
     ///
-    /// This is the headline cross-platform metric. Unlike every other field
-    /// here it is computed purely from `elapsed_tsc` and the iteration count,
-    /// so it does not depend on the TSC frequency being calibrated correctly
-    /// and can be compared between the enclave and the Linux baseline without
-    /// any conversion. `None` when the guest reported no TSC reading.
-    pub cycles_per_op: Option<f64>,
+    /// The headline cross-platform metric. Unlike every other field here it is
+    /// computed purely from `elapsed_tsc` and the iteration count, so it does
+    /// not depend on the TSC frequency being calibrated correctly and can be
+    /// compared between the enclave and the Linux baseline without any
+    /// conversion. `None` when the guest reported no TSC reading.
+    pub tsc_ticks_per_op: Option<f64>,
+    /// Nanoseconds per operation, printed beside the tick figure.
+    ///
+    /// Unlike [`Self::tsc_ticks_per_op`] this does depend on the calibrated
+    /// frequency for the enclave, which has no clock of its own. `None` when
+    /// no iterations completed.
+    pub ns_per_op: Option<f64>,
+    /// Invariant-TSC ticks per byte.
+    ///
+    /// `None` unless the benchmark's [`ByteSemantics`] make a per-byte figure
+    /// comparable with published numbers, which in practice means the hash and
+    /// AEAD rows. Emitting it for, say, the allocator benchmark would invite a
+    /// comparison against eBACS that the number cannot support.
+    pub tsc_ticks_per_byte: Option<f64>,
 }
 
 impl BenchmarkMetrics {
     /// Calculate metrics from raw benchmark data.
     ///
-    /// Both platforms now report `elapsed_tsc`. `elapsed_ns` is additionally
+    /// Both platforms report `elapsed_tsc`. `elapsed_ns` is additionally
     /// reported by the Linux baseline, which has a real clock; when present it
     /// is preferred over converting from ticks, since it involves no
     /// calibration at all.
+    ///
+    /// `byte_semantics` decides only whether a per-byte figure is produced. It
+    /// does not affect any other field.
     pub fn calculate(
         elapsed_tsc: u64,
         elapsed_ns: u64,
         iterations_completed: u32,
         bytes_processed: u64,
         tsc_freq: u64,
+        byte_semantics: ByteSemantics,
     ) -> Self {
         // Use elapsed_ns directly if available, otherwise convert from TSC.
         let elapsed_ns =
@@ -72,13 +111,33 @@ impl BenchmarkMetrics {
             0.0
         };
 
-        let cycles_per_op = if elapsed_tsc > 0 && iterations_completed > 0 {
+        let tsc_ticks_per_op = if elapsed_tsc > 0 && iterations_completed > 0 {
             Some(elapsed_tsc as f64 / iterations_completed as f64)
         } else {
             None
         };
 
-        Self { elapsed_ns, throughput_bps, ops_per_sec, cycles_per_op }
+        let ns_per_op = if iterations_completed > 0 {
+            Some(elapsed_ns as f64 / iterations_completed as f64)
+        } else {
+            None
+        };
+
+        let tsc_ticks_per_byte =
+            if byte_semantics.supports_per_byte() && elapsed_tsc > 0 && bytes_processed > 0 {
+                Some(elapsed_tsc as f64 / bytes_processed as f64)
+            } else {
+                None
+            };
+
+        Self {
+            elapsed_ns,
+            throughput_bps,
+            ops_per_sec,
+            tsc_ticks_per_op,
+            ns_per_op,
+            tsc_ticks_per_byte,
+        }
     }
 
     /// Get throughput in MB/s for display purposes.
@@ -98,13 +157,23 @@ pub struct BenchmarkResult {
     pub elapsed_ns: u64,
     pub bytes_processed: u64,
     pub status: u32,
+    /// What [`Self::bytes_processed`] counts for this benchmark.
+    ///
+    /// Carried on the result rather than looked up at format time so that a
+    /// byte rate is never printed without the label that makes it meaningful.
+    pub bytes: ByteSemantics,
     /// Actual working set size used by the guest, in bytes.
     pub working_set_size: u64,
     /// Checksum over the benchmark output.
     ///
     /// Must match between the enclave and the baseline for the same benchmark,
-    /// seed and parameters. A mismatch means the two sides did different work
-    /// and the comparison is invalid.
+    /// seed and parameters.
+    ///
+    /// A match is weaker evidence than it looks. Most benchmarks fold their
+    /// checksum from setup data after the timer stops, so it witnesses that
+    /// both sides consumed the same *inputs*, not that both sides performed
+    /// the same *work*. Only the signing and pointer-chase benchmarks fold a
+    /// value produced inside the timed loop.
     pub checksum: u64,
     /// Packed [`CpuFeatures`]: compile-time features, `CPUID` features and the
     /// runtime-dispatch flag. Layout is defined by `CpuFeatures::to_wire`.
@@ -138,9 +207,14 @@ pub fn check_status(status: u32) -> Result<(), String> {
 }
 
 /// CSV header matching the column order produced by [`format_result`].
+///
+/// `cycles_per_op` was renamed to `tsc_ticks_per_op` when `ns_per_op` and
+/// `tsc_ticks_per_byte` were added; anything parsing the old column name needs
+/// updating.
 pub fn csv_header() -> String {
-    "benchmark,data_size,iterations,elapsed_tsc,elapsed_ns,bytes_processed,throughput_bps,\
-     ops_per_sec,cycles_per_op,working_set_size,checksum,cpu_features,detail,status\n"
+    "benchmark,data_size,iterations,elapsed_tsc,elapsed_ns,bytes_processed,byte_semantics,\
+     throughput_bps,ops_per_sec,tsc_ticks_per_op,ns_per_op,tsc_ticks_per_byte,working_set_size,\
+     checksum,cpu_features,detail,status\n"
         .to_string()
 }
 
@@ -202,22 +276,49 @@ fn json_string(value: &str) -> String {
     escaped
 }
 
+/// Renders an optional figure, or `n/a`, at the given precision.
+fn optional(value: Option<f64>, precision: usize) -> String {
+    match value {
+        Some(v) => format!("{v:.precision$}"),
+        None => "n/a".to_string(),
+    }
+}
+
+/// Renders an optional figure as a JSON number, or `null`.
+///
+/// NaN is not valid JSON, so an absent figure has to be `null` rather than the
+/// float that `unwrap_or` would produce.
+fn optional_json(value: Option<f64>, precision: usize) -> String {
+    match value {
+        Some(v) => format!("{v:.precision$}"),
+        None => "null".to_string(),
+    }
+}
+
 /// Format benchmark results for output.
 pub fn format_result(
     result: &BenchmarkResult,
     metrics: &BenchmarkMetrics,
     format: OutputFormat,
 ) -> String {
-    let cycles_per_op = metrics.cycles_per_op.unwrap_or(f64::NAN);
     match format {
         OutputFormat::Human => {
-            // Benchmarks that move no bytes have no throughput; printing
+            // Benchmarks that move no bytes have no byte rate; printing
             // "0.00 MB/s" for them reads as a measurement rather than as an
-            // absent one.
+            // absent one. Where there is a rate, say what the bytes are: the
+            // same field counts message bytes for a hash and
+            // allocator-requested bytes for the churn benchmark, and those are
+            // not the same quantity.
             let throughput = if result.bytes_processed == 0 {
                 "n/a".to_string()
             } else {
-                format!("{:.2} MB/s", metrics.throughput_mbps())
+                format!("{:.2} MB/s ({})", metrics.throughput_mbps(), result.bytes.label())
+            };
+            // Only shown where it is comparable with published cycles-per-byte
+            // figures; see `ByteSemantics::supports_per_byte`.
+            let per_byte = match metrics.tsc_ticks_per_byte {
+                Some(v) => format!("TSC ticks/byte:      {v:.3}\n"),
+                None => String::new(),
             };
             let detail = if result.detail.is_empty() {
                 String::new()
@@ -233,13 +334,17 @@ pub fn format_result(
                  Working set:         {} bytes\n\
                  Guest elapsed (TSC): {} ticks\n\
                  Guest elapsed:       {:.3} ms\n\
-                 Bytes processed:     {}\n\
-                 Cycles/op:           {:.1}\n\
+                 Bytes processed:     {} ({})\n\
+                 TSC ticks/op:        {}\n\
+                 Nanoseconds/op:      {}\n\
+                 {}\
                  Throughput:          {}\n\
                  Operations/sec:      {:.0}\n\
                  Checksum:            0x{:016x}\n\
                  CPU features:        {:#}\n\
-                 Status:              {}\n",
+                 Status:              {}\n\
+                 \n\
+                 Timebase is the invariant TSC, not retired core cycles.\n",
                 result.benchmark_name,
                 detail,
                 result.data_size,
@@ -248,7 +353,10 @@ pub fn format_result(
                 result.elapsed_tsc,
                 metrics.elapsed_ns as f64 / 1_000_000.0,
                 result.bytes_processed,
-                cycles_per_op,
+                result.bytes.label(),
+                optional(metrics.tsc_ticks_per_op, 1),
+                optional(metrics.ns_per_op, 2),
+                per_byte,
                 throughput,
                 metrics.ops_per_sec,
                 result.checksum,
@@ -257,18 +365,26 @@ pub fn format_result(
             )
         }
         OutputFormat::Csv => {
-            // Use base units (bytes/s) in machine-readable formats.
+            // Use base units (bytes/s) in machine-readable formats. An absent
+            // figure is an empty field rather than a sentinel value.
+            let optional_csv = |v: Option<f64>, p: usize| match v {
+                Some(v) => format!("{v:.p$}"),
+                None => String::new(),
+            };
             format!(
-                "{},{},{},{},{},{},{:.0},{:.0},{:.3},{},{},{},{},{}\n",
+                "{},{},{},{},{},{},{},{:.0},{:.0},{},{},{},{},{},{},{},{}\n",
                 csv_field(&result.benchmark_name),
                 result.data_size,
                 result.iterations_completed,
                 result.elapsed_tsc,
                 metrics.elapsed_ns,
                 result.bytes_processed,
+                result.bytes.name(),
                 metrics.throughput_bps,
                 metrics.ops_per_sec,
-                cycles_per_op,
+                optional_csv(metrics.tsc_ticks_per_op, 3),
+                optional_csv(metrics.ns_per_op, 3),
+                optional_csv(metrics.tsc_ticks_per_byte, 4),
                 result.working_set_size,
                 result.checksum,
                 result.cpu_features,
@@ -278,23 +394,20 @@ pub fn format_result(
         }
         OutputFormat::Json => {
             // Use base units (bytes/s) in machine-readable formats.
-            // `cycles_per_op` is emitted as null rather than NaN when absent,
-            // because NaN is not valid JSON.
-            let cycles_json = match metrics.cycles_per_op {
-                Some(v) => format!("{v:.3}"),
-                None => "null".to_string(),
-            };
             format!(
-                r#"{{"benchmark":"{}","data_size":{},"iterations":{},"elapsed_tsc":{},"elapsed_ns":{},"bytes_processed":{},"throughput_bps":{:.0},"ops_per_sec":{:.0},"cycles_per_op":{},"working_set_size":{},"checksum":{},"cpu_features":{},"detail":"{}","status":{}}}"#,
+                r#"{{"benchmark":"{}","data_size":{},"iterations":{},"elapsed_tsc":{},"elapsed_ns":{},"bytes_processed":{},"byte_semantics":"{}","throughput_bps":{:.0},"ops_per_sec":{:.0},"tsc_ticks_per_op":{},"ns_per_op":{},"tsc_ticks_per_byte":{},"working_set_size":{},"checksum":{},"cpu_features":{},"detail":"{}","status":{}}}"#,
                 json_string(&result.benchmark_name),
                 result.data_size,
                 result.iterations_completed,
                 result.elapsed_tsc,
                 metrics.elapsed_ns,
                 result.bytes_processed,
+                result.bytes.name(),
                 metrics.throughput_bps,
                 metrics.ops_per_sec,
-                cycles_json,
+                optional_json(metrics.tsc_ticks_per_op, 3),
+                optional_json(metrics.ns_per_op, 3),
+                optional_json(metrics.tsc_ticks_per_byte, 4),
                 result.working_set_size,
                 result.checksum,
                 result.cpu_features,
@@ -309,38 +422,83 @@ pub fn format_result(
 mod tests {
     use super::*;
 
-    #[test]
-    fn cycles_per_op_is_frequency_independent() {
-        // Same ticks and iterations, wildly different assumed frequencies.
-        let a = BenchmarkMetrics::calculate(1_000_000, 0, 1_000, 0, 1_000_000_000);
-        let b = BenchmarkMetrics::calculate(1_000_000, 0, 1_000, 0, 5_000_000_000);
-        assert_eq!(a.cycles_per_op, b.cycles_per_op);
-        assert_eq!(a.cycles_per_op, Some(1_000.0));
-        // ...whereas the nanosecond figure does depend on it.
-        assert_ne!(a.elapsed_ns, b.elapsed_ns);
+    /// Metrics for a benchmark that moves no bytes, which is most of them.
+    fn metrics(
+        elapsed_tsc: u64,
+        elapsed_ns: u64,
+        iterations: u32,
+        tsc_freq: u64,
+    ) -> BenchmarkMetrics {
+        BenchmarkMetrics::calculate(
+            elapsed_tsc,
+            elapsed_ns,
+            iterations,
+            0,
+            tsc_freq,
+            ByteSemantics::None,
+        )
     }
 
     #[test]
-    fn cycles_per_op_absent_without_tsc() {
-        let m = BenchmarkMetrics::calculate(0, 1_000_000, 1_000, 0, 1_000_000_000);
-        assert_eq!(m.cycles_per_op, None);
+    fn tsc_ticks_per_op_is_frequency_independent() {
+        // Same ticks and iterations, wildly different assumed frequencies.
+        let a = metrics(1_000_000, 0, 1_000, 1_000_000_000);
+        let b = metrics(1_000_000, 0, 1_000, 5_000_000_000);
+        assert_eq!(a.tsc_ticks_per_op, b.tsc_ticks_per_op);
+        assert_eq!(a.tsc_ticks_per_op, Some(1_000.0));
+        // ...whereas the nanosecond figures do depend on it.
+        assert_ne!(a.elapsed_ns, b.elapsed_ns);
+        assert_ne!(a.ns_per_op, b.ns_per_op);
+    }
+
+    #[test]
+    fn tsc_ticks_per_op_absent_without_tsc() {
+        assert_eq!(metrics(0, 1_000_000, 1_000, 1_000_000_000).tsc_ticks_per_op, None);
+    }
+
+    /// The nanosecond figure is what a reader sanity-checks against intuition,
+    /// so it has to be present even where the tick figure is not.
+    #[test]
+    fn ns_per_op_accompanies_every_measured_run() {
+        let m = metrics(0, 1_000_000, 1_000, 1_000_000_000);
+        assert_eq!(m.ns_per_op, Some(1_000.0));
+
+        // 1000 ticks at 1 GHz is 1000 ns, over 10 iterations.
+        let converted = metrics(1_000, 0, 10, 1_000_000_000);
+        assert_eq!(converted.tsc_ticks_per_op, Some(100.0));
+        assert_eq!(converted.ns_per_op, Some(100.0));
+    }
+
+    /// Per-byte figures invite comparison against published cycles-per-byte
+    /// tables, so they are emitted only where that comparison is valid.
+    #[test]
+    fn ticks_per_byte_only_for_message_bytes() {
+        let message = BenchmarkMetrics::calculate(4_096, 0, 4, 4_096, 1, ByteSemantics::Message);
+        assert_eq!(message.tsc_ticks_per_byte, Some(1.0));
+
+        for semantics in [ByteSemantics::Payload, ByteSemantics::Requested, ByteSemantics::Written]
+        {
+            let m = BenchmarkMetrics::calculate(4_096, 0, 4, 4_096, 1, semantics);
+            assert_eq!(m.tsc_ticks_per_byte, None, "{semantics:?} should not report per-byte");
+        }
     }
 
     #[test]
     fn elapsed_ns_is_preferred_over_conversion() {
         // A deliberately wrong frequency must not affect the reported time
         // when the guest supplied real nanoseconds.
-        let m = BenchmarkMetrics::calculate(999_999_999, 2_000_000, 10, 0, 1);
-        assert_eq!(m.elapsed_ns, 2_000_000);
+        assert_eq!(metrics(999_999_999, 2_000_000, 10, 1).elapsed_ns, 2_000_000);
     }
 
     #[test]
     fn zero_everything_does_not_panic_or_divide_by_zero() {
-        let m = BenchmarkMetrics::calculate(0, 0, 0, 0, 0);
+        let m = metrics(0, 0, 0, 0);
         assert_eq!(m.elapsed_ns, 0);
         assert_eq!(m.throughput_bps, 0.0);
         assert_eq!(m.ops_per_sec, 0.0);
-        assert_eq!(m.cycles_per_op, None);
+        assert_eq!(m.tsc_ticks_per_op, None);
+        assert_eq!(m.ns_per_op, None);
+        assert_eq!(m.tsc_ticks_per_byte, None);
     }
 
     /// Runtime dispatch is what makes the `CPUID` half count, so the report has
@@ -367,6 +525,7 @@ mod tests {
             elapsed_ns: 1,
             bytes_processed: 1,
             status: 0,
+            bytes: ByteSemantics::Message,
             working_set_size: 1,
             checksum: 1,
             cpu_features: 1,
@@ -377,7 +536,8 @@ mod tests {
     #[test]
     fn csv_header_matches_row_column_count() {
         let result = sample_result();
-        let metrics = BenchmarkMetrics::calculate(1, 1, 1, 1, 1_000_000_000);
+        let metrics =
+            BenchmarkMetrics::calculate(1, 1, 1, 1, 1_000_000_000, ByteSemantics::Message);
         let row = format_result(&result, &metrics, OutputFormat::Csv);
         assert_eq!(
             csv_header().trim_end().split(',').count(),
@@ -392,7 +552,8 @@ mod tests {
     fn throughput_is_omitted_when_no_bytes_move() {
         let mut result = sample_result();
         result.bytes_processed = 0;
-        let metrics = BenchmarkMetrics::calculate(1, 1, 0, 1, 1_000_000_000);
+        let metrics =
+            BenchmarkMetrics::calculate(1, 1, 0, 1, 1_000_000_000, ByteSemantics::Message);
         let text = format_result(&result, &metrics, OutputFormat::Human);
         assert!(text.contains("Throughput:          n/a"), "{text}");
         assert!(!text.contains("MB/s"), "{text}");
@@ -404,7 +565,8 @@ mod tests {
     fn the_detail_reaches_every_output_format() {
         let mut result = sample_result();
         result.detail = "getppid()".to_string();
-        let metrics = BenchmarkMetrics::calculate(1, 1, 1, 1, 1_000_000_000);
+        let metrics =
+            BenchmarkMetrics::calculate(1, 1, 1, 1, 1_000_000_000, ByteSemantics::Message);
         for format in [OutputFormat::Human, OutputFormat::Csv, OutputFormat::Json] {
             assert!(
                 format_result(&result, &metrics, format).contains("getppid()"),
@@ -421,7 +583,8 @@ mod tests {
     fn a_detail_containing_commas_stays_in_one_csv_field() {
         let mut result = sample_result();
         result.detail = "write(-1,NULL,0)".to_string();
-        let metrics = BenchmarkMetrics::calculate(1, 1, 1, 1, 1_000_000_000);
+        let metrics =
+            BenchmarkMetrics::calculate(1, 1, 1, 1, 1_000_000_000, ByteSemantics::Message);
         let row = format_result(&result, &metrics, OutputFormat::Csv);
 
         let header_columns = csv_header().trim_end().split(',').count();

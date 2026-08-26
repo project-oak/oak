@@ -50,14 +50,36 @@ is quoted:
 
 ## Metrics
 
-The headline metric is **cycles per operation**, computed from the guest's own
-TSC reading. It requires no knowledge of the TSC frequency and therefore cannot
-be distorted by a mis-detected one, which makes it the safest number to compare
-across platforms.
+The headline metric is **TSC ticks per operation**, computed from the guest's
+own TSC reading. It requires no knowledge of the TSC frequency and therefore
+cannot be distorted by a mis-detected one, which makes it the safest number to
+compare across platforms.
 
-Nanoseconds and MB/s are derived figures. On the Linux baseline they come from a
-real clock; for the enclave, which has no clock, the host converts from TSC
-ticks using a frequency measured against `CLOCK_MONOTONIC` at startup.
+It is **not** retired core cycles, and the field is named `tsc_ticks_per_op`
+rather than `cycles_per_op` to stop it claiming otherwise. The TSC is invariant:
+it advances at a fixed rate no matter what frequency the core is running at, so
+a tick figure is wall time in a unit that happens to need no calibration.
+Retired cycles would need a performance counter, and the enclave has no access
+to one. Anything comparing these numbers against a published cycle count should
+know which of the two it is looking at.
+
+Every run reports ticks per operation and **nanoseconds per operation** side by
+side, following the form of Unikraft's syscall table (EuroSys 2021, Table 1),
+which prints `#Cycles` and `nsecs` in adjacent columns. Ticks are the honest
+cross-platform comparison; nanoseconds are what a reader can check against their
+own intuition.
+
+For the hash and AEAD benchmarks the report also carries **TSC ticks per byte**,
+the unit [eBACS](https://bench.cr.yp.to/results-hash.html) publishes, always
+against a stated message size. It is deliberately absent elsewhere: emitting it
+for the allocator benchmark would invite a comparison the number cannot support.
+
+`bytes_processed` does not count the same thing in every benchmark, so every
+byte rate is printed with a label saying what its bytes are — message bytes for
+a hash, key and value bytes for a map operation, bytes requested from the
+allocator for `alloc-churn`, bytes written for `array-update`. Only figures
+sharing a label are comparable with each other. The `ByteSemantics` type in
+[`cli_common/cli.rs`](cli_common/cli.rs) is the single definition.
 
 ## Running Benchmarks
 
@@ -111,8 +133,10 @@ bazel run -c opt //oak_benchmarks/linux_enclave_app -- \
 
 ## Available Benchmarks
 
-The authoritative list of names is `BENCHMARK_TYPE_NAMES` in
+The authoritative list of names is `BENCHMARKS` in
 [`cli_common/cli.rs`](cli_common/cli.rs); pass one of them to `--benchmark`.
+That one table also carries each benchmark's display name and byte semantics, so
+those cannot drift apart from the parser.
 
 ### CPU-Bound: Cryptographic Hashing
 
@@ -193,8 +217,8 @@ schedule of size classes that exercises allocator size-class boundaries.
 
 `pointer-chase` walks a randomly permuted list of cache lines where each access
 supplies the address of the next, so nothing can be prefetched or overlapped and
-`cycles_per_op` is the load-to-use latency directly. It is the construction used
-by lmbench's
+`tsc_ticks_per_op` is the load-to-use latency directly. It is the construction
+used by lmbench's
 [`lat_mem_rd`](https://lmbench.sourceforge.net/man/lat_mem_rd.8.html), which
 cannot run here because it needs `fork`, signals and a filesystem.
 

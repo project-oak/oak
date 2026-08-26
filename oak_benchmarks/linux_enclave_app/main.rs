@@ -28,7 +28,7 @@ use benchmark::{BenchmarkService, DEFAULT_BENCHMARK_SEED, NativeTimer, NullSysca
 use clap::Parser;
 use cli_common::{
     BenchmarkMetrics, BenchmarkResult, CpuFeatures, DisplayBenchmarkType, OutputFormat,
-    check_status, csv_header, format_result, parse_benchmark_type, sanitize_detail,
+    byte_semantics, check_status, csv_header, format_result, parse_benchmark_type, sanitize_detail,
 };
 use oak_benchmark_proto_rust::oak::benchmark::{BenchmarkType, RunBenchmarkRequest};
 
@@ -213,6 +213,7 @@ fn run_standalone(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
     check_status(response.status)?;
 
     // Use cli_common for metrics calculation and formatting.
+    let bytes = byte_semantics(args.benchmark);
     let metrics = BenchmarkMetrics::calculate(
         response.elapsed_tsc,
         response.elapsed_ns,
@@ -221,6 +222,7 @@ fn run_standalone(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
         // Not needed: the native runner has a real clock and reports
         // `elapsed_ns` directly, which takes precedence over TSC conversion.
         0,
+        bytes,
     );
     let result = BenchmarkResult {
         benchmark_name: DisplayBenchmarkType(args.benchmark).to_string(),
@@ -230,6 +232,7 @@ fn run_standalone(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
         elapsed_ns: response.elapsed_ns,
         bytes_processed: response.bytes_processed,
         status: response.status,
+        bytes,
         working_set_size: response.working_set_size,
         checksum: response.checksum,
         cpu_features: response.cpu_features,

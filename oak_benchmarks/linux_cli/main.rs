@@ -30,7 +30,8 @@ use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use cli_common::{
     BenchmarkMetrics, BenchmarkResult, CpuFeatures, DEFAULT_BENCHMARK_SEED, DisplayBenchmarkType,
-    OutputFormat, check_status, csv_header, format_result, parse_benchmark_type, sanitize_detail,
+    OutputFormat, byte_semantics, check_status, csv_header, format_result, parse_benchmark_type,
+    sanitize_detail,
 };
 use oak_benchmark_grpc::oak::benchmark::benchmark_client::BenchmarkClient;
 use oak_benchmark_proto_rust::oak::benchmark::{
@@ -209,12 +210,14 @@ async fn main() -> Result<()> {
 
     // Calculate metrics. The Linux runner provides elapsed_ns directly,
     // so tsc_freq is not needed (pass 0 as unused fallback).
+    let bytes = byte_semantics(args.benchmark);
     let metrics = BenchmarkMetrics::calculate(
         response.elapsed_tsc,
         response.elapsed_ns,
         response.iterations_completed,
         response.bytes_processed,
         0, // tsc_freq unused — Linux runner provides elapsed_ns
+        bytes,
     );
     let result = BenchmarkResult {
         benchmark_name: DisplayBenchmarkType(args.benchmark).to_string(),
@@ -224,6 +227,7 @@ async fn main() -> Result<()> {
         elapsed_ns: metrics.elapsed_ns,
         bytes_processed: response.bytes_processed,
         status: response.status,
+        bytes,
         working_set_size: response.working_set_size,
         checksum: response.checksum,
         cpu_features: response.cpu_features,
