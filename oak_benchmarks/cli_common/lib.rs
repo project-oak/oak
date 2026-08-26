@@ -21,6 +21,7 @@
 //! and result formatting.
 
 pub mod cli;
+pub mod dispersion;
 pub mod results;
 pub mod tsc;
 
@@ -29,8 +30,10 @@ pub use cli::{
     BENCHMARKS, BenchmarkInfo, ByteSemantics, DEFAULT_BENCHMARK_SEED, DisplayBenchmarkType,
     OutputFormat, benchmark_info, byte_semantics, parse_benchmark_type,
 };
+pub use dispersion::{Distribution, geometric_mean};
 pub use results::{
-    BenchmarkMetrics, BenchmarkResult, CpuFeatures, check_status, csv_header, describe_status,
-    format_result, sanitize_detail,
+    BenchmarkMetrics, BenchmarkResult, CpuFeatures, RepeatedRun, Repetition, check_status,
+    csv_header, describe_status, format_repeated, format_result, repeated_csv_header,
+    sanitize_detail,
 };
 pub use tsc::{DEFAULT_TSC_FREQ_HZ, TscFreq, detect_tsc_freq, tsc_to_nanos};

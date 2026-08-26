@@ -25,6 +25,7 @@ rust_library(
     name = "cli_common",
     srcs = [
         "cli.rs",
+        "dispersion.rs",
         "lib.rs",
         "results.rs",
         "tsc.rs",

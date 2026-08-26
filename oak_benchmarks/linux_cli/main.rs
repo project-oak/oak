@@ -30,8 +30,8 @@ use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use cli_common::{
     BenchmarkMetrics, BenchmarkResult, CpuFeatures, DEFAULT_BENCHMARK_SEED, DisplayBenchmarkType,
-    OutputFormat, byte_semantics, check_status, csv_header, format_result, parse_benchmark_type,
-    sanitize_detail,
+    OutputFormat, RepeatedRun, Repetition, byte_semantics, check_status, csv_header,
+    format_repeated, format_result, parse_benchmark_type, repeated_csv_header, sanitize_detail,
 };
 use oak_benchmark_grpc::oak::benchmark::benchmark_client::BenchmarkClient;
 use oak_benchmark_proto_rust::oak::benchmark::{
@@ -107,16 +107,33 @@ struct Args {
     /// Don't shut down the VM after running (for debugging).
     #[arg(long)]
     keep_vm: bool,
+
+    /// Number of times to repeat the whole measurement.
+    ///
+    /// Above one, the report becomes a median with quartiles and a stated
+    /// sample count instead of a single number, and every sample is listed.
+    /// A single run of a microbenchmark is one draw from a right-skewed
+    /// distribution, not a measurement.
+    ///
+    /// The VM is booted once and every repetition is a separate RPC against
+    /// it, so only the first repetition sees a cold guest. The samples are
+    /// printed individually because for the allocator and page-fault
+    /// benchmarks that difference is the effect under study.
+    #[arg(long, default_value = "1")]
+    repetitions: u32,
 }
 
-/// Connect to the benchmark server and run a benchmark with retries.
+/// Connects to the benchmark server and runs the first benchmark, retrying
+/// until the VM is up or the deadline passes.
 ///
-/// Returns the response and the host-side elapsed time for the RPC.
-async fn run_benchmark(
+/// The first call doubles as the readiness probe, so it returns the connected
+/// client alongside the response. Later repetitions reuse that client rather
+/// than reconnecting.
+async fn connect_and_run(
     addr: &str,
     request: RunBenchmarkRequest,
     timeout: Duration,
-) -> Result<(RunBenchmarkResponse, Duration)> {
+) -> Result<(BenchmarkClient<Channel>, RunBenchmarkResponse, Duration)> {
     let start = Instant::now();
     let mut last_error = None;
 
@@ -139,8 +156,8 @@ async fn run_benchmark(
                 let mut client = BenchmarkClient::new(channel);
                 match client.run_benchmark(request).await {
                     Ok(resp) => {
-                        eprintln!("Connected!");
-                        return Ok((resp.into_inner(), attempt_start.elapsed()));
+                        eprintln!("connected");
+                        return Ok((client, resp.into_inner(), attempt_start.elapsed()));
                     }
                     Err(e) => {
                         log::debug!("RPC failed: {}, retrying...", e);
@@ -162,6 +179,12 @@ async fn run_benchmark(
 async fn main() -> Result<()> {
     env_logger::init();
     let args = Args::parse();
+
+    // Checked before booting so a typo does not cost a VM boot, and so the
+    // indexing into `repetitions` below always has something to index.
+    if args.repetitions == 0 {
+        return Err(anyhow!("--repetitions must be at least 1"));
+    }
 
     // Verify VM image exists.
     if !args.vm_image.exists() {
@@ -196,35 +219,63 @@ async fn main() -> Result<()> {
     let addr = format!("127.0.0.1:{}", args.port);
     let timeout = Duration::from_secs(args.boot_timeout);
 
-    let (response, host_elapsed) = run_benchmark(&addr, request, timeout).await?;
+    let (mut client, first_response, first_elapsed) =
+        connect_and_run(&addr, request, timeout).await?;
 
-    // Abort before formatting: a failed benchmark returns an all-zero
-    // response, which would otherwise print as a plausible row of zeros. Shut
-    // the VM down first so we do not leak a QEMU process.
-    if let Err(message) = check_status(response.status) {
-        if !args.keep_vm {
-            vm.shutdown().context("shutting down VM after a failed benchmark")?;
+    // The Linux runner reports elapsed_ns directly, so the TSC frequency is
+    // never needed to convert; 0 is passed as the unused fallback.
+    let bytes = byte_semantics(args.benchmark);
+    let mut repetitions = Vec::with_capacity(args.repetitions as usize);
+    let mut response = first_response;
+    // Every repetition, so that this is the quantity `oak_cli` reports under
+    // the same name. Taking one repetition would make the two runners print
+    // different things. The first repetition also carries the connection
+    // setup, because it doubles as the readiness probe.
+    let mut host_elapsed = first_elapsed;
+
+    for index in 0..args.repetitions {
+        // The first response came back from the readiness probe above, so only
+        // the later repetitions need a fresh RPC.
+        if index > 0 {
+            let call_start = Instant::now();
+            response = client
+                .run_benchmark(request)
+                .await
+                .context("running benchmark repetition")?
+                .into_inner();
+            host_elapsed += call_start.elapsed();
         }
-        return Err(anyhow!(message));
+
+        // Abort before formatting: a failed benchmark returns an all-zero
+        // response, which would otherwise print as a plausible row of zeros.
+        // Shut the VM down first so we do not leak a QEMU process.
+        if let Err(message) = check_status(response.status) {
+            if !args.keep_vm {
+                vm.shutdown().context("shutting down VM after a failed benchmark")?;
+            }
+            return Err(anyhow!(message));
+        }
+
+        repetitions.push(Repetition {
+            elapsed_tsc: response.elapsed_tsc,
+            checksum: response.checksum,
+            metrics: BenchmarkMetrics::calculate(
+                response.elapsed_tsc,
+                response.elapsed_ns,
+                response.iterations_completed,
+                response.bytes_processed,
+                0,
+                bytes,
+            ),
+        });
     }
 
-    // Calculate metrics. The Linux runner provides elapsed_ns directly,
-    // so tsc_freq is not needed (pass 0 as unused fallback).
-    let bytes = byte_semantics(args.benchmark);
-    let metrics = BenchmarkMetrics::calculate(
-        response.elapsed_tsc,
-        response.elapsed_ns,
-        response.iterations_completed,
-        response.bytes_processed,
-        0, // tsc_freq unused — Linux runner provides elapsed_ns
-        bytes,
-    );
     let result = BenchmarkResult {
         benchmark_name: DisplayBenchmarkType(args.benchmark).to_string(),
         data_size: args.data_size,
         iterations_completed: response.iterations_completed,
         elapsed_tsc: response.elapsed_tsc,
-        elapsed_ns: metrics.elapsed_ns,
+        elapsed_ns: repetitions[repetitions.len() - 1].metrics.elapsed_ns,
         bytes_processed: response.bytes_processed,
         status: response.status,
         bytes,
@@ -233,10 +284,18 @@ async fn main() -> Result<()> {
         cpu_features: response.cpu_features,
         detail: sanitize_detail(&response.detail),
     };
-    if args.csv_header && matches!(args.output, OutputFormat::Csv) {
-        print!("{}", csv_header());
+    if args.repetitions == 1 {
+        if args.csv_header && matches!(args.output, OutputFormat::Csv) {
+            print!("{}", csv_header());
+        }
+        print!("{}", format_result(&result, &repetitions[0].metrics, args.output));
+    } else {
+        if args.csv_header && matches!(args.output, OutputFormat::Csv) {
+            print!("{}", repeated_csv_header());
+        }
+        let run = RepeatedRun { result, repetitions };
+        print!("{}", format_repeated(&run, args.output));
     }
-    print!("{}", format_result(&result, &metrics, args.output));
 
     // Print host timing for Human format.
     if matches!(args.output, OutputFormat::Human) {

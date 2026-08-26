@@ -324,11 +324,20 @@ A comparison between the enclave and the Linux baseline only means something if
 both sides did the same work, so the parameters that decide it travel in the
 request.
 
-| Flag                 | Effect                                                        |
-| -------------------- | ------------------------------------------------------------- |
-| `--seed`             | Fixes the pseudo-random input; both sides need the same value |
-| `--working-set-size` | Working set in bytes for the memory benchmarks (0 = default)  |
-| `--csv-header`       | Emits a header row before the CSV result row                  |
+| Flag                 | Effect                                                         |
+| -------------------- | -------------------------------------------------------------- |
+| `--seed`             | Fixes the pseudo-random input; both sides need the same value  |
+| `--working-set-size` | Working set in bytes for the memory benchmarks (0 = default)   |
+| `--repetitions`      | Repeats the whole measurement and reports median and quartiles |
+| `--csv-header`       | Emits a header row before the CSV result row                   |
+
+One run of a microbenchmark is a single draw from a right-skewed distribution,
+so `--repetitions` above 1 replaces the single figure with a median, its first
+and third quartiles and the sample count, and lists every sample in run order.
+The enclave or VM is started once and each repetition is a separate request
+against it, so only the first repetition sees a cold heap; the samples are
+listed individually because for `alloc-churn` and `page-touch` that difference
+is the effect under study rather than noise.
 
 Results carry a `checksum` over each benchmark's output and the `cpu_features`
 the guest was built with and found at runtime. Treat a comparison as invalid

@@ -25,8 +25,8 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use cli_common::{
     BenchmarkMetrics, CpuFeatures, DEFAULT_BENCHMARK_SEED, DisplayBenchmarkType, OutputFormat,
-    byte_semantics, check_status, csv_header, detect_tsc_freq, format_result, parse_benchmark_type,
-    sanitize_detail,
+    RepeatedRun, Repetition, byte_semantics, check_status, csv_header, detect_tsc_freq,
+    format_repeated, format_result, parse_benchmark_type, repeated_csv_header, sanitize_detail,
 };
 use oak_benchmark_proto_rust::oak::benchmark::{BenchmarkType, RunBenchmarkRequest};
 use oak_launcher_utils::launcher;
@@ -93,12 +93,32 @@ struct Args {
     /// when the benchmark is trivial. Use `--benchmark=debug --iterations=1`.
     #[arg(long, default_value = "false")]
     report_boot_latency: bool,
+
+    /// Number of times to repeat the whole measurement.
+    ///
+    /// Above one, the report becomes a median with quartiles and a stated
+    /// sample count instead of a single number, and every sample is listed.
+    /// A single run of a microbenchmark is one draw from a right-skewed
+    /// distribution, not a measurement.
+    ///
+    /// The enclave is launched once and every repetition is a separate RPC
+    /// against it, so only the first repetition sees a cold heap. The samples
+    /// are printed individually because for the allocator and page-fault
+    /// benchmarks that difference is the effect under study.
+    #[arg(long, default_value = "1")]
+    repetitions: u32,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
     env_logger::init();
+
+    // Checked before launching so a typo does not cost an enclave boot, and so
+    // that the "at least one repetition" expectation below cannot fire.
+    if args.repetitions == 0 {
+        anyhow::bail!("--repetitions must be at least 1");
+    }
 
     log::info!("Starting Oak Benchmark Host Runner");
     log::info!("Benchmark: {:?}", args.benchmark);
@@ -130,37 +150,9 @@ async fn main() -> Result<()> {
     };
 
     log::info!("Sending benchmark request...");
-    let host_start = Instant::now();
 
-    // Call the RunBenchmark RPC.
-    let response = client
-        .run_benchmark(&request)
-        .await
-        .map_err(|e| anyhow::anyhow!("Failed to invoke benchmark RPC: {:?}", e))?
-        .map_err(|e| anyhow::anyhow!("Benchmark RPC returned error: {:?}", e))?;
-
-    let host_elapsed = host_start.elapsed();
-    let ready_elapsed = launch_start.elapsed();
-
-    // Printed before the status check so a failed benchmark still yields a
-    // boot measurement, which does not depend on the benchmark succeeding.
-    if args.report_boot_latency {
-        println!(
-            "boot-latency launch_ns={} ready_ns={}",
-            launch_elapsed.as_nanos(),
-            ready_elapsed.as_nanos()
-        );
-    }
-
-    // Abort before formatting: a failed benchmark returns an all-zero
-    // response, which would otherwise be printed as a plausible-looking row of
-    // zeros. Tear the enclave down first so we do not leak a QEMU process.
-    if let Err(message) = check_status(response.status) {
-        guest_instance.kill().await.context("terminating enclave after a failed benchmark")?;
-        anyhow::bail!(message);
-    }
-
-    // Calculate metrics using shared cli_common utilities.
+    // Detected once, before the loop: calibration spins for 50 ms and the
+    // frequency does not change between repetitions.
     let tsc_freq = args.tsc_freq.unwrap_or_else(|| {
         let detected = detect_tsc_freq();
         log::info!(
@@ -171,21 +163,65 @@ async fn main() -> Result<()> {
         if !detected.is_trustworthy() {
             log::warn!(
                 "TSC frequency was not measured directly ({}); nanosecond and MB/s figures may \
-                 be scaled incorrectly, prefer the cycles/op column",
+                 be scaled incorrectly, prefer the TSC ticks/op column",
                 detected.source_description()
             );
         }
         detected.hz()
     });
     let bytes = byte_semantics(args.benchmark);
-    let metrics = BenchmarkMetrics::calculate(
-        response.elapsed_tsc,
-        response.elapsed_ns,
-        response.iterations_completed,
-        response.bytes_processed,
-        tsc_freq,
-        bytes,
-    );
+
+    let host_start = Instant::now();
+    let mut repetitions = Vec::with_capacity(args.repetitions as usize);
+    let mut last = None;
+
+    for _ in 0..args.repetitions {
+        // Call the RunBenchmark RPC.
+        let response = client
+            .run_benchmark(&request)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to invoke benchmark RPC: {:?}", e))?
+            .map_err(|e| anyhow::anyhow!("Benchmark RPC returned error: {:?}", e))?;
+
+        // Printed before the status check so a failed benchmark still yields a
+        // boot measurement, which does not depend on the benchmark succeeding.
+        // Only the first response bounds the boot; later repetitions run
+        // against an already-booted enclave.
+        if args.report_boot_latency && repetitions.is_empty() {
+            println!(
+                "boot-latency launch_ns={} ready_ns={}",
+                launch_elapsed.as_nanos(),
+                launch_start.elapsed().as_nanos()
+            );
+        }
+
+        // Abort before formatting: a failed benchmark returns an all-zero
+        // response, which would otherwise be printed as a plausible-looking
+        // row of zeros. Tear the enclave down first so we do not leak a QEMU
+        // process.
+        if let Err(message) = check_status(response.status) {
+            guest_instance.kill().await.context("terminating enclave after a failed benchmark")?;
+            anyhow::bail!(message);
+        }
+
+        repetitions.push(Repetition {
+            elapsed_tsc: response.elapsed_tsc,
+            checksum: response.checksum,
+            metrics: BenchmarkMetrics::calculate(
+                response.elapsed_tsc,
+                response.elapsed_ns,
+                response.iterations_completed,
+                response.bytes_processed,
+                tsc_freq,
+                bytes,
+            ),
+        });
+        last = Some(response);
+    }
+
+    let host_elapsed = host_start.elapsed();
+    // Populated because `repetitions` is validated to be at least one.
+    let response = last.expect("at least one repetition");
 
     log::info!("guest CPU features: {}", CpuFeatures::from_wire(response.cpu_features));
 
@@ -195,7 +231,7 @@ async fn main() -> Result<()> {
         data_size: args.data_size,
         iterations_completed: response.iterations_completed,
         elapsed_tsc: response.elapsed_tsc,
-        elapsed_ns: metrics.elapsed_ns,
+        elapsed_ns: repetitions[repetitions.len() - 1].metrics.elapsed_ns,
         bytes_processed: response.bytes_processed,
         status: response.status,
         bytes,
@@ -204,11 +240,18 @@ async fn main() -> Result<()> {
         cpu_features: response.cpu_features,
         detail: sanitize_detail(&response.detail),
     };
-    if args.csv_header && matches!(args.output, OutputFormat::Csv) {
-        print!("{}", csv_header());
+    if args.repetitions == 1 {
+        if args.csv_header && matches!(args.output, OutputFormat::Csv) {
+            print!("{}", csv_header());
+        }
+        print!("{}", format_result(&result, &repetitions[0].metrics, args.output));
+    } else {
+        if args.csv_header && matches!(args.output, OutputFormat::Csv) {
+            print!("{}", repeated_csv_header());
+        }
+        let run = RepeatedRun { result, repetitions };
+        print!("{}", format_repeated(&run, args.output));
     }
-    let output = format_result(&result, &metrics, args.output);
-    print!("{}", output);
 
     // Print host timing for Human format.
     if matches!(args.output, OutputFormat::Human) {

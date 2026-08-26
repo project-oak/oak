@@ -20,6 +20,7 @@ pub use benchmark::cpu::CpuFeatures;
 
 use crate::{
     cli::{ByteSemantics, OutputFormat},
+    dispersion::Distribution,
     tsc::tsc_to_nanos,
 };
 
@@ -416,6 +417,228 @@ pub fn format_result(
             )
         }
     }
+}
+
+/// One repetition's raw readings and the metrics derived from them.
+///
+/// `elapsed_tsc` and `checksum` are carried per repetition rather than taken
+/// from the final run. Reusing the last repetition's tick count for every row
+/// of a machine-readable dump silently replaces the measurement with a copy of
+/// one sample, which is worse than not emitting the column at all.
+#[derive(Debug, Clone, Copy)]
+pub struct Repetition {
+    /// TSC ticks this repetition took.
+    pub elapsed_tsc: u64,
+    /// Checksum this repetition produced.
+    pub checksum: u64,
+    /// Metrics derived from this repetition alone.
+    pub metrics: BenchmarkMetrics,
+}
+
+/// One benchmark measured several times over.
+///
+/// Holds every repetition rather than a running summary, so the individual
+/// samples can be printed. That matters more than it sounds: the first
+/// repetition of an allocator or page-fault benchmark is systematically
+/// different from the rest, because the heap is cold, and a median would hide
+/// that rather than reveal it.
+#[derive(Debug, Clone)]
+pub struct RepeatedRun {
+    /// Metadata that does not vary between repetitions of the same request:
+    /// benchmark name, requested sizes, CPU features, working set.
+    ///
+    /// Its `elapsed_tsc`, `elapsed_ns` and `checksum` fields are those of the
+    /// final repetition and are overridden per row when formatting.
+    pub result: BenchmarkResult,
+    /// One entry per repetition, in the order they ran.
+    pub repetitions: Vec<Repetition>,
+}
+
+impl RepeatedRun {
+    /// Whether every repetition produced the same checksum.
+    ///
+    /// A disagreement means the repetitions did not all do the same thing, so
+    /// pooling them into one distribution would be meaningless.
+    pub fn checksums_agree(&self) -> bool {
+        let mut checksums = self.repetitions.iter().map(|r| r.checksum);
+        match checksums.next() {
+            Some(first) => checksums.all(|c| c == first),
+            None => true,
+        }
+    }
+
+    /// Distribution of TSC ticks per operation, `None` if no repetition
+    /// reported a TSC reading.
+    pub fn tsc_ticks_per_op(&self) -> Option<Distribution> {
+        self.distribution(|m| m.tsc_ticks_per_op)
+    }
+
+    /// Distribution of nanoseconds per operation.
+    pub fn ns_per_op(&self) -> Option<Distribution> {
+        self.distribution(|m| m.ns_per_op)
+    }
+
+    /// Distribution of TSC ticks per byte, `None` unless the benchmark's byte
+    /// semantics make a per-byte figure meaningful.
+    pub fn tsc_ticks_per_byte(&self) -> Option<Distribution> {
+        self.distribution(|m| m.tsc_ticks_per_byte)
+    }
+
+    /// Distribution of operations per second.
+    pub fn ops_per_sec(&self) -> Option<Distribution> {
+        self.distribution(|m| Some(m.ops_per_sec))
+    }
+
+    fn distribution(
+        &self,
+        extract: impl Fn(&BenchmarkMetrics) -> Option<f64>,
+    ) -> Option<Distribution> {
+        let mut samples: Vec<f64> =
+            self.repetitions.iter().filter_map(|r| extract(&r.metrics)).collect();
+        Distribution::from_samples(&mut samples)
+    }
+
+    /// The result as it stood for one repetition, for per-row formatting.
+    fn result_for(&self, repetition: &Repetition) -> BenchmarkResult {
+        BenchmarkResult {
+            elapsed_tsc: repetition.elapsed_tsc,
+            elapsed_ns: repetition.metrics.elapsed_ns,
+            checksum: repetition.checksum,
+            ..self.result.clone()
+        }
+    }
+}
+
+/// Renders a distribution as `median [q1, q3] n=N`, the form the suite quotes.
+fn summarize(distribution: Option<Distribution>, precision: usize) -> String {
+    match distribution {
+        Some(d) => {
+            let spread = match d.relative_iqr() {
+                Some(r) => format!(" IQR={:.1}%", r * 100.0),
+                None => String::new(),
+            };
+            format!(
+                "{:.precision$} [{:.precision$}, {:.precision$}] n={}{}",
+                d.median, d.q1, d.q3, d.n, spread
+            )
+        }
+        None => "n/a".to_string(),
+    }
+}
+
+/// Format a repeated run.
+///
+/// The human form leads with the median and quartiles and then lists every
+/// sample, because a cold first repetition is a fact about the benchmark and
+/// not noise to be averaged away. CSV and JSON emit one record per repetition,
+/// carrying that repetition's own readings, leaving aggregation to whatever
+/// consumes them.
+pub fn format_repeated(run: &RepeatedRun, format: OutputFormat) -> String {
+    match format {
+        OutputFormat::Human => {
+            let per_byte = match run.tsc_ticks_per_byte() {
+                Some(d) => format!("TSC ticks/byte:      {}\n", summarize(Some(d), 3)),
+                None => String::new(),
+            };
+            let samples: Vec<String> = run
+                .repetitions
+                .iter()
+                .map(|r| match r.metrics.tsc_ticks_per_op {
+                    Some(v) => format!("{v:.1}"),
+                    None => "n/a".to_string(),
+                })
+                .collect();
+            let checksum_warning = if run.checksums_agree() {
+                String::new()
+            } else {
+                "\n\nWARNING: repetitions disagreed on the checksum, so they did not all do\n\
+                 the same work and this summary is not meaningful."
+                    .to_string()
+            };
+            let detail = if run.result.detail.is_empty() {
+                String::new()
+            } else {
+                format!("Measured:            {}\n", run.result.detail)
+            };
+            format!(
+                "\n=== Benchmark Results ({} repetitions) ===\n\
+                 Benchmark:           {}\n\
+                 {}\
+                 Data size:           {} bytes\n\
+                 Iterations:          {} per repetition\n\
+                 Working set:         {} bytes\n\
+                 Bytes processed:     {} per repetition ({})\n\
+                 TSC ticks/op:        {}\n\
+                 Nanoseconds/op:      {}\n\
+                 {}\
+                 Operations/sec:      {}\n\
+                 Checksum:            0x{:016x}\n\
+                 CPU features:        {:#}\n\
+                 \n\
+                 Per-repetition TSC ticks/op, in run order:\n  {}\n\
+                 \n\
+                 Figures are median [q1, q3] over n repetitions. Timebase is the\n\
+                 invariant TSC, not retired core cycles.{}\n",
+                run.repetitions.len(),
+                run.result.benchmark_name,
+                detail,
+                run.result.data_size,
+                run.result.iterations_completed,
+                run.result.working_set_size,
+                run.result.bytes_processed,
+                run.result.bytes.label(),
+                summarize(run.tsc_ticks_per_op(), 1),
+                summarize(run.ns_per_op(), 2),
+                per_byte,
+                summarize(run.ops_per_sec(), 0),
+                run.result.checksum,
+                CpuFeatures::from_wire(run.result.cpu_features),
+                samples.join(", "),
+                checksum_warning,
+            )
+        }
+        // One record per repetition, so no aggregation choice is baked in.
+        // CSV rows already end in a newline; JSON objects do not, so they are
+        // joined into JSON Lines rather than concatenated into one long line.
+        OutputFormat::Csv | OutputFormat::Json => {
+            let records: Vec<String> = run
+                .repetitions
+                .iter()
+                .enumerate()
+                .map(|(index, repetition)| {
+                    let result = run.result_for(repetition);
+                    with_repetition(
+                        index,
+                        &format_result(&result, &repetition.metrics, format),
+                        format,
+                    )
+                })
+                .collect();
+            match format {
+                OutputFormat::Json => format!("{}\n", records.join("\n")),
+                _ => records.concat(),
+            }
+        }
+    }
+}
+
+/// Adds a repetition index to a formatted single-run record.
+fn with_repetition(index: usize, record: &str, format: OutputFormat) -> String {
+    match format {
+        // Prepend the index, matching `repeated_csv_header`.
+        OutputFormat::Csv => format!("{index},{record}"),
+        // Splice into the opening brace, so the field leads the object.
+        OutputFormat::Json => match record.strip_prefix('{') {
+            Some(rest) => format!("{{\"repetition\":{index},{rest}"),
+            None => record.to_string(),
+        },
+        OutputFormat::Human => record.to_string(),
+    }
+}
+
+/// CSV header for [`format_repeated`], which prefixes a repetition index.
+pub fn repeated_csv_header() -> String {
+    format!("repetition,{}", csv_header())
 }
 
 #[cfg(test)]

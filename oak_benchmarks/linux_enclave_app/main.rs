@@ -28,7 +28,8 @@ use benchmark::{BenchmarkService, DEFAULT_BENCHMARK_SEED, NativeTimer, NullSysca
 use clap::Parser;
 use cli_common::{
     BenchmarkMetrics, BenchmarkResult, CpuFeatures, DisplayBenchmarkType, OutputFormat,
-    byte_semantics, check_status, csv_header, format_result, parse_benchmark_type, sanitize_detail,
+    RepeatedRun, Repetition, byte_semantics, check_status, csv_header, format_repeated,
+    format_result, parse_benchmark_type, repeated_csv_header, sanitize_detail,
 };
 use oak_benchmark_proto_rust::oak::benchmark::{BenchmarkType, RunBenchmarkRequest};
 
@@ -124,6 +125,20 @@ struct Args {
     /// silently ran over different input data.
     #[arg(long, default_value_t = DEFAULT_BENCHMARK_SEED)]
     seed: u64,
+
+    /// Number of times to repeat the whole measurement.
+    ///
+    /// Above one, the report becomes a median with quartiles and a stated
+    /// sample count instead of a single number, and every sample is listed.
+    /// A single run of a microbenchmark is one draw from a right-skewed
+    /// distribution, not a measurement.
+    ///
+    /// Repetitions share one process, so the heap and the caches are warm from
+    /// the second onwards. For the allocator and page-fault benchmarks that is
+    /// a real difference rather than noise, which is why the individual
+    /// samples are printed rather than only their median.
+    #[arg(long, default_value = "1")]
+    repetitions: u32,
 }
 
 // ── gRPC server implementation ──
@@ -194,36 +209,54 @@ async fn run_server(port: u16, seed: u64) -> Result<(), Box<dyn std::error::Erro
 
 /// Run the benchmark locally and print results.
 fn run_standalone(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
+    if args.repetitions == 0 {
+        return Err("--repetitions must be at least 1".into());
+    }
+
     let mut service =
         BenchmarkService::<NativeTimer>::new(args.seed).with_null_syscall(&NULL_SYSCALL_PROBE);
 
-    let request = RunBenchmarkRequest {
-        benchmark_type: args.benchmark as i32,
-        data_size: args.data_size,
-        iterations: args.iterations,
-        warmup_iterations: args.warmup_iterations,
-        seed: Some(args.seed),
-        working_set_size: args.working_set_size,
-    };
-
-    let response = service.handle_request(request);
-
-    // A failed benchmark returns an all-zero response. Report the error rather
-    // than formatting the zeros as if they were a measurement.
-    check_status(response.status)?;
-
-    // Use cli_common for metrics calculation and formatting.
     let bytes = byte_semantics(args.benchmark);
-    let metrics = BenchmarkMetrics::calculate(
-        response.elapsed_tsc,
-        response.elapsed_ns,
-        response.iterations_completed,
-        response.bytes_processed,
-        // Not needed: the native runner has a real clock and reports
-        // `elapsed_ns` directly, which takes precedence over TSC conversion.
-        0,
-        bytes,
-    );
+    let mut repetitions = Vec::with_capacity(args.repetitions as usize);
+    let mut last = None;
+
+    for _ in 0..args.repetitions {
+        let request = RunBenchmarkRequest {
+            benchmark_type: args.benchmark as i32,
+            data_size: args.data_size,
+            iterations: args.iterations,
+            warmup_iterations: args.warmup_iterations,
+            seed: Some(args.seed),
+            working_set_size: args.working_set_size,
+        };
+
+        let response = service.handle_request(request);
+
+        // A failed benchmark returns an all-zero response. Report the error
+        // rather than formatting the zeros as if they were a measurement.
+        check_status(response.status)?;
+
+        repetitions.push(Repetition {
+            elapsed_tsc: response.elapsed_tsc,
+            checksum: response.checksum,
+            metrics: BenchmarkMetrics::calculate(
+                response.elapsed_tsc,
+                response.elapsed_ns,
+                response.iterations_completed,
+                response.bytes_processed,
+                // Not needed: the native runner has a real clock and reports
+                // `elapsed_ns` directly, which takes precedence over TSC
+                // conversion.
+                0,
+                bytes,
+            ),
+        });
+        last = Some(response);
+    }
+
+    // `last` is populated because the loop ran at least once.
+    let response = last.expect("at least one repetition");
+
     let result = BenchmarkResult {
         benchmark_name: DisplayBenchmarkType(args.benchmark).to_string(),
         data_size: args.data_size,
@@ -239,10 +272,18 @@ fn run_standalone(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
         detail: sanitize_detail(&response.detail),
     };
 
-    if args.csv_header && matches!(args.output, OutputFormat::Csv) {
-        print!("{}", csv_header());
+    if args.repetitions == 1 {
+        if args.csv_header && matches!(args.output, OutputFormat::Csv) {
+            print!("{}", csv_header());
+        }
+        print!("{}", format_result(&result, &repetitions[0].metrics, args.output));
+    } else {
+        if args.csv_header && matches!(args.output, OutputFormat::Csv) {
+            print!("{}", repeated_csv_header());
+        }
+        let run = RepeatedRun { result, repetitions };
+        print!("{}", format_repeated(&run, args.output));
     }
-    print!("{}", format_result(&result, &metrics, args.output));
 
     if matches!(args.output, OutputFormat::Human) {
         println!("Native CPU features: {}", CpuFeatures::from_wire(response.cpu_features));
