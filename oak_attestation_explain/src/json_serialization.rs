@@ -370,6 +370,7 @@ pub fn serialize_raw_digest(instance: &RawDigest) -> serde_json::Value {
     // to keep the serialization in sync manually.
     let RawDigest {
         psha2,
+        #[allow(deprecated)]
         sha1,
         sha2_256,
         sha2_512,

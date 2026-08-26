@@ -30,7 +30,7 @@ option java_package = "com.google.oak";
 message RawDigest {
   reserved 1 to 15;
   bytes psha2 = 16;
-  bytes sha1 = 17;
+  bytes sha1 = 17 [deprecated = true];
   bytes sha2_256 = 18;
   bytes sha2_512 = 19;
   bytes sha3_512 = 20;
@@ -51,7 +51,7 @@ message RawDigest {
 message HexDigest {
   reserved 2 to 15;
   string psha2 = 16;
-  string sha1 = 17;
+  string sha1 = 17 [deprecated = true];
   string sha2_256 = 18;
   string sha2_512 = 19;
   string sha3_512 = 20;

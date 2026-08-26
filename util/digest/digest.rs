@@ -579,6 +579,7 @@ impl From<Digest> for RawDigest {
     fn from(digest: Digest) -> Self {
         match digest {
             Digest::Psha2(h) => RawDigest { psha2: h.as_ref().to_vec(), ..Default::default() },
+            #[allow(deprecated)]
             Digest::Sha1(h) => RawDigest { sha1: h.as_ref().to_vec(), ..Default::default() },
             Digest::Sha256(h) => RawDigest { sha2_256: h.as_ref().to_vec(), ..Default::default() },
             Digest::Sha384(h) => RawDigest { sha2_384: h.as_ref().to_vec(), ..Default::default() },
@@ -603,6 +604,7 @@ impl From<Digest> for HexDigest {
     fn from(digest: Digest) -> Self {
         match digest {
             Digest::Psha2(h) => HexDigest { psha2: hex::encode(h), ..Default::default() },
+            #[allow(deprecated)]
             Digest::Sha1(h) => HexDigest { sha1: hex::encode(h), ..Default::default() },
             Digest::Sha256(h) => HexDigest { sha2_256: hex::encode(h), ..Default::default() },
             Digest::Sha384(h) => HexDigest { sha2_384: hex::encode(h), ..Default::default() },

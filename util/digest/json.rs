@@ -38,9 +38,11 @@ fn set_digest_field_from_map_entry(
             digest.psha2.push_str(value);
         }
         "sha1" => {
+            #[allow(deprecated)]
             if !digest.sha1.is_empty() {
                 anyhow::bail!("duplicate key {}", key);
             }
+            #[allow(deprecated)]
             digest.sha1.push_str(value);
         }
         "sha256" | "sha2_256" => {
@@ -108,6 +110,7 @@ pub fn hex_to_set_digest(hex_digest: &HexDigest) -> DigestSet {
 
     macro_rules! insert_if_present {
         ($field:ident) => {
+            #[allow(deprecated)]
             if !hex_digest.$field.is_empty() {
                 digest_set.insert(stringify!($field).into(), hex_digest.$field.clone());
             }
