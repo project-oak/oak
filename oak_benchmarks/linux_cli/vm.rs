@@ -17,8 +17,9 @@
 //! Linux VM management for benchmarking.
 
 use std::{
+    os::fd::AsFd,
     path::Path,
-    process::{Child, Command, Stdio},
+    process::{Child, Command, ExitStatus, Stdio},
 };
 
 use anyhow::{Context, Result, anyhow};
@@ -71,15 +72,32 @@ impl LinuxVm {
             cmd.arg("--enable-snp");
         }
 
-        // Suppress script output (the script uses exec, so QEMU replaces it)
+        // The script reports its own failures on stdout, so discarding stdout
+        // turns "QEMU is not on the path" into a readiness timeout minutes
+        // later. It is sent to our stderr instead of our stdout, which carries
+        // the benchmark's CSV.
+        let script_output = std::io::stderr()
+            .as_fd()
+            .try_clone_to_owned()
+            .context("duplicating stderr for the VM script")?;
+
         let child = cmd
             .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::piped()) // Keep stderr for debugging
+            .stdout(Stdio::from(script_output))
+            .stderr(Stdio::inherit())
             .spawn()
             .context("starting run_vm.sh")?;
 
         Ok(Self { child })
+    }
+
+    /// Returns how the VMM exited, or `None` while it is still running.
+    ///
+    /// A readiness loop needs this: without it, a VMM that never started is
+    /// indistinguishable from a guest that is still booting, and the caller
+    /// waits out its whole timeout before reporting the wrong cause.
+    pub fn exited(&mut self) -> Result<Option<ExitStatus>> {
+        self.child.try_wait().context("checking whether the VM is still running")
     }
 
     /// Get the process ID of the VM.

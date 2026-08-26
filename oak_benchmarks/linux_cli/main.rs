@@ -77,6 +77,54 @@ struct Args {
     #[arg(long, default_value = "60")]
     boot_timeout: u64,
 
+    /// How long to wait between readiness probes, in milliseconds.
+    ///
+    /// Together with `--probe-timeout-ms` this sets the resolution of any boot
+    /// measurement: a probe every second cannot resolve a boot that takes two.
+    #[arg(long, default_value = "5")]
+    poll_interval_ms: u64,
+
+    /// How long a single readiness probe may block, in milliseconds.
+    ///
+    /// Without a bound the loop stops being a poll. QEMU's user-mode
+    /// networking binds the forwarded host port long before the guest is
+    /// listening, so a probe after that point is not refused: it is accepted
+    /// and held until the guest answers.
+    ///
+    /// This bounds the probe only. The benchmark itself runs afterwards and is
+    /// not bounded by anything here.
+    ///
+    /// It does not by itself bound the error in a boot measurement. A probe
+    /// still in flight when the guest starts answering returns immediately, so
+    /// in practice the overshoot is one poll interval plus the probe's own
+    /// duration, which is why that duration is reported as `probe_ns`. A probe
+    /// that starts before the guest answers and times out anyway costs a
+    /// further interval each time it happens.
+    #[arg(long, default_value = "100")]
+    probe_timeout_ms: u64,
+
+    /// Report how long the VM took to become usable.
+    ///
+    /// Prints one extra line in the same shape as the enclave runner's:
+    /// `boot-latency ready_ns=<n> launch_ns=<n> probe_ns=<n> attempts=<n>`.
+    /// The line has its own format and is ignored by anything parsing the CSV
+    /// row.
+    ///
+    /// `ready_ns` is the comparable figure: the clock starts immediately
+    /// before the VMM is spawned and stops when the readiness probe is
+    /// answered. The probe is a `debug` request, so the figure does not
+    /// contain the benchmark this invocation went on to run.
+    ///
+    /// `launch_ns` is how long the host-side launcher took before it could
+    /// start probing. It means something different on each platform and is
+    /// not comparable across them. Here it is a `spawn` of a shell script
+    /// that goes on to exec QEMU, so it is not even the whole of the launch.
+    ///
+    /// `probe_ns` is how long the successful probe took, and `attempts` how
+    /// many probes there were.
+    #[arg(long, default_value = "false")]
+    report_boot_latency: bool,
+
     /// Benchmark to run.
     #[arg(long, value_parser = parse_benchmark_type, default_value = "sha256")]
     benchmark: BenchmarkType,
@@ -132,55 +180,87 @@ struct Args {
     repetitions: u32,
 }
 
-/// Connects to the benchmark server and runs the first benchmark, retrying
-/// until the VM is up or the deadline passes.
+/// Waits for the benchmark server to answer, and returns the client that
+/// reached it.
 ///
-/// The first call doubles as the readiness probe, so it returns the connected
-/// client alongside the response. Later repetitions reuse that client rather
-/// than reconnecting.
-async fn connect_and_run(
+/// The probe is a request of its own rather than the caller's, and a trivial
+/// one, because a probe has to be bounded to stay a poll and the caller's
+/// request has no bound on how long it may legitimately take. Probing with a
+/// real workload would cancel and retry every benchmark whose first call
+/// outlasts `probe_timeout`.
+///
+/// Returns the connected client, how long the probe that finally succeeded
+/// took, and how many probes it took.
+async fn connect(
+    vm: &mut LinuxVm,
     addr: &str,
-    request: RunBenchmarkRequest,
+    seed: u64,
     timeout: Duration,
-) -> Result<(BenchmarkClient<Channel>, RunBenchmarkResponse, Duration)> {
+    poll_interval: Duration,
+    probe_timeout: Duration,
+) -> Result<(BenchmarkClient<Channel>, Duration, u32)> {
+    // Does nothing in the guest beyond proving the server is answering; see
+    // `BenchmarkType::Debug` in benchmark/service.rs.
+    let request = RunBenchmarkRequest {
+        benchmark_type: BenchmarkType::Debug as i32,
+        data_size: 0,
+        iterations: 1,
+        warmup_iterations: 0,
+        seed: Some(seed),
+        working_set_size: 0,
+    };
+
     let start = Instant::now();
     let mut last_error = None;
+    let mut attempts = 0u32;
 
     loop {
         if start.elapsed() > timeout {
-            return Err(
-                last_error.unwrap_or_else(|| anyhow!("Timeout waiting for benchmark server"))
-            );
+            return Err(last_error
+                .unwrap_or_else(|| anyhow!("no readiness probe was attempted"))
+                .context("waiting for the benchmark server"));
         }
 
         let attempt_start = Instant::now();
+        attempts += 1;
 
-        let channel_result = Channel::from_shared(format!("http://{}", addr))
-            .context("invalid address")?
-            .connect()
-            .await;
+        // The timeout covers the RPC as well as the connect, because it is the
+        // RPC that hangs: the connect succeeds against SLIRP's bound port.
+        let probe = tokio::time::timeout(probe_timeout, async {
+            let channel = Channel::from_shared(format!("http://{}", addr))
+                .context("parsing the server address")?
+                .connect_timeout(probe_timeout)
+                .connect()
+                .await
+                .context("connecting")?;
+            let mut client = BenchmarkClient::new(channel);
+            client.run_benchmark(request).await.context("probing with a debug request")?;
+            Ok::<_, anyhow::Error>(client)
+        })
+        .await;
 
-        match channel_result {
-            Ok(channel) => {
-                let mut client = BenchmarkClient::new(channel);
-                match client.run_benchmark(request).await {
-                    Ok(resp) => {
-                        eprintln!("connected");
-                        return Ok((client, resp.into_inner(), attempt_start.elapsed()));
-                    }
-                    Err(e) => {
-                        log::debug!("RPC failed: {}, retrying...", e);
-                        last_error = Some(anyhow!("RPC failed: {}", e));
-                    }
-                }
+        match probe {
+            Ok(Ok(client)) => {
+                return Ok((client, attempt_start.elapsed(), attempts));
             }
-            Err(e) => {
-                log::debug!("Connection failed: {}, retrying...", e);
-                last_error = Some(anyhow!("Connection failed: {}", e));
+            Ok(Err(e)) => {
+                log::debug!("probe {attempts} failed after {:?}: {e:#}", attempt_start.elapsed());
+                last_error = Some(e);
+            }
+            Err(_) => {
+                log::debug!("probe {attempts} timed out after {:?}", attempt_start.elapsed());
+                last_error = Some(anyhow!("readiness probe timed out"));
             }
         }
 
-        tokio::time::sleep(Duration::from_secs(1)).await;
+        // A VMM that failed to start refuses every probe, which is what a guest
+        // that has not finished booting also does. Distinguishing them here
+        // turns a minute of polling into an immediate, accurate error.
+        if let Some(status) = vm.exited()? {
+            return Err(anyhow!("the VM exited before becoming reachable: {status}"));
+        }
+
+        tokio::time::sleep(poll_interval).await;
     }
 }
 
@@ -213,7 +293,11 @@ async fn main() -> Result<()> {
         cpus: args.vm_cpus,
         enable_snp: args.enable_snp,
     };
-    let vm = LinuxVm::boot(&vm_config)?;
+    // The clock for the boot measurement starts here, before the VMM exists,
+    // so that everything the host does to bring the guest up is inside it.
+    let launch_start = Instant::now();
+    let mut vm = LinuxVm::boot(&vm_config)?;
+    let launch_elapsed = launch_start.elapsed();
 
     eprintln!("Waiting for benchmark server on port {}...", args.port);
 
@@ -229,32 +313,54 @@ async fn main() -> Result<()> {
     let addr = format!("127.0.0.1:{}", args.port);
     let timeout = Duration::from_secs(args.boot_timeout);
 
-    let (mut client, first_response, first_elapsed) =
-        connect_and_run(&addr, request, timeout).await?;
+    let (mut client, probe_elapsed, attempts) = connect(
+        &mut vm,
+        &addr,
+        args.seed,
+        timeout,
+        Duration::from_millis(args.poll_interval_ms),
+        Duration::from_millis(args.probe_timeout_ms),
+    )
+    .await?;
+    let ready_elapsed = launch_start.elapsed();
+
+    // Printed before the benchmark runs, because the boot measurement is
+    // complete at this point and does not depend on the benchmark succeeding.
+    //
+    // `probe_ns` is how long the probe that finally succeeded took. It bounds
+    // the error in `ready_ns`: the guest became reachable at most that long
+    // before the probe returned, and at most one poll interval before the
+    // probe started.
+    if args.report_boot_latency {
+        println!(
+            "boot-latency ready_ns={} launch_ns={} probe_ns={} attempts={}",
+            ready_elapsed.as_nanos(),
+            launch_elapsed.as_nanos(),
+            probe_elapsed.as_nanos(),
+            attempts
+        );
+    }
 
     // The Linux runner reports elapsed_ns directly, so the TSC frequency is
     // never needed to convert; 0 is passed as the unused fallback.
     let bytes = byte_semantics(args.benchmark);
     let mut repetitions = Vec::with_capacity(args.repetitions as usize);
-    let mut response = first_response;
-    // Every repetition, so that this is the quantity `oak_cli` reports under
-    // the same name. Taking one repetition would make the two runners print
-    // different things. The first repetition also carries the connection
-    // setup, because it doubles as the readiness probe.
-    let mut host_elapsed = first_elapsed;
+    // Set on every repetition; the reported row describes the last one.
+    let mut response = RunBenchmarkResponse::default();
+    // Spans every repetition, so that this is the quantity `oak_cli` reports
+    // under the same name. Timing one repetition would make the two runners
+    // print different things. The readiness probe is already outside it.
+    let host_start = Instant::now();
 
-    for index in 0..args.repetitions {
-        // The first response came back from the readiness probe above, so only
-        // the later repetitions need a fresh RPC.
-        if index > 0 {
-            let call_start = Instant::now();
-            response = client
-                .run_benchmark(request)
-                .await
-                .context("running benchmark repetition")?
-                .into_inner();
-            host_elapsed += call_start.elapsed();
-        }
+    for _ in 0..args.repetitions {
+        // Deliberately not bounded by `--probe-timeout-ms`: that bound exists
+        // to keep the readiness loop a poll, and a benchmark may take as long
+        // as it takes.
+        response = client
+            .run_benchmark(request)
+            .await
+            .context("running the benchmark")?
+            .into_inner();
 
         // Abort before formatting: a failed benchmark returns an all-zero
         // response, which would otherwise print as a plausible row of zeros.
@@ -279,6 +385,7 @@ async fn main() -> Result<()> {
             ),
         });
     }
+    let host_elapsed = host_start.elapsed();
 
     let result = BenchmarkResult {
         benchmark_name: DisplayBenchmarkType(args.benchmark).to_string(),

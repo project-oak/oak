@@ -84,13 +84,23 @@ struct Args {
 
     /// Report how long the enclave took to become usable.
     ///
-    /// Prints one extra line, `boot-latency launch_ns=<n> ready_ns=<n>`,
-    /// where `launch_ns` is the time for the launcher to return and
-    /// `ready_ns` is the time until the first RPC response arrives. The line
-    /// has its own format and is ignored by anything parsing the CSV row.
+    /// Prints one extra line in the same shape as the Linux runner's:
+    /// `boot-latency ready_ns=<n> launch_ns=<n> probe_ns=<n> attempts=<n>`.
+    /// The line has its own format and is ignored by anything parsing the CSV
+    /// row.
     ///
-    /// `ready_ns` includes the benchmark itself, so it is only a boot latency
-    /// when the benchmark is trivial. Use `--benchmark=debug --iterations=1`.
+    /// `ready_ns` is the comparable figure: the clock starts immediately
+    /// before the VMM is spawned and stops when the first RPC response
+    /// arrives. It contains the benchmark itself, so use one that does no
+    /// work: `--benchmark=debug --iterations=1`.
+    ///
+    /// `launch_ns` is how long the host-side launcher took before it could
+    /// send anything. It means something different on each platform and is
+    /// not comparable across them.
+    ///
+    /// `probe_ns` and `attempts` are always zero here, because this platform
+    /// has no readiness loop: the launcher creates a socket pair rather than
+    /// binding a port that has to be polled.
     #[arg(long, default_value = "false")]
     report_boot_latency: bool,
 
@@ -125,12 +135,34 @@ async fn main() -> Result<()> {
     log::info!("Data size: {} bytes", args.data_size);
     log::info!("Iterations: {}", args.iterations);
 
+    // Detected before the launch clock starts: calibration spins for 50 ms,
+    // and that is host-side setup rather than any part of the guest coming up.
+    // Measuring it inside the boot window would have added the whole 50 ms to
+    // every reported boot latency. It is detected once because the frequency
+    // does not change between repetitions.
+    let tsc_freq = args.tsc_freq.unwrap_or_else(|| {
+        let detected = detect_tsc_freq();
+        log::info!(
+            "detected TSC frequency: {} Hz (source: {})",
+            detected.hz(),
+            detected.source_description()
+        );
+        if !detected.is_trustworthy() {
+            log::warn!(
+                "TSC frequency was not measured directly ({}); nanosecond and MB/s figures may \
+                 be scaled incorrectly, prefer the TSC ticks/op column",
+                detected.source_description()
+            );
+        }
+        detected.hz()
+    });
+
     // Launch the enclave.
     log::info!("Launching enclave...");
     let launch_start = Instant::now();
     let (guest_instance, connector_handle) = launcher::launch(args.launcher_params)
         .await
-        .map_err(|e| anyhow::anyhow!("Failed to launch enclave: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("launching the enclave: {e}"))?;
     let launch_elapsed = launch_start.elapsed();
 
     log::info!("Enclave launched");
@@ -151,25 +183,40 @@ async fn main() -> Result<()> {
 
     log::info!("Sending benchmark request...");
 
-    // Detected once, before the loop: calibration spins for 50 ms and the
-    // frequency does not change between repetitions.
-    let tsc_freq = args.tsc_freq.unwrap_or_else(|| {
-        let detected = detect_tsc_freq();
-        log::info!(
-            "detected TSC frequency: {} Hz (source: {})",
-            detected.hz(),
-            detected.source_description()
-        );
-        if !detected.is_trustworthy() {
-            log::warn!(
-                "TSC frequency was not measured directly ({}); nanosecond and MB/s figures may \
-                 be scaled incorrectly, prefer the TSC ticks/op column",
-                detected.source_description()
-            );
-        }
-        detected.hz()
-    });
     let bytes = byte_semantics(args.benchmark);
+
+    // The boot measurement stops here, on a request of its own, so that it does
+    // not contain the benchmark this invocation goes on to run. The Linux
+    // runner bounds and repeats the equivalent request as a readiness probe;
+    // this one needs neither, because the launcher hands back an established
+    // channel rather than a port that has to be polled. What matters is that
+    // both platforms stop the clock on the same trivial request, which is an
+    // invariant of the two runners rather than something the caller has to
+    // arrange by passing `--benchmark=debug`.
+    if args.report_boot_latency {
+        let probe = RunBenchmarkRequest {
+            benchmark_type: BenchmarkType::Debug as i32,
+            data_size: 0,
+            iterations: 1,
+            warmup_iterations: 0,
+            seed: Some(args.seed),
+            working_set_size: 0,
+        };
+        client
+            .run_benchmark(&probe)
+            .await
+            .map_err(|e| anyhow::anyhow!("invoking the readiness probe: {e:?}"))?
+            .map_err(|e| anyhow::anyhow!("readiness probe returned an error: {e:?}"))?;
+
+        // `probe_ns` and `attempts` are zero rather than one: this platform has
+        // no readiness loop to describe, so there is no probe duration that
+        // could bound the error in `ready_ns`.
+        println!(
+            "boot-latency ready_ns={} launch_ns={} probe_ns=0 attempts=0",
+            launch_start.elapsed().as_nanos(),
+            launch_elapsed.as_nanos(),
+        );
+    }
 
     let host_start = Instant::now();
     let mut repetitions = Vec::with_capacity(args.repetitions as usize);
@@ -180,20 +227,8 @@ async fn main() -> Result<()> {
         let response = client
             .run_benchmark(&request)
             .await
-            .map_err(|e| anyhow::anyhow!("Failed to invoke benchmark RPC: {:?}", e))?
-            .map_err(|e| anyhow::anyhow!("Benchmark RPC returned error: {:?}", e))?;
-
-        // Printed before the status check so a failed benchmark still yields a
-        // boot measurement, which does not depend on the benchmark succeeding.
-        // Only the first response bounds the boot; later repetitions run
-        // against an already-booted enclave.
-        if args.report_boot_latency && repetitions.is_empty() {
-            println!(
-                "boot-latency launch_ns={} ready_ns={}",
-                launch_elapsed.as_nanos(),
-                launch_start.elapsed().as_nanos()
-            );
-        }
+            .map_err(|e| anyhow::anyhow!("invoking the benchmark RPC: {e:?}"))?
+            .map_err(|e| anyhow::anyhow!("benchmark RPC returned an error: {e:?}"))?;
 
         // Abort before formatting: a failed benchmark returns an all-zero
         // response, which would otherwise be printed as a plausible-looking
