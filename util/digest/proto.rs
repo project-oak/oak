@@ -83,8 +83,6 @@ pub fn get_hex_digest_match(a: &HexDigest, b: &HexDigest) -> MatchResult {
     };
 
     compare(&a.psha2, &b.psha2);
-    #[allow(deprecated)]
-    compare(&a.sha1, &b.sha1);
     compare(&a.sha2_256, &b.sha2_256);
     compare(&a.sha2_512, &b.sha2_512);
     compare(&a.sha3_512, &b.sha3_512);
@@ -133,8 +131,6 @@ pub fn is_raw_digest_match(actual: &RawDigest, expected: &RawDigest) -> anyhow::
 pub fn raw_to_hex_digest(r: &RawDigest) -> HexDigest {
     HexDigest {
         psha2: hex::encode(&r.psha2),
-        #[allow(deprecated)]
-        sha1: hex::encode(&r.sha1),
         sha2_256: hex::encode(&r.sha2_256),
         sha2_512: hex::encode(&r.sha2_512),
         sha3_512: hex::encode(&r.sha3_512),
@@ -155,8 +151,6 @@ pub fn hex_to_raw_digest(h: &HexDigest) -> anyhow::Result<RawDigest> {
 
     let raw = RawDigest {
         psha2: hex_decode(&h.psha2, "psha2")?,
-        #[allow(deprecated)]
-        sha1: hex_decode(&h.sha1, "sha1")?,
         sha2_256: hex_decode(&h.sha2_256, "sha2_256")?,
         sha2_512: hex_decode(&h.sha2_512, "sha2_512")?,
         sha3_512: hex_decode(&h.sha3_512, "sha3_512")?,

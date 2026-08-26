@@ -368,26 +368,13 @@ pub fn serialize_raw_digest(instance: &RawDigest) -> serde_json::Value {
     // all fields. If a new field is added to the struct, this code won't
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
-    let RawDigest {
-        psha2,
-        #[allow(deprecated)]
-        sha1,
-        sha2_256,
-        sha2_512,
-        sha3_512,
-        sha3_384,
-        sha3_256,
-        sha3_224,
-        sha2_384,
-    } = instance;
+    let RawDigest { psha2, sha2_256, sha2_512, sha3_512, sha3_384, sha3_256, sha3_224, sha2_384 } =
+        instance;
 
     let mut map = serde_json::Map::new();
 
     if !psha2.is_empty() {
         map.insert("psha2".to_string(), json!(hex::encode(psha2)));
-    }
-    if !sha1.is_empty() {
-        map.insert("sha1".to_string(), json!(hex::encode(sha1)));
     }
     if !sha2_256.is_empty() {
         map.insert("sha2_256".to_string(), json!(hex::encode(sha2_256)));

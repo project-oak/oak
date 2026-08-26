@@ -47,9 +47,6 @@ pub struct Variant {
 pub struct RawDigest {
     #[prost(bytes = "vec", tag = "16")]
     pub psha2: ::prost::alloc::vec::Vec<u8>,
-    #[deprecated]
-    #[prost(bytes = "vec", tag = "17")]
-    pub sha1: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "18")]
     pub sha2_256: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "19")]
@@ -76,9 +73,6 @@ pub struct RawDigest {
 pub struct HexDigest {
     #[prost(string, tag = "16")]
     pub psha2: ::prost::alloc::string::String,
-    #[deprecated]
-    #[prost(string, tag = "17")]
-    pub sha1: ::prost::alloc::string::String,
     #[prost(string, tag = "18")]
     pub sha2_256: ::prost::alloc::string::String,
     #[prost(string, tag = "19")]
