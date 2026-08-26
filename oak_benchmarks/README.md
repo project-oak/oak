@@ -71,6 +71,22 @@ is quoted:
    baseline ISA than the other. The baseline's build transition below is what
    closes that gap. See [Crypto acceleration](#crypto-acceleration) below.
 
+`scripts/check_matrix.py` gates a matrix run on these. It compares the checksum
+and `cpu_features` columns directly, and before either, that there is more than
+one platform, that they ran the same benchmarks the same number of times, and
+that `iterations`, `data_size` and `working_set_size` agree. That last group is
+what stops a green verdict meaning only that the disagreeing rows were absent.
+The seed it can reach only indirectly, since it is not a CSV column: a matching
+checksum implies a matching seed everywhere except the three free-matching rows
+above, which the script names in its output rather than counting.
+`scripts/run_matrix.sh` calls it and adopts its exit status.
+
+On a host whose `CPUID` reports SHA-NI and AVX-512 IFMA, the two Linux platforms
+reach them by runtime dispatch and the enclave does not, so the check fails on
+any matrix that includes the enclave. That is the intended behaviour: the run
+did happen, and the CSVs are written either way, but the platforms are not
+comparable and the tooling now says so.
+
 ## Metrics
 
 The headline metric is **TSC ticks per operation**, computed from the guest's

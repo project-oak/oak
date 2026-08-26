@@ -84,6 +84,9 @@ Environment variables:
   ITERATIONS=10000           Timed iterations per repetition
   PLATFORMS="native oak vm"  Which platforms to measure
   OUT_DIR=<path>             Where to write the CSVs and the manifest
+
+Exits non-zero when check_matrix.py finds the platforms incomparable. The CSVs
+are still written; only the claim that they may be compared is withheld.
 EOF
 }
 
@@ -133,7 +136,9 @@ write_manifest() {
 
 run_native() {
   local out="${OUT_DIR}/native.csv"
+  local log="${OUT_DIR}/native.log"
   : >"${out}"
+  : >"${log}"
   local header="--csv-header"
   for b in "${BENCHMARKS[@]}"; do
     local n w
@@ -142,7 +147,8 @@ run_native() {
     echo "native ${b} (${n} iterations)" >&2
     "${PIN[@]}" "${BAZEL[@]}" run -c opt //oak_benchmarks/linux_enclave_app -- \
       --benchmark="${b}" --iterations="${n}" --working-set-size="${w}" \
-      --repetitions="${REPETITIONS}" --output=csv ${header} 2>/dev/null >>"${out}"
+      --repetitions="${REPETITIONS}" --output=csv ${header} \
+      2>>"${log}" >>"${out}"
     header=""
   done
   echo "wrote ${out}"
@@ -150,7 +156,9 @@ run_native() {
 
 run_oak() {
   local out="${OUT_DIR}/oak.csv"
+  local log="${OUT_DIR}/oak.log"
   : >"${out}"
+  : >"${log}"
   local header="--csv-header"
   for b in "${BENCHMARKS[@]}"; do
     local n w
@@ -160,7 +168,8 @@ run_oak() {
     "${PIN[@]}" "${BAZEL[@]}" run -c opt \
       //oak_benchmarks/oak_enclave_app:oak_enclave_app_run -- \
       --memory-size=1024M --benchmark="${b}" --iterations="${n}" --working-set-size="${w}" \
-      --repetitions="${REPETITIONS}" --output=csv ${header} 2>/dev/null >>"${out}"
+      --repetitions="${REPETITIONS}" --output=csv ${header} \
+      2>>"${log}" >>"${out}"
     header=""
   done
   echo "wrote ${out}"
@@ -168,7 +177,9 @@ run_oak() {
 
 run_vm() {
   local out="${OUT_DIR}/vm.csv"
+  local log="${OUT_DIR}/vm.log"
   : >"${out}"
+  : >"${log}"
   local header="--csv-header"
   for b in "${BENCHMARKS[@]}"; do
     local n w
@@ -178,11 +189,17 @@ run_vm() {
     "${PIN[@]}" "${BAZEL[@]}" run -c opt \
       //oak_benchmarks/linux_enclave_app:linux_enclave_image_run -- \
       --benchmark="${b}" --iterations="${n}" --working-set-size="${w}" \
-      --repetitions="${REPETITIONS}" --output=csv ${header} 2>/dev/null >>"${out}"
+      --repetitions="${REPETITIONS}" --output=csv ${header} \
+      2>>"${log}" >>"${out}"
     header=""
   done
   echo "wrote ${out}"
 }
+
+# A reused OUT_DIR would otherwise leave a previous run's CSV in place for any
+# platform this run is not measuring, and the checker would compare it against
+# today's without noticing.
+rm -f "${OUT_DIR}"/*.csv "${OUT_DIR}"/*.log
 
 write_manifest
 for p in ${PLATFORMS}; do
@@ -198,3 +215,9 @@ for p in ${PLATFORMS}; do
 done
 
 echo "matrix complete: ${OUT_DIR}"
+
+# Nothing above establishes that the CSVs may be placed side by side. The
+# checker does, and its exit status becomes this script's, so a matrix whose
+# platforms disagree cannot be mistaken for one that succeeded.
+python3 "${REPO_ROOT}/oak_benchmarks/scripts/check_matrix.py" \
+  --dir="${OUT_DIR}" --platforms="${PLATFORMS}"

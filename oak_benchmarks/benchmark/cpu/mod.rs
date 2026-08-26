@@ -78,6 +78,13 @@ bitflags! {
 /// [`CpuFeatures::to_wire`].
 const _: () = assert!(FeatureSet::all().bits() <= 0xFF);
 
+/// `oak_benchmarks/scripts/check_matrix.py` mirrors these flags by name and bit
+/// position, and masks off anything it does not know about. A seventh flag
+/// added here and not there would be dropped on both sides of that comparison,
+/// so the checker would report agreement between platforms that differ. Adding
+/// a flag means updating `FEATURE_NAMES` in that file and this bound together.
+const _: () = assert!(FeatureSet::all().bits() == 0x3F);
+
 impl FeatureSet {
     /// The AVX-512 flags, whose register state the Restricted Kernel does not
     /// enable.
