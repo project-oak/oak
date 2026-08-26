@@ -36,15 +36,17 @@ is quoted:
 3. **Same instruction set.** Every response carries `cpu_features`, reporting
    the compile-time target features, the `CPUID` features, and whether the
    crypto crates can dispatch on the latter at runtime. The _effective_ sets
-   must match. The field covers SHA-NI, AES-NI, PCLMULQDQ, AVX2, AVX-512 IFMA
+   should match. The field covers SHA-NI, AES-NI, PCLMULQDQ, AVX2, AVX-512 IFMA
    and AVX-512VL. It has already caught two real problems: bare-metal builds
    silently using software SHA-2 and AES, and `curve25519-dalek` selecting an
    AVX-512 IFMA backend on Linux while the enclave fell back to AVX2, worth
-   1.65x on Ed25519. Note that this field covers only the dispatch-capable
-   crypto crates, **not** general codegen: two binaries can report identical
-   effective features while one was compiled for a newer baseline ISA than the
-   other. The baseline's build transition below is what closes that gap. See
-   [Crypto acceleration](#crypto-acceleration) below.
+   1.65x on Ed25519. AES-NI and PCLMULQDQ now agree; **SHA-NI and AVX-512 IFMA
+   still do not**, and the `sha256` and `ed25519-*` ratios should not be quoted
+   as enclave overhead until they do. Note that this field covers only the
+   dispatch-capable crypto crates, **not** general codegen: two binaries can
+   report identical effective features while one was compiled for a newer
+   baseline ISA than the other. The baseline's build transition below is what
+   closes that gap. See [Crypto acceleration](#crypto-acceleration) below.
 
 ## Metrics
 
@@ -371,17 +373,51 @@ The consequence, before this was addressed, was that the enclave binary
 contained zero SHA-NI and zero AES-NI instructions while the Linux baseline
 contained 56 and 462 respectively. A naive comparison then reported a large
 "enclave overhead" that was really the gap between a hardware and a software
-implementation of the same primitive: SHA-256 appeared to run at 0.20x native,
-when the true figure is close to parity.
+implementation of the same primitive.
 
-The fix is in [`bazel/rust/extensions.bzl`](../bazel/rust/extensions.bzl), which
-adds `+sha,+aes,+pclmulqdq` to the bare-metal target features. To verify:
+AES-NI is fixed. [`bazel/rust/defs.bzl`](../bazel/rust/defs.bzl) puts
+`+aes,+pclmulqdq` in `ENCLAVE_TARGET_FEATURES`, and both sides now issue the
+same VEX-encoded `vaesenc`. To verify:
+
+```bash
+objdump -d "$(bazel cquery -c opt --output=files \
+    //oak_benchmarks/oak_enclave_app:oak_enclave_app)" |
+    grep -cE 'v?aesenc'
+```
+
+### SHA-NI is deliberately absent, and SHA-256 is still asymmetric
+
+`+sha` was enabled once and then removed. SHA-NI is missing from pre-Ice Lake
+Intel parts, and a binary built with it raises an invalid-opcode fault on
+machines still used for development, so `ENCLAVE_TARGET_FEATURES` carries no
+`+sha`. The same census returns zero for the enclave and 56 for the baseline:
 
 ```bash
 objdump -d "$(bazel cquery -c opt --output=files \
     //oak_benchmarks/oak_enclave_app:oak_enclave_app)" |
     grep -cE 'sha256rnds2|sha256msg'
 ```
+
+The `matched_isa_binary` transition described below cannot close that gap. The
+transition sets compile-time target features, while `sha2` reaches SHA-NI
+through a runtime `CPUID` check whose body lives in a
+`#[target_feature(enable = "sha")]` function, which the compiler emits whatever
+the global flags say. `curve25519-dalek` selects its AVX-512 IFMA backend the
+same way, which is why `ed25519-sign` and `ed25519-verify` are asymmetric too.
+The baseline exports `sha2::sha256::x86::shani_cpuid::STORAGE` and
+`curve25519_dalek::backend::get_selected_backend::cpuid_avx512::STORAGE`; the
+enclave exports neither.
+
+So `sha256` reports the enclave at roughly 4.7x the baseline, and `ed25519-*` at
+roughly 1.7x. Those figures measure the absence of runtime CPU feature detection
+under `no_std`. They are not a cost the Restricted Kernel imposes, and quoting
+them as such would be wrong.
+
+To measure the primitive rather than the dispatch, force the baseline to the
+software backend. `sha2` has a `force-soft` feature, already applied to
+`ONLY_NO_STD_NO_AVX` in `MODULE.bazel`; widening that scope makes SHA-256
+like-for-like. The enclave-side alternative, restoring `+sha`, is what the
+hardware supports here but not everywhere.
 
 ### The baseline is built to match
 
@@ -420,8 +456,9 @@ objdump -d "${binary}" |
     grep -oE '\b(v?aesenc|sha256rnds2|rorx|mulx)\b' | sort | uniq -c
 ```
 
-Both binaries should show `vaesenc` (not the legacy `aesenc`), the same
-`sha256rnds2` count, and non-zero `rorx`/`mulx`.
+Both binaries should show `vaesenc` rather than the legacy `aesenc`, in
+comparable quantity, and non-zero `rorx`/`mulx`. `sha256rnds2` is the exception:
+the baseline has it and the enclave does not, for the reason given above.
 
 ## Notes
 
