@@ -19,7 +19,7 @@
 use oak_benchmark_proto_rust::oak::benchmark::{BenchmarkType, RunBenchmarkRequest};
 
 use super::service::BenchmarkService;
-use crate::{BenchmarkError, NativeTimer, NullSyscall};
+use crate::{BenchmarkError, CHECKSUM_INIT, NativeTimer, NullSyscall, fold_sample};
 
 /// Builds a small request for `benchmark_type` with everything else defaulted.
 fn request_for(benchmark_type: BenchmarkType) -> RunBenchmarkRequest {
@@ -364,5 +364,132 @@ fn test_checksums_witness_the_seed() {
             "{benchmark_type:?} produces the same checksum for two different seeds, \
              so it cannot witness the work it performed"
         );
+    }
+}
+
+/// Whether a change in the iteration count must change the checksum.
+///
+/// Exhaustive for the same reason as [`is_self_contained`].
+fn checksum_depends_on_iterations(benchmark_type: BenchmarkType) -> bool {
+    match benchmark_type {
+        BenchmarkType::Sha256
+        | BenchmarkType::Sha512
+        | BenchmarkType::Sha3256
+        | BenchmarkType::Sha3512
+        | BenchmarkType::P256Sign
+        | BenchmarkType::P256Verify
+        | BenchmarkType::Ed25519Sign
+        | BenchmarkType::Ed25519Verify
+        | BenchmarkType::Aes256GcmSeal
+        | BenchmarkType::Aes256GcmOpen
+        | BenchmarkType::MemoryInsert
+        | BenchmarkType::MemoryLookup
+        | BenchmarkType::MemoryChurn
+        | BenchmarkType::ArrayUpdate
+        | BenchmarkType::AllocChurn
+        | BenchmarkType::PageTouch => true,
+
+        // Rounds its iteration count up to a whole lap of the buffer, so two
+        // counts that fall inside the same lap walk the same nodes and land on
+        // the same checksum. It does vary across laps; see
+        // `checksum_witnesses_the_order_of_a_whole_number_of_laps` in
+        // `memory::pointer_chase`, which is where that belongs because it
+        // needs a buffer small enough to lap quickly.
+        BenchmarkType::PointerChase => false,
+
+        // Their checksum folds a success count the run forces to equal
+        // `iterations`, so it carries nothing about the work — but it does
+        // carry the count, and checking that costs nothing.
+        BenchmarkType::SyscallControl | BenchmarkType::NullSyscall => true,
+
+        // Not benchmarks.
+        BenchmarkType::Debug | BenchmarkType::Unspecified => false,
+    }
+}
+
+/// The checksum has to witness the timed loop, not only its inputs.
+///
+/// Eight benchmarks shipped without this property. The four hashes, both AEAD
+/// directions and both verify modes recomputed their checksum after the timer
+/// stopped, from data setup had established, and threw away the accumulator
+/// the loop had carried. Their checksums were byte-identical at eight
+/// iterations and at a thousand, so "the checksums agreed" said only that both
+/// platforms had been handed the same inputs.
+#[test]
+fn test_checksums_witness_the_timed_loop() {
+    for benchmark_type in self_contained_types() {
+        if !checksum_depends_on_iterations(benchmark_type) {
+            continue;
+        }
+
+        let mut request = request_for(benchmark_type);
+        request.working_set_size = 1 << 20;
+        request.warmup_iterations = 0;
+
+        // 512 and 640 differ by 128, which is the period of a rotate-XOR fold
+        // over a value that repeats every 64 iterations. Both counts are
+        // multiples of 128, so under such a fold both accumulators sit at
+        // CHECKSUM_INIT and the pair is exactly the one that catches it. 8 is
+        // there so a benchmark whose checksum ignores the count entirely fails
+        // on the first comparison rather than the second.
+        let counts = [8u32, 512, 640];
+        let mut checksums = alloc::vec::Vec::new();
+        for iterations in counts {
+            let mut request = request;
+            request.iterations = iterations;
+            let mut svc = BenchmarkService::<NativeTimer>::new(0);
+            let response = svc.handle_request(request);
+            assert_eq!(
+                response.status, 0,
+                "{benchmark_type:?} returned a non-zero status at {iterations} iterations"
+            );
+            checksums.push(response.checksum);
+        }
+
+        for i in 0..counts.len() {
+            for j in i + 1..counts.len() {
+                assert_ne!(
+                    checksums[i], checksums[j],
+                    "{benchmark_type:?} produces the same checksum at {} and at {} \
+                     iterations, so it witnesses its inputs but not the loop that \
+                     was timed",
+                    counts[i], counts[j]
+                );
+            }
+        }
+    }
+}
+
+/// A fold whose value term can cancel is not a witness.
+///
+/// `fold_sample` was `acc.rotate_left(7) ^ value` when it was introduced.
+/// Rotation is linear over GF(2) and generates a group of order 64, so a value
+/// repeating with a period dividing 64 cancels exactly and the accumulator
+/// returns to its starting point every 128 folds.
+///
+/// Both shapes that occur in the suite are covered. A constant value is what
+/// every benchmark folding one fixed digest produces; a cycle of 64 is what
+/// the verify loops produce, since they walk `NUM_MESSAGES` messages. Distinct
+/// accumulators, rather than merely never reaching `CHECKSUM_INIT`, because a
+/// cycle that misses the starting point is the same defect.
+#[test]
+fn fold_sample_never_repeats_an_accumulator() {
+    const FOLDS: usize = 4096;
+    let constant: [[u8; 2]; 1] = [[0x5A, 0xA5]];
+    let cycle: alloc::vec::Vec<[u8; 2]> = (0..64u16).map(|i| [i as u8, (i >> 3) as u8]).collect();
+
+    for (name, values) in
+        [("a constant value", &constant[..]), ("a cycle of 64 values", &cycle[..])]
+    {
+        let mut acc = CHECKSUM_INIT;
+        let mut seen = alloc::collections::BTreeSet::new();
+        seen.insert(acc);
+        for n in 1..=FOLDS {
+            acc = fold_sample(acc, &values[(n - 1) % values.len()]);
+            assert!(
+                seen.insert(acc),
+                "fold_sample repeated an accumulator after {n} folds of {name}"
+            );
+        }
     }
 }

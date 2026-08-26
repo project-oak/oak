@@ -31,8 +31,8 @@ use p256::ecdsa::{Signature, SigningKey, VerifyingKey, signature::Verifier};
 
 use super::CpuBenchmark;
 use crate::{
-    BenchmarkError, BenchmarkResult, CHECKSUM_INIT, checksum_update, generate_benchmark_data,
-    timer::BenchmarkTimer,
+    BenchmarkError, BenchmarkResult, CHECKSUM_INIT, checksum_update, checksum_with_witness,
+    fold_sample, generate_benchmark_data, timer::BenchmarkTimer,
 };
 
 /// Size of the message that gets signed, in bytes.
@@ -161,6 +161,11 @@ impl SigningBenchmark {
         core::hint::black_box(warmup_ok);
 
         let mut verified = 0u64;
+        // Verification returns only a boolean, so there is no output to fold.
+        // Folding the message instead witnesses that the loop walked the
+        // expected sequence the expected number of times; that all of them
+        // verified is what the check below covers.
+        let mut acc = CHECKSUM_INIT;
         let timer = T::start();
 
         for i in 0..iterations as usize {
@@ -169,6 +174,7 @@ impl SigningBenchmark {
             if self.verifying_key.verify(msg, &self.signatures[idx]).is_ok() {
                 verified += 1;
             }
+            acc = fold_sample(acc, msg);
         }
 
         let timing = timer.stop();
@@ -182,11 +188,13 @@ impl SigningBenchmark {
 
         let bytes_processed = iterations as u64 * MESSAGE_SIZE as u64;
         // Checksum over the signature set makes the verify path comparable
-        // across platforms in the same way as the other benchmarks.
-        let mut checksum = CHECKSUM_INIT;
+        // across platforms in the same way as the other benchmarks, and the
+        // accumulator ties it to the loop that ran.
+        let mut inputs = CHECKSUM_INIT;
         for sig in &self.signatures {
-            checksum = checksum_update(checksum, &sig.to_bytes());
+            inputs = checksum_update(inputs, &sig.to_bytes());
         }
+        let checksum = checksum_with_witness(inputs, acc);
         Ok(BenchmarkResult::new(timing, iterations, bytes_processed, checksum))
     }
 }

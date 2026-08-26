@@ -27,24 +27,28 @@ is quoted:
    CLI (`DEFAULT_BENCHMARK_SEED`). Earlier versions derived the seed from the
    clock independently on each platform, so the two sides silently processed
    different data.
-2. **Same result.** Every response carries a `checksum` over the benchmark
-   output. For a given benchmark, seed and parameter set it **must** be
-   identical on both platforms, and a mismatch means the comparison is invalid
-   rather than merely noisy. Read it as a witness that both sides were handed
-   the same inputs and produced the same answer — **not**, in general, as proof
-   that the timed loop ran. Comparing checksums at 8 and at 1000 iterations
-   sorts the suite into three groups:
-   - **Unchanged by `--iterations`**, so a witness of the inputs alone: the four
-     hashes, both AEAD directions, `p256-verify` and `ed25519-verify`. Their
-     checksummed value is established during setup.
-   - **A function of the iteration count alone**, so a witness of nothing:
-     `null-syscall` and `syscall-control`, which return checksums identical to
-     _each other_ at equal iteration counts. See
-     [Kernel Boundary](#kernel-boundary).
-   - **Varying with the timed loop**: everything else. That is necessary for
-     witnessing the loop but not sufficient, since a fold over the loop index
-     also varies. `pointer-chase` belongs here only above one full lap of its
-     buffer, because `--iterations` is rounded up to a lap.
+2. **Same result.** Every response carries a `checksum`. For a given benchmark,
+   seed and parameter set it **must** be identical on both platforms, and a
+   mismatch means the comparison is invalid rather than merely noisy. It folds
+   two things: the benchmark's output, which pins what was computed, and a value
+   the timed loop carried on every iteration, which pins that the loop ran and
+   how many times. Comparing checksums at two different iteration counts should
+   therefore give different values.
+   - Three benchmarks match across platforms for free, so agreement says nothing
+     about them. `null-syscall` and `syscall-control` fold a count the run
+     already forces to equal `--iterations`, because each kernel's cheapest
+     crossing returns a different value and there is nothing both sides could
+     agree on to fold; they return checksums identical to _each other_. See
+     [Kernel Boundary](#kernel-boundary). `alloc-churn` takes no seed and folds
+     a closed form in the iteration count.
+   - `pointer-chase` rounds `--iterations` up to a whole lap of its buffer, so
+     two counts inside the same lap walk the same nodes and agree. It is the
+     only exception to the iteration half.
+   - Varying with the loop is necessary but not sufficient, since a fold over
+     the loop index also varies. Nor does a matching checksum witness the hash
+     function: the three hash-map modes fold only LCG-derived key material and
+     generator state, so two platforms that resolved `ahash` to different
+     backends would agree here anyway. `cpu_features` is what covers that.
 3. **Same instruction set.** Every response carries `cpu_features`, reporting
    the compile-time target features, the `CPUID` features, and whether the
    crypto crates can dispatch on the latter at runtime. The _effective_ sets
@@ -370,11 +374,11 @@ is the effect under study rather than noise. `memory-insert` now shares it: each
 request builds and drops its own map, so every repetition after the first starts
 against a heap the previous one just churned with up to a million entries.
 
-Results carry a `checksum` over each benchmark's output and the `cpu_features`
-the guest was built with and found at runtime. Treat a comparison as invalid
-unless both sides report the same checksum, and read a difference in
-`cpu_features` as the two sides having run different instruction sets rather
-than as a difference between the kernels.
+Results carry a `checksum` over each benchmark's output and the loop that
+produced it, and the `cpu_features` the guest was built with and found at
+runtime. Treat a comparison as invalid unless both sides report the same
+checksum, and read a difference in `cpu_features` as the two sides having run
+different instruction sets rather than as a difference between the kernels.
 
 ## Manual Building
 

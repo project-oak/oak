@@ -35,8 +35,8 @@ use aes_gcm::{
 
 use super::CpuBenchmark;
 use crate::{
-    BenchmarkError, BenchmarkResult, CHECKSUM_INIT, checksum_update, fold_sample,
-    generate_benchmark_data, timer::BenchmarkTimer,
+    BenchmarkError, BenchmarkResult, CHECKSUM_INIT, checksum_update, checksum_with_witness,
+    fold_sample, generate_benchmark_data, timer::BenchmarkTimer,
 };
 
 /// Maximum plaintext size (1 MB), matching the hashing benchmark.
@@ -159,17 +159,18 @@ impl AeadBenchmark {
         }
 
         let timing = timer.stop();
-        core::hint::black_box(acc);
 
-        // Encryption is deterministic for a fixed key, nonce and message, so one
-        // extra sealing outside the timed region reproduces exactly what the loop
-        // computed. The result is independent of `iterations`, which lets the host
-        // compare checksums across runs of differing length.
+        // Encryption is deterministic for a fixed key, nonce and message, so
+        // one extra sealing outside the timed region reproduces exactly what
+        // each iteration of the loop computed. Mixing in `acc` is what makes
+        // the reported value depend on the loop having run: on its own the
+        // ciphertext checksum is the same at eight iterations as at a
+        // thousand, and the same whether or not the loop ran at all.
         let ct = self
             .cipher
             .encrypt(nonce, Payload { msg, aad: &[] })
             .map_err(|_| BenchmarkError::CryptoFailure)?;
-        let checksum = checksum_update(CHECKSUM_INIT, &ct);
+        let checksum = checksum_with_witness(checksum_update(CHECKSUM_INIT, &ct), acc);
 
         let bytes_processed = data_size as u64 * iterations as u64;
         Ok(BenchmarkResult::new(timing, iterations, bytes_processed, checksum))
@@ -209,14 +210,13 @@ impl AeadBenchmark {
         }
 
         let timing = timer.stop();
-        core::hint::black_box(acc);
 
         // One extra opening outside the timed region; see `run_seal`.
         let pt = self
             .cipher
             .decrypt(nonce, Payload { msg: ct, aad: &[] })
             .map_err(|_| BenchmarkError::CryptoFailure)?;
-        let checksum = checksum_update(CHECKSUM_INIT, &pt);
+        let checksum = checksum_with_witness(checksum_update(CHECKSUM_INIT, &pt), acc);
 
         let bytes_processed = data_size as u64 * iterations as u64;
         Ok(BenchmarkResult::new(timing, iterations, bytes_processed, checksum))

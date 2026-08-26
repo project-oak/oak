@@ -33,7 +33,7 @@ use alloc::vec::Vec;
 
 use super::MemoryBenchmark;
 use crate::{
-    BenchmarkError, BenchmarkResult, CHECKSUM_INIT, checksum_update, timer::BenchmarkTimer,
+    BenchmarkError, BenchmarkResult, CHECKSUM_INIT, checksum_with_witness, timer::BenchmarkTimer,
 };
 
 /// Default allocation size (4 KB).
@@ -140,7 +140,7 @@ impl AllocChurnBenchmark {
 
         let timing = timer.stop();
 
-        let checksum = checksum_update(CHECKSUM_INIT, &acc.to_le_bytes());
+        let checksum = checksum_with_witness(CHECKSUM_INIT, acc);
         Ok(BenchmarkResult::new(timing, iterations, total_bytes, checksum))
     }
 }

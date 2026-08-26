@@ -25,8 +25,8 @@ use sha3::{Sha3_256, Sha3_512};
 
 use super::CpuBenchmark;
 use crate::{
-    BenchmarkError, BenchmarkResult, CHECKSUM_INIT, checksum_update, fold_sample,
-    generate_benchmark_data, timer::BenchmarkTimer,
+    BenchmarkError, BenchmarkResult, CHECKSUM_INIT, checksum_update, checksum_with_witness,
+    fold_sample, generate_benchmark_data, timer::BenchmarkTimer,
 };
 
 /// Maximum data buffer size (1 MB).
@@ -111,9 +111,17 @@ impl HashingBenchmark {
     /// Run a hash benchmark using any Digest-compatible hasher.
     ///
     /// Each digest goes through [`core::hint::black_box`] so the optimiser
-    /// cannot discard the hashing. The comparable checksum is computed once
-    /// after the timer stops, since [`checksum_update`] over a 32-byte digest
-    /// costs about as much as SHA-256 itself at the short end of the sweep.
+    /// cannot discard the hashing, and [`fold_sample`] carries two bytes of it
+    /// into an accumulator. [`checksum_update`] itself is too expensive to run
+    /// per iteration: over a 32-byte digest it costs about as much as SHA-256
+    /// does at the short end of the sweep, and it costs the same on both
+    /// platforms, so it would drag their ratio toward 1.0.
+    ///
+    /// The reported checksum is the digest of the input, which pins what was
+    /// hashed, mixed with the accumulator, which pins how many times and in
+    /// what order. Neither alone is enough: the digest is the same at eight
+    /// iterations as at a thousand, and the accumulator alone would not show
+    /// that the data differed.
     fn run_hash<D: Digest, T: BenchmarkTimer>(
         data: &[u8],
         iterations: u32,
@@ -139,13 +147,13 @@ impl HashingBenchmark {
         }
 
         let timing = timer.stop();
-        core::hint::black_box(acc);
 
-        // Hashing is deterministic, so one extra digest outside the timed region
-        // reproduces what the loop computed, independently of `iterations`.
+        // Hashing is deterministic, so one extra digest outside the timed
+        // region reproduces what each iteration of the loop computed.
         let mut hasher = D::new();
         hasher.update(data);
-        let checksum = checksum_update(CHECKSUM_INIT, &hasher.finalize());
+        let checksum =
+            checksum_with_witness(checksum_update(CHECKSUM_INIT, &hasher.finalize()), acc);
 
         let bytes_processed = data.len() as u64 * iterations as u64;
 

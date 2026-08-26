@@ -170,11 +170,10 @@ pub struct BenchmarkResult {
     /// Must match between the enclave and the baseline for the same benchmark,
     /// seed and parameters.
     ///
-    /// A match is weaker evidence than it looks. Most benchmarks fold their
-    /// checksum from setup data after the timer stops, so it witnesses that
-    /// both sides consumed the same *inputs*, not that both sides performed
-    /// the same *work*. Only the signing and pointer-chase benchmarks fold a
-    /// value produced inside the timed loop.
+    /// A match is weaker evidence than it looks. It witnesses the inputs and
+    /// the loop, but not the hash function or the instruction set, and three
+    /// benchmarks match for free. The `oak_benchmarks::benchmark` module
+    /// documentation lists which and why.
     pub checksum: u64,
     /// Packed [`CpuFeatures`]: compile-time features, `CPUID` features and the
     /// runtime-dispatch flag. Layout is defined by `CpuFeatures::to_wire`.

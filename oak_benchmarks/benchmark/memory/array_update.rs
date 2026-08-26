@@ -157,10 +157,17 @@ impl ArrayUpdateBenchmark {
         let timing = timer.stop();
 
         // Fold a sample of the buffer into a checksum. Reading the whole
-        // buffer would dominate the runtime, so sample a fixed stride. This is
-        // enough to prove both platforms wrote the same bytes, and it forces
-        // the writes to be materialised.
-        let checksum = self.sample_checksum();
+        // buffer would dominate the runtime, so sample a fixed stride, which
+        // is enough to show both platforms wrote the same bytes and forces the
+        // writes to be materialised.
+        //
+        // The stride is coarse, though: 4096 bytes apart is 256 samples of a
+        // 1 MiB buffer, and a few hundred writes will usually miss all of
+        // them, leaving the checksum unchanged by the loop. The generator
+        // state the loop leaves behind closes that. It is a fingerprint of
+        // the address sequence walked and of how many steps were taken, and
+        // the loop carries it anyway.
+        let checksum = crate::checksum_with_witness(self.sample_checksum(), rng);
 
         let bytes_processed = iterations as u64;
         Ok(BenchmarkResult::new(timing, iterations, bytes_processed, checksum)

@@ -17,7 +17,7 @@
 //! Shared benchmark logic for the Oak enclave app and the Linux baseline, so
 //! that both run the same code.
 //!
-//! - `cpu`: CPU-bound benchmarks (hashing, AEAD, signing, integer compute)
+//! - `cpu`: CPU-bound benchmarks (hashing, AEAD, signing)
 //! - `memory`: Memory-bound benchmarks (random writes, hash maps, allocation,
 //!   dependent-load latency, page provisioning)
 //! - `syscall`: cost of a user/kernel round trip
@@ -30,40 +30,37 @@
 //! 1. **Identical work.** The enclave and the baseline must execute the same
 //!    operations over the same inputs. All pseudo-random data is derived from a
 //!    caller-supplied seed, never from a clock or the TSC.
-//! 2. **Verifiable inputs.** Each benchmark returns a checksum over its output,
-//!    and that checksum must be a function of the data the benchmark touched
-//!    rather than only of the request parameters. Matching checksums across
-//!    platforms show that both sides were handed the same inputs and computed
-//!    the same answer from them.
+//! 2. **Verifiable work.** Each benchmark returns a checksum, and that checksum
+//!    must be a function both of the data the benchmark touched and of what the
+//!    timed loop did with it. Matching checksums across platforms then show
+//!    that both sides were handed the same inputs, computed the same answer
+//!    from them, and did so the same number of times.
 //! 3. **Untimed setup.** Allocation and input generation happen outside the
 //!    timed region.
 //!
-//! Property 2 is narrower than it looks, and the gap matters when quoting a
-//! number. Comparing a benchmark's checksum at 8 and at 1000 iterations sorts
-//! the suite into three groups. For the four hashes, both AEAD directions and
-//! the two verify benchmarks the checksum is byte-identical, because the
-//! value it folds is established during setup: it witnesses the inputs, not
-//! the loop. For [`syscall`] it is worse than that, since `null-syscall` and
-//! `syscall-control` return checksums identical to *each other* at equal
-//! iteration counts, so theirs is a function of the count and witnesses
-//! nothing. Everything else varies with the loop, which is necessary but not
-//! sufficient, because a fold over the loop index varies too.
-//! [`memory::pointer_chase`] varies only above one full lap of its buffer,
-//! since its iteration count is rounded up to a lap.
+//! The second half of property 2 is the one that gets lost. The four hashes,
+//! both AEAD directions and the two verify benchmarks each once recomputed
+//! their checksum after the timer stopped, from data setup had established,
+//! and discarded the accumulator the loop had carried;
+//! [`checksum_with_witness`] is what closes that. Folding cheaply enough to run
+//! per iteration is the hard part, and [`fold_sample`] says why the obvious
+//! fold does not work.
 //!
-//! Property 2 is also easy to break outright: three benchmarks have shipped
-//! with a checksum that a fold had cancelled the data out of, leaving a
-//! function of the iteration count alone. Prefer a multiply-XOR fold.
-//! `test_checksums_witness_the_seed` in `tests.rs` catches this class, at a
-//! working set size the suite really runs at, since all three bugs were
-//! invisible at the sizes the unit tests happened to use.
+//! Varying with the loop is necessary but not sufficient, because a fold over
+//! the loop index varies too. Three checksums have shipped with the data
+//! cancelled out of them, leaving exactly that.
+//! `test_checksums_witness_the_seed`
+//! and `test_checksums_witness_the_timed_loop` in `tests.rs` catch the two
+//! halves, at sizes and counts the suite really runs at, since every one of
+//! those bugs was invisible at the values the unit tests happened to use.
 //!
-//! Two modules are documented exceptions. [`syscall`] breaks both 1 and 2: each
-//! kernel's cheapest crossing is a different syscall, and since the two return
-//! different values its checksum can only be folded from a count the run
-//! already requires to equal `iterations`, so it matches for free and witnesses
-//! nothing. [`memory::page_touch`] breaks 1 alone, moving different volumes of
-//! memory on the two platforms. Both modules say what is checked instead.
+//! Four modules are documented exceptions and each says what is checked
+//! instead. [`syscall`] and [`memory::alloc_churn`] match across platforms for
+//! free, the first because the two kernels return different values and the
+//! second because it takes no seed. [`memory::page_touch`] breaks property 1,
+//! moving different volumes of memory on the two platforms.
+//! [`memory::pointer_chase`] rounds its count up to a whole lap, so two counts
+//! inside one lap agree.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -264,9 +261,37 @@ pub const CHECKSUM_INIT: u64 = 14695981039346656037;
 /// same on both platforms, so folding it into the measured region would drag
 /// their ratio toward 1.0. Timed loops call this instead and checksum once the
 /// timer has stopped.
+///
+/// The multiply is not optional, and injectivity is not the reason: the obvious
+/// cheaper mix, `acc.rotate_left(7) ^ value`, composes two bijections and is
+/// injective too. What matters is the order of the linear part. Rotation is
+/// linear over GF(2) and generates a group of order 64, so a folded value
+/// repeating with a period dividing 64 has its terms cancel exactly, and the
+/// accumulator returns to [`CHECKSUM_INIT`] at every multiple of 128
+/// iterations. Every benchmark that folds one fixed digest is in that case, and
+/// so are the verify loops, which cycle 64 messages. [`GOLDEN_RATIO_64`] has
+/// multiplicative order 2^62, and mixing XOR with a multiply leaves the
+/// cancellation argument nothing to work on, since the two are linear over
+/// different rings. That bug shipped twice; see [`memory::page_touch`].
+///
+/// Callers pass the result to [`checksum_with_witness`] whole. Truncating it
+/// would be a mistake: [`GOLDEN_RATIO_64`] is odd but congruent to 1 mod 4, so
+/// the bottom two bits alone have period 2 in the iteration count.
 #[inline]
 pub fn fold_sample(acc: u64, bytes: &[u8]) -> u64 {
     let first = bytes.first().copied().unwrap_or(0) as u64;
     let last = bytes.last().copied().unwrap_or(0) as u64;
-    acc.rotate_left(7) ^ first ^ (last << 8)
+    (acc ^ first ^ (last << 8)).wrapping_mul(GOLDEN_RATIO_64)
+}
+
+/// Mix a value the timed loop carried into a checksum over the inputs.
+///
+/// Call this once the timer has stopped, and last: a benchmark that folds more
+/// material after the witness is not calling this, whatever it looks like.
+/// Without it the reported checksum is recomputed from data setup established,
+/// and a loop that never ran produces the same one as a loop that ran a
+/// thousand times.
+#[inline]
+pub fn checksum_with_witness(inputs: u64, witness: u64) -> u64 {
+    checksum_update(inputs, &witness.to_le_bytes())
 }
