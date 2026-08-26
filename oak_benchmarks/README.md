@@ -403,6 +403,122 @@ runtime. Treat a comparison as invalid unless both sides report the same
 checksum, and read a difference in `cpu_features` as the two sides having run
 different instruction sets rather than as a difference between the kernels.
 
+## Cold Boot Latency
+
+`scripts/boot_latency.sh` measures the other question a serverless operator
+asks: not how fast the enclave runs, but how long a caller waits for one that
+does not exist yet.
+
+The measured quantity is `ready_ns`. The clock starts on the host immediately
+before the VMM is spawned and stops when the guest answers a `debug` request,
+which does no work in the guest at all; see `BenchmarkType::Debug` in
+`benchmark/service.rs`. Both CLIs use that definition, so no guest clock enters
+the comparison.
+
+The two windows have the same start and stop events but not identical contents.
+The Linux window additionally holds a shell wrapper that goes on to exec QEMU,
+and a TCP connection and HTTP/2 handshake that cannot begin until the guest is
+listening, where the enclave's request goes into a socket pair the launcher has
+already created. Both differences favour the enclave, and together they come to
+well under one percent of the reported figure.
+
+Each sample is a whole process, because a boot only happens once per launch.
+`--repetitions` is deliberately not used: later repetitions would run against an
+already-booted guest.
+
+Three platforms are reported:
+
+| Platform   | What it is                                                     |
+| ---------- | -------------------------------------------------------------- |
+| `oak`      | the restricted kernel, direct kernel boot, no firmware or disk |
+| `vm`       | the benchmark VM image exactly as the build produces it        |
+| `vm-tuned` | the same image with `scripts/tune_vm_image.sh` applied         |
+
+Both Linux rows run the same binary against images in the same directory, so the
+tuning is the only thing that differs between them.
+
+`vm` is a Debian nocloud image with a five second GRUB menu timeout and
+`graphical.target` as its default. Most of what it spends is settings rather
+than Linux, and on this host the bootloader timeout alone is about half of it.
+`vm-tuned` changes only what a serverless deployment would already have changed,
+and it is the honest comparison; `vm` is kept so the size of that correction is
+visible rather than assumed.
+
+Two flags set the resolution. `--probe-timeout-ms` bounds how long a single
+readiness probe may block, and `--poll-interval-ms` the gap between probes. Both
+matter: QEMU's user-mode networking binds the forwarded host port long before
+the guest listens, so an unbounded probe stops being a poll and blocks until the
+guest answers.
+
+They do not by themselves bound the error. A probe still in flight when the
+guest starts answering returns immediately, so the usual overshoot is one poll
+interval plus the successful probe's own duration, and that duration is reported
+as `probe_ns` for exactly this reason. A probe that starts before the guest
+answers and times out anyway costs another interval each time it happens. The
+evidence that this term is small is that the reported figure moves by about one
+percent across a twenty-five-fold change in the probe timeout.
+
+All of this applies to the Linux rows only. The enclave has no discovery
+quantum: the launcher hands back an established channel, so it reports no probes
+and no probe duration.
+
+The probe is a request of its own rather than the benchmark the invocation goes
+on to run, on both platforms. Probing with the real workload would cancel and
+retry every Linux benchmark whose first call outlasts the bound, and would
+quietly put the whole benchmark inside the enclave's boot figure.
+
+What the comparison does not equalise, and what any reading of it has to carry:
+
+- the enclave boots a kernel directly, while the VM goes through SeaBIOS, GRUB
+  and a qcow2 disk;
+- the enclave answers over a virtio console on a Unix socket, while the VM
+  answers over SLIRP, TCP, HTTP/2 and gRPC, so its readiness includes DHCP;
+- no sample runs against a cold host page cache: the build writes every image
+  immediately beforehand, and dropping the cache needs root. The first sample is
+  reported separately so a reader can see whether there is a first-sample
+  effect, and on a warm host there is none. A genuinely cold comparison would
+  favour the enclave further, since its image is a few megabytes against the
+  VM's four hundred.
+
+No ratio is reported for `vm`. An image with only its bootloader timeout patched
+measures the same as the fully tuned one, so the distance between the two rows
+is one integer in one config file, and a ratio against it would be a ratio
+against `sleep 5`.
+
+Two things the checksum does not do here. `debug` returns a zero checksum on
+both platforms, so the cross-platform agreement that validates every other
+benchmark in this suite is vacuous for this one; what stands in for it is that
+both runners stop the clock on the same request by construction. And `debug`
+reports no elapsed time of its own, because the enclave's timer does not convert
+to nanoseconds at all.
+
+Known gaps, with what they are worth on this host:
+
+- the VM still boots through SeaBIOS and GRUB, where the enclave gets a direct
+  kernel boot. Giving the VM the same removes about 0.6 s more. It needs a
+  change to `linux_vm/run_vm.sh`, which is not ours to make here.
+- the VM gets one vCPU to match the restricted kernel, which cannot have more.
+  Two vCPUs would save it about 0.3 s.
+- roughly 0.8 s of the Linux figure is `systemd-networkd` and DHCP, on the
+  critical path only because this side answers over SLIRP and the enclave
+  answers over an already-open socket pair.
+- the guest userspace is Debian on a 400 MB root filesystem, not the Alpine or
+  minimal Debian the evaluation plan asks for.
+- the enclave figure is not broken down. Some tens of milliseconds of it are the
+  VMM binary's own loading, which both platforms pay, and the evaluation plan
+  asks for stage0, kernel and application separately. There is no equivalent of
+  `boot_phases.py` for the enclave yet.
+
+`scripts/boot_phases.py` attributes a Linux boot to its phases. It is a
+diagnostic and its numbers are not comparable with the measurement: it needs a
+serial console the benchmark does not enable, and the bootloader row in
+particular is dominated by that console. Use `tune_vm_image.sh --keep-console`
+to produce a tuned image it can still read.
+
+```bash
+ITERATIONS=10 oak_benchmarks/scripts/boot_latency.sh
+```
+
 ## Manual Building
 
 For development, you can build the binaries directly without invoking

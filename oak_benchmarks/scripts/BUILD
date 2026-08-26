@@ -38,3 +38,18 @@ py_test(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [":check_matrix"],
 )
+
+py_library(
+    name = "boot_latency",
+    srcs = ["boot_latency.py"],
+    imports = ["."],
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+py_test(
+    name = "boot_latency_test",
+    size = "small",
+    srcs = ["boot_latency_test.py"],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [":boot_latency"],
+)
