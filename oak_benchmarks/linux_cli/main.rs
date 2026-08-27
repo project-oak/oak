@@ -356,11 +356,8 @@ async fn main() -> Result<()> {
         // Deliberately not bounded by `--probe-timeout-ms`: that bound exists
         // to keep the readiness loop a poll, and a benchmark may take as long
         // as it takes.
-        response = client
-            .run_benchmark(request)
-            .await
-            .context("running the benchmark")?
-            .into_inner();
+        response =
+            client.run_benchmark(request).await.context("running the benchmark")?.into_inner();
 
         // Abort before formatting: a failed benchmark returns an all-zero
         // response, which would otherwise print as a plausible row of zeros.

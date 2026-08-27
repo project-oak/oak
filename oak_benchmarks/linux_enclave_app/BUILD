@@ -15,8 +15,8 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("//oak_benchmarks:defs.bzl", "matched_isa_binary")
 load("//oak_benchmarks/linux_vm:defs.bzl", "vm_disk_image")
-load(":defs.bzl", "matched_isa_binary")
 
 package(
     default_visibility = ["//visibility:public"],

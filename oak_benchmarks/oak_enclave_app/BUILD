@@ -16,6 +16,7 @@
 
 load("@rules_rust//rust:defs.bzl", "rust_binary")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("//oak_benchmarks:defs.bzl", "matched_isa_binary")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -23,7 +24,7 @@ package(
 )
 
 rust_binary(
-    name = "oak_enclave_app",
+    name = "oak_enclave_app_base",
     srcs = ["main.rs"],
     platform = "//:x86_64-unknown-none",
     rustc_flags = [
@@ -39,6 +40,11 @@ rust_binary(
         "//oak_restricted_kernel_sdk",
         "@oak_no_std_crates_index//:prost",
     ],
+)
+
+matched_isa_binary(
+    name = "oak_enclave_app",
+    binary = ":oak_enclave_app_base",
 )
 
 # Provide the `oak_enclave_app_run` target to execute the benchmark seamlessly.

@@ -63,13 +63,13 @@ is quoted:
    and AVX-512VL. It has already caught two real problems: bare-metal builds
    silently using software SHA-2 and AES, and `curve25519-dalek` selecting an
    AVX-512 IFMA backend on Linux while the enclave fell back to AVX2, worth
-   1.65x on Ed25519. AES-NI and PCLMULQDQ now agree; **SHA-NI and AVX-512 IFMA
-   still do not**, and the `sha256` and `ed25519-*` ratios should not be quoted
-   as enclave overhead until they do. Note that this field covers only the
-   dispatch-capable crypto crates, **not** general codegen: two binaries can
-   report identical effective features while one was compiled for a newer
-   baseline ISA than the other. The baseline's build transition below is what
-   closes that gap. See [Crypto acceleration](#crypto-acceleration) below.
+   1.65x on Ed25519. AES-NI, PCLMULQDQ and SHA-NI now agree; **AVX-512 IFMA
+   still does not**, and the `ed25519-*` ratios should not be quoted as enclave
+   overhead until it does. Note that this field covers only the dispatch-capable
+   crypto crates, **not** general codegen: two binaries can report identical
+   effective features while one was compiled for a newer baseline ISA than the
+   other. The baseline's build transition below is what closes that gap. See
+   [Crypto acceleration](#crypto-acceleration) below.
 
 `scripts/check_matrix.py` gates a matrix run on these. It compares the checksum
 and `cpu_features` columns directly, and before either, that there is more than
@@ -81,11 +81,11 @@ checksum implies a matching seed everywhere except the three free-matching rows
 above, which the script names in its output rather than counting.
 `scripts/run_matrix.sh` calls it and adopts its exit status.
 
-On a host whose `CPUID` reports SHA-NI and AVX-512 IFMA, the two Linux platforms
-reach them by runtime dispatch and the enclave does not, so the check fails on
-any matrix that includes the enclave. That is the intended behaviour: the run
-did happen, and the CSVs are written either way, but the platforms are not
-comparable and the tooling now says so.
+On a host whose `CPUID` reports AVX-512 IFMA, the two Linux platforms reach it
+by runtime dispatch and the enclave cannot, so the check fails on any matrix
+that includes the enclave. That is the intended behaviour: the run did happen,
+and the CSVs are written either way, but the platforms are not comparable and
+the tooling now says so.
 
 ## Metrics
 
@@ -592,12 +592,18 @@ objdump -d "$(bazel cquery -c opt --output=files \
     grep -cE 'v?aesenc'
 ```
 
-### SHA-NI is deliberately absent, and SHA-256 is still asymmetric
+### SHA-NI is enabled for the benchmark binaries only
 
-`+sha` was enabled once and then removed. SHA-NI is missing from pre-Ice Lake
+`ENCLAVE_TARGET_FEATURES` carries no `+sha`. SHA-NI is missing from pre-Ice Lake
 Intel parts, and a binary built with it raises an invalid-opcode fault on
-machines still used for development, so `ENCLAVE_TARGET_FEATURES` carries no
-`+sha`. The same census returns zero for the enclave and 56 for the baseline:
+machines still used for development, so the enclave this project ships has to do
+without it.
+
+The benchmark binaries are not shipped anywhere. They are run deliberately, on a
+host picked for the measurement, so `BENCHMARK_TARGET_FEATURES` in
+[`defs.bzl`](defs.bzl) is `ENCLAVE_TARGET_FEATURES` plus `+sha`, and both sides
+of the comparison are built through the transition that applies it. The census
+is now non-zero on both:
 
 ```bash
 objdump -d "$(bazel cquery -c opt --output=files \
@@ -605,26 +611,25 @@ objdump -d "$(bazel cquery -c opt --output=files \
     grep -cE 'sha256rnds2|sha256msg'
 ```
 
-The `matched_isa_binary` transition described below cannot close that gap. The
-transition sets compile-time target features, while `sha2` reaches SHA-NI
-through a runtime `CPUID` check whose body lives in a
-`#[target_feature(enable = "sha")]` function, which the compiler emits whatever
-the global flags say. `curve25519-dalek` selects its AVX-512 IFMA backend the
-same way, which is why `ed25519-sign` and `ed25519-verify` are asymmetric too.
-The baseline exports `sha2::sha256::x86::shani_cpuid::STORAGE` and
-`curve25519_dalek::backend::get_selected_backend::cpuid_avx512::STORAGE`; the
-enclave exports neither.
+A compile-time feature settles the runtime check rather than bypassing it.
+`sha2` reaches SHA-NI through `cpufeatures`, which expands to a constant `true`
+when every feature it names is already enabled at compile time and consults
+`CPUID` only otherwise. Under `target_os = "none"` that fallback answers false
+without asking the CPU, which is why the enclave never reached the backend
+however capable the machine was. Enabling it moves `sha256` from about 5.0x the
+baseline to 1.01x, and the accompanying `sha512` row, which has no SHA-NI path,
+does not move at all.
 
-So `sha256` reports the enclave at roughly 4.7x the baseline, and `ed25519-*` at
-roughly 1.7x. Those figures measure the absence of runtime CPU feature detection
-under `no_std`. They are not a cost the Restricted Kernel imposes, and quoting
-them as such would be wrong.
+The consequence for anyone reading a `sha256` row: it now measures the
+primitive, and the enclave build it measures is not the build that ships. The
+gap for the shipped enclave is a `cfg` in `cpufeatures`, not a cost of the
+Restricted Kernel.
 
-To measure the primitive rather than the dispatch, force the baseline to the
-software backend. `sha2` has a `force-soft` feature, already applied to
-`ONLY_NO_STD_NO_AVX` in `MODULE.bazel`; widening that scope makes SHA-256
-like-for-like. The enclave-side alternative, restoring `+sha`, is what the
-hardware supports here but not everywhere.
+`curve25519-dalek` selects its AVX-512 IFMA backend the same way, and that one
+cannot be closed here. The Restricted Kernel does not enable the AVX-512
+register state, so `ed25519-sign` and `ed25519-verify` stay asymmetric, their
+ratios are still not enclave overhead, and `check_matrix.py` still fails a
+matrix that includes the enclave for this reason alone.
 
 ### The baseline is built to match
 
@@ -636,10 +641,10 @@ alone, that biases every workload the compiler can vectorise, and every one that
 reaches for AES-NI, in the enclave's favour.
 
 `//oak_benchmarks/linux_enclave_app` closes the gap itself. It is a
-`matched_isa_binary`, defined in [`defs.bzl`](linux_enclave_app/defs.bzl), which
-applies a configuration transition that compiles the binary and every crate it
-links with the enclave's instruction set. No build flag is needed, and an
-unmatched baseline cannot be produced by accident:
+`matched_isa_binary`, defined in [`defs.bzl`](defs.bzl), which applies a
+configuration transition that compiles the binary and every crate it links with
+the enclave's instruction set. No build flag is needed, and an unmatched
+baseline cannot be produced by accident:
 
 ```bash
 bazel build -c opt //oak_benchmarks/linux_enclave_app
