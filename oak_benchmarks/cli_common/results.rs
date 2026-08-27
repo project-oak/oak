@@ -21,7 +21,7 @@ pub use benchmark::cpu::CpuFeatures;
 use crate::{
     cli::{ByteSemantics, OutputFormat},
     dispersion::Distribution,
-    tsc::tsc_to_nanos,
+    tsc::{TscFreq, tsc_to_nanos},
 };
 
 /// Calculated metrics from a benchmark response.
@@ -183,6 +183,16 @@ pub struct BenchmarkResult {
     /// The syscall benchmarks put the name of the syscall here. Empty
     /// otherwise.
     pub detail: String,
+    /// Frequency used to convert guest TSC ticks to nanoseconds, and where it
+    /// came from.
+    ///
+    /// Recorded on every row because it scales `elapsed_ns`, `ns_per_op`,
+    /// `throughput_bps` and `ops_per_sec` for the enclave, which has no clock
+    /// of its own. Only [`TscFreq::Calibrated`] measures the TSC; the others
+    /// can be wrong by double-digit percentages, and a results file that omits
+    /// the provenance makes a calibrated row and a guessed one look identical.
+    /// The `tsc_ticks_*` columns are unaffected and need no frequency at all.
+    pub tsc_freq: TscFreq,
 }
 
 /// Human-readable description of a guest status code.
@@ -214,7 +224,7 @@ pub fn check_status(status: u32) -> Result<(), String> {
 pub fn csv_header() -> String {
     "benchmark,data_size,iterations,elapsed_tsc,elapsed_ns,bytes_processed,byte_semantics,\
      throughput_bps,ops_per_sec,tsc_ticks_per_op,ns_per_op,tsc_ticks_per_byte,working_set_size,\
-     checksum,cpu_features,detail,status\n"
+     checksum,cpu_features,tsc_freq_hz,tsc_freq_source,detail,status\n"
         .to_string()
 }
 
@@ -342,6 +352,7 @@ pub fn format_result(
                  Operations/sec:      {:.0}\n\
                  Checksum:            0x{:016x}\n\
                  CPU features:        {:#}\n\
+                 TSC frequency:       {} Hz ({})\n\
                  Status:              {}\n\
                  \n\
                  Timebase is the invariant TSC, not retired core cycles.\n",
@@ -361,6 +372,8 @@ pub fn format_result(
                 metrics.ops_per_sec,
                 result.checksum,
                 CpuFeatures::from_wire(result.cpu_features),
+                result.tsc_freq.hz(),
+                result.tsc_freq.source_description(),
                 if result.status == 0 { "OK" } else { "ERROR" },
             )
         }
@@ -372,7 +385,7 @@ pub fn format_result(
                 None => String::new(),
             };
             format!(
-                "{},{},{},{},{},{},{},{:.0},{:.0},{},{},{},{},{},{},{},{}\n",
+                "{},{},{},{},{},{},{},{:.0},{:.0},{},{},{},{},{},{},{},{},{},{}\n",
                 csv_field(&result.benchmark_name),
                 result.data_size,
                 result.iterations_completed,
@@ -388,6 +401,8 @@ pub fn format_result(
                 result.working_set_size,
                 result.checksum,
                 result.cpu_features,
+                result.tsc_freq.hz(),
+                result.tsc_freq.name(),
                 csv_field(&result.detail),
                 result.status,
             )
@@ -395,7 +410,7 @@ pub fn format_result(
         OutputFormat::Json => {
             // Use base units (bytes/s) in machine-readable formats.
             format!(
-                r#"{{"benchmark":"{}","data_size":{},"iterations":{},"elapsed_tsc":{},"elapsed_ns":{},"bytes_processed":{},"byte_semantics":"{}","throughput_bps":{:.0},"ops_per_sec":{:.0},"tsc_ticks_per_op":{},"ns_per_op":{},"tsc_ticks_per_byte":{},"working_set_size":{},"checksum":{},"cpu_features":{},"detail":"{}","status":{}}}"#,
+                r#"{{"benchmark":"{}","data_size":{},"iterations":{},"elapsed_tsc":{},"elapsed_ns":{},"bytes_processed":{},"byte_semantics":"{}","throughput_bps":{:.0},"ops_per_sec":{:.0},"tsc_ticks_per_op":{},"ns_per_op":{},"tsc_ticks_per_byte":{},"working_set_size":{},"checksum":{},"cpu_features":{},"tsc_freq_hz":{},"tsc_freq_source":"{}","detail":"{}","status":{}}}"#,
                 json_string(&result.benchmark_name),
                 result.data_size,
                 result.iterations_completed,
@@ -411,6 +426,8 @@ pub fn format_result(
                 result.working_set_size,
                 result.checksum,
                 result.cpu_features,
+                result.tsc_freq.hz(),
+                result.tsc_freq.name(),
                 json_string(&result.detail),
                 result.status,
             )
@@ -752,7 +769,31 @@ mod tests {
             checksum: 1,
             cpu_features: 1,
             detail: String::new(),
+            tsc_freq: TscFreq::Calibrated(1_000_000_000),
         }
+    }
+
+    /// The whole point of the column: a reader must be able to tell a row
+    /// whose nanoseconds came from a measured frequency from one whose came
+    /// from a guess. Both rows are otherwise identical.
+    #[test]
+    fn csv_records_which_frequency_scaled_the_row() {
+        let metrics =
+            BenchmarkMetrics::calculate(1, 1, 1, 1, 1_000_000_000, ByteSemantics::Message);
+
+        let calibrated = format_result(&sample_result(), &metrics, OutputFormat::Csv);
+        assert!(calibrated.contains("1000000000,calibrated"), "{calibrated}");
+
+        let guessed =
+            BenchmarkResult { tsc_freq: TscFreq::CpuInfoMaxFreq(1_000_000_000), ..sample_result() };
+        let guessed = format_result(&guessed, &metrics, OutputFormat::Csv);
+        assert!(guessed.contains("1000000000,cpuinfo_max_freq"), "{guessed}");
+
+        // The Linux baseline applies no frequency at all, and must not be
+        // mistaken for a detection failure.
+        let unused = BenchmarkResult { tsc_freq: TscFreq::Unused, ..sample_result() };
+        let unused = format_result(&unused, &metrics, OutputFormat::Csv);
+        assert!(unused.contains("0,unused"), "{unused}");
     }
 
     #[test]

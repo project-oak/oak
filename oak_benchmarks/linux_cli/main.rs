@@ -30,7 +30,7 @@ use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use cli_common::{
     BenchmarkMetrics, BenchmarkResult, CpuFeatures, DEFAULT_BENCHMARK_SEED, DisplayBenchmarkType,
-    OutputFormat, RepeatedRun, Repetition, byte_semantics, check_status, csv_header,
+    OutputFormat, RepeatedRun, Repetition, TscFreq, byte_semantics, check_status, csv_header,
     format_repeated, format_result, parse_benchmark_type, repeated_csv_header, sanitize_detail,
 };
 use oak_benchmark_grpc::oak::benchmark::benchmark_client::BenchmarkClient;
@@ -397,6 +397,9 @@ async fn main() -> Result<()> {
         checksum: response.checksum,
         cpu_features: response.cpu_features,
         detail: sanitize_detail(&response.detail),
+        // The Linux guest times itself and reports nanoseconds, so no TSC
+        // frequency is ever applied on this path.
+        tsc_freq: TscFreq::Unused,
     };
     if args.repetitions == 1 {
         if args.csv_header && matches!(args.output, OutputFormat::Csv) {

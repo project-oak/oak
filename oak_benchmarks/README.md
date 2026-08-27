@@ -687,6 +687,16 @@ the baseline has it and the enclave does not, for the reason given above.
 > rather than the invariant TSC rate. Cross-check with
 > `journalctl -k | grep -i "refined tsc"`. Prefer cycles/op, which needs no
 > frequency at all.
+>
+> Every result carries the frequency it used and where that came from, in the
+> `tsc_freq_hz` and `tsc_freq_source` columns. `tsc_freq_source` is one of
+> `calibrated`, `override`, `base_frequency`, `cpuinfo_max_freq`, `default` or
+> `unused`. Only `calibrated` measures the TSC, and only `unused` — the Linux
+> baseline, whose guest reports nanoseconds from its own clock — needs no
+> frequency. Anything else may be wrong by double-digit percentages, and it
+> scales `elapsed_ns`, `ns_per_op`, `throughput_bps` and `ops_per_sec`. Without
+> the column a guessed row and a measured one are indistinguishable, so check it
+> before quoting a nanosecond figure. The `tsc_ticks_*` columns are unaffected.
 
 <!-- -->
 

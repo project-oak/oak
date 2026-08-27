@@ -50,6 +50,12 @@ pub enum TscFreq {
     /// Measured over a known monotonic-clock interval. The only variant that
     /// reflects the actual TSC rate rather than a nominal core frequency.
     Calibrated(u64),
+    /// Supplied by the operator via `--tsc-freq`, bypassing detection.
+    ///
+    /// Recorded distinctly because it is an assertion rather than a
+    /// measurement: it may well be more accurate than anything detection would
+    /// have produced, but nothing here can check that.
+    Override(u64),
     /// Base (non-boost) core clock from sysfs. Matches the TSC on many Intel
     /// parts, but by coincidence, and the file is absent under `amd_pstate`.
     BaseFrequency(u64),
@@ -57,16 +63,26 @@ pub enum TscFreq {
     CpuInfoMaxFreq(u64),
     /// Default fallback when every detection method fails.
     Default(u64),
+    /// No frequency was applied, because the guest reported nanoseconds
+    /// directly from its own clock.
+    ///
+    /// This is the Linux baseline. Recording it distinctly matters when the
+    /// two platforms' rows are merged: an empty or zero frequency would
+    /// otherwise read as a detection failure rather than as a guest that never
+    /// needed one.
+    Unused,
 }
 
 impl TscFreq {
-    /// Get the frequency value in Hz.
+    /// Get the frequency value in Hz, or 0 where none was applied.
     pub fn hz(&self) -> u64 {
         match self {
             TscFreq::Calibrated(hz) => *hz,
+            TscFreq::Override(hz) => *hz,
             TscFreq::BaseFrequency(hz) => *hz,
             TscFreq::CpuInfoMaxFreq(hz) => *hz,
             TscFreq::Default(hz) => *hz,
+            TscFreq::Unused => 0,
         }
     }
 
@@ -75,23 +91,45 @@ impl TscFreq {
         matches!(self, TscFreq::Default(_))
     }
 
-    /// Returns true if this frequency actually measures the TSC.
+    /// Returns true if the nanosecond figures derived with this are sound.
     ///
-    /// Only [`TscFreq::Calibrated`] does. Every other variant is an inference
-    /// from a nominal core frequency and may be wrong by double-digit
-    /// percentages; callers converting enclave TSC counts to nanoseconds
-    /// should warn the user when this returns false.
+    /// True for [`TscFreq::Calibrated`], which measures the TSC, and for
+    /// [`TscFreq::Unused`], where the guest supplied nanoseconds itself and no
+    /// conversion happened. Every other variant is an inference from a nominal
+    /// core frequency, or an unverifiable assertion in the case of
+    /// [`TscFreq::Override`], and may be wrong by double-digit percentages;
+    /// callers converting enclave TSC counts to nanoseconds should warn the
+    /// user when this returns false.
     pub fn is_trustworthy(&self) -> bool {
-        matches!(self, TscFreq::Calibrated(_))
+        matches!(self, TscFreq::Calibrated(_) | TscFreq::Unused)
+    }
+
+    /// Machine-readable source name, for the `tsc_freq_source` results column.
+    ///
+    /// Distinct from [`Self::source_description`], which is prose for humans.
+    /// A results file records this so that a reader can tell a calibrated row
+    /// from one scaled by a guessed frequency; without it, `ns_per_op` from the
+    /// two are indistinguishable.
+    pub fn name(&self) -> &'static str {
+        match self {
+            TscFreq::Calibrated(_) => "calibrated",
+            TscFreq::Override(_) => "override",
+            TscFreq::BaseFrequency(_) => "base_frequency",
+            TscFreq::CpuInfoMaxFreq(_) => "cpuinfo_max_freq",
+            TscFreq::Default(_) => "default",
+            TscFreq::Unused => "unused",
+        }
     }
 
     /// Human-readable description of the source.
     pub fn source_description(&self) -> &'static str {
         match self {
             TscFreq::Calibrated(_) => "calibrated against CLOCK_MONOTONIC",
+            TscFreq::Override(_) => "supplied via --tsc-freq (unverified)",
             TscFreq::BaseFrequency(_) => "base_frequency (nominal, unverified)",
             TscFreq::CpuInfoMaxFreq(_) => "cpuinfo_max_freq (boost clock, likely wrong)",
             TscFreq::Default(_) => "default (detection failed)",
+            TscFreq::Unused => "unused (guest reports nanoseconds directly)",
         }
     }
 }

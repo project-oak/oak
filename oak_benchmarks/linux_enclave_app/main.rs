@@ -28,7 +28,7 @@ use benchmark::{BenchmarkService, DEFAULT_BENCHMARK_SEED, NativeTimer, NullSysca
 use clap::Parser;
 use cli_common::{
     BenchmarkMetrics, BenchmarkResult, CpuFeatures, DisplayBenchmarkType, OutputFormat,
-    RepeatedRun, Repetition, byte_semantics, check_status, csv_header, format_repeated,
+    RepeatedRun, Repetition, TscFreq, byte_semantics, check_status, csv_header, format_repeated,
     format_result, parse_benchmark_type, repeated_csv_header, sanitize_detail,
 };
 use oak_benchmark_proto_rust::oak::benchmark::{BenchmarkType, RunBenchmarkRequest};
@@ -270,6 +270,9 @@ fn run_standalone(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
         checksum: response.checksum,
         cpu_features: response.cpu_features,
         detail: sanitize_detail(&response.detail),
+        // As above: the native runner has a real clock, so no TSC frequency is
+        // ever applied.
+        tsc_freq: TscFreq::Unused,
     };
 
     if args.repetitions == 1 {

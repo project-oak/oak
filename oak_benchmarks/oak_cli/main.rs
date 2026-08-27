@@ -25,7 +25,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use cli_common::{
     BenchmarkMetrics, CpuFeatures, DEFAULT_BENCHMARK_SEED, DisplayBenchmarkType, OutputFormat,
-    RepeatedRun, Repetition, byte_semantics, check_status, csv_header, detect_tsc_freq,
+    RepeatedRun, Repetition, TscFreq, byte_semantics, check_status, csv_header, detect_tsc_freq,
     format_repeated, format_result, parse_benchmark_type, repeated_csv_header, sanitize_detail,
 };
 use oak_benchmark_proto_rust::oak::benchmark::{BenchmarkType, RunBenchmarkRequest};
@@ -140,22 +140,25 @@ async fn main() -> Result<()> {
     // Measuring it inside the boot window would have added the whole 50 ms to
     // every reported boot latency. It is detected once because the frequency
     // does not change between repetitions.
-    let tsc_freq = args.tsc_freq.unwrap_or_else(|| {
-        let detected = detect_tsc_freq();
-        log::info!(
-            "detected TSC frequency: {} Hz (source: {})",
-            detected.hz(),
-            detected.source_description()
-        );
-        if !detected.is_trustworthy() {
-            log::warn!(
-                "TSC frequency was not measured directly ({}); nanosecond and MB/s figures may \
-                 be scaled incorrectly, prefer the TSC ticks/op column",
+    let tsc_freq = match args.tsc_freq {
+        Some(hz) => TscFreq::Override(hz),
+        None => {
+            let detected = detect_tsc_freq();
+            log::info!(
+                "detected TSC frequency: {} Hz (source: {})",
+                detected.hz(),
                 detected.source_description()
             );
+            if !detected.is_trustworthy() {
+                log::warn!(
+                    "TSC frequency was not measured directly ({}); nanosecond and MB/s figures \
+                     may be scaled incorrectly, prefer the TSC ticks/op column",
+                    detected.source_description()
+                );
+            }
+            detected
         }
-        detected.hz()
-    });
+    };
 
     // Launch the enclave.
     log::info!("Launching enclave...");
@@ -247,7 +250,7 @@ async fn main() -> Result<()> {
                 response.elapsed_ns,
                 response.iterations_completed,
                 response.bytes_processed,
-                tsc_freq,
+                tsc_freq.hz(),
                 bytes,
             ),
         });
@@ -274,6 +277,7 @@ async fn main() -> Result<()> {
         checksum: response.checksum,
         cpu_features: response.cpu_features,
         detail: sanitize_detail(&response.detail),
+        tsc_freq,
     };
     if args.repetitions == 1 {
         if args.csv_header && matches!(args.output, OutputFormat::Csv) {
