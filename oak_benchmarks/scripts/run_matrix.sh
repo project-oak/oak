@@ -27,11 +27,28 @@
 set -euo pipefail
 
 CORES="${CORES:-6,7}"
-REPETITIONS="${REPETITIONS:-15}"
+REPETITIONS="${REPETITIONS:-30}"
 ITERATIONS="${ITERATIONS:-10000}"
+MEMORY_WORKING_SET="${MEMORY_WORKING_SET:-268435456}"
+# Run the confidential-computing legs. Off by default because it needs an
+# SEV-SNP host: on anything else QEMU refuses to start and every sample fails.
+#
+# The two runners spell it differently because each inherits the option from a
+# different launcher: the enclave goes through `oak_launcher_utils`, whose
+# `--vm-type` also covers sev, sev-es and tdx, while `linux_cli` drives
+# `run_vm.sh` and has a plain boolean. Nothing here has been run on SNP
+# hardware yet.
+SNP="${SNP:-0}"
 OUT_DIR="${OUT_DIR:-/tmp/oak_matrix_$(date +%Y%m%d_%H%M%S)}"
 PLATFORMS="${PLATFORMS:-native oak vm}"
 
+# The full set, in the order it is measured. Overridable from the environment
+# as a space-separated list, so that a run which only varies one flag -- the
+# 1 GiB working set, say, which sizes just two of these -- does not have to
+# re-measure the other seventeen to produce the one point it is after.
+#
+# check_matrix.py compares platforms benchmark by benchmark, so a narrowed run
+# stays checkable; it simply has fewer rows to check.
 BENCHMARKS=(
   sha256 sha512 sha3-256 sha3-512
   aes256gcm-seal aes256gcm-open
@@ -39,6 +56,9 @@ BENCHMARKS=(
   memory-insert memory-lookup memory-churn array-update alloc-churn
   pointer-chase page-touch null-syscall syscall-control
 )
+if [[ -n ${BENCHMARKS_OVERRIDE:-} ]]; then
+  read -r -a BENCHMARKS <<<"${BENCHMARKS_OVERRIDE}"
+fi
 
 # Iteration counts that differ from ITERATIONS, so that no single row
 # dominates the wall time of the matrix and so the memory benchmarks reach a
@@ -59,17 +79,32 @@ iterations_for() {
 }
 
 # memory-lookup and memory-churn run against a map built before the clock
-# starts, and this flag is what sizes it. 256 MB is comfortably past this
-# host's 32 MiB L3 slice, so both are memory benchmarks rather than cache
-# benchmarks.
+# starts, and this flag is what sizes it. The 256 MB default is comfortably
+# past this host's 32 MiB L3 slice, so both are memory benchmarks rather than
+# cache benchmarks.
+#
+# The evaluation plan also asks for a working set of at least 1 GiB, which is
+# a separate run rather than a new default: it multiplies the setup cost of
+# every repetition of both memory benchmarks, and the conclusion the plan
+# draws from it does not need the rest of the matrix re-measured alongside.
+# Set MEMORY_WORKING_SET=1073741824 for that point.
 #
 # memory-insert builds its map inside the timed loop, one distinct key per
 # iteration, so its footprint follows iterations_for. The service gives it a
 # one-entry pre-built map whatever this flag says, so passing a size would
 # change nothing.
+# Per-runner SNP arguments, empty unless SNP=1. See the note on SNP above for
+# why the two spellings differ.
+OAK_SNP_ARGS=()
+VM_SNP_ARGS=()
+if [[ ${SNP} == 1 ]]; then
+  OAK_SNP_ARGS=(--vm-type=sev-snp)
+  VM_SNP_ARGS=(--enable-snp)
+fi
+
 working_set_for() {
   case "$1" in
-    memory-lookup | memory-churn) echo 268435456 ;;
+    memory-lookup | memory-churn) echo "${MEMORY_WORKING_SET}" ;;
     *) echo 0 ;;
   esac
 }
@@ -80,8 +115,14 @@ Usage: $0 [--help]
 
 Environment variables:
   CORES=6,7                  Logical CPUs to pin every run to
-  REPETITIONS=15             Repetitions per benchmark, reported as median and IQR
+  REPETITIONS=30             Repetitions per benchmark, reported as median and IQR
   ITERATIONS=10000           Timed iterations per repetition
+  MEMORY_WORKING_SET=256MB   Working set for memory-lookup and memory-churn, in
+                             bytes. Use 1073741824 for the plan's >=1 GiB point.
+  SNP=0                      Set to 1 to run the SEV-SNP legs. Needs an SNP
+                             host; untested, as no such host is available yet.
+  BENCHMARKS_OVERRIDE=...    Space-separated benchmark names, to narrow the run
+                             to a subset of the matrix.
   PLATFORMS="native oak vm"  Which platforms to measure
   OUT_DIR=<path>             Where to write the CSVs and the manifest
 
@@ -124,6 +165,9 @@ write_manifest() {
     echo "cmdline: $(cat /proc/cmdline)"
     echo "repetitions: ${REPETITIONS}"
     echo "iterations: ${ITERATIONS}"
+    echo "memory working set: ${MEMORY_WORKING_SET} bytes"
+    echo "benchmarks: ${BENCHMARKS[*]}"
+    echo "sev-snp: ${SNP}"
     echo "revision: $(jj --ignore-working-copy log -r @ --no-graph -T 'commit_id' 2>/dev/null || echo unknown)"
     echo
     echo "not controlled:"
@@ -132,6 +176,36 @@ write_manifest() {
     echo "  the kernel may still schedule unrelated work onto them"
   } >"${f}"
   echo "wrote ${f}"
+}
+
+# Builds first, for two reasons.
+#
+# The runners below send stdout to the CSV, because that is where the benchmark
+# writes its rows. A build triggered by the first `bazel run` puts its own
+# output on that same stream: the VM image genrule runs unsandboxed and prints
+# a banner, which lands above the CSV header and makes the file unparseable.
+# Only the first run of a fresh output base sees this, which is why it stayed
+# hidden for so long.
+#
+# It also keeps compilation out of the measurement. A build inside the first
+# invocation would be charged to whichever benchmark happened to run first.
+prebuild() {
+  echo "building..." >&2
+  for p in ${PLATFORMS}; do
+    case "${p}" in
+      native) "${BAZEL[@]}" build -c opt //oak_benchmarks/linux_enclave_app ;;
+      oak) "${BAZEL[@]}" build -c opt //oak_benchmarks/oak_enclave_app:oak_enclave_app_run ;;
+      vm)
+        "${BAZEL[@]}" build -c opt \
+          //oak_benchmarks/linux_cli \
+          //oak_benchmarks/linux_enclave_app:linux_enclave_image_run
+        ;;
+      *)
+        echo "unknown platform: ${p}" >&2
+        exit 1
+        ;;
+    esac
+  done >&2
 }
 
 run_native() {
@@ -168,7 +242,7 @@ run_oak() {
     "${PIN[@]}" "${BAZEL[@]}" run -c opt \
       //oak_benchmarks/oak_enclave_app:oak_enclave_app_run -- \
       --memory-size=1024M --benchmark="${b}" --iterations="${n}" --working-set-size="${w}" \
-      --repetitions="${REPETITIONS}" --output=csv ${header} \
+      --repetitions="${REPETITIONS}" --output=csv ${header} "${OAK_SNP_ARGS[@]}" \
       2>>"${log}" >>"${out}"
     header=""
   done
@@ -189,7 +263,7 @@ run_vm() {
     "${PIN[@]}" "${BAZEL[@]}" run -c opt \
       //oak_benchmarks/linux_enclave_app:linux_enclave_image_run -- \
       --benchmark="${b}" --iterations="${n}" --working-set-size="${w}" \
-      --repetitions="${REPETITIONS}" --output=csv ${header} \
+      --repetitions="${REPETITIONS}" --output=csv ${header} "${VM_SNP_ARGS[@]}" \
       2>>"${log}" >>"${out}"
     header=""
   done
@@ -201,6 +275,7 @@ run_vm() {
 # today's without noticing.
 rm -f "${OUT_DIR}"/*.csv "${OUT_DIR}"/*.log
 
+prebuild
 write_manifest
 for p in ${PLATFORMS}; do
   case "${p}" in
