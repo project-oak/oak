@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 load("//oak_benchmarks/linux_vm:defs.bzl", "vm_disk_image")
 
 package(
@@ -56,6 +56,13 @@ rust_library(
         "@oak_crates_index//:rustls-pemfile",
         "@oak_crates_index//:rustls-pki-types",
     ],
+)
+
+rust_test(
+    name = "linux_server_test",
+    crate = ":linux_server",
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = ["@oak_crates_index//:googletest"],
 )
 
 rust_binary(

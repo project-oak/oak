@@ -72,6 +72,40 @@ end-of-stream instead of panicking.
 > calls `complete_io` so the handshake lands in `Setup` on every leg. Removing
 > it from the timed send cut the reported TLS exchange latency by about half.
 
+## Nagle's algorithm
+
+> ⚠️ **IMPORTANT**: Use `linux_server::connect` for any new leg, never
+> `TcpStream::connect`.
+
+Until 2026-08 every socket here ran with Nagle's algorithm enabled. The
+length-prefixed framing writes the 4-byte prefix and the body as two separate
+writes, so the body waited on the peer's 40 ms delayed-ACK timer. It did not hit
+the legs evenly, and it **inverted the result**. Local TCP, 50 samples per
+point:
+
+| Group                      |    Nagle | `TCP_NODELAY` |  change |
+| -------------------------- | -------: | ------------: | ------: |
+| Plaintext Message Exchange | 13.01 us |      13.03 us |       - |
+| Plaintext Setup            | 36.83 us |      33.77 us |       - |
+| Noise Message Exchange     | 22.83 ms |      13.58 us | -99.94% |
+| Noise Setup                | 91.68 ms |     529.81 us | -99.42% |
+| TLS Message Exchange       | 52.66 us |      19.56 us |  -62.9% |
+| TLS Setup                  | 172.9 us |     172.88 us |       - |
+
+Plaintext escaped because its connections carry a single exchange, so no
+unacknowledged segment ever precedes the write. rustls suffered less because it
+coalesces a record into one write rather than two. Noise took the full stall on
+every message.
+
+Read against the corrected figures, the Noise data path costs 4% over plaintext
+and beats rustls by 1.4x, while Noise setup is 3.1x _slower_ than a rustls
+handshake. Both halves are worth knowing and neither was visible before.
+
+`linux_server::connect` and `start_tcp_server` now set `TCP_NODELAY`, and
+`linux_server_test` covers both call sites. The root cause is the two-write
+framing in `message_stream.rs`; fixing it there would also help the Restricted
+Kernel channel, which is not a socket.
+
 ## Running VM TCP Benchmarks
 
 The VM TCP benchmarks require a VM running the `crypto_channel_server` binary.

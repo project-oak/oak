@@ -173,13 +173,13 @@ fn plaintext_local_tcp_benchmark(c: &mut Criterion) {
     );
 
     let connect = || -> Box<dyn MessageStream> {
-        Box::new(TcpStream::connect(addr).expect("couldn't connect to server"))
+        Box::new(linux_server::connect(addr).expect("couldn't connect to server"))
     };
 
     benchmark_wrapper(TEST_SIZES, "Local TCP Plaintext Message Exchange", c, connect);
     handshake_wrapper("Local TCP Plaintext Setup", c, connect);
 
-    let mut stream = TcpStream::connect(addr).expect("couldn't connect to server");
+    let mut stream = linux_server::connect(addr).expect("couldn't connect to server");
     stream.send_message(b"exit");
     server_handle.join().unwrap();
 }
@@ -254,7 +254,7 @@ fn tls_local_tcp_benchmark(c: &mut Criterion) {
     let client_config = Arc::new(client_config);
 
     let tls_connect = || -> Box<dyn MessageStream> {
-        let tcp_stream = TcpStream::connect(addr).expect("couldn't connect to server");
+        let tcp_stream = linux_server::connect(addr).expect("couldn't connect to server");
         new_tls_client_stream(tcp_stream, client_config.clone())
     };
 
@@ -273,15 +273,16 @@ fn plaintext_vm_tcp_benchmark(c: &mut Criterion) {
     let addr = get_vm_addr("plaintext", DEFAULT_PLAINTEXT_PORT);
     println!("Connecting to VM at {} for plaintext benchmark", addr);
 
-    let connect =
-        || -> Box<dyn MessageStream> { Box::new(TcpStream::connect(addr).expect(VM_CONNECT_HELP)) };
+    let connect = || -> Box<dyn MessageStream> {
+        Box::new(linux_server::connect(addr).expect(VM_CONNECT_HELP))
+    };
 
     benchmark_wrapper(TEST_SIZES, "VM TCP Plaintext Message Exchange", c, connect);
     handshake_wrapper("VM TCP Plaintext Setup", c, connect);
 }
 
 fn new_noise_client_stream(addr: SocketAddr) -> Box<dyn MessageStream> {
-    let tcp_stream = TcpStream::connect(addr).expect("couldn't connect to server");
+    let tcp_stream = linux_server::connect(addr).expect("couldn't connect to server");
     Box::new(NoiseMessageStream::new_client(tcp_stream))
 }
 
@@ -309,7 +310,7 @@ fn tls_vm_tcp_benchmark(c: &mut Criterion) {
     let client_config = Arc::new(client_config);
 
     let tls_connect = || -> Box<dyn MessageStream> {
-        let tcp_stream = TcpStream::connect(addr).expect(VM_CONNECT_HELP);
+        let tcp_stream = linux_server::connect(addr).expect(VM_CONNECT_HELP);
         new_tls_client_stream(tcp_stream, client_config.clone())
     };
 
