@@ -63,6 +63,77 @@ holds **one channel open** for the whole measurement, `Setup` performs a
 time is the sum of the two; the cost for a protocol that keeps a channel is
 `Message Exchange` alone.
 
+### The settle interval between `Setup` iterations
+
+Between iterations `Setup` closes the channel and then waits `SETUP_SETTLE` (200
+µs), both untimed. Without that wait, a connect issued while the previous
+connection's teardown is still in flight is markedly slower, which doubled the
+plaintext figure and left its confidence interval at ±23%.
+
+Sweeping the interval on the local TCP leg with everything else held constant:
+
+| interval | reported plaintext setup |
+| -------: | -----------------------: |
+|     0 µs |           33.34 µs, ±22% |
+|    10 µs |                 23.84 µs |
+|    25 µs |                 18.02 µs |
+|    50 µs |                 17.22 µs |
+|   300 µs |          16.78 µs, ±1.3% |
+|   600 µs |                 18.31 µs |
+|  1000 µs |                 19.37 µs |
+
+The curve has a threshold rather than a slope: almost all of the effect is
+recovered by 25 µs and nothing further after that. Two mechanisms were ruled
+out. It is **not** the listen backlog -- the kernel completes a loopback connect
+without the server calling `accept`. And it is **not** ephemeral-port or
+`TIME_WAIT` pressure -- sweeping `TIME_WAIT` occupancy from 36 to 87,084 sockets
+moves the figure by 0.7%, and the faster runs hold _more_ sockets in `TIME_WAIT`
+than the slower ones.
+
+25 µs is about one loopback round trip on the host this was measured on, which
+is suggestive but **not** established as a scaling law: the threshold was only
+ever measured on the local TCP leg. 200 µs deliberately over-provisions, which
+is safe either way. If the threshold does track the round trip, the VM legs run
+at roughly 33 µs one way, so ~70 µs, and 200 µs clears that with 2.6x margin --
+a 50 µs value tuned on the local leg would have left them contaminated.
+
+#### What the interval costs
+
+It is not free for the legs that do real work in the handshake. Measured back to
+back in one session, so that day-to-day drift is not in the comparison:
+
+| leg       |           0 µs |          50 µs |                 200 µs |
+| --------- | -------------: | -------------: | ---------------------: |
+| plaintext |   33.35, 33.97 |   16.30, 15.93 |    16.42, 16.46, 16.80 |
+| Noise     | 530.00, 527.46 | 530.79, 532.94 | 533.98, 536.71, 530.58 |
+| TLS       | 176.05, 174.48 | 182.02, 177.43 | 180.27, 179.39, 178.34 |
+
+TLS costs about 2% and Noise about 1%, the latter inside the run-to-run spread.
+The penalty is **flat between 50 µs and 200 µs**, so it is a threshold rather
+than something proportional to the length of the spin. That rules out the spin's
+duty cycle depressing the boost clock, and points instead at the _server_ thread
+having gone idle between iterations, so the timed handshake now includes waking
+it.
+
+The same mechanism is the best available explanation for the upturn at 600 µs
+and beyond: the client core is busy-spinning throughout, so it is not the client
+that idles -- the longer the client waits, the deeper the idle state the server
+thread reaches, and the more its wake-up costs. This is an inference from the
+shape of the two tables rather than something measured directly; the server's
+C-state residency has not been instrumented.
+
+That is a reason to keep the interval rather than shorten it: a server that has
+to be woken is the more representative case, since a real one is not spinning in
+wait for the next connection. The trade is 2% on one leg against a plaintext
+baseline that was otherwise twice its true value at ±23%.
+
+> [!NOTE] If the interval is too short for a leg, that leg's confidence interval
+> stays wide, so narrowing is good confirmation. The converse does **not** hold:
+> a VM leg can have a wide interval for reasons unrelated to this setting -- see
+> QEMU's user-mode networking churn below -- so a persistently wide VM interval
+> is not by itself evidence that the settle is too short. Vary the settle on
+> that leg before concluding anything.
+
 `Message Exchange` used to open a fresh channel per iteration too, untimed. That
 excluded the connect from the reported figure but not from the machine, and it
 mattered most where it was least affordable: on the VM legs the resulting
@@ -124,6 +195,11 @@ Plaintext escaped because its connections carry a single exchange, so no
 unacknowledged segment ever precedes the write. rustls suffered less because it
 coalesces a record into one write rather than two. Noise took the full stall on
 every message.
+
+> [!NOTE] The `Setup` rows above predate `SETUP_SETTLE`. Both columns were
+> measured without the settle interval, so the comparison between them is sound,
+> but the absolute plaintext `Setup` figure is roughly double what the current
+> harness reports. It is now about 16.4 us rather than 33.77 us.
 
 Read against the corrected figures, the Noise data path costs 4% over plaintext
 and beats rustls by 1.4x, while Noise setup is 3.1x _slower_ than a rustls

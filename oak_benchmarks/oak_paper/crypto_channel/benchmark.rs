@@ -147,6 +147,37 @@ fn benchmark_wrapper(
     }
 }
 
+/// How long to wait, untimed, between tearing one channel down and timing the
+/// next one up.
+///
+/// A connect issued while the previous connection's teardown is still in
+/// flight is slower, and without this wait the `Setup` figure is roughly twice
+/// its true value and far too noisy to use (plaintext: 33.3 µs ±22% at 0 µs,
+/// 16.4 µs ±1.6% at 200 µs). The effect is a threshold, not a slope -- almost
+/// all of it is recovered by 25 µs -- so 200 µs deliberately over-provisions to
+/// cover the slower VM legs as well.
+///
+/// It is not free: it costs the TLS leg about 2% and Noise about 1%, because
+/// the server thread now goes idle between iterations and the timed handshake
+/// includes waking it. That is a reason to keep it rather than shorten it, as a
+/// real server is not spinning in wait for the next connection.
+///
+/// See the README for the interval sweep, the cost table, and the two
+/// mechanisms that were ruled out.
+const SETUP_SETTLE: Duration = Duration::from_micros(200);
+
+/// Spins for `duration` without sleeping.
+///
+/// Deliberately a busy wait, so that the client core stays in the state the
+/// measurement is supposed to characterise rather than paying a wake-up inside
+/// the following timed region.
+fn spin_for(duration: Duration) {
+    let start = Instant::now();
+    while start.elapsed() < duration {
+        core::hint::spin_loop();
+    }
+}
+
 /// Times channel setup: the transport connect plus whatever handshake the leg
 /// performs.
 ///
@@ -156,10 +187,11 @@ fn benchmark_wrapper(
 /// has long claimed this crate measures it. It did not: every handshake
 /// happened inside `stream_creator`, outside every timer.
 ///
-/// Each iteration then closes the channel, untimed. That is not padding: the
-/// server serves one channel at a time, so without it the next iteration's
-/// connect would sit in the listen backlog behind a connection nobody is
-/// using.
+/// Each iteration then closes the channel and waits [`SETUP_SETTLE`], both
+/// untimed. The close is required because the server serves one channel at a
+/// time. The wait is required because a connect issued immediately after a
+/// teardown is measurably slower than one issued a round trip later; see
+/// [`SETUP_SETTLE`] for the measurements behind that.
 ///
 /// The plaintext leg is the baseline here. It has no handshake, so what it
 /// reports is the cost of the transport alone, and the interesting quantity
@@ -180,6 +212,7 @@ fn handshake_wrapper(
                 total += start.elapsed();
 
                 close_channel(&mut *stream);
+                spin_for(SETUP_SETTLE);
             }
             total
         });
@@ -187,6 +220,7 @@ fn handshake_wrapper(
 
     group.finish();
 }
+
 fn plaintext_local_tcp_benchmark(c: &mut Criterion) {
     let (addr, server_handle) = linux_server::start_tcp_server(
         "127.0.0.1:0",
