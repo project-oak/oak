@@ -257,6 +257,39 @@ fn noise_local_tcp_benchmark(c: &mut Criterion) {
     server_handle.join().unwrap();
 }
 
+/// Builds the client configuration for the rustls legs, with session
+/// resumption **disabled**.
+///
+/// One `ClientConfig` is shared across every iteration of a leg, and
+/// `Resumption::default()` is an in-memory store of 256 sessions, so leaving it
+/// on means the first handshake is full and every subsequent one is a PSK
+/// resumption. Confirmed by printing
+/// [`rustls::ClientConnection::handshake_kind`] from this code path: iteration
+/// 0 reports `Full` and iterations 1 through 6000 all report `Resumed`.
+/// [`new_tls_client_stream`] now asserts this on every iteration rather than
+/// leaving it to a one-off observation, because the setting is remote from the
+/// measurement and its failure mode is silent.
+///
+/// A resumed TLS 1.3 handshake sends no certificate and generates no
+/// signature, so it is a different protocol exchange from the one `Setup`
+/// claims to measure, and it is not what the BoringSSL leg does -- that one
+/// reports `full_handshakes` equal to its iteration count. With resumption on,
+/// `Setup` reported ~180 µs; with it off, ~652 µs. The BoringSSL leg's full
+/// handshake is ~601 µs, and those two agreeing to within 8% is the check that
+/// both are now doing the same work.
+///
+/// Resumption is a real and important optimisation, and a client that really
+/// did reconnect to the same server for every RPC would benefit from it. It is
+/// disabled here because the point of this group is to compare handshake cost
+/// across three protocols, and Noise has no resumption mechanism to offer, so
+/// the only exchange all three can perform is a full one.
+fn tls_client_config(root_store: rustls::RootCertStore) -> Arc<ClientConfig> {
+    let mut client_config =
+        ClientConfig::builder().with_root_certificates(root_store).with_no_client_auth();
+    client_config.resumption = rustls::client::Resumption::disabled();
+    Arc::new(client_config)
+}
+
 /// Completes the TLS handshake on an already-connected socket.
 ///
 /// `rustls::StreamOwned::new` does not handshake; rustls defers that to the
@@ -272,6 +305,14 @@ fn noise_local_tcp_benchmark(c: &mut Criterion) {
 /// Takes a connected socket rather than an address so that each caller keeps
 /// its own connect-failure message; the VM legs need to say how to start the
 /// VM.
+///
+/// Asserts on every iteration that the handshake really was a full one. The
+/// resumption setting lives in [`tls_client_config`], several call frames away,
+/// and a default-constructed `ClientConfig` resumes; this defect went unnoticed
+/// precisely because a resumed handshake is silent and merely fast.
+/// `FullWithHelloRetryRequest` is rejected too: it is a full handshake, but it
+/// spends an extra round trip, so it is not the exchange the other two legs
+/// perform either.
 fn new_tls_client_stream(
     tcp_stream: TcpStream,
     client_config: Arc<ClientConfig>,
@@ -280,6 +321,12 @@ fn new_tls_client_stream(
     let conn = rustls::ClientConnection::new(client_config, server_name).unwrap();
     let mut stream = rustls::StreamOwned::new(conn, tcp_stream);
     stream.conn.complete_io(&mut stream.sock).expect("tls handshake failed");
+    assert_eq!(
+        stream.conn.handshake_kind(),
+        Some(rustls::HandshakeKind::Full),
+        "the tls leg must perform a full handshake, otherwise it is not measuring \
+         the same exchange as the noise and boringssl legs"
+    );
     Box::new(stream)
 }
 
@@ -304,9 +351,7 @@ fn tls_local_tcp_benchmark(c: &mut Criterion) {
 
     let mut root_store = rustls::RootCertStore::empty();
     root_store.add(certs[0].clone()).unwrap();
-    let client_config =
-        ClientConfig::builder().with_root_certificates(root_store).with_no_client_auth();
-    let client_config = Arc::new(client_config);
+    let client_config = tls_client_config(root_store);
 
     let tls_connect = || -> Box<dyn MessageStream> {
         let tcp_stream = linux_server::connect(addr).expect("couldn't connect to server");
@@ -360,9 +405,7 @@ fn tls_vm_tcp_benchmark(c: &mut Criterion) {
 
     let mut root_store = rustls::RootCertStore::empty();
     root_store.add(certs[0].clone()).unwrap();
-    let client_config =
-        ClientConfig::builder().with_root_certificates(root_store).with_no_client_auth();
-    let client_config = Arc::new(client_config);
+    let client_config = tls_client_config(root_store);
 
     let tls_connect = || -> Box<dyn MessageStream> {
         let tcp_stream = linux_server::connect(addr).expect(VM_CONNECT_HELP);

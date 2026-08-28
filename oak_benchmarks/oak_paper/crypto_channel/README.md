@@ -202,8 +202,17 @@ every message.
 > harness reports. It is now about 16.4 us rather than 33.77 us.
 
 Read against the corrected figures, the Noise data path costs 4% over plaintext
-and beats rustls by 1.4x, while Noise setup is 3.1x _slower_ than a rustls
-handshake. Both halves are worth knowing and neither was visible before.
+and beats rustls by 1.4x on the message-exchange arm. Both halves are worth
+knowing and neither was visible before.
+
+> [!WARNING] This section used to add "while Noise setup is 3.1x _slower_ than a
+> rustls handshake". **That was wrong.** The rustls leg was resuming its TLS
+> sessions -- one `ClientConfig` was shared across every iteration and
+> `Resumption::default()` is an in-memory store of 256 sessions, so only the
+> first handshake was full. A resumed handshake sends no certificate and
+> generates no signature. With resumption disabled the rustls handshake costs
+> ~652 us against Noise's ~534 us, so **Noise setup is about 1.2x faster, not
+> 3.1x slower**. See `tls_client_config` in `benchmark.rs`.
 
 `linux_server::connect` and `start_tcp_server` now set `TCP_NODELAY`, and
 `linux_server_test` covers both call sites. The root cause is the two-write
