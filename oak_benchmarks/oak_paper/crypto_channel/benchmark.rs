@@ -26,6 +26,7 @@ use std::{
 };
 
 use criterion::{Criterion, criterion_group, criterion_main};
+use crypto_channel_attestation::{ServerAttestationMaterial, client_session_config};
 use linux_server::{
     DEFAULT_NOISE_PORT, DEFAULT_PLAINTEXT_PORT, DEFAULT_TLS_PORT, init_rustls, load_certs_and_key,
 };
@@ -72,7 +73,43 @@ fn create_message(size: usize) -> Vec<u8> {
     message
 }
 
-const TEST_SIZES: &[usize] = &[1, 1000, 100_000, 1_000_000, 10_000_000, 100_000_000];
+/// Payload sizes swept by [`benchmark_wrapper`], in bytes.
+///
+/// A single 1-byte payload cannot separate cryptography from framing. At that
+/// size the exchange is almost entirely fixed cost: four socket calls at
+/// roughly 1 us each on this host, plus the length prefix. The Noise legs put
+/// 89 bytes on the wire to carry 1 byte, because the session layer wraps the
+/// payload in a protobuf, against roughly 26 for a TLS record -- so even the
+/// bytes moved are mostly overhead. Any per-message claim read off the 1-byte
+/// row is a claim about framing.
+///
+/// The decade points -- 1, 1000, 100_000, 1_000_000, 10_000_000, 100_000_000
+/// -- come from the sweep added for `crypto_channel_benchmark_report.md` and
+/// are kept unchanged so that report can be regenerated. They characterise
+/// bulk throughput.
+///
+/// Two further points are added here because the decade spacing steps straight
+/// over the threshold that decides the small-message comparison. Both are
+/// four bytes short of a power of two, because `send_message` puts the u32
+/// length prefix in the *same* write as the body, so rustls is handed
+/// `payload + 4` bytes and fragments on that total:
+///
+/// - `16_380` -- 16384 bytes with the prefix, exactly the largest TLS 1.3
+///   plaintext that fits a single record
+///   ([RFC 8446 section 5.1](https://www.rfc-editor.org/rfc/rfc8446#section-5.1)),
+///   so it is the last size at which the TLS legs pay record overhead once.
+///   `16_384` would be the worst point rather than the boundary: at 16388
+///   bytes rustls emits two records, the second carrying four bytes.
+/// - `65_532` -- 65536 bytes with the prefix, so exactly four records. The TLS
+///   legs pay four AEAD seals and four sets of record overhead where the Noise
+///   legs pay one. This is where the comparison stops being about the cipher
+///   and starts being about the record layer, and it is here to make that
+///   visible rather than to hide it.
+///
+/// Without those two, the sweep jumps from 1000 to 100_000 and the record
+/// boundary is never observed.
+const TEST_SIZES: &[usize] =
+    &[1, 1000, 16_380, 65_532, 100_000, 1_000_000, 10_000_000, 100_000_000];
 
 /// Hands a channel back to the server and waits for it to say so.
 ///
@@ -264,6 +301,60 @@ fn noise_local_tcp_benchmark(c: &mut Criterion) {
     let mut stream = new_noise_client_stream(addr);
     stream.send_message(control::EXIT);
     server_handle.join().unwrap();
+}
+
+/// The same Noise leg, but with attestation switched on.
+///
+/// Read alongside [`noise_local_tcp_benchmark`]: the two differ only in the
+/// [`SessionConfig`] handed to the same handshake loop and the same transport,
+/// so their difference isolates what attestation costs. Both exchange the same
+/// number of messages, because an unattested Oak session still performs the
+/// attestation round trip with empty evidence.
+///
+/// The server's evidence is generated once, here, and shared by every session
+/// the leg opens. That mirrors a real deployment, where the DICE chain is built
+/// as the stack boots and long before any client arrives; charging it per
+/// session would measure something no deployment pays.
+///
+/// See [`crypto_channel_attestation`] for what is real in this evidence and
+/// what is substituted -- in particular that the hardware root of trust is not,
+/// and cannot be, exercised on this host.
+fn noise_attested_local_tcp_benchmark(c: &mut Criterion) {
+    let material = Arc::new(
+        ServerAttestationMaterial::generate().expect("generating server attestation material"),
+    );
+
+    let server_material = material.clone();
+    let (addr, server_handle) = linux_server::start_tcp_server(
+        "127.0.0.1:0",
+        Arc::new(move |tcp_stream: TcpStream| -> Box<dyn MessageStream> {
+            Box::new(NoiseMessageStream::new_server_with_config(
+                BufferedStream::new(tcp_stream),
+                server_material.session_config(),
+            ))
+        }),
+    );
+
+    benchmark_wrapper(TEST_SIZES, "Local TCP Noise (attested) Message Exchange", c, || {
+        new_attested_noise_client_stream(addr)
+    });
+    handshake_wrapper("Local TCP Noise (attested) Setup", c, || {
+        new_attested_noise_client_stream(addr)
+    });
+
+    let mut stream = new_attested_noise_client_stream(addr);
+    stream.send_message(control::EXIT);
+    server_handle.join().unwrap();
+}
+
+/// Connects and runs an attested Noise handshake, verifying the server's
+/// evidence and its binding signature.
+fn new_attested_noise_client_stream(addr: SocketAddr) -> Box<dyn MessageStream> {
+    let tcp_stream = linux_server::connect(addr).expect("couldn't connect to server");
+    Box::new(NoiseMessageStream::new_client_with_config(
+        BufferedStream::new(tcp_stream),
+        client_session_config(),
+    ))
 }
 
 /// Builds the client configuration for the rustls legs, with session
@@ -481,6 +572,7 @@ criterion_group!(
     noise_rk_benchmark,
     plaintext_local_tcp_benchmark,
     noise_local_tcp_benchmark,
+    noise_attested_local_tcp_benchmark,
     tls_local_tcp_benchmark,
     plaintext_vm_tcp_benchmark,
     noise_vm_tcp_benchmark,

@@ -33,6 +33,11 @@
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use oak_crypto::noise_handshake::{P256Scalar, p256_scalar_mult};
+use p256::ecdsa::{
+    Signature, SigningKey, VerifyingKey,
+    signature::{Signer, Verifier},
+};
+use rand_core::OsRng;
 
 /// Key generation: draws a scalar and multiplies the generator by it.
 fn bench_keygen(c: &mut Criterion) {
@@ -73,5 +78,49 @@ fn bench_ecdh(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_keygen, bench_generate_only, bench_public_key_only, bench_ecdh);
+/// ECDSA signing: what a server pays to bind one session to its attestation.
+///
+/// Oak's attested Noise signs the Noise handshake hash with the private half of
+/// the binding key carried in its DICE evidence, exactly once per session.
+fn bench_ecdsa_sign(c: &mut Criterion) {
+    let signing_key = SigningKey::random(&mut OsRng);
+    let message = [0u8; 32];
+    c.bench_function("p256 ecdsa sign", |b| {
+        b.iter(|| {
+            let signature: Signature = signing_key.sign(&message);
+            std::hint::black_box(signature)
+        })
+    });
+}
+
+/// ECDSA verification: what a client pays *per DICE layer certificate*, and
+/// once more for the session binding signature.
+///
+/// This is the unit the attested-versus-unattested `Setup` difference is built
+/// from: multiply by the number of certificates in the chain, add one for the
+/// binding, and the remainder is parsing and policy evaluation.
+fn bench_ecdsa_verify(c: &mut Criterion) {
+    let signing_key = SigningKey::random(&mut OsRng);
+    let verifying_key = VerifyingKey::from(&signing_key);
+    let message = [0u8; 32];
+    let signature: Signature = signing_key.sign(&message);
+    // `verify` returns `Result<(), Error>`, so black-boxing its `unwrap()`
+    // black-boxes a unit and is no barrier at all. Hand criterion the `Result`
+    // instead, and check outside the loop that it is the success path being
+    // timed.
+    assert!(verifying_key.verify(&message, &signature).is_ok());
+    c.bench_function("p256 ecdsa verify", |b| {
+        b.iter(|| verifying_key.verify(&message, &signature))
+    });
+}
+
+criterion_group!(
+    benches,
+    bench_keygen,
+    bench_generate_only,
+    bench_public_key_only,
+    bench_ecdh,
+    bench_ecdsa_sign,
+    bench_ecdsa_verify
+);
 criterion_main!(benches);

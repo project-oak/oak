@@ -284,18 +284,43 @@ where
 pub type ClientNoiseMessageStream<MS> = NoiseMessageStream<MS, ClientSession>;
 pub type ServerNoiseMessageStream<MS> = NoiseMessageStream<MS, ServerSession>;
 
+/// The config used by the unattested Noise legs.
+///
+/// `Unattested` removes the attestation *evidence*, not the attestation
+/// *round trip*: the session protocol still exchanges an `AttestRequest` and an
+/// `AttestResponse`, they are just empty. That is what makes the attested and
+/// unattested legs comparable — they have the same network shape, so the
+/// difference between them is attestation's cryptography rather than its
+/// latency.
+pub fn unattested_noise_nn_config() -> SessionConfig {
+    SessionConfig::builder(
+        oak_session::attestation::AttestationType::Unattested,
+        oak_session::handshake::HandshakeType::NoiseNN,
+    )
+    .build()
+}
+
 impl<MS: MessageStream> ClientNoiseMessageStream<MS> {
     // Create a new client session for the provided message stream, and perform
     // handshake. Unattested NoiseNN is used.
-    pub fn new_client(mut message_stream: MS) -> ClientNoiseMessageStream<MS> {
-        let mut session = ClientSession::create(
-            SessionConfig::builder(
-                oak_session::attestation::AttestationType::Unattested,
-                oak_session::handshake::HandshakeType::NoiseNN,
-            )
-            .build(),
-        )
-        .unwrap();
+    pub fn new_client(message_stream: MS) -> ClientNoiseMessageStream<MS> {
+        Self::new_client_with_config(message_stream, unattested_noise_nn_config())
+    }
+
+    /// Same as [`Self::new_client`], but with a caller-supplied
+    /// [`SessionConfig`].
+    ///
+    /// The handshake loop is identical whether or not the session attests:
+    /// attestation is carried inside the session protocol's own messages, so
+    /// the transport does not need to know about it. Constructing the config is
+    /// left to the caller because the attested configs need `std` and pull in
+    /// the attestation verification stack, which this crate deliberately does
+    /// not depend on.
+    pub fn new_client_with_config(
+        mut message_stream: MS,
+        config: SessionConfig,
+    ) -> ClientNoiseMessageStream<MS> {
+        let mut session = ClientSession::create(config).unwrap();
         while !session.is_open() {
             let init_req = session
                 .get_outgoing_message()
@@ -318,15 +343,18 @@ impl<MS: MessageStream> ClientNoiseMessageStream<MS> {
 impl<MS: MessageStream> ServerNoiseMessageStream<MS> {
     // Create a new server session for the provided message stream, and perform
     // handshake. Unattested NoiseNN is used.
-    pub fn new_server(mut message_stream: MS) -> ServerNoiseMessageStream<MS> {
-        let mut session = ServerSession::create(
-            SessionConfig::builder(
-                oak_session::attestation::AttestationType::Unattested,
-                oak_session::handshake::HandshakeType::NoiseNN,
-            )
-            .build(),
-        )
-        .unwrap();
+    pub fn new_server(message_stream: MS) -> ServerNoiseMessageStream<MS> {
+        Self::new_server_with_config(message_stream, unattested_noise_nn_config())
+    }
+
+    /// Same as [`Self::new_server`], but with a caller-supplied
+    /// [`SessionConfig`]. See [`ClientNoiseMessageStream::
+    /// new_client_with_config`].
+    pub fn new_server_with_config(
+        mut message_stream: MS,
+        config: SessionConfig,
+    ) -> ServerNoiseMessageStream<MS> {
+        let mut session = ServerSession::create(config).unwrap();
         while !session.is_open() {
             let req_bytes = message_stream.read_message();
             let session_req = SessionRequest::decode(req_bytes.as_slice())

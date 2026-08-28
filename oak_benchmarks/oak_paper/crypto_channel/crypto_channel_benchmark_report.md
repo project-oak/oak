@@ -1,5 +1,20 @@
 # Crypto Channel Benchmark Report
 
+> [!WARNING] **These numbers are superseded and must not be quoted.** They were
+> measured before the harness fixes in this stack, and every leg is affected:
+>
+> - Nagle's algorithm was enabled, which is why the Local Noise 1-byte figure is
+>   22.074 ms while its 100 KB figure is 425 µs. The report below attributes
+>   that inversion to "handshake overhead or lazy evaluation artifacts"; the
+>   cause is a delayed-ACK interaction, and disabling Nagle removes it.
+> - A fresh channel was opened per iteration, so the connect cost is in the
+>   machine even though it is not in the figure.
+> - The TLS leg resumed sessions, so its Setup row is not a full handshake.
+> - The RK leg ran under QEMU's software emulation rather than KVM.
+> - Sample size was 20.
+>
+> Regenerate with `process_benchmarks.py` once this stack has landed.
+
 ## 1. Overview
 
 This report summarizes the performance benchmarks conducted on the crypto

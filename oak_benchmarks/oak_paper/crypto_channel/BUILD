@@ -78,6 +78,32 @@ rust_test(
     deps = ["@oak_crates_index//:googletest"],
 )
 
+# Real (software-rooted) DICE evidence for the attested Noise leg, plus the
+# client config that verifies it.
+rust_library(
+    name = "crypto_channel_attestation",
+    srcs = ["attestation.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        "//oak_attestation_verification",
+        "//oak_dice",
+        "//oak_proto_rust",
+        "//oak_sdk/common:oak_sdk_common",
+        "//oak_sdk/standalone:oak_sdk_standalone",
+        "//oak_session",
+        "//oak_time:oak_time_std",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:p256",
+    ],
+)
+
+rust_test(
+    name = "crypto_channel_attestation_test",
+    crate = ":crypto_channel_attestation",
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = ["@oak_crates_index//:googletest"],
+)
+
 rust_binary(
     name = "benchmark",
     srcs = [
@@ -94,9 +120,34 @@ rust_binary(
     env = {
         "RUST_LOG": "debug",
         "RUST_BACKTRACE": "1",
+        # Stop the message-exchange results depending on which benchmarks ran
+        # before them.
+        #
+        # glibc's mmap threshold is adaptive: it ratchets upward each time an
+        # mmap'd block is freed, and setting it also freezes the *trim*
+        # threshold. Left alone, whether a given payload size is served from a
+        # retained heap or from memory handed back to the kernel and re-faulted
+        # depends on the process's allocation history. Measured effect on the
+        # same unattested Noise code at a 1 MB payload: 1.27 ms when it ran
+        # after a filter excluded the smaller sizes, 2.97 ms when it ran first
+        # in the full sweep. Payloads up to 16380 bytes are unaffected; 65532
+        # and above are not.
+        #
+        # Both tunables are pinned above any allocation this benchmark makes,
+        # which reproduces the steady state that the adaptive default converges
+        # to -- a warmed-up server does not return its buffers to the kernel
+        # between requests -- and makes it independent of ordering. Verified:
+        # with both pinned, every payload matches the default's converged value
+        # to within 3%, while pinning only the mmap threshold inflates the
+        # plaintext 1 MB point by 5.7x.
+        #
+        # <https://www.gnu.org/software/libc/manual/html_node/Memory-Allocation-Tunables.html>
+        "MALLOC_MMAP_THRESHOLD_": "1073741824",
+        "MALLOC_TRIM_THRESHOLD_": "1073741824",
     },
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
+        ":crypto_channel_attestation",
         ":linux_server",
         ":message_stream_client",
         ":rk_launcher",
@@ -193,5 +244,7 @@ rust_binary(
     deps = [
         "//oak_crypto",
         "@oak_crates_index//:criterion",
+        "@oak_crates_index//:p256",
+        "@oak_crates_index//:rand_core",
     ],
 )
