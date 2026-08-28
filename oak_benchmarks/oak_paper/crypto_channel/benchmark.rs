@@ -27,8 +27,7 @@ use std::{
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use linux_server::{
-    DEFAULT_BORINGSSL_PORT, DEFAULT_NOISE_PORT, DEFAULT_PLAINTEXT_PORT, init_rustls,
-    load_certs_and_key,
+    DEFAULT_NOISE_PORT, DEFAULT_PLAINTEXT_PORT, DEFAULT_TLS_PORT, init_rustls, load_certs_and_key,
 };
 use message_stream_client::{MessageStream, NoiseMessageStream};
 use rk_launcher::{OakClientChannelMessageStream, start_rk_enclave_server};
@@ -145,7 +144,7 @@ fn noise_local_tcp_benchmark(c: &mut Criterion) {
     server_handle.join().unwrap();
 }
 
-fn boringssl_local_tcp_benchmark(c: &mut Criterion) {
+fn tls_local_tcp_benchmark(c: &mut Criterion) {
     init_rustls();
     let (certs, key) = load_certs_and_key();
 
@@ -170,7 +169,7 @@ fn boringssl_local_tcp_benchmark(c: &mut Criterion) {
         ClientConfig::builder().with_root_certificates(root_store).with_no_client_auth();
     let client_config = Arc::new(client_config);
 
-    benchmark_wrapper(TEST_SIZES, "Local TCP BoringSSL Message Exchange", c, || {
+    benchmark_wrapper(TEST_SIZES, "Local TCP TLS (rustls) Message Exchange", c, || {
         let tcp_stream = TcpStream::connect(addr).expect("couldn't connect to server");
         let server_name = ServerName::try_from("localhost").unwrap().to_owned();
         let conn = rustls::ClientConnection::new(client_config.clone(), server_name).unwrap();
@@ -211,9 +210,9 @@ fn noise_vm_tcp_benchmark(c: &mut Criterion) {
     });
 }
 
-fn boringssl_vm_tcp_benchmark(c: &mut Criterion) {
-    let addr = get_vm_addr("boringssl", DEFAULT_BORINGSSL_PORT);
-    println!("Connecting to VM at {} for boringssl benchmark", addr);
+fn tls_vm_tcp_benchmark(c: &mut Criterion) {
+    let addr = get_vm_addr("tls", DEFAULT_TLS_PORT);
+    println!("Connecting to VM at {} for the TLS benchmark", addr);
 
     init_rustls();
     let (certs, _key) = load_certs_and_key();
@@ -224,7 +223,7 @@ fn boringssl_vm_tcp_benchmark(c: &mut Criterion) {
         ClientConfig::builder().with_root_certificates(root_store).with_no_client_auth();
     let client_config = Arc::new(client_config);
 
-    benchmark_wrapper(TEST_SIZES, "VM TCP BoringSSL Message Exchange", c, || {
+    benchmark_wrapper(TEST_SIZES, "VM TCP TLS (rustls) Message Exchange", c, || {
         let tcp_stream = TcpStream::connect(addr).expect(
             "Couldn't connect to VM. Make sure the VM is running with:\n\
              ./oak_benchmarks/linux_vm/run_vm.sh --image=<path> --port=5000 --port=5001 --port=5002 --headless",
@@ -270,9 +269,9 @@ criterion_group!(
     noise_rk_benchmark,
     plaintext_local_tcp_benchmark,
     noise_local_tcp_benchmark,
-    boringssl_local_tcp_benchmark,
+    tls_local_tcp_benchmark,
     plaintext_vm_tcp_benchmark,
     noise_vm_tcp_benchmark,
-    boringssl_vm_tcp_benchmark
+    tls_vm_tcp_benchmark
 );
 criterion_main!(benches);

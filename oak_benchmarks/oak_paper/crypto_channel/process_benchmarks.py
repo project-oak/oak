@@ -33,8 +33,14 @@ def convert_to_mib(value, unit):
 def parse_log(log_file):
   """Parse Criterion log file and extract time and throughput."""
   # Regex patterns
+  # The TLS leg is rustls, not BoringSSL, and the benchmark names say so. The
+  # parentheses in "TLS (rustls)" are literal, hence the escaping. A name that
+  # no longer matches would not raise here, it would silently drop every TLS
+  # row from the table and the plot, so this pattern and the benchmark names in
+  # `benchmark.rs` have to be changed together.
   bench_pattern = re.compile(
-      r"Benchmarking (RK|Local TCP|VM TCP) (Plaintext|Noise|BoringSSL) Message"
+      r"Benchmarking (RK|Local TCP|VM TCP)"
+      r" (Plaintext|Noise|TLS \(rustls\)) Message"
       r" Exchange/(\d+)"
   )
 
@@ -58,6 +64,19 @@ def parse_log(log_file):
         key = (current_env, current_protocol, current_size)
         if key not in results:
           results[key] = {}
+        continue
+
+      # Any other benchmark announcement ends the current group. Without this
+      # the parser stays latched on the last Message Exchange row and the next
+      # `time:` line it sees overwrites it -- and there is such a line: the
+      # `Setup` groups emit "Benchmarking <env> <protocol> Setup/setup", which
+      # `bench_pattern` deliberately does not match. The symptom is a table
+      # whose largest-payload row shows a handshake time of a few microseconds
+      # beside a GiB/s throughput, which is silently wrong rather than absent.
+      if line.startswith("Benchmarking "):
+        current_env = None
+        current_protocol = None
+        current_size = None
         continue
 
       if "thrpt:" in line and current_env:
@@ -152,8 +171,8 @@ def generate_plot(results, output_image):
       "Noise Local": ("o--", "tab:orange"),
       "Noise VM": ("s--", "tab:orange"),
       "Noise RK": ("^--", "tab:orange"),
-      "BoringSSL Local": ("o:", "tab:green"),
-      "BoringSSL VM": ("s:", "tab:green"),
+      "TLS (rustls) Local": ("o:", "tab:green"),
+      "TLS (rustls) VM": ("s:", "tab:green"),
   }
 
   plot_count = 0

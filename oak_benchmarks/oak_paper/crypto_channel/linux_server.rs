@@ -28,10 +28,24 @@ use rustls_pki_types::{CertificateDer, PrivateKeyDer};
 
 pub const DEFAULT_PLAINTEXT_PORT: u16 = 5000;
 pub const DEFAULT_NOISE_PORT: u16 = 5001;
-pub const DEFAULT_BORINGSSL_PORT: u16 = 5002;
+
+/// Port for the TLS leg.
+///
+/// The TLS implementation is rustls with the `ring` provider, installed by
+/// [`init_rustls`]. This constant and everything else on this leg used to be
+/// named after BoringSSL, which was never what the code linked. BoringSSL is
+/// a dependency of this repository -- see the `boringssl` bazel_dep in
+/// MODULE.bazel, used by `cc/crypto/hpke` and `oak_session/tls` -- so the old
+/// name was plausible enough to be repeated in a paper without anyone
+/// checking it against the build graph.
+pub const DEFAULT_TLS_PORT: u16 = 5002;
 
 static INIT_RUSTLS: Once = Once::new();
 
+/// Installs the process-wide rustls crypto provider.
+///
+/// Idempotent, because rustls rejects a second install and the benchmarks
+/// reach this from several entry points.
 pub fn init_rustls() {
     INIT_RUSTLS.call_once(|| {
         rustls::crypto::ring::default_provider()

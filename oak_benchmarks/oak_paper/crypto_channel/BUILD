@@ -161,6 +161,6 @@ rust_binary(
 vm_disk_image(
     name = "crypto_channel_vm",
     binary = ":crypto_channel_server",
-    command = "/opt/app/crypto_channel_server --host 0.0.0.0 --plaintext-port 5000 --noise-port 5001 --boringssl-port 5002",
+    command = "/opt/app/crypto_channel_server --host 0.0.0.0 --plaintext-port 5000 --noise-port 5001 --tls-port 5002",
     data = [":generate_certs"],
 )

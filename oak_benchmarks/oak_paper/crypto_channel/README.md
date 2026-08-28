@@ -15,10 +15,22 @@ We currently test the following combinations:
 
 - Plaintext protocol, Local TCP Server (Host)
 - NoiseNN encrypted protocol, Local TCP Server (Host)
+- TLS, Local TCP Server (Host)
 - Plaintext protocol, VM TCP Server
 - NoiseNN encrypted protocol, VM TCP Server
+- TLS, VM TCP Server
 - Plaintext protocol, Restricted Kernel Server
 - NoiseNN encrypted protocol, Restricted Kernel Server
+
+The TLS leg is [rustls](https://github.com/rustls/rustls) with the `ring`
+provider. It was named after BoringSSL until 2026-08; the code never linked
+BoringSSL, and the name is worth keeping straight because "we compared against
+BoringSSL" is a different, checkable claim from "we compared against rustls".
+BoringSSL is a dependency of this repository, just not of this benchmark.
+
+The Noise legs are **unattested** NoiseNN (`AttestationType::Unattested`).
+Nothing here exercises attestation, so no number produced by this crate says
+anything about DICE or attestation verification cost.
 
 All measurements are taken on the host side.
 
@@ -40,7 +52,7 @@ The server serves all three protocols simultaneously on different ports:
 | --------- | ------------ |
 | Plaintext | 5000         |
 | Noise     | 5001         |
-| BoringSSL | 5002         |
+| TLS       | 5002         |
 
 ### Prerequisites
 
@@ -86,7 +98,7 @@ BASE_IMAGE=$(bazel cquery @debian_nocloud_qcow2//file --output=files)
     --binary="${BINARY}" \
     --base-image="${BASE_IMAGE}" \
     --output=/tmp/crypto-channel.qcow2 \
-    --command="/opt/app/crypto_channel_server --host 0.0.0.0 --plaintext-port 5000 --noise-port 5001 --boringssl-port 5002"
+    --command="/opt/app/crypto_channel_server --host 0.0.0.0 --plaintext-port 5000 --noise-port 5001 --tls-port 5002"
 ```
 
 1. Start the VM:
@@ -108,7 +120,7 @@ In another terminal, run the benchmarks:
 bazel run -c opt //oak_benchmarks/oak_paper/crypto_channel:benchmark -- --bench
 ```
 
-This will run all three protocol benchmarks (plaintext, noise, boringssl)
+This will run all three protocol benchmarks (plaintext, noise, TLS)
 automatically, connecting to the appropriate port for each.
 
 ### 4. Stop the VM
@@ -121,4 +133,4 @@ running with `--headless`).
 - `VM_HOST`: Host address of the VM (default: `127.0.0.1`)
 - `VM_PLAINTEXT_PORT`: Port for plaintext protocol (default: `5000`)
 - `VM_NOISE_PORT`: Port for Noise protocol (default: `5001`)
-- `VM_BORINGSSL_PORT`: Port for BoringSSL protocol (default: `5002`)
+- `VM_TLS_PORT`: Port for the TLS protocol (default: `5002`)

@@ -16,7 +16,7 @@
 
 //! Multi-port TCP server for crypto channel benchmarks.
 //!
-//! Serves all three protocols (plaintext, noise, boringssl) simultaneously
+//! Serves all three protocols (plaintext, noise, TLS) simultaneously
 //! on different ports, allowing benchmarks to run without restarting the VM.
 
 use std::sync::Arc;
@@ -40,9 +40,9 @@ struct Args {
     #[arg(long, default_value_t = linux_server::DEFAULT_NOISE_PORT)]
     noise_port: u16,
 
-    /// Port for BoringSSL/TLS protocol (0 to disable).
-    #[arg(long, default_value_t = linux_server::DEFAULT_BORINGSSL_PORT)]
-    boringssl_port: u16,
+    /// Port for the TLS protocol, served by rustls (0 to disable).
+    #[arg(long, default_value_t = linux_server::DEFAULT_TLS_PORT)]
+    tls_port: u16,
 }
 
 fn main() {
@@ -70,8 +70,8 @@ fn main() {
         handles.push(("noise", handle));
     }
 
-    // Start BoringSSL/TLS server.
-    if args.boringssl_port != 0 {
+    // Start the TLS server.
+    if args.tls_port != 0 {
         // Try to load certs - this may fail if running outside Bazel (e.g., in a VM).
         match std::panic::catch_unwind(|| {
             linux_server::init_rustls();
@@ -84,20 +84,20 @@ fn main() {
                     .expect("bad certificate/key");
                 let server_config = Arc::new(server_config);
 
-                let addr = format!("{}:{}", args.host, args.boringssl_port);
+                let addr = format!("{}:{}", args.host, args.tls_port);
                 let stream_creator: linux_server::ServerStreamCreator =
                     Arc::new(move |tcp_stream| {
                         let conn = rustls::ServerConnection::new(server_config.clone()).unwrap();
                         Box::new(rustls::StreamOwned::new(conn, tcp_stream))
                     });
                 let (bound_addr, handle) = linux_server::start_tcp_server(&addr, stream_creator);
-                println!("BoringSSL server listening on {}", bound_addr);
-                handles.push(("boringssl", handle));
+                println!("TLS (rustls) server listening on {}", bound_addr);
+                handles.push(("tls", handle));
             }
             Err(_) => {
                 eprintln!(
                     "Warning: Could not load TLS certificates (runfiles not available). \
-                     BoringSSL server disabled."
+                     TLS server disabled."
                 );
             }
         }
