@@ -57,12 +57,40 @@ round trip**. Do not quote it as an RTT.
 leg has no handshake, so its `Setup` figure is the transport cost alone and is
 the floor the other legs should be read against.
 
-A fresh channel is created for every iteration of `Message Exchange`, so the
-comparison is currently **handshake-per-RPC only**. The single-long-lived-
-channel arm is not implemented: `linux_server::start_tcp_server` serves exactly
-one message per connection, so measuring channel reuse needs a server that loops
-on the connection, and that needs `MessageStream` to be able to report
-end-of-stream instead of panicking.
+The two groups are the two arms the evaluation plan asks for: `Message Exchange`
+holds **one channel open** for the whole measurement, `Setup` performs a
+**handshake per iteration**. The per-RPC cost of a protocol that reconnects each
+time is the sum of the two; the cost for a protocol that keeps a channel is
+`Message Exchange` alone.
+
+`Message Exchange` used to open a fresh channel per iteration too, untimed. That
+excluded the connect from the reported figure but not from the machine, and it
+mattered most where it was least affordable: on the VM legs the resulting
+connection churn through QEMU's user-mode networking left two of six points with
+confidence intervals spanning more than an order of magnitude, and made
+plaintext look slower than both encrypted legs. Holding the channel open also
+cut the local figures by 14-24%.
+
+### The control protocol
+
+The servers are echo servers, so a client needs a way to say it is finished. Two
+sentinels, defined in `message_stream::control`:
+
+| Sentinel   | Meaning                                                                                                                      |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `b"close"` | Finish with this channel. Echoed back, then the server returns to `accept` (or, in the enclave, discards its Noise session). |
+| `b"exit"`  | Shut the server down. Not echoed.                                                                                            |
+
+`close` is acknowledged rather than being a bare disconnect because the
+Restricted Kernel leg has no connection to close: without the reply the enclave
+would sit reading an application message while the client sent the first frame
+of a new handshake. Benchmark payloads cannot collide with either sentinel,
+since `create_message` fills a buffer with `0, 1, 2, ...`.
+
+A client that disconnects without saying `close` is tolerated -- the server
+treats end-of-stream as the end of that connection. It has to, because the
+server outlives every client and a panic on the server thread would surface
+later against an unrelated leg.
 
 > [!IMPORTANT] Until 2026-08 the TLS leg's handshake was charged to its first
 > timed send. `rustls::StreamOwned::new` does not handshake; rustls defers it to

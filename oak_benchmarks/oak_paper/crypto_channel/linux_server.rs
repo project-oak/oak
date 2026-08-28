@@ -22,7 +22,7 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use message_stream_client::MessageStream;
+use message_stream_client::{MessageStream, control};
 use oak_file_utils::data_path;
 use rustls_pki_types::{CertificateDer, PrivateKeyDer};
 
@@ -130,6 +130,23 @@ pub fn connect(addr: SocketAddr) -> std::io::Result<TcpStream> {
     Ok(tcp_stream)
 }
 
+/// Runs an echo server on a background thread until a client sends
+/// [`control::EXIT`].
+///
+/// Each accepted connection is served until the client sends
+/// [`control::CLOSE`] or simply goes away, at which point the server returns
+/// to `accept`. Serving more than one message per connection is what lets a
+/// benchmark hold a channel open across a whole measurement, so that what it
+/// times is the exchange rather than the exchange plus a connect.
+///
+/// A client that disconnects without saying [`control::CLOSE`] is tolerated.
+/// It has to be: the server outlives every client, so a panic here would be
+/// reported much later, against whichever leg happened to run next.
+///
+/// One connection is served at a time, deliberately. These benchmarks measure
+/// latency on an idle path; a concurrent server would add scheduling noise
+/// and measure something else. It does mean a second client blocks in the
+/// listen backlog until the first is done.
 pub fn start_tcp_server(
     addr: &str,
     stream_creator: ServerStreamCreator,
@@ -137,18 +154,22 @@ pub fn start_tcp_server(
     let listener = TcpListener::bind(addr).expect("failed to bind server");
     let addr = listener.local_addr().expect("failed to get local address");
     let handle = thread::spawn(move || {
-        loop {
+        'accept: loop {
             let (tcp_stream, _) = listener.accept().expect("failed to receive connection");
             // The server replies with the same two-write framing, so it stalls
             // the client the same way if this is left out.
             disable_nagle(&tcp_stream);
             let stream = &mut stream_creator(tcp_stream);
 
-            let read_msg = stream.read_message();
-            if read_msg == b"exit" {
-                break;
+            while let Some(read_msg) = stream.try_read_message() {
+                if read_msg == control::EXIT {
+                    break 'accept;
+                }
+                stream.send_message(&read_msg);
+                if read_msg == control::CLOSE {
+                    break;
+                }
             }
-            stream.send_message(&read_msg);
         }
     });
     (addr, handle)
@@ -156,6 +177,8 @@ pub fn start_tcp_server(
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
     use googletest::prelude::*;
 
     use super::*;
@@ -189,9 +212,92 @@ mod tests {
         );
 
         let mut client = connect(addr).expect("failed to connect");
-        client.send_message(b"exit");
+        client.send_message(control::EXIT);
         handle.join().expect("server panicked");
 
         expect_that!(nodelay_rx.recv(), ok(eq(true)));
+    }
+
+    /// Counts accepted connections, so that a regression to one connection
+    /// per message is a test failure rather than a slow benchmark.
+    fn counting_echo_server() -> (SocketAddr, JoinHandle<()>, Arc<AtomicUsize>) {
+        let accepted = Arc::new(AtomicUsize::new(0));
+        let counter = accepted.clone();
+        let (addr, handle) = start_tcp_server(
+            "127.0.0.1:0",
+            Arc::new(move |tcp_stream: TcpStream| -> Box<dyn MessageStream> {
+                counter.fetch_add(1, Ordering::SeqCst);
+                Box::new(tcp_stream)
+            }),
+        );
+        (addr, handle, accepted)
+    }
+
+    /// The point of the change: a channel survives more than one exchange.
+    ///
+    /// Without this the message-exchange benchmark cannot hold a channel open,
+    /// and every iteration pays a connect that the reported figure excludes
+    /// but the machine does not.
+    #[googletest::test]
+    fn serves_many_messages_on_one_connection() {
+        let (addr, handle, accepted) = counting_echo_server();
+
+        let mut client = connect(addr).expect("failed to connect");
+        for i in 0..5u8 {
+            client.send_message(&[i]);
+            expect_that!(client.read_message(), eq(&vec![i]));
+        }
+        client.send_message(control::EXIT);
+        handle.join().expect("server panicked");
+
+        expect_that!(accepted.load(Ordering::SeqCst), eq(1));
+    }
+
+    /// `CLOSE` is acknowledged and returns the server to `accept`, so the
+    /// handshake benchmark can measure setup repeatedly against one server.
+    #[googletest::test]
+    fn close_acknowledges_and_frees_the_server() {
+        let (addr, handle, accepted) = counting_echo_server();
+
+        for _ in 0..3 {
+            let mut client = connect(addr).expect("failed to connect");
+            client.send_message(control::CLOSE);
+            expect_that!(client.read_message(), eq(&control::CLOSE.to_vec()));
+        }
+
+        let mut client = connect(addr).expect("failed to connect");
+        client.send_message(control::EXIT);
+        handle.join().expect("server panicked");
+
+        expect_that!(accepted.load(Ordering::SeqCst), eq(4));
+    }
+
+    /// A client that drops its socket without saying [`control::CLOSE`] must
+    /// not take the server with it.
+    ///
+    /// This is not hypothetical. The VM readiness probe connects, exchanges
+    /// one message to confirm the guest is serving, and hangs up; an earlier
+    /// version of this loop panicked the plaintext server thread at that
+    /// point, and the leg then failed several minutes later for no visible
+    /// reason.
+    #[googletest::test]
+    fn survives_a_client_that_disconnects() {
+        let (addr, handle, accepted) = counting_echo_server();
+
+        {
+            let mut client = connect(addr).expect("failed to connect");
+            client.send_message(&[7u8]);
+            expect_that!(client.read_message(), eq(&vec![7u8]));
+            // Dropped without CLOSE, exactly as the readiness probe does.
+        }
+
+        // The server is still there and still serving.
+        let mut client = connect(addr).expect("failed to connect");
+        client.send_message(&[9u8]);
+        expect_that!(client.read_message(), eq(&vec![9u8]));
+        client.send_message(control::EXIT);
+        handle.join().expect("server panicked");
+
+        expect_that!(accepted.load(Ordering::SeqCst), eq(2));
     }
 }

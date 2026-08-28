@@ -29,6 +29,7 @@ rust_library(
         "//oak_channel",
         "//oak_proto_rust",
         "//oak_session",
+        "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost",
     ],
 )
@@ -36,11 +37,13 @@ rust_library(
 rust_library(
     name = "message_stream_client",
     srcs = ["message_stream.rs"],
+    crate_features = ["std"],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_channel:oak_channel_client",
         "//oak_proto_rust",
         "//oak_session",
+        "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost",
     ],
 )

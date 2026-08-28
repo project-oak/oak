@@ -34,17 +34,19 @@ impl OakClientChannelMessageStream {
 }
 
 impl MessageStream for OakClientChannelMessageStream {
-    fn read_message(&mut self) -> Vec<u8> {
+    /// Never `None`: the enclave channel is a pair of file descriptors into a
+    /// running guest, not a connection, so there is nothing that could close.
+    fn try_read_message(&mut self) -> Option<Vec<u8>> {
         let (msg, _timer) =
-            self.oak_client_channel.borrow_mut().read_response().expect("failed to read message");
-        msg.body
+            self.oak_client_channel.borrow_mut().read_response().expect("reading message");
+        Some(msg.body)
     }
 
     fn send_message(&mut self, msg: &[u8]) {
         self.oak_client_channel
             .borrow_mut()
             .write_request(RequestMessage { invocation_id: 0, body: msg.to_vec() })
-            .expect("failed to read message");
+            .expect("writing message");
     }
 }
 

@@ -29,7 +29,7 @@ use criterion::{Criterion, criterion_group, criterion_main};
 use linux_server::{
     DEFAULT_NOISE_PORT, DEFAULT_PLAINTEXT_PORT, DEFAULT_TLS_PORT, init_rustls, load_certs_and_key,
 };
-use message_stream_client::{MessageStream, NoiseMessageStream};
+use message_stream_client::{MessageStream, NoiseMessageStream, control};
 use rk_launcher::{OakClientChannelMessageStream, start_rk_enclave_server};
 use rustls::{ClientConfig, ServerConfig};
 use rustls_pki_types::ServerName;
@@ -74,22 +74,41 @@ fn create_message(size: usize) -> Vec<u8> {
 
 const TEST_SIZES: &[usize] = &[1, 1000, 100_000, 1_000_000, 10_000_000, 100_000_000];
 
-/// Wraps the benchmark logic for a given set of sizes and protocol.
+/// Hands a channel back to the server and waits for it to say so.
 ///
-/// Measures steady-state message exchange. It EXCLUDES the time taken to
-/// establish the connection and perform any handshake, which happens inside
-/// the `stream_creator` closure before the timer starts. [`handshake_wrapper`]
-/// measures that part.
+/// See [`control::CLOSE`] for why the acknowledgement is required rather than
+/// just closing the socket.
+fn close_channel(stream: &mut dyn MessageStream) {
+    stream.send_message(control::CLOSE);
+    let ack = stream.read_message();
+    assert_eq!(ack, control::CLOSE, "server did not acknowledge close");
+}
+
+/// Measures steady-state message exchange over a single long-lived channel.
+///
+/// One channel is established for the whole measurement and reused for every
+/// iteration, so what is timed is a send plus a receive and nothing else.
+/// This is the "single channel setup" arm of the comparison the evaluation
+/// plan asks for; [`handshake_wrapper`] is the "handshake-per-RPC" arm, and
+/// the per-RPC cost of a protocol is the sum of the two.
+///
+/// It used to open a fresh channel per iteration, untimed. That was not a
+/// neutral choice. The connect was excluded from the reported figure but not
+/// from the machine, and on the VM legs the resulting connection churn
+/// through QEMU's user-mode networking dominated: two of six points came back
+/// with confidence intervals spanning more than an order of magnitude, and
+/// plaintext -- which churned hardest, because criterion runs the most
+/// iterations on the fastest leg -- came out slower than both encrypted legs.
 ///
 /// The reported figure is `(send + recv) / 2`, a mean one-way latency, not a
 /// round trip. Halving is what makes the legs comparable -- a round trip
 /// through a leg with an asymmetric protocol is not the same quantity -- but
 /// it does mean the number must not be quoted as an RTT.
 ///
-/// A fresh channel is created per iteration, so this is the handshake-per-RPC
-/// arm of the comparison the evaluation plan asks for. The single-setup arm
-/// needs a server that serves more than one message per connection; see the
-/// README.
+/// The channel is created lazily, on the first iteration rather than up
+/// front, so that filtering the benchmarks with `--bench <regex>` does not
+/// make the VM legs demand a running VM they were told not to measure.
+/// Criterion runs every group function regardless of the filter.
 fn benchmark_wrapper(
     sizes: &[usize],
     description: &str,
@@ -97,16 +116,17 @@ fn benchmark_wrapper(
     mut stream_creator: impl FnMut() -> Box<dyn MessageStream>,
 ) {
     let mut group = c.benchmark_group(description);
+    let mut channel: Option<Box<dyn MessageStream>> = None;
 
     for size in sizes.iter() {
         group.throughput(criterion::Throughput::Bytes(*size as u64));
         group.bench_with_input(criterion::BenchmarkId::from_parameter(size), size, |b, size| {
             b.iter_custom(|iters| {
+                let stream = channel.get_or_insert_with(&mut stream_creator);
                 let mut send_total = Duration::from_millis(0);
                 let mut recv_total = Duration::from_millis(0);
+                let message = create_message(*size);
                 for _i in 0..iters {
-                    let mut stream = stream_creator();
-                    let message = create_message(*size);
                     let start = Instant::now();
                     stream.send_message(message.as_slice());
                     send_total += start.elapsed();
@@ -121,6 +141,10 @@ fn benchmark_wrapper(
     }
 
     group.finish();
+
+    if let Some(mut stream) = channel {
+        close_channel(&mut *stream);
+    }
 }
 
 /// Times channel setup: the transport connect plus whatever handshake the leg
@@ -132,10 +156,10 @@ fn benchmark_wrapper(
 /// has long claimed this crate measures it. It did not: every handshake
 /// happened inside `stream_creator`, outside every timer.
 ///
-/// Each iteration then performs one untimed echo. That is not padding: the
-/// TCP server handles exactly one message per connection before returning to
-/// `accept`, so without it the next iteration's connect would race the
-/// previous connection's teardown.
+/// Each iteration then closes the channel, untimed. That is not padding: the
+/// server serves one channel at a time, so without it the next iteration's
+/// connect would sit in the listen backlog behind a connection nobody is
+/// using.
 ///
 /// The plaintext leg is the baseline here. It has no handshake, so what it
 /// reports is the cost of the transport alone, and the interesting quantity
@@ -155,10 +179,7 @@ fn handshake_wrapper(
                 let mut stream = stream_creator();
                 total += start.elapsed();
 
-                // Untimed: let the server finish its cycle.
-                stream.send_message(&[0u8]);
-                let response = stream.read_message();
-                assert_eq!(response, vec![0u8]);
+                close_channel(&mut *stream);
             }
             total
         });
@@ -180,7 +201,7 @@ fn plaintext_local_tcp_benchmark(c: &mut Criterion) {
     handshake_wrapper("Local TCP Plaintext Setup", c, connect);
 
     let mut stream = linux_server::connect(addr).expect("couldn't connect to server");
-    stream.send_message(b"exit");
+    stream.send_message(control::EXIT);
     server_handle.join().unwrap();
 }
 
@@ -198,7 +219,7 @@ fn noise_local_tcp_benchmark(c: &mut Criterion) {
     handshake_wrapper("Local TCP Noise Setup", c, || new_noise_client_stream(addr));
 
     let mut stream = new_noise_client_stream(addr);
-    stream.send_message(b"exit");
+    stream.send_message(control::EXIT);
     server_handle.join().unwrap();
 }
 
@@ -262,7 +283,7 @@ fn tls_local_tcp_benchmark(c: &mut Criterion) {
     handshake_wrapper("Local TCP TLS (rustls) Setup", c, tls_connect);
 
     let mut stream = tls_connect();
-    stream.send_message(b"exit");
+    stream.send_message(control::EXIT);
     server_handle.join().unwrap();
 }
 /// Message shown when a VM leg cannot reach its server.

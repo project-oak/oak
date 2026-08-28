@@ -17,6 +17,11 @@
 #![no_std]
 
 extern crate alloc;
+// Needed only to inspect `std::io::Error` for end-of-stream; see
+// `is_end_of_stream`. The crate stays `no_std` for the enclave build.
+#[cfg(feature = "std")]
+extern crate std;
+
 use alloc::{vec, vec::Vec};
 use core::default::Default;
 
@@ -25,10 +30,68 @@ use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, Session
 use oak_session::{ClientSession, ProtocolEngine, ServerSession, Session, config::SessionConfig};
 use prost::Message;
 
-// A trait for reading/writing length-prefixed messages.
+/// Control messages understood by every benchmark echo server.
+///
+/// The servers echo any payload that is not one of these straight back. The
+/// sentinels are how a client says it has finished with a channel, which only
+/// became necessary once the benchmarks started reusing a channel across many
+/// exchanges instead of building a fresh one per message.
+///
+/// The benchmark's own payloads cannot collide with these. `create_message`
+/// fills a buffer with `0, 1, 2, ...`, so a four-byte payload is
+/// `[0, 1, 2, 3]`, never `b"exit"`.
+pub mod control {
+    /// Asks the server to stop serving the current channel.
+    ///
+    /// The server echoes it back *before* acting, so the client can tell the
+    /// cycle completed. That acknowledgement is not a nicety. The Restricted
+    /// Kernel leg has no connection to close and no end-of-stream to observe,
+    /// so a client that simply walked away would leave the enclave blocked
+    /// reading an application message while the client sent the first frame
+    /// of a new handshake.
+    ///
+    /// Afterwards the TCP legs return to `accept`, and the Restricted Kernel
+    /// Noise leg discards its session and waits for a fresh handshake.
+    pub const CLOSE: &[u8] = b"close";
+
+    /// Asks the server to exit altogether.
+    ///
+    /// Only used by the legs whose server the harness owns and must join.
+    /// The server does not echo this one; the connection dropping is the
+    /// acknowledgement.
+    pub const EXIT: &[u8] = b"exit";
+}
+
+/// A bidirectional stream of length-prefixed messages.
+///
+/// Implementations exist for anything that is [`oak_channel::Read`] plus
+/// [`oak_channel::Write`] (so a `TcpStream` or a `rustls::StreamOwned`
+/// qualifies), for the Restricted Kernel channel at either end, and for a
+/// Noise session layered over any of those.
 pub trait MessageStream {
     fn send_message(&mut self, msg: &[u8]);
-    fn read_message(&mut self) -> Vec<u8>;
+
+    /// Reads one message, or returns `None` if the peer closed the stream
+    /// cleanly -- that is, at a message boundary, having sent nothing.
+    ///
+    /// Servers must use this. An echo server is shared by every iteration of
+    /// a benchmark, and clients come and go; a client that exits without
+    /// sending [`control::CLOSE`] is untidy but it must not take the server
+    /// thread down, because the resulting panic surfaces much later as an
+    /// unrelated failure in whichever leg runs next.
+    ///
+    /// Transports with no notion of end-of-stream -- the Restricted Kernel
+    /// channel is one, being a pair of file descriptors into a running
+    /// enclave rather than a connection -- never return `None`.
+    fn try_read_message(&mut self) -> Option<Vec<u8>>;
+
+    /// Reads one message, panicking if the peer has gone away.
+    ///
+    /// Clients use this: the server is part of the harness, so its
+    /// disappearance is a bug rather than a condition worth handling.
+    fn read_message(&mut self) -> Vec<u8> {
+        self.try_read_message().expect("peer closed the stream")
+    }
 }
 
 pub struct OakServerChannelMessageStream {
@@ -42,32 +105,62 @@ impl OakServerChannelMessageStream {
 }
 
 impl MessageStream for OakServerChannelMessageStream {
-    fn read_message(&mut self) -> Vec<u8> {
-        let (msg, _timer) = self.oak_server_channel.read_request().expect("failed to read message");
-        msg.body
+    /// Never `None`: the enclave channel is a pair of file descriptors, not a
+    /// connection, so there is nothing that could close.
+    fn try_read_message(&mut self) -> Option<Vec<u8>> {
+        let (msg, _timer) = self.oak_server_channel.read_request().expect("reading message");
+        Some(msg.body)
     }
 
     fn send_message(&mut self, msg: &[u8]) {
         self.oak_server_channel
             .write_response(ResponseMessage { invocation_id: 0, body: msg.to_vec() })
-            .expect("failed to write message");
+            .expect("writing message");
     }
 }
 
+/// Reports whether a [`oak_channel::Read`] failure was a clean end of stream.
+///
+/// `oak_channel`'s blanket implementation over [`std::io::Read`] wraps the
+/// underlying error with `anyhow::Error::msg`, which keeps the concrete type
+/// recoverable by downcast. A short read at a message boundary arrives as
+/// [`std::io::ErrorKind::UnexpectedEof`].
+///
+/// Without `std` there is no such error to inspect, and the transports that
+/// remain -- the Restricted Kernel channel -- cannot reach end of stream
+/// anyway, so every failure is a real one.
+#[cfg(feature = "std")]
+fn is_end_of_stream(err: &anyhow::Error) -> bool {
+    err.downcast_ref::<std::io::Error>()
+        .is_some_and(|e| e.kind() == std::io::ErrorKind::UnexpectedEof)
+}
+
+#[cfg(not(feature = "std"))]
+fn is_end_of_stream(_err: &anyhow::Error) -> bool {
+    false
+}
+
 impl<T: Read + Write> MessageStream for T {
-    fn read_message(&mut self) -> Vec<u8> {
+    fn try_read_message(&mut self) -> Option<Vec<u8>> {
         let mut size_buf = [0u8; 4];
-        self.read_exact(&mut size_buf).expect("failed to read message size");
+        match self.read_exact(&mut size_buf) {
+            Ok(()) => {}
+            // Only a failure to read the *length* can be a clean close. Once a
+            // length has arrived the peer has committed to a body, so a short
+            // read there is a truncated message and a real error.
+            Err(err) if is_end_of_stream(&err) => return None,
+            Err(err) => panic!("reading message size: {err}"),
+        }
         let size = u32::from_le_bytes(size_buf) as usize;
         let mut buf = vec![0u8; size];
-        self.read_exact(&mut buf).expect("failed to read message");
-        buf
+        self.read_exact(&mut buf).expect("reading message");
+        Some(buf)
     }
 
     fn send_message(&mut self, msg: &[u8]) {
         let size = msg.len() as u32;
-        self.write_all(&size.to_le_bytes()).expect("failed to write message size");
-        self.write_all(msg).expect("failed to write message");
+        self.write_all(&size.to_le_bytes()).expect("writing message size");
+        self.write_all(msg).expect("writing message");
     }
 }
 
@@ -155,18 +248,21 @@ where
     S::Input: prost::Message + Default,
     S::Output: prost::Message,
 {
-    fn read_message(&mut self) -> Vec<u8> {
-        let incoming_bytes = self.message_stream.read_message();
+    /// Propagates the inner stream's end of stream. A Noise session over a
+    /// transport that has closed cannot produce another message, and the
+    /// session state is not worth preserving.
+    fn try_read_message(&mut self) -> Option<Vec<u8>> {
+        let incoming_bytes = self.message_stream.try_read_message()?;
         let incoming_message = <S::Input as prost::Message>::decode(incoming_bytes.as_slice())
-            .expect("failed to decode incoming encrypted message");
-        self.session
-            .put_incoming_message(incoming_message)
-            .expect("failed to put incoming message");
-        self.session
-            .read()
-            .expect("failed to read decrypted message")
-            .expect("empty decrypted message")
-            .plaintext
+            .expect("decoding incoming encrypted message");
+        self.session.put_incoming_message(incoming_message).expect("putting incoming message");
+        Some(
+            self.session
+                .read()
+                .expect("reading decrypted message")
+                .expect("empty decrypted message")
+                .plaintext,
+        )
     }
 
     fn send_message(&mut self, msg: &[u8]) {
