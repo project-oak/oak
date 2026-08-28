@@ -157,10 +157,58 @@ impl<T: Read + Write> MessageStream for T {
         Some(buf)
     }
 
+    /// Writes the length prefix and the body as a single `write_all`.
+    ///
+    /// Not a micro-optimisation. Every leg shares this framing but sits at a
+    /// different level relative to it. The Noise legs encrypt above it, so two
+    /// writes cost two syscalls. The TLS legs wrap this stream in a
+    /// `rustls::StreamOwned`, whose `write` forms a record and then calls
+    /// `complete_io`, so a length write followed by a body write became **two
+    /// TLS records** -- two AEAD seals and two sets of record overhead, doubled
+    /// again on the read side -- for every message a Noise leg sealed once.
+    ///
+    /// Measured on the local TCP legs, one write versus two:
+    ///
+    /// | leg | two writes | one write | change |
+    /// | --- | ---: | ---: | ---: |
+    /// | plaintext | 10.730 µs | 8.660 µs | -2.07 µs |
+    /// | Noise | 11.644 µs | 9.571 µs | -2.07 µs |
+    /// | TLS | 14.629 µs | 7.721 µs | -6.91 µs |
+    ///
+    /// Plaintext and Noise save an identical 2.07 µs, which is the two `sendto`
+    /// calls this removes (`strace -c` confirms 4 per exchange before and 2
+    /// after, with reads unchanged) and puts a syscall on this host at about
+    /// 1.03 µs. TLS saves 3.3x that, and the surplus is the second record's
+    /// crypto. So most of what looked like TLS overhead was this framing.
+    ///
+    /// The cost is one allocation and one copy per message, charged identically
+    /// to every leg.
+    ///
+    /// # This does not make the legs comparable
+    ///
+    /// It removes one asymmetry and exposes another. With a single record,
+    /// rustls serves the second `read_exact` out of `received_plaintext`, so
+    /// the TLS legs now issue **4** socket syscalls per exchange against
+    /// plaintext's **6** (measured: 2.34 versus 4.55 reads per exchange). At
+    /// 1.03 µs each that is 2.06 µs in TLS's favour, against roughly 1.1 µs of
+    /// AEAD work, which is why TLS now reports *faster than plaintext* -- an
+    /// impossible result that is entirely an artefact of read buffering.
+    ///
+    /// The two-write framing was accidentally syscall-symmetric (8 per exchange
+    /// on every leg) while being crypto-asymmetric. This is the reverse. Making
+    /// the comparison fair needs a buffered reader on the plaintext and Noise
+    /// legs so that every leg performs one socket read per message, which TLS
+    /// gets for free because it must buffer records.
+    ///
+    /// Note also that rustls writes with `writev` while the raw legs use
+    /// `sendto`. That difference is not controlled for, and on this host the
+    /// `write` family has been measured as materially more expensive than the
+    /// `send` family.
     fn send_message(&mut self, msg: &[u8]) {
-        let size = msg.len() as u32;
-        self.write_all(&size.to_le_bytes()).expect("writing message size");
-        self.write_all(msg).expect("writing message");
+        let mut frame = Vec::with_capacity(size_of::<u32>() + msg.len());
+        frame.extend_from_slice(&(msg.len() as u32).to_le_bytes());
+        frame.extend_from_slice(msg);
+        self.write_all(&frame).expect("writing message");
     }
 }
 

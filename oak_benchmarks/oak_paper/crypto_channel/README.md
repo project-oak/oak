@@ -249,9 +249,15 @@ point:
 | TLS Setup                  | 172.9 us |     172.88 us |       - |
 
 Plaintext escaped because its connections carry a single exchange, so no
-unacknowledged segment ever precedes the write. rustls suffered less because it
-coalesces a record into one write rather than two. Noise took the full stall on
+unacknowledged segment ever precedes the write. Noise took the full stall on
 every message.
+
+**Correction.** This paragraph used to explain rustls's smaller penalty by
+saying it "coalesces a record into one write rather than two". That is wrong.
+`rustls::StreamOwned::write` forms a record and then calls `complete_io`, so
+before the framing fix each of the two writes produced its own record and its
+own socket write, exactly as on the Noise leg. Why rustls suffered less than
+Noise under Nagle is unexplained.
 
 > [!NOTE] The `Setup` rows above predate `SETUP_SETTLE`. Both columns were
 > measured without the settle interval, so the comparison between them is sound,
@@ -259,10 +265,16 @@ every message.
 > harness reports. It is now about 16.4 us rather than 33.77 us.
 
 Read against the corrected figures, the Noise data path costs 4% over plaintext
-and beats rustls by 1.4x on the message-exchange arm. Both halves are worth
-knowing and neither was visible before.
+and beats rustls by 1.4x on the message-exchange arm.
 
-> [!WARNING] This section used to add "while Noise setup is 3.1x _slower_ than a
+> [!WARNING] Two corrections apply to the figures above.
+>
+> That 1.4x predates the framing fix, and is therefore an overstatement of
+> whatever the real gap is. Until the message-exchange arm is re-measured with
+> one record per message, treat it as an upper bound on Noise's advantage rather
+> than a result.
+>
+> This section also used to add "while Noise setup is 3.1x _slower_ than a
 > rustls handshake". **That was wrong.** The rustls leg was resuming its TLS
 > sessions -- one `ClientConfig` was shared across every iteration and
 > `Resumption::default()` is an in-memory store of 256 sessions, so only the

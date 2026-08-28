@@ -105,17 +105,18 @@ pub type ServerStreamCreator =
 ///
 /// Plaintext escapes because its connections carry one exchange and nothing
 /// precedes it, so there is never an unacknowledged segment to trigger the
-/// hold. rustls suffers less than Noise because it coalesces a record into a
-/// single write rather than two.
+/// hold. Why rustls suffered less than Noise is **not** established. An earlier
+/// version of this comment said rustls coalesces a record into a single write;
+/// that is wrong. `rustls::StreamOwned::write` forms a record and then calls
+/// `complete_io`, so each of the two framing writes produced its own record
+/// *and* its own socket write, exactly as the Noise leg did.
 ///
 /// Every RPC stack that carries small messages sets this -- gRPC, HTTP/2 and
 /// Thrift all do -- so it is also what the systems being modelled would do.
 ///
-/// The deeper fix is to stop issuing two writes per message and frame into
-/// one buffer, in `message_stream.rs`. That would help the Restricted Kernel
-/// channel too, which is not a socket and cannot be fixed from here. It is a
-/// change to a `no_std` library shared with the enclave app, so it is left
-/// for its owner; disabling Nagle is sufficient and provably so.
+/// `message_stream.rs` now frames the length and body into one write, which
+/// removes the second record and helps the Restricted Kernel channel too.
+/// Disabling Nagle remains necessary and is independently justified.
 fn disable_nagle(tcp_stream: &TcpStream) {
     tcp_stream.set_nodelay(true).expect("failed to set TCP_NODELAY");
 }
