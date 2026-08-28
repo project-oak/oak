@@ -119,6 +119,11 @@ fn benchmark_wrapper(
     let mut channel: Option<Box<dyn MessageStream>> = None;
 
     for size in sizes.iter() {
+        // `size`, not `2 * size`, even though each iteration moves the message
+        // in both directions. Criterion computes `bytes / per_iteration_time`,
+        // and the time this group reports is already halved (see above), so the
+        // halving and the two directions cancel and the byte rate comes out
+        // right. Do not "fix" either half on its own.
         group.throughput(criterion::Throughput::Bytes(*size as u64));
         group.bench_with_input(criterion::BenchmarkId::from_parameter(size), size, |b, size| {
             b.iter_custom(|iters| {
@@ -425,9 +430,12 @@ fn plaintext_rk_benchmark(c: &mut Criterion) {
     benchmark_wrapper(TEST_SIZES, "RK Plaintext Message Exchange", c, || {
         Box::new(OakClientChannelMessageStream::new(&oak_client_channel))
     });
-    // The plaintext enclave app serves every message over one channel, so this
-    // only measures wrapping an existing handle -- there is no handshake to
-    // pay for. It is the floor against which the Noise setup cost is read.
+    // Degenerate, and reported only so the row is not silently missing:
+    // `OakClientChannelMessageStream::new` is an `Rc::clone`, so this times a
+    // refcount bump and nothing else. Unlike the TCP legs, whose plaintext
+    // `Setup` at least includes a connect, this is not a transport baseline and
+    // must not be subtracted from `RK Noise Setup` -- that would charge Noise
+    // for the enclave channel round trips the plaintext row never performs.
     handshake_wrapper("RK Plaintext Setup", c, || {
         Box::new(OakClientChannelMessageStream::new(&oak_client_channel))
     });

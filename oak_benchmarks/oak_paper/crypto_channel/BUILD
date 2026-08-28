@@ -174,3 +174,14 @@ vm_disk_image(
     command = "/opt/app/crypto_channel_server --host 0.0.0.0 --plaintext-port 5000 --noise-port 5001 --tls-port 5002",
     data = [":generate_certs"],
 )
+
+# Backs the README's "What the `Setup` comparison does not show" section.
+rust_binary(
+    name = "p256_cost",
+    srcs = ["p256_cost.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        "//oak_crypto",
+        "@oak_crates_index//:criterion",
+    ],
+)

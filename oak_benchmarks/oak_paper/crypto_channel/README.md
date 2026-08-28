@@ -41,6 +41,57 @@ All measurements are taken on the host side.
 - In tests that measure receive speeds, the host measures the time it takes to
   receive the expected amount of data.
 
+## What the `Setup` comparison does not show
+
+> [!CAUTION] The `Setup` rows compare two implementations, not two protocols.
+> Read on before quoting any Noise-versus-TLS handshake ratio.
+
+**Oak's Noise handshake is almost entirely pure-Rust P-256 scalar
+multiplication.** Despite the name, `Noise_NN_P256_AESGCM_SHA256` (see
+`oak_crypto/src/noise_handshake/noise.rs`) is P-256, not X25519, and
+`crypto_wrapper.rs` implements it with the generic `primeorder` double-and-add
+ladder with no assembly. Measured by `p256_cost` in this package:
+
+| operation                                        |     cost |
+| ------------------------------------------------ | -------: |
+| `P256Scalar::generate`                           |   0.9 µs |
+| `compute_public_key` (fixed-base mul)            | 103.3 µs |
+| `p256_scalar_mult` (variable-base mul, the `ee`) | 102.5 µs |
+
+An NN handshake performs four of these in a serial chain -- client keygen, then
+server keygen and `ee`, then client `ee` -- for about 412 µs. A transport-free
+NN handshake (`//oak_session/benches:benches --bench 'handshake NN'`) measures
+417.8 µs, so scalar multiplication is **99% of the compute**, and about 77% of
+the ~534 µs measured over local TCP.
+
+Note also that the fixed-base multiplication is not cheaper than the
+variable-base one, which means the generator-table optimisation available to
+`primeorder` is not in effect. A tuned implementation would make key generation
+several times cheaper than ECDH.
+
+**The TLS legs are dominated by a different, unrelated cost.** `cert_gen.rs`
+issues an RSA-2048 certificate, so each full handshake includes an RSA
+signature. That is the single largest term in the 600-650 µs TLS setup figures,
+though it has not been separately measured here.
+
+The consequence is that the near-parity between Noise and TLS setup is a
+coincidence of two unrelated inefficiencies, and neither ordering is robust:
+re-issue the certificate as ECDSA P-256 and TLS setup falls sharply; give Oak a
+tuned P-256 or an X25519 and Noise setup falls sharply. Neither is a
+protocol-level result and neither should be presented as one.
+
+Two further asymmetries run in opposite directions, and neither is priced in:
+
+- **The Noise legs authenticate nobody.** They are `AttestationType::Unattested`
+  NoiseNN with no static keys, while both TLS legs do certificate path building,
+  a signature verification and a hostname check. The deployable Oak
+  configuration -- NK or KK with DICE and endorsement verification -- is
+  strictly more expensive than what is measured here. This favours Noise.
+- **Noise setup costs two network round trips to TLS 1.3's one**, because even
+  `Unattested` exchanges an AttestRequest and AttestResponse before the
+  handshake. On loopback this is tens of microseconds; on a wide-area link it
+  doubles time-to-first-byte. This counts against Noise.
+
 ## What each group measures
 
 Every leg reports two groups.
@@ -53,9 +104,15 @@ Every leg reports two groups.
 `Message Exchange` reports `(send + recv) / 2`, a **mean one-way latency, not a
 round trip**. Do not quote it as an RTT.
 
-`Setup` is the metric the evaluation plan calls handshake latency. The plaintext
-leg has no handshake, so its `Setup` figure is the transport cost alone and is
-the floor the other legs should be read against.
+`Setup` is the metric the evaluation plan calls handshake latency. On the TCP
+legs the plaintext leg has no handshake, so its `Setup` figure is the transport
+cost alone and is the floor the other legs on that transport are read against.
+
+> [!WARNING] That does **not** hold for the restricted-kernel legs.
+> `OakClientChannelMessageStream::new` is an `Rc::clone`, so
+> `RK Plaintext Setup` times a refcount bump rather than a transport. It is not
+> a floor, and subtracting it from `RK Noise Setup` charges Noise for the
+> enclave channel round trips the plaintext row never performs.
 
 The two groups are the two arms the evaluation plan asks for: `Message Exchange`
 holds **one channel open** for the whole measurement, `Setup` performs a
