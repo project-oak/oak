@@ -36,12 +36,41 @@ All measurements are taken on the host side.
 
 - In general, we are interested in relative latencies rather than absolute
   latencies, so consistency between the test types is important.
-- To compare handshake latencies, we use tests where the server sends a single
-  byte of data after its handshake.
 - In tests that measure sending speeds, a short ACK from the server is used to
   indicate complete reception of the data.
 - In tests that measure receive speeds, the host measures the time it takes to
   receive the expected amount of data.
+
+## What each group measures
+
+Every leg reports two groups.
+
+| Group suffix           | Timed region                                |
+| ---------------------- | ------------------------------------------- |
+| `... Message Exchange` | one send and one receive on an open channel |
+| `... Setup`            | transport connect plus the leg's handshake  |
+
+`Message Exchange` reports `(send + recv) / 2`, a **mean one-way latency, not a
+round trip**. Do not quote it as an RTT.
+
+`Setup` is the metric the evaluation plan calls handshake latency. The plaintext
+leg has no handshake, so its `Setup` figure is the transport cost alone and is
+the floor the other legs should be read against.
+
+A fresh channel is created for every iteration of `Message Exchange`, so the
+comparison is currently **handshake-per-RPC only**. The single-long-lived-
+channel arm is not implemented: `linux_server::start_tcp_server` serves exactly
+one message per connection, so measuring channel reuse needs a server that loops
+on the connection, and that needs `MessageStream` to be able to report
+end-of-stream instead of panicking.
+
+> [!IMPORTANT] Until 2026-08 the TLS leg's handshake was charged to its first
+> timed send. `rustls::StreamOwned::new` does not handshake; rustls defers it to
+> first use, and nothing forced it earlier. The Noise leg, whose handshake
+> happens eagerly in `NoiseMessageStream::new_client`, was not charged for its
+> own. The legs were not measuring the same thing. `new_tls_client_stream` now
+> calls `complete_io` so the handshake lands in `Setup` on every leg. Removing
+> it from the timed send cut the reported TLS exchange latency by about half.
 
 ## Running VM TCP Benchmarks
 
