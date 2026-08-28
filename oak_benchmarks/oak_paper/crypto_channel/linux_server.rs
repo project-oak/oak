@@ -75,6 +75,14 @@ pub fn load_certs_and_key() -> (Vec<CertificateDer<'static>>, PrivateKeyDer<'sta
     (certs, key.expect("no key found"))
 }
 
+/// Builds the server side of a channel from a freshly accepted socket.
+///
+/// Takes the raw [`TcpStream`], not a buffered wrapper, because *where* the
+/// read buffer goes is per-leg and getting it wrong is silent. The raw legs
+/// buffer the socket. The TLS legs must buffer **above** rustls, wrapping the
+/// `StreamOwned`, because rustls has its own record buffer underneath and
+/// reads the socket 4096 bytes at a time; a buffer below it would coalesce
+/// those reads and change the very syscall count these benchmarks compare.
 pub type ServerStreamCreator =
     Arc<dyn Fn(TcpStream) -> Box<dyn MessageStream> + Send + Sync + 'static>;
 
@@ -125,6 +133,8 @@ fn disable_nagle(tcp_stream: &TcpStream) {
 ///
 /// Use this rather than [`TcpStream::connect`] directly, so that no leg is
 /// accidentally measured with Nagle still on. See [`disable_nagle`].
+/// Returns the raw socket. The caller decides where the read buffer belongs;
+/// see [`ServerStreamCreator`] for why that cannot be decided here.
 pub fn connect(addr: SocketAddr) -> std::io::Result<TcpStream> {
     let tcp_stream = TcpStream::connect(addr)?;
     disable_nagle(&tcp_stream);
@@ -157,8 +167,8 @@ pub fn start_tcp_server(
     let handle = thread::spawn(move || {
         'accept: loop {
             let (tcp_stream, _) = listener.accept().expect("failed to receive connection");
-            // The server replies with the same two-write framing, so it stalls
-            // the client the same way if this is left out.
+            // The server replies over the same framing, so it stalls the
+            // client the same way if this is left out.
             disable_nagle(&tcp_stream);
             let stream = &mut stream_creator(tcp_stream);
 

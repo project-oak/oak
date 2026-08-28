@@ -48,6 +48,16 @@ rust_library(
     ],
 )
 
+rust_test(
+    name = "message_stream_test",
+    crate = ":message_stream_client",
+    # `rust_test` does not inherit `crate_features` from the crate it wraps,
+    # and the tests exercise `BufferedStream`, which is behind `std`.
+    crate_features = ["std"],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = ["@oak_crates_index//:googletest"],
+)
+
 rust_library(
     name = "linux_server",
     srcs = ["linux_server.rs"],

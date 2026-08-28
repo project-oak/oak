@@ -29,7 +29,7 @@ use criterion::{Criterion, criterion_group, criterion_main};
 use linux_server::{
     DEFAULT_NOISE_PORT, DEFAULT_PLAINTEXT_PORT, DEFAULT_TLS_PORT, init_rustls, load_certs_and_key,
 };
-use message_stream_client::{MessageStream, NoiseMessageStream, control};
+use message_stream_client::{BufferedStream, MessageStream, NoiseMessageStream, control};
 use rk_launcher::{OakClientChannelMessageStream, start_rk_enclave_server};
 use rustls::{ClientConfig, ServerConfig};
 use rustls_pki_types::ServerName;
@@ -229,11 +229,15 @@ fn handshake_wrapper(
 fn plaintext_local_tcp_benchmark(c: &mut Criterion) {
     let (addr, server_handle) = linux_server::start_tcp_server(
         "127.0.0.1:0",
-        Arc::new(|tcp_stream: TcpStream| -> Box<dyn MessageStream> { Box::new(tcp_stream) }),
+        Arc::new(|tcp_stream: TcpStream| -> Box<dyn MessageStream> {
+            Box::new(BufferedStream::new(tcp_stream))
+        }),
     );
 
     let connect = || -> Box<dyn MessageStream> {
-        Box::new(linux_server::connect(addr).expect("couldn't connect to server"))
+        Box::new(BufferedStream::new(
+            linux_server::connect(addr).expect("couldn't connect to server"),
+        ))
     };
 
     benchmark_wrapper(TEST_SIZES, "Local TCP Plaintext Message Exchange", c, connect);
@@ -248,7 +252,7 @@ fn noise_local_tcp_benchmark(c: &mut Criterion) {
     let (addr, server_handle) = linux_server::start_tcp_server(
         "127.0.0.1:0",
         Arc::new(|tcp_stream: TcpStream| -> Box<dyn MessageStream> {
-            Box::new(NoiseMessageStream::new_server(tcp_stream))
+            Box::new(NoiseMessageStream::new_server(BufferedStream::new(tcp_stream)))
         }),
     );
 
@@ -318,6 +322,14 @@ fn tls_client_config(root_store: rustls::RootCertStore) -> Arc<ClientConfig> {
 /// `FullWithHelloRetryRequest` is rejected too: it is a full handshake, but it
 /// spends an extra round trip, so it is not the exchange the other two legs
 /// perform either.
+///
+/// The read buffer goes *above* rustls, not below it. rustls does its own
+/// socket reads into a record buffer, in 4 KiB chunks
+/// (`DeframerVecBuffer::read`), so a buffer underneath would coalesce two
+/// rustls reads into one `recvfrom` and memcpy every byte of ciphertext on the
+/// way past -- changing the very socket-read count this leg exists to report.
+/// Above rustls the buffer sees decrypted message bytes, which is where the raw
+/// legs' buffer sits too.
 fn new_tls_client_stream(
     tcp_stream: TcpStream,
     client_config: Arc<ClientConfig>,
@@ -332,7 +344,7 @@ fn new_tls_client_stream(
         "the tls leg must perform a full handshake, otherwise it is not measuring \
          the same exchange as the noise and boringssl legs"
     );
-    Box::new(stream)
+    Box::new(BufferedStream::new(stream))
 }
 
 fn tls_local_tcp_benchmark(c: &mut Criterion) {
@@ -350,7 +362,7 @@ fn tls_local_tcp_benchmark(c: &mut Criterion) {
         Arc::new(move |tcp_stream: TcpStream| -> Box<dyn MessageStream> {
             let conn = rustls::ServerConnection::new(server_config.clone()).unwrap();
             let stream = rustls::StreamOwned::new(conn, tcp_stream);
-            Box::new(stream)
+            Box::new(BufferedStream::new(stream))
         }),
     );
 
@@ -379,7 +391,7 @@ fn plaintext_vm_tcp_benchmark(c: &mut Criterion) {
     println!("Connecting to VM at {} for plaintext benchmark", addr);
 
     let connect = || -> Box<dyn MessageStream> {
-        Box::new(linux_server::connect(addr).expect(VM_CONNECT_HELP))
+        Box::new(BufferedStream::new(linux_server::connect(addr).expect(VM_CONNECT_HELP)))
     };
 
     benchmark_wrapper(TEST_SIZES, "VM TCP Plaintext Message Exchange", c, connect);
@@ -388,7 +400,7 @@ fn plaintext_vm_tcp_benchmark(c: &mut Criterion) {
 
 fn new_noise_client_stream(addr: SocketAddr) -> Box<dyn MessageStream> {
     let tcp_stream = linux_server::connect(addr).expect("couldn't connect to server");
-    Box::new(NoiseMessageStream::new_client(tcp_stream))
+    Box::new(NoiseMessageStream::new_client(BufferedStream::new(tcp_stream)))
 }
 
 fn noise_vm_tcp_benchmark(c: &mut Criterion) {

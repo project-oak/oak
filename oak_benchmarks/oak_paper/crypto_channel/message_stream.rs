@@ -140,6 +140,67 @@ fn is_end_of_stream(_err: &anyhow::Error) -> bool {
     false
 }
 
+/// A stream that reads through a buffer and writes straight through.
+///
+/// Every leg must issue the same number of socket calls per message, or the
+/// benchmark measures syscall counts instead of cryptography. At a one-byte
+/// payload a syscall costs about 1.03 µs on the reference host, far more than
+/// the AEAD work, so an unmatched read dominates the result. Unbuffered, the
+/// length read and the body read are two separate `recvfrom` calls; buffered,
+/// they are one.
+///
+/// Each leg wraps its own stream, and *where* it wraps matters. Put this
+/// directly above whatever produces message bytes: the socket for the raw legs,
+/// the `rustls::StreamOwned` for the TLS legs. Underneath rustls it would
+/// instead coalesce rustls's own 4 KiB record reads and copy every byte of
+/// ciphertext, which changes the count being reported.
+///
+/// Writes deliberately pass straight through. Buffering them would need an
+/// explicit flush per message to preserve the request/response shape, which is
+/// the same syscall count with an extra copy.
+#[cfg(feature = "std")]
+pub struct BufferedStream<S: std::io::Read + std::io::Write> {
+    inner: std::io::BufReader<S>,
+}
+
+#[cfg(feature = "std")]
+impl<S: std::io::Read + std::io::Write> BufferedStream<S> {
+    pub fn new(inner: S) -> Self {
+        BufferedStream { inner: std::io::BufReader::new(inner) }
+    }
+
+    /// Borrows the wrapped stream, for setting or inspecting socket options.
+    pub fn get_ref(&self) -> &S {
+        self.inner.get_ref()
+    }
+}
+
+#[cfg(feature = "std")]
+impl<S: std::io::Read + std::io::Write> std::io::Read for BufferedStream<S> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.inner.read(buf)
+    }
+}
+
+#[cfg(feature = "std")]
+impl<S: std::io::Read + std::io::Write> std::io::Write for BufferedStream<S> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.inner.get_mut().write(buf)
+    }
+
+    /// Forwarded deliberately. The default implementation writes only the first
+    /// slice, which would turn rustls's single vectored record write into a
+    /// loop of one-slice writes and change the leg's syscall count -- the exact
+    /// thing this type exists to hold constant.
+    fn write_vectored(&mut self, bufs: &[std::io::IoSlice<'_>]) -> std::io::Result<usize> {
+        self.inner.get_mut().write_vectored(bufs)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.get_mut().flush()
+    }
+}
+
 impl<T: Read + Write> MessageStream for T {
     fn try_read_message(&mut self) -> Option<Vec<u8>> {
         let mut size_buf = [0u8; 4];
@@ -184,21 +245,20 @@ impl<T: Read + Write> MessageStream for T {
     /// The cost is one allocation and one copy per message, charged identically
     /// to every leg.
     ///
-    /// # This does not make the legs comparable
+    /// # On its own this did not make the legs comparable
     ///
-    /// It removes one asymmetry and exposes another. With a single record,
-    /// rustls serves the second `read_exact` out of `received_plaintext`, so
-    /// the TLS legs now issue **4** socket syscalls per exchange against
+    /// It removed one asymmetry and exposed another. With a single record,
+    /// rustls served the second `read_exact` out of `received_plaintext`, so
+    /// the TLS legs issued **4** socket syscalls per exchange against
     /// plaintext's **6** (measured: 2.34 versus 4.55 reads per exchange). At
     /// 1.03 µs each that is 2.06 µs in TLS's favour, against roughly 1.1 µs of
-    /// AEAD work, which is why TLS now reports *faster than plaintext* -- an
-    /// impossible result that is entirely an artefact of read buffering.
+    /// AEAD work, which made TLS report *faster than plaintext* -- an
+    /// impossible result that was entirely an artefact of read buffering.
     ///
     /// The two-write framing was accidentally syscall-symmetric (8 per exchange
-    /// on every leg) while being crypto-asymmetric. This is the reverse. Making
-    /// the comparison fair needs a buffered reader on the plaintext and Noise
-    /// legs so that every leg performs one socket read per message, which TLS
-    /// gets for free because it must buffer records.
+    /// on every leg) while being crypto-asymmetric; one write is the reverse.
+    /// `BufferedStream` closes the gap by giving every leg one socket read
+    /// per message.
     ///
     /// Note also that rustls writes with `writev` while the raw legs use
     /// `sendto`. That difference is not controlled for, and on this host the
@@ -324,5 +384,154 @@ where
             .expect("expected outgoing message");
         let outgoing_bytes = outgoing_message.encode_to_vec();
         self.message_stream.send_message(outgoing_bytes.as_slice());
+    }
+}
+
+#[cfg(all(test, feature = "std"))]
+mod tests {
+    use std::{
+        io::{IoSlice, Write as _},
+        vec,
+        vec::Vec,
+    };
+
+    use googletest::prelude::*;
+
+    use super::*;
+
+    /// A stream that counts the calls made to it.
+    ///
+    /// The two claims this module exists to check -- one write and one read per
+    /// message -- are claims about *call counts*, not about bytes, so the
+    /// counts are what the mock records. Reads are served from `to_read` and
+    /// never span more than one call's worth of data, which is what a socket
+    /// does.
+    #[derive(Default)]
+    struct CountingStream {
+        to_read: Vec<u8>,
+        read_pos: usize,
+        reads: usize,
+        written: Vec<u8>,
+        writes: usize,
+        /// Lengths passed to each `write_vectored`, so a forwarded vectored
+        /// write can be told apart from a loop of single-slice writes.
+        vectored_slice_counts: Vec<usize>,
+    }
+
+    impl CountingStream {
+        fn with_input(to_read: Vec<u8>) -> Self {
+            CountingStream { to_read, ..Default::default() }
+        }
+    }
+
+    impl std::io::Read for CountingStream {
+        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            self.reads += 1;
+            let n = core::cmp::min(buf.len(), self.to_read.len() - self.read_pos);
+            buf[..n].copy_from_slice(&self.to_read[self.read_pos..self.read_pos + n]);
+            self.read_pos += n;
+            Ok(n)
+        }
+    }
+
+    impl std::io::Write for CountingStream {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            self.writes += 1;
+            self.written.extend_from_slice(buf);
+            Ok(buf.len())
+        }
+
+        fn write_vectored(&mut self, bufs: &[IoSlice<'_>]) -> std::io::Result<usize> {
+            self.writes += 1;
+            self.vectored_slice_counts.push(bufs.len());
+            let mut n = 0;
+            for b in bufs {
+                self.written.extend_from_slice(b);
+                n += b.len();
+            }
+            Ok(n)
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    /// A framed message, as `send_message` writes it.
+    fn framed(payload: &[u8]) -> Vec<u8> {
+        let mut v = (payload.len() as u32).to_le_bytes().to_vec();
+        v.extend_from_slice(payload);
+        v
+    }
+
+    #[googletest::test]
+    fn send_message_writes_the_frame_once() {
+        let mut stream = CountingStream::default();
+        stream.send_message(&[7u8; 100]);
+
+        // One write, not two: a length write followed by a body write would
+        // become two TLS records on the rustls legs.
+        expect_that!(stream.writes, eq(1));
+        expect_that!(stream.written, eq(&framed(&[7u8; 100])));
+    }
+
+    #[googletest::test]
+    fn unbuffered_read_costs_two_reads() {
+        // The baseline the buffer exists to remove, pinned so that the
+        // buffered case below is measuring something.
+        let mut stream = CountingStream::with_input(framed(&[9u8; 100]));
+        let msg = stream.try_read_message();
+
+        expect_that!(msg, some(eq(&vec![9u8; 100])));
+        expect_that!(stream.reads, eq(2));
+    }
+
+    #[googletest::test]
+    fn buffered_read_costs_one_read() {
+        let inner = CountingStream::with_input(framed(&[9u8; 100]));
+        let mut stream = BufferedStream::new(inner);
+        let msg = stream.try_read_message();
+
+        expect_that!(msg, some(eq(&vec![9u8; 100])));
+        expect_that!(stream.get_ref().reads, eq(1));
+    }
+
+    #[googletest::test]
+    fn buffering_does_not_add_a_write() {
+        let mut stream = BufferedStream::new(CountingStream::default());
+        stream.send_message(&[1u8; 10]);
+
+        expect_that!(stream.get_ref().writes, eq(1));
+        expect_that!(stream.get_ref().written, eq(&framed(&[1u8; 10])));
+    }
+
+    #[googletest::test]
+    fn vectored_writes_are_forwarded_whole() {
+        // rustls writes a record as several slices in one `writev`. The
+        // default `write_vectored` would write only the first, turning that
+        // into a loop and changing the leg's syscall count.
+        let mut stream = BufferedStream::new(CountingStream::default());
+        let n = stream
+            .write_vectored(&[IoSlice::new(b"abc"), IoSlice::new(b"de")])
+            .expect("write_vectored");
+
+        expect_that!(n, eq(5));
+        expect_that!(stream.get_ref().vectored_slice_counts, eq(&vec![2usize]));
+        expect_that!(stream.get_ref().written, eq(&b"abcde".to_vec()));
+    }
+
+    #[googletest::test]
+    fn clean_end_of_stream_reads_none() {
+        let mut stream = CountingStream::default();
+        expect_that!(stream.try_read_message(), none());
+    }
+
+    #[googletest::test]
+    fn a_message_survives_a_round_trip() {
+        let mut writer = CountingStream::default();
+        writer.send_message(b"hello");
+
+        let mut reader = CountingStream::with_input(writer.written);
+        expect_that!(reader.try_read_message(), some(eq(&b"hello".to_vec())));
     }
 }

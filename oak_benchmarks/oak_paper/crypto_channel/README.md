@@ -265,14 +265,18 @@ Noise under Nagle is unexplained.
 > harness reports. It is now about 16.4 us rather than 33.77 us.
 
 Read against the corrected figures, the Noise data path costs 4% over plaintext
-and beats rustls by 1.4x on the message-exchange arm.
+and beats rustls by 1.4x on the message-exchange arm. Both of those numbers have
+since been superseded; see the warning below.
 
 > [!WARNING] Two corrections apply to the figures above.
 >
-> That 1.4x predates the framing fix, and is therefore an overstatement of
-> whatever the real gap is. Until the message-exchange arm is re-measured with
-> one record per message, treat it as an upper bound on Noise's advantage rather
-> than a result.
+> **The 1.4x is retracted, and its sign was wrong.** It was measured while the
+> framing charged rustls two TLS records per message, and while the raw legs
+> issued an extra socket read that TLS did not. With both artefacts removed, and
+> the legs verified at exactly four socket calls per exchange each, the
+> message-exchange arm reads plaintext 6.94 µs, rustls 7.40 µs, Noise 7.67 µs.
+> Oak's Noise data path costs about **1.6x rustls**, rather than beating it by
+> 1.4x. See `BufferedStream` and `send_message` in `message_stream.rs`.
 >
 > This section also used to add "while Noise setup is 3.1x _slower_ than a
 > rustls handshake". **That was wrong.** The rustls leg was resuming its TLS

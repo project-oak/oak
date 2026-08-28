@@ -22,7 +22,7 @@
 use std::sync::Arc;
 
 use clap::Parser;
-use message_stream_client::NoiseMessageStream;
+use message_stream_client::{BufferedStream, NoiseMessageStream};
 use rustls::ServerConfig;
 
 #[derive(Parser, Debug)]
@@ -54,7 +54,7 @@ fn main() {
     if args.plaintext_port != 0 {
         let addr = format!("{}:{}", args.host, args.plaintext_port);
         let stream_creator: linux_server::ServerStreamCreator =
-            Arc::new(|tcp_stream| Box::new(tcp_stream));
+            Arc::new(|tcp_stream| Box::new(BufferedStream::new(tcp_stream)));
         let (bound_addr, handle) = linux_server::start_tcp_server(&addr, stream_creator);
         println!("Plaintext server listening on {}", bound_addr);
         handles.push(("plaintext", handle));
@@ -63,8 +63,9 @@ fn main() {
     // Start Noise server.
     if args.noise_port != 0 {
         let addr = format!("{}:{}", args.host, args.noise_port);
-        let stream_creator: linux_server::ServerStreamCreator =
-            Arc::new(|tcp_stream| Box::new(NoiseMessageStream::new_server(tcp_stream)));
+        let stream_creator: linux_server::ServerStreamCreator = Arc::new(|tcp_stream| {
+            Box::new(NoiseMessageStream::new_server(BufferedStream::new(tcp_stream)))
+        });
         let (bound_addr, handle) = linux_server::start_tcp_server(&addr, stream_creator);
         println!("Noise server listening on {}", bound_addr);
         handles.push(("noise", handle));
@@ -88,7 +89,9 @@ fn main() {
                 let stream_creator: linux_server::ServerStreamCreator =
                     Arc::new(move |tcp_stream| {
                         let conn = rustls::ServerConnection::new(server_config.clone()).unwrap();
-                        Box::new(rustls::StreamOwned::new(conn, tcp_stream))
+                        // Above rustls, for the reason given on
+                        // `new_tls_client_stream` in benchmark.rs.
+                        Box::new(BufferedStream::new(rustls::StreamOwned::new(conn, tcp_stream)))
                     });
                 let (bound_addr, handle) = linux_server::start_tcp_server(&addr, stream_creator);
                 println!("TLS (rustls) server listening on {}", bound_addr);
