@@ -283,6 +283,15 @@ impl Machine for Q35 {
     }
 
     fn init_acpi_io(access: &mut dyn ConfigAccess) -> Result<(), &'static str> {
+        // Program the Q35 host bridge (D0:F0) PCIEXBAR register so that PCIe
+        // MMCONFIG decoding is enabled. Without this register set, QEMU will not
+        // generate the MCFG table or the DRAC device in DSDT.
+        let host_bridge = Bdf::new(0, 0, 0)?;
+        // offset 0x60 (PCIEXBAR low 32 bits): base 0xE000_0000, bit 0 = 1 (enable)
+        access.write(host_bridge, 0x18, 0xE000_0001)?;
+        // offset 0x64 (PCIEXBAR high 32 bits): 0
+        access.write(host_bridge, 0x19, 0)?;
+
         // Program the ICH9 LPC (D31:F0) PMBASE register so that ACPI I/O
         // decoding is enabled before we build ACPI tables. Without this the
         // guest kernel cannot reach the PM1a control block and `shutdown -h`
