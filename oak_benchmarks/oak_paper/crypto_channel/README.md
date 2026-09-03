@@ -133,7 +133,11 @@ message-exchange row agrees between the two legs to within run-to-run variance,
 which is the expected result: once the channel is open the two are the same code
 operating on the same session keys.
 
-The setup difference decomposes almost entirely into signature operations.
+> [!IMPORTANT] The `Setup` row is measured with evidence generated using the
+> domain-separated AAD. The current `main` temporarily generates legacy-AAD
+> evidence and so measures 2.95 ms instead of 1.92 ms; see "The legacy AAD
+> fallback, and what it costs today" for the measurement and the mechanism.
+
 `crypto_channel_attestation_test` pins the shape of the chain -- three DICE
 layer certificates plus two application-key certificates -- so this count is
 checked rather than asserted:
@@ -274,6 +278,58 @@ evidence without comparing measurements against expected digests. That
 comparison is a handful of digest equality checks and is not where the time
 goes.
 
+## The legacy AAD fallback, and what it costs today
+
+> [!WARNING] At the current `main` (`5771319c2b65`), an attested `Setup`
+> measures **2.95 ms**, not the 1.92 ms recorded above. That is not measurement
+> drift and the older figure is not wrong: the tree is temporarily generating
+> evidence in a form that makes the client verify every certificate twice.
+
+`verify_cose_sign1_signature`
+(`oak_attestation_verification/src/verifier.rs:49`) verifies a certificate
+against a domain-separated AAD and, if that fails, retries with
+`LEGACY_ADDITIONAL_DATA` (`b""`) for backward compatibility. The fallback is a
+second full ECDSA verification.
+
+Commit `5771319c2b65`, "Keep generating keys with `LEGACY_ADDITIONAL_DATA`",
+reverted the _generation_ side to the legacy AAD while keeping the verification
+changes, because consumers have not been updated yet (b/533984986). Every
+certificate the client now receives therefore fails the first attempt and
+succeeds on the second.
+
+This was measured rather than assumed. Restoring the domain-separated AAD in
+`oak_dice/src/cert.rs` and `oak_attestation/src/dice.rs` on a throwaway change,
+and changing nothing else:
+
+| leg                           | legacy AAD (`main`) | domain-separated AAD |    delta |
+| ----------------------------- | ------------------: | -------------------: | -------: |
+| criterion `Setup`, unattested |              486 µs |               490 µs |    +4 µs |
+| criterion `Setup`, attested   |             2945 µs |              1858 µs | −1087 µs |
+| segments total, attested      |             2805 µs |              1796 µs | −1009 µs |
+| segments `attest ingest`      |             2102 µs |              1120 µs |  −982 µs |
+
+Three things make this a mechanism and not a correlation:
+
+- **The unattested leg does not move.** It exchanges no certificates, so it
+  should not, and it does not.
+- **The cost lands entirely in one segment.** `attest ingest` is where the
+  client walks the DICE chain; every other segment is within noise. The
+  breakdown in "Where the handshake time goes" is what makes this visible.
+- **The size is right.** The chain is five certificates -- three DICE layers
+  plus two application keys, pinned by `crypto_channel_attestation_test` -- and
+  ECDSA verify costs 197.6 µs here, so the prediction is 5 × 197.6 = **988 µs**
+  against a measured **982 µs** in `attest ingest`.
+
+The restored figure, 1858 µs, also agrees with the 1921 / 1930 µs recorded in
+"What attestation costs" to within 3.5%, which is what confirms those numbers
+were correct for the tree they were taken on.
+
+**Which number to quote.** The domain-separated one. The legacy generation is
+explicitly a temporary compatibility measure with a tracking bug on it, so 2.95
+ms describes a migration window rather than the design. Anything quoting an
+attested handshake cost should use ~1.86 ms and should say which AAD
+configuration it was measured in, because the two differ by 58%.
+
 ## Where the handshake time goes
 
 `Setup` is a single number per leg, which is enough to compare legs and not
@@ -296,10 +352,12 @@ protobuf oneof variant on the wire (`AttestRequest`, `HandshakeRequest`,
 `EncryptedMessage`) rather than inferred from the round-trip index, so the
 labelling stays correct if the message count ever changes.
 
-Medians at n = 500, warm-up 20, `-c opt`:
+Medians at n = 500, warm-up 20, `-c opt`, on `main` = `5771319c2b65`. The
+attested rows are inflated by 1.0 ms because that revision generates legacy-AAD
+evidence; the same table with the domain-separated AAD totals 1796 µs, of which
+`attest ingest` is 1120 µs. See the previous section.
 
 | leg                  | segment            |       µs |
-| -------------------- | ------------------ | -------: |
 | plaintext            | connect            |     15.8 |
 | noise                | connect            |     18.4 |
 | noise                | create             |      0.3 |
