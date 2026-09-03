@@ -372,11 +372,9 @@ fn new_attested_noise_client_stream(addr: SocketAddr) -> Box<dyn MessageStream> 
 ///
 /// A resumed TLS 1.3 handshake sends no certificate and generates no
 /// signature, so it is a different protocol exchange from the one `Setup`
-/// claims to measure, and it is not what the BoringSSL leg does -- that one
-/// reports `full_handshakes` equal to its iteration count. With resumption on,
-/// `Setup` reported ~180 µs; with it off, ~652 µs. The BoringSSL leg's full
-/// handshake is ~601 µs, and those two agreeing to within 8% is the check that
-/// both are now doing the same work.
+/// claims to measure. With resumption on, `Setup` reported ~180 µs; with it
+/// off, ~652 µs. The per-iteration assert is what holds that in place; there
+/// is no second implementation in this repository to check it against.
 ///
 /// Resumption is a real and important optimisation, and a client that really
 /// did reconnect to the same server for every RPC would benefit from it. It is
@@ -433,7 +431,7 @@ fn new_tls_client_stream(
         stream.conn.handshake_kind(),
         Some(rustls::HandshakeKind::Full),
         "the tls leg must perform a full handshake, otherwise it is not measuring \
-         the same exchange as the noise and boringssl legs"
+         the same exchange as the noise legs"
     );
     Box::new(BufferedStream::new(stream))
 }
