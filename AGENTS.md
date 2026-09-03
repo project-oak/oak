@@ -59,12 +59,48 @@ faster, more targeted approach, you can run tests for a specific package using
 If a target does not have any tests, running `bazel test` on it will fail. In
 this case, use `bazel build` to verify the target instead.
 
-Note: The following two test targets are expected to fail when running
-`just build-and-test` in the local development environment. This is known
-behavior and can be disregarded:
+Note: The following two test targets fail in a default local development
+environment:
 
 - `//oak_containers/examples/hello_world/host_app:oak_containers_hello_world_host_app_tests_tests/integration_test_test`
 - `//oak_functions_containers_launcher:oak_functions_containers_launcher_test_tests/integration_test_test`
+
+Both launch a VM that talks over **vsock**, which needs `/dev/vhost-vsock`.
+Access to it is the usual cause, and it comes from membership of the `kvm`
+group, since the device is `root:kvm` mode `660`:
+
+```bash
+sudo usermod -aG kvm "$USER" # then log out and back in
+```
+
+> [!IMPORTANT]
+> Agents must not run that command. It needs `sudo`, and it changes the
+> developer's account. Ask them to run it and to confirm they have logged back
+> in before you re-run the tests.
+
+Entering the nix shell attempts `modprobe vhost_vsock` and prints
+`Failed to install vhost_vsock module, some integration tests may not work`
+when it cannot. **That message is usually a red herring.** `/dev/vhost-vsock` is
+a *static* device node, created from the module's `devname` alias (see
+`kmod static-nodes`), so it exists even while the module is unloaded, and the
+kernel autoloads the module when a permitted process opens it. An unprivileged
+`modprobe` failing therefore says nothing about whether vsock works. Check the
+device itself:
+
+```bash
+ls -l /dev/vhost-vsock # exists, root:kvm 660 -> you need the group, not modprobe
+```
+
+`sudo modprobe vhost_vsock` is only the answer if that node is genuinely absent,
+which means the kernel has no `vhost_vsock` support to load
+(`grep VHOST_VSOCK /boot/config-$(uname -r)`). Ask the developer to run it in
+that case; do not run it yourself.
+
+KVM working is not evidence that vsock will. `/dev/kvm` is usually granted
+through a per-user POSIX ACL (`user:<you>:rw-`, visible with
+`getfacl /dev/kvm`) rather than through the group, and that ACL is not extended
+to `/dev/vhost-vsock`. So the usual symptom is that everything else runs and
+only these two targets fail.
 
 ## Rust
 
