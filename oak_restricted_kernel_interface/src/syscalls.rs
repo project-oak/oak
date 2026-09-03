@@ -63,8 +63,7 @@ pub enum Syscall {
     ///   - arg0 (*const c_void): hint for start address for the new mapping,
     ///     may be nullptr
     ///   - arg1 (c_size_t): size of the new mapping
-    ///   - arg2 (c_int): protection on mapping (PROT_EXEC, PROT_READ,
-    ///     PROT_WRITE, PROT_NONE)
+    ///   - arg2 (c_int): protection on mapping (PROT_READ, PROT_WRITE)
     ///   - arg3 (c_int): flags. We require MAP_PRIVATE and MAP_ANONYMOUS to be
     ///     set, and additionally support MAP_FIXED.
     ///   - arg4 (c_int): file descriptor. Ignored, as we only support anonymous
@@ -81,6 +80,8 @@ pub enum Syscall {
     ///   - MAP_FIXED requires address to be 2 MiB-aligned, and will return an
     ///     error if it'd touch any existing mappings.
     ///   - We do not support PROT_NONE; PROT_READ is always implied.
+    ///   - PROT_EXEC is refused with EPERM. The application gets no executable
+    ///     memory, and there is no `mprotect` either.
     Mmap = 9,
 
     /// Terminates he calling process.

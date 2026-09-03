@@ -210,6 +210,14 @@ pub fn syscall_mmap(
         return Errno::EINVAL as isize;
     };
 
+    // Ring 3 must not get an executable page, and there is no `mprotect` to
+    // close one later, so this is the only place to refuse it. `EPERM` rather
+    // than `EINVAL`: the bit is valid ABI, it is the request that is refused.
+    if prot.contains(MmapProtection::PROT_EXEC) {
+        log::warn!("mmap: refusing PROT_EXEC; the kernel grants no executable memory to Ring 3");
+        return Errno::EPERM as isize;
+    }
+
     // `addr` is untrusted user input; a non-canonical value must not be allowed
     // to panic the kernel (`VirtAddr::new`). Reject it with EINVAL instead.
     let addr = match VirtAddr::try_new(addr as u64) {

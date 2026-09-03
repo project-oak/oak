@@ -26,6 +26,8 @@ use strum::{Display, FromRepr};
 #[repr(isize)]
 #[non_exhaustive]
 pub enum Errno {
+    /// Operation not permitted
+    EPERM = -1,
     /// Input/output error
     EIO = -5,
     /// Bad file descriptor
