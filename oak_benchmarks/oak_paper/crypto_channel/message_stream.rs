@@ -17,15 +17,18 @@
 #![no_std]
 
 extern crate alloc;
-// Needed only to inspect `std::io::Error` for end-of-stream; see
-// `is_end_of_stream`. The crate stays `no_std` for the enclave build.
+// Needed for the framing implementation over `std::io` streams, which is where
+// every socket-backed leg lives. The crate stays `no_std` for the enclave
+// build, whose transports implement [`MessageStream`] directly.
 #[cfg(feature = "std")]
 extern crate std;
 
-use alloc::{vec, vec::Vec};
+#[cfg(feature = "std")]
+use alloc::vec;
+use alloc::vec::Vec;
 use core::default::Default;
 
-use oak_channel::{Read, Write, message::ResponseMessage, server::ServerChannelHandle};
+use oak_channel::{message::ResponseMessage, server::ServerChannelHandle};
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
 use oak_session::{ClientSession, ProtocolEngine, ServerSession, Session, config::SessionConfig};
 use prost::Message;
@@ -64,10 +67,12 @@ pub mod control {
 
 /// A bidirectional stream of length-prefixed messages.
 ///
-/// Implementations exist for anything that is [`oak_channel::Read`] plus
-/// [`oak_channel::Write`] (so a `TcpStream` or a `rustls::StreamOwned`
-/// qualifies), for the Restricted Kernel channel at either end, and for a
-/// Noise session layered over any of those.
+/// The trait itself is `no_std`. Implementations exist for the Restricted
+/// Kernel channel at either end ([`OakServerChannelMessageStream`] here, and
+/// `OakClientChannelMessageStream` in `rk_launcher.rs`), for a Noise session
+/// layered over any other implementation, and -- behind the `std` feature
+/// only -- a blanket impl covering everything that is `std::io::Read` plus
+/// `std::io::Write`, so a `TcpStream` or a `rustls::StreamOwned` qualifies.
 pub trait MessageStream {
     fn send_message(&mut self, msg: &[u8]);
 
@@ -117,27 +122,6 @@ impl MessageStream for OakServerChannelMessageStream {
             .write_response(ResponseMessage { invocation_id: 0, body: msg.to_vec() })
             .expect("writing message");
     }
-}
-
-/// Reports whether a [`oak_channel::Read`] failure was a clean end of stream.
-///
-/// `oak_channel`'s blanket implementation over [`std::io::Read`] wraps the
-/// underlying error with `anyhow::Error::msg`, which keeps the concrete type
-/// recoverable by downcast. A short read at a message boundary arrives as
-/// [`std::io::ErrorKind::UnexpectedEof`].
-///
-/// Without `std` there is no such error to inspect, and the transports that
-/// remain -- the Restricted Kernel channel -- cannot reach end of stream
-/// anyway, so every failure is a real one.
-#[cfg(feature = "std")]
-fn is_end_of_stream(err: &anyhow::Error) -> bool {
-    err.downcast_ref::<std::io::Error>()
-        .is_some_and(|e| e.kind() == std::io::ErrorKind::UnexpectedEof)
-}
-
-#[cfg(not(feature = "std"))]
-fn is_end_of_stream(_err: &anyhow::Error) -> bool {
-    false
 }
 
 /// A stream that reads through a buffer and writes straight through.
@@ -201,24 +185,66 @@ impl<S: std::io::Read + std::io::Write> std::io::Write for BufferedStream<S> {
     }
 }
 
-impl<T: Read + Write> MessageStream for T {
+/// The body size at or above which [`MessageStream::send_message`] frames with
+/// a vectored write rather than by copying.
+///
+/// Both framings issue exactly one write. They differ in what they spend to get
+/// there: the copy costs an allocation and a `memcpy` proportional to the body,
+/// the vectored write costs a second `iovec` for the kernel to walk. Neither is
+/// free, and which one wins depends on the payload.
+///
+/// Measured on the local TCP legs, vectored against copying, median of three
+/// runs per point, arms interleaved within one binary. Positive means the
+/// vectored write is *slower*:
+///
+/// | payload | plaintext | Noise |
+/// | ---: | ---: | ---: |
+/// | 1 B | +4.9% | +6.2% |
+/// | 1 kB | +4.9% | +3.2% |
+/// | 4 kB | +3.0% | +2.1% |
+/// | 8 kB | +2.7% | +0.1% |
+/// | 16,380 B | +1.9% | +0.7% |
+/// | 65,532 B | -3.1% | -1.9% |
+/// | 100 MB | -24.0% | -22.8% |
+///
+/// The run-to-run spread at these points is 1-4%, so everything from 2 kB to
+/// 16 kB is a tie and the only resolvable effects are the ~5% loss at and below
+/// 1 kB and the large win from 64 kB up. 16 KiB is the smallest round threshold
+/// that keeps the loss out of the sweep, and the boundary it introduces is
+/// smaller than the noise floor either side of it.
+#[cfg(feature = "std")]
+const VECTORED_FRAMING_THRESHOLD: usize = 16 * 1024;
+
+/// Framing for anything that is already a `std::io` stream: the raw sockets,
+/// `BufferedStream`, and `rustls::StreamOwned`.
+///
+/// This is deliberately narrower than [`oak_channel::Read`] +
+/// [`oak_channel::Write`], which is what it used to be written against.
+/// `oak_channel::Write` offers only `write_all`, so it cannot express the
+/// vectored write that [`MessageStream::send_message`] needs. Nothing is lost
+/// by narrowing it: every transport that reached this impl is a `std` socket
+/// type, and the enclave transports ([`OakServerChannelMessageStream`] and
+/// [`OakClientChannelMessageStream`]) implement [`MessageStream`] themselves.
+/// The `no_std` build therefore has no blanket impl at all.
+#[cfg(feature = "std")]
+impl<T: std::io::Read + std::io::Write> MessageStream for T {
     fn try_read_message(&mut self) -> Option<Vec<u8>> {
         let mut size_buf = [0u8; 4];
-        match self.read_exact(&mut size_buf) {
+        match std::io::Read::read_exact(self, &mut size_buf) {
             Ok(()) => {}
             // Only a failure to read the *length* can be a clean close. Once a
             // length has arrived the peer has committed to a body, so a short
             // read there is a truncated message and a real error.
-            Err(err) if is_end_of_stream(&err) => return None,
+            Err(err) if err.kind() == std::io::ErrorKind::UnexpectedEof => return None,
             Err(err) => panic!("reading message size: {err}"),
         }
         let size = u32::from_le_bytes(size_buf) as usize;
         let mut buf = vec![0u8; size];
-        self.read_exact(&mut buf).expect("reading message");
+        std::io::Read::read_exact(self, &mut buf).expect("reading message");
         Some(buf)
     }
 
-    /// Writes the length prefix and the body as a single `write_all`.
+    /// Writes the length prefix and the body as a single write.
     ///
     /// Not a micro-optimisation. Every leg shares this framing but sits at a
     /// different level relative to it. The Noise legs encrypt above it, so two
@@ -242,8 +268,23 @@ impl<T: Read + Write> MessageStream for T {
     /// 1.03 µs. TLS saves 3.3x that, and the surplus is the second record's
     /// crypto. So most of what looked like TLS overhead was this framing.
     ///
-    /// The cost is one allocation and one copy per message, charged identically
-    /// to every leg.
+    /// # Getting the single write without paying for a copy
+    ///
+    /// The obvious way to write two buffers at once is to concatenate them, and
+    /// that is what this did first. The copy is charged inside the timed region
+    /// to every leg, and it is proportional to the payload, so at the top of
+    /// the sweep it was an allocation and a `memcpy` of 100 MB per message
+    /// per direction -- about a quarter of the reported 100 MB figure.
+    ///
+    /// Handing the prefix and the body to `write_vectored` as two `IoSlice`s
+    /// keeps the single write and drops the copy. rustls does not reintroduce
+    /// one: `Writer::write_vectored` wraps the slices in `OutboundChunks` and
+    /// fragments by total length, so both still land in one record.
+    /// [`BufferedStream`] forwards `write_vectored` to the socket, and a
+    /// `TcpStream` turns it into one `writev`.
+    ///
+    /// Below [`VECTORED_FRAMING_THRESHOLD`] the copy is the cheaper of the two;
+    /// see that constant for the measurements.
     ///
     /// # On its own this did not make the legs comparable
     ///
@@ -261,14 +302,31 @@ impl<T: Read + Write> MessageStream for T {
     /// per message.
     ///
     /// Note also that rustls writes with `writev` while the raw legs use
-    /// `sendto`. That difference is not controlled for, and on this host the
-    /// `write` family has been measured as materially more expensive than the
-    /// `send` family.
+    /// `sendto` below the threshold. That difference is not controlled for, and
+    /// on this host the `write` family has been measured as materially more
+    /// expensive than the `send` family.
     fn send_message(&mut self, msg: &[u8]) {
-        let mut frame = Vec::with_capacity(size_of::<u32>() + msg.len());
-        frame.extend_from_slice(&(msg.len() as u32).to_le_bytes());
-        frame.extend_from_slice(msg);
-        self.write_all(&frame).expect("writing message");
+        let prefix = (msg.len() as u32).to_le_bytes();
+        if msg.len() < VECTORED_FRAMING_THRESHOLD {
+            let mut frame = Vec::with_capacity(size_of::<u32>() + msg.len());
+            frame.extend_from_slice(&prefix);
+            frame.extend_from_slice(msg);
+            std::io::Write::write_all(self, &frame).expect("writing message");
+            return;
+        }
+        // `write_vectored` is permitted to consume only part of what it is
+        // given, so it needs the same advance-and-retry loop `write_all` has.
+        // `write_all_vectored` does exactly this but is still nightly-only.
+        let mut slices = [std::io::IoSlice::new(&prefix), std::io::IoSlice::new(msg)];
+        let mut slices: &mut [std::io::IoSlice<'_>] = &mut slices;
+        while !slices.is_empty() {
+            match std::io::Write::write_vectored(self, slices) {
+                Ok(0) => panic!("writing message: the stream accepted no bytes"),
+                Ok(n) => std::io::IoSlice::advance_slices(&mut slices, n),
+                Err(err) if err.kind() == std::io::ErrorKind::Interrupted => {}
+                Err(err) => panic!("writing message: {err}"),
+            }
+        }
     }
 }
 
@@ -501,6 +559,86 @@ mod tests {
         // become two TLS records on the rustls legs.
         expect_that!(stream.writes, eq(1));
         expect_that!(stream.written, eq(&framed(&[7u8; 100])));
+    }
+
+    #[googletest::test]
+    fn a_small_message_is_framed_by_copying() {
+        let mut stream = CountingStream::default();
+        stream.send_message(&[7u8; VECTORED_FRAMING_THRESHOLD - 1]);
+
+        expect_that!(stream.writes, eq(1));
+        // No vectored write, so the copy path ran. Below the threshold that is
+        // the cheaper of the two; see `VECTORED_FRAMING_THRESHOLD`.
+        expect_that!(stream.vectored_slice_counts, eq(&Vec::<usize>::new()));
+        expect_that!(stream.written, eq(&framed(&[7u8; VECTORED_FRAMING_THRESHOLD - 1])));
+    }
+
+    #[googletest::test]
+    fn a_large_message_is_framed_without_copying() {
+        let mut stream = CountingStream::default();
+        stream.send_message(&[7u8; VECTORED_FRAMING_THRESHOLD]);
+
+        // Still one write, and now the prefix and the body reach it as two
+        // separate slices rather than as a freshly allocated concatenation.
+        expect_that!(stream.writes, eq(1));
+        expect_that!(stream.vectored_slice_counts, eq(&vec![2usize]));
+        expect_that!(stream.written, eq(&framed(&[7u8; VECTORED_FRAMING_THRESHOLD])));
+    }
+
+    /// A stream whose `write_vectored` behaves like the default one, writing
+    /// only the first slice it is given.
+    #[derive(Default)]
+    struct OneSliceAtATimeStream {
+        written: Vec<u8>,
+        writes: usize,
+    }
+
+    impl std::io::Write for OneSliceAtATimeStream {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            self.writes += 1;
+            self.written.extend_from_slice(buf);
+            Ok(buf.len())
+        }
+
+        fn write_vectored(&mut self, bufs: &[IoSlice<'_>]) -> std::io::Result<usize> {
+            match bufs.iter().find(|b| !b.is_empty()) {
+                Some(b) => self.write(b),
+                None => Ok(0),
+            }
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    impl std::io::Read for OneSliceAtATimeStream {
+        fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
+            Ok(0)
+        }
+    }
+
+    #[googletest::test]
+    fn a_partial_vectored_write_still_sends_the_whole_frame() {
+        // `write_vectored` may consume only part of what it is handed, and the
+        // default implementation consumes exactly one slice. The frame must
+        // still arrive intact -- at the cost of the extra write, which is why
+        // every stream on the measured legs implements it properly.
+        let mut stream = OneSliceAtATimeStream::default();
+        stream.send_message(&[3u8; VECTORED_FRAMING_THRESHOLD]);
+
+        expect_that!(stream.writes, eq(2));
+        expect_that!(stream.written, eq(&framed(&[3u8; VECTORED_FRAMING_THRESHOLD])));
+    }
+
+    #[googletest::test]
+    fn an_empty_message_survives_a_round_trip() {
+        // The framing loop must not spin on the empty body slice.
+        let mut writer = CountingStream::default();
+        writer.send_message(b"");
+
+        let mut reader = CountingStream::with_input(writer.written);
+        expect_that!(reader.try_read_message(), some(eq(&Vec::<u8>::new())));
     }
 
     #[googletest::test]
