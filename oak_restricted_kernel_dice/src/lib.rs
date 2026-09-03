@@ -154,13 +154,14 @@ pub fn generate_dice_data(
             )]),
         )];
 
+        // TODO: b/533984986 - use APPLICATION_KEYS_ADDITIONAL_DATA here
         let application_signing_public_key_certificate =
             oak_dice::cert::generate_signing_certificate_with_aad(
                 &kernel_signing_key,
                 kernel_cert_issuer.clone(),
                 &application_public_verifying_key,
                 additional_claims.clone(),
-                oak_dice::cert::APPLICATION_KEYS_ADDITIONAL_DATA,
+                oak_dice::cert::LEGACY_ADDITIONAL_DATA,
             )
             .expect("couldn't generate signing certificate");
 

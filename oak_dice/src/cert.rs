@@ -301,12 +301,13 @@ pub fn generate_signing_certificate(
     verifying_key: &VerifyingKey,
     additional_claims: Vec<(ClaimName, Value)>,
 ) -> Result<CoseSign1, CoseError> {
+    // TODO: b/533984986 - use DICE_LAYER_ADDITIONAL_DATA here
     generate_signing_certificate_with_aad(
         issuer_eca_key,
         issuer_id,
         verifying_key,
         additional_claims,
-        DICE_LAYER_ADDITIONAL_DATA,
+        LEGACY_ADDITIONAL_DATA,
     )
 }
 
@@ -349,12 +350,13 @@ pub fn generate_kem_certificate(
     kem_public_key: &[u8],
     additional_claims: Vec<(ClaimName, Value)>,
 ) -> Result<CoseSign1, CoseError> {
+    // TODO: b/533984986 - use APPLICATION_KEYS_ADDITIONAL_DATA here
     generate_kem_certificate_with_aad(
         issuer_eca_key,
         issuer_id,
         kem_public_key,
         additional_claims,
-        APPLICATION_KEYS_ADDITIONAL_DATA,
+        LEGACY_ADDITIONAL_DATA,
     )
 }
 

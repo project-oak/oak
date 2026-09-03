@@ -755,12 +755,13 @@ mod tests {
             container_claims.clone(),
         )
         .expect("failed to generate app encryption certificate");
+        // TODO: b/533984986 - use APPLICATION_KEYS_ADDITIONAL_DATA here
         let app_signing_cert = oak_dice::cert::generate_signing_certificate_with_aad(
             &system_private_key,
             system_public_key_id_hex,
             &app_signing_public_key,
             container_claims,
-            oak_dice::cert::APPLICATION_KEYS_ADDITIONAL_DATA,
+            oak_dice::cert::LEGACY_ADDITIONAL_DATA,
         )
         .expect("failed to generate app signing certificate");
 
