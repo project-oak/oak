@@ -256,13 +256,15 @@ impl TLogProof {
     /// # Arguments
     ///
     /// * `policy`: The sigsum policy specifying trusted log keys and witness
-    ///   quorum. The t-log proof must contain exactly one valid signature from
+    ///   quorum. The t-log proof must carry at least one valid signature from
     ///   one of the policy's log keys, and enough witness cosignatures to
     ///   satisfy the quorum.
     /// * `entry`: The raw bytes of the entry or leaf that was logged.
+    ///
+    /// Only one valid signature from a trusted log key is required.
     pub fn verify(&self, policy: &policy::Policy, entry: &[u8]) -> Result<(), TLogProofError> {
-        // Verify log signature: exactly one trusted log key must match and
-        // verify exactly one signature in the checkpoint.
+        // Verify log signatures: at least one trusted log key must match, and
+        // every signature matching a trusted log key must verify.
         let mut num_found: usize = 0;
         for log_key in policy.log_keys() {
             if self.checkpoint.origin != log_key.origin {
@@ -276,17 +278,17 @@ impl TLogProof {
                 }
             }
         }
-        if num_found != 1 {
+        if num_found == 0 {
             return Err(TLogProofError::SignatureMismatch);
         }
 
-        // Verify witness cosignatures and check quorum.
+        // Verify witness cosignatures and check quorum. As with log keys, a
+        // signature matching a trusted witness key must verify.
         let mut verified_witnesses: Vec<&NoteVerifyingKey> = Vec::new();
         for sig in &self.checkpoint.signatures {
             for witness_key in policy.witness_keys() {
-                if sig.matches_key(witness_key)
-                    && witness_key.verify(&self.checkpoint.signed_payload, sig).is_ok()
-                {
+                if sig.matches_key(witness_key) {
+                    witness_key.verify(&self.checkpoint.signed_payload, sig)?;
                     verified_witnesses.push(witness_key);
                     break;
                 }
@@ -1410,5 +1412,141 @@ mod tests {
         let policy = policy::Policy::parse(&policy_str).unwrap();
 
         assert!(matches!(proof.verify(&policy, entry), Err(TLogProofError::InsufficientWitnesses)));
+    }
+
+    /// Builds a checkpoint signed by both a classical and a post-quantum log
+    /// key on the same origin.
+    fn make_dual_signed_checkpoint(
+        ed_log: &TestIdentity,
+        ml_log: &TestIdentity,
+        tree_size: u64,
+        root_hash: &Sha256,
+    ) -> Checkpoint {
+        let signed_payload =
+            format!("{}\n{}\n{}\n", ed_log.origin, tree_size, B64.encode(root_hash));
+        let ed_sig = ed_log.sign(&signed_payload, Instant::UNIX_EPOCH);
+        let ml_sig = ml_log.sign(&signed_payload, Instant::UNIX_EPOCH);
+        Checkpoint {
+            origin: ed_log.origin.clone(),
+            tree_size,
+            root_hash: *root_hash,
+            signed_payload,
+            signatures: vec![ed_sig, ml_sig],
+        }
+    }
+
+    #[test]
+    fn test_verify_dual_signed_log() {
+        let ed_log = TestIdentity::fake_ed25519();
+        let ml_log = TestIdentity::subtree_v1(FAKE_ORIGIN);
+        let entry = b"dual-signed-entry";
+        let test_tree = TestTree::new(4, 2, entry);
+        let checkpoint = make_dual_signed_checkpoint(&ed_log, &ml_log, 4, &test_tree.root());
+
+        let proof_str = make_tlog_proof(2, &test_tree.proof(2), &checkpoint);
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        // Both log keys are trusted, and both signatures are valid.
+        let policy_str = format!("{}{}quorum none\n", ed_log.log_line(), ml_log.log_line());
+        let policy = policy::Policy::parse(&policy_str).unwrap();
+
+        assert!(proof.verify(&policy, entry).is_ok());
+    }
+
+    #[test]
+    fn test_verify_dual_signed_log_one_key_trusted() {
+        let ed_log = TestIdentity::fake_ed25519();
+        let ml_log = TestIdentity::subtree_v1(FAKE_ORIGIN);
+        let entry = b"dual-signed-partial-trust";
+        let test_tree = TestTree::new(4, 1, entry);
+        let checkpoint = make_dual_signed_checkpoint(&ed_log, &ml_log, 4, &test_tree.root());
+
+        let proof_str = make_tlog_proof(1, &test_tree.proof(1), &checkpoint);
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        // The policy only knows the Ed25519 key. The ML-DSA signature names a
+        // key that is absent from the policy, so it is ignored.
+        let policy_str = format!("{}quorum none\n", ed_log.log_line());
+        let policy = policy::Policy::parse(&policy_str).unwrap();
+
+        assert!(proof.verify(&policy, entry).is_ok());
+    }
+
+    #[test]
+    fn test_verify_dual_signed_log_second_signature_invalid() {
+        let ed_log = TestIdentity::fake_ed25519();
+        let ml_log = TestIdentity::subtree_v1(FAKE_ORIGIN);
+        let entry = b"dual-signed-tampered";
+        let test_tree = TestTree::new(4, 0, entry);
+        let mut checkpoint = make_dual_signed_checkpoint(&ed_log, &ml_log, 4, &test_tree.root());
+
+        // Corrupt the ML-DSA signature, leaving the key ID hint intact so it
+        // still matches the trusted key.
+        let ml_sig = checkpoint.signatures.last_mut().unwrap();
+        *ml_sig.sig_bytes.last_mut().unwrap() ^= 0xFF;
+
+        let proof_str = make_tlog_proof(0, &test_tree.proof(0), &checkpoint);
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        // The Ed25519 signature is still valid, but a signature naming a
+        // trusted key must not silently fail to verify.
+        let policy_str = format!("{}{}quorum none\n", ed_log.log_line(), ml_log.log_line());
+        let policy = policy::Policy::parse(&policy_str).unwrap();
+
+        assert!(matches!(
+            proof.verify(&policy, entry),
+            Err(TLogProofError::Note(NoteError::SignatureVerificationFailed))
+        ));
+    }
+
+    #[test]
+    fn test_verify_tampered_witness_cosignature() {
+        let log = TestIdentity::fake_ed25519();
+        let witness1 = TestIdentity::fake_cosignature_v1();
+        let witness2 = TestIdentity::cosignature_v1("fake-witness-2", [44u8; 32]);
+        let entry = b"tampered-witness-entry";
+        let test_tree = TestTree::new(3, 1, entry);
+        let root = test_tree.root();
+        let signed_payload = format!("{}\n{}\n{}\n", log.origin, 3, B64.encode(root));
+
+        let log_sig = log.sign(&signed_payload, Instant::UNIX_EPOCH);
+        let witness1_sig = witness1.sign(&signed_payload, Instant::from_unix_seconds(1700000000));
+        let mut witness2_sig =
+            witness2.sign(&signed_payload, Instant::from_unix_seconds(1700000001));
+        // Corrupt witness2's cosignature, leaving its key ID hint intact.
+        *witness2_sig.sig_bytes.last_mut().unwrap() ^= 0xFF;
+
+        let checkpoint = Checkpoint {
+            origin: log.origin.clone(),
+            tree_size: 3,
+            root_hash: root,
+            signed_payload,
+            signatures: vec![log_sig, witness1_sig, witness2_sig],
+        };
+
+        let proof_str = make_tlog_proof(1, &test_tree.proof(1), &checkpoint);
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        // The quorum would be satisfied by witness1 alone, but a cosignature
+        // naming a trusted witness key that fails to verify is evidence of
+        // tampering, so verification fails.
+        let policy_str = format!(
+            concat!(
+                "log {}\n",
+                "witness w1 {}\n",
+                "witness w2 {}\n",
+                "group g any w1 w2\n",
+                "quorum g\n",
+            ),
+            log.verifying_key.to_vkey_string(),
+            witness1.verifying_key.to_vkey_string(),
+            witness2.verifying_key.to_vkey_string()
+        );
+        let policy = policy::Policy::parse(&policy_str).unwrap();
+
+        assert!(matches!(
+            proof.verify(&policy, entry),
+            Err(TLogProofError::Note(NoteError::SignatureVerificationFailed))
+        ));
     }
 }

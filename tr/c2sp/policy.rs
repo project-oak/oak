@@ -89,7 +89,7 @@ pub enum PolicyError {
 #[derive(Debug)]
 pub struct Policy {
     /// Trusted log verifying keys. Multiple keys are allowed to support key
-    /// rotation; during verification exactly one (whose origin matches the
+    /// rotation; during verification at least one (whose origin matches the
     /// checkpoint's origin) must produce a valid signature.
     log_keys: Vec<NoteVerifyingKey>,
     /// Named quorum entries (witnesses and groups), indexed by policy-local
@@ -349,7 +349,7 @@ impl Policy {
     /// Returns the trusted log verifying keys specified in the policy.
     ///
     /// Multiple keys may be present to support key rotation. During
-    /// verification exactly one must produce a valid signature.
+    /// verification at least one must produce a valid signature.
     pub fn log_keys(&self) -> &[NoteVerifyingKey] {
         &self.log_keys
     }
