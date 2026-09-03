@@ -267,7 +267,9 @@ has not been separated.
 > modes need about half as much again for the key array and the table's
 > load-factor headroom. `pointer-chase` and `page-touch` allocate with
 > `try_reserve`, so an undersized guest reports `allocation failure` rather than
-> aborting; the hash map modes do not, and abort.
+> aborting; the hash map modes do not, and abort. `run_matrix.sh` does this
+> arithmetic itself, in `guest_memory_for`, and applies the result to both VM
+> legs; only a hand-run `oak_cli` or `linux_cli` needs the flag set by hand.
 
 ### Memory-Bound: Latency and Page Size
 

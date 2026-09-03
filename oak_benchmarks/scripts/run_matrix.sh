@@ -87,7 +87,8 @@ iterations_for() {
 # a separate run rather than a new default: it multiplies the setup cost of
 # every repetition of both memory benchmarks, and the conclusion the plan
 # draws from it does not need the rest of the matrix re-measured alongside.
-# Set MEMORY_WORKING_SET=1073741824 for that point.
+# Set MEMORY_WORKING_SET=1073741824 for that point; the guest grows to match,
+# see guest_memory_for.
 #
 # memory-insert builds its map inside the timed loop, one distinct key per
 # iteration, so its footprint follows iterations_for. The service gives it a
@@ -109,6 +110,41 @@ working_set_for() {
   esac
 }
 
+# How much guest memory the VM legs get, in MiB, for a given working set.
+#
+# Neither VM runner used to size itself: the enclave was pinned at 1024M here
+# and linux_cli defaults to 1G, so the >= 1 GiB point the evaluation plan asks
+# for aborted on both legs. The failure is silent -- the guest allocator dies
+# and micro_rpc surfaces it as an empty `Status { code: Internal }` -- and only
+# the native leg, which has no VM, survived it. That made the plan's own
+# recipe, MEMORY_WORKING_SET=1073741824, unrunnable on the two legs the point
+# is about.
+#
+# The working set is doubled rather than merely padded because the hash-map
+# benchmarks need about half as much again for the key array and the table's
+# load-factor headroom (see the README), and rounding that 1.5x up to 2x costs
+# nothing on a host with this much RAM. The 512 MiB on top is for the guest
+# itself: kernel, application, and, on the Linux leg, a distribution.
+#
+# The constants are chosen so that the 256 MB default yields exactly 1024M --
+# what the enclave leg has always been given, and what `linux_cli`'s 1G default
+# already amounted to. A default run therefore measures the same guest as
+# before this change, and only a run that asks for a larger working set gets a
+# larger guest.
+guest_memory_for() {
+  local mib=$(($1 * 2 / 1048576 + 512))
+  if ((mib < 1024)); then
+    mib=1024
+  fi
+  echo "${mib}M"
+}
+
+# One size for the whole matrix, not one per benchmark. The README asks for the
+# guest to be held constant across a comparison, and a guest that grew only for
+# the two benchmarks that read MEMORY_WORKING_SET would make those two
+# incomparable with the other seventeen.
+GUEST_MEMORY="$(guest_memory_for "${MEMORY_WORKING_SET}")"
+
 usage() {
   cat <<EOF
 Usage: $0 [--help]
@@ -118,7 +154,8 @@ Environment variables:
   REPETITIONS=30             Repetitions per benchmark, reported as median and IQR
   ITERATIONS=10000           Timed iterations per repetition
   MEMORY_WORKING_SET=256MB   Working set for memory-lookup and memory-churn, in
-                             bytes. Use 1073741824 for the plan's >=1 GiB point.
+                             bytes. Use 1073741824 for the plan's >=1 GiB point;
+                             the two VM legs are given a guest to match.
   SNP=0                      Set to 1 to run the SEV-SNP legs. Needs an SNP
                              host; untested, as no such host is available yet.
   BENCHMARKS_OVERRIDE=...    Space-separated benchmark names, to narrow the run
@@ -166,6 +203,7 @@ write_manifest() {
     echo "repetitions: ${REPETITIONS}"
     echo "iterations: ${ITERATIONS}"
     echo "memory working set: ${MEMORY_WORKING_SET} bytes"
+    echo "guest memory: ${GUEST_MEMORY} (VM legs only; native runs on the host)"
     echo "benchmarks: ${BENCHMARKS[*]}"
     echo "sev-snp: ${SNP}"
     echo "revision: $(jj --ignore-working-copy log -r @ --no-graph -T 'commit_id' 2>/dev/null || echo unknown)"
@@ -241,7 +279,8 @@ run_oak() {
     echo "oak ${b} (${n} iterations)" >&2
     "${PIN[@]}" "${BAZEL[@]}" run -c opt \
       //oak_benchmarks/oak_enclave_app:oak_enclave_app_run -- \
-      --memory-size=1024M --benchmark="${b}" --iterations="${n}" --working-set-size="${w}" \
+      --memory-size="${GUEST_MEMORY}" --benchmark="${b}" --iterations="${n}" \
+      --working-set-size="${w}" \
       --repetitions="${REPETITIONS}" --output=csv ${header} "${OAK_SNP_ARGS[@]}" \
       2>>"${log}" >>"${out}"
     header=""
@@ -262,7 +301,8 @@ run_vm() {
     echo "vm ${b} (${n} iterations)" >&2
     "${PIN[@]}" "${BAZEL[@]}" run -c opt \
       //oak_benchmarks/linux_enclave_app:linux_enclave_image_run -- \
-      --benchmark="${b}" --iterations="${n}" --working-set-size="${w}" \
+      --memory-size="${GUEST_MEMORY}" --benchmark="${b}" --iterations="${n}" \
+      --working-set-size="${w}" \
       --repetitions="${REPETITIONS}" --output=csv ${header} "${VM_SNP_ARGS[@]}" \
       2>>"${log}" >>"${out}"
     header=""
