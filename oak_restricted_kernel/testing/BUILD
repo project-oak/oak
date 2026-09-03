@@ -103,3 +103,39 @@ rust_test(
         "@oak_crates_index//:sha2",
     ],
 )
+
+rust_binary(
+    name = "mmap_test_app",
+    srcs = [
+        "mmap_test_app.rs",
+    ],
+    platform = "//:x86_64-unknown-none",
+    rustc_flags = [
+        "--codegen=link-arg=-Wl,-zmax-page-size=0x200000",
+    ],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    deps = [
+        "//oak_restricted_kernel_interface",
+        "//oak_restricted_kernel_sdk",
+    ],
+)
+
+rust_test(
+    name = "mmap_test",
+    srcs = [
+        "mmap_test.rs",
+    ],
+    args = ["--test-threads=1"],
+    data = [
+        ":mmap_test_app",
+        "//enclave_apps/oak_orchestrator",
+        "//oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin",
+        "//stage0_bin",
+    ],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    deps = [
+        "//oak_file_utils",
+        "//oak_test_utils",
+        "@oak_crates_index//:googletest",
+    ],
+)
