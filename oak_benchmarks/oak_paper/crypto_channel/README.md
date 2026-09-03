@@ -325,6 +325,41 @@ worth stating plainly: measured under the two artificial configurations the
 Noise figure would have been 9.87 or 11.08 cycles per byte instead of 5.10, and
 "3.5x rustls" would have been written as "6.9x" or "7.4x".
 
+### What pinning did not fix, and a regression that was not one
+
+Pinning both thresholds makes a cell reproducible _within_ a process. It does
+not make it reproducible _between_ processes. Re-measured 2026-09-03 with both
+thresholds pinned, five runs per arm, arms compiled into one binary and selected
+at run time, interleaved with the order rotated between runs:
+
+| cell             |   median | spread across runs |
+| ---------------- | -------: | -----------------: |
+| Plaintext 100 MB | 27.63 ms |           0.9-2.9% |
+| Noise 100 MB     | 225.4 ms |         **19-38%** |
+| Plaintext 1 kB   |  6.75 µs |           1.0-1.5% |
+| Noise 1 kB       |  8.61 µs |           0.6-2.6% |
+
+Only the Noise 100 MB cell is bad, and it is bad in the way that hides: each run
+reports a tight interval and successive runs disagree by a quarter. Criterion's
+dispersion is computed from samples within one run and cannot see it. The Noise
+path is the one that allocates most per exchange -- a `to_vec()`, a protobuf
+`encode_to_vec()`, the read buffer, and the frame -- so it is the cell where
+whatever the allocator and the huge-page state happen to be doing on that boot
+shows up most.
+
+That cost a wrong conclusion, which is retracted here. A bisect on 2026-08-31
+attributed a **+22% regression at Noise 100 MB to `BufferedStream`**, by
+comparing single runs of separately built binaries. Re-measured with the arms in
+one binary, removing the read buffer changes plaintext 100 MB by **-0.1%**
+(spread 0.9%) and Noise 100 MB by **+4.1%** (spread 19%): nothing, against a
+noise floor larger than the effect that was claimed. At 1 kB removing it costs
+19-25%, which is what it was added for. There was no regression.
+
+> [!IMPORTANT] Do not compare two versions of the harness by rebuilding between
+> them. Compile both paths into one binary, select at run time, interleave the
+> arms, and rotate the order. At 100 MB quote the plaintext cell; the Noise cell
+> cannot resolve anything below roughly 25%.
+
 ## What the `Message Exchange` comparison shows, by payload size
 
 Until 2026-08-28 this group was measured at a **single 1-byte payload**, and
