@@ -28,7 +28,8 @@ use std::{
 use criterion::{Criterion, criterion_group, criterion_main};
 use crypto_channel_attestation::{ServerAttestationMaterial, client_session_config};
 use linux_server::{
-    DEFAULT_NOISE_PORT, DEFAULT_PLAINTEXT_PORT, DEFAULT_TLS_PORT, init_rustls, load_certs_and_key,
+    DEFAULT_NOISE_PORT, DEFAULT_PLAINTEXT_PORT, DEFAULT_TLS_PORT, SETUP_SETTLE, init_rustls,
+    load_certs_and_key, spin_for,
 };
 use message_stream_client::{BufferedStream, MessageStream, NoiseMessageStream, control};
 use rk_launcher::{OakClientChannelMessageStream, start_rk_enclave_server};
@@ -186,37 +187,6 @@ fn benchmark_wrapper(
 
     if let Some(mut stream) = channel {
         close_channel(&mut *stream);
-    }
-}
-
-/// How long to wait, untimed, between tearing one channel down and timing the
-/// next one up.
-///
-/// A connect issued while the previous connection's teardown is still in
-/// flight is slower, and without this wait the `Setup` figure is roughly twice
-/// its true value and far too noisy to use (plaintext: 33.3 µs ±22% at 0 µs,
-/// 16.4 µs ±1.6% at 200 µs). The effect is a threshold, not a slope -- almost
-/// all of it is recovered by 25 µs -- so 200 µs deliberately over-provisions to
-/// cover the slower VM legs as well.
-///
-/// It is not free: it costs the TLS leg about 2% and Noise about 1%, because
-/// the server thread now goes idle between iterations and the timed handshake
-/// includes waking it. That is a reason to keep it rather than shorten it, as a
-/// real server is not spinning in wait for the next connection.
-///
-/// See the README for the interval sweep, the cost table, and the two
-/// mechanisms that were ruled out.
-const SETUP_SETTLE: Duration = Duration::from_micros(200);
-
-/// Spins for `duration` without sleeping.
-///
-/// Deliberately a busy wait, so that the client core stays in the state the
-/// measurement is supposed to characterise rather than paying a wake-up inside
-/// the following timed region.
-fn spin_for(duration: Duration) {
-    let start = Instant::now();
-    while start.elapsed() < duration {
-        core::hint::spin_loop();
     }
 }
 

@@ -20,6 +20,7 @@ use std::{
     net::{SocketAddr, TcpListener, TcpStream},
     sync::{Arc, Once},
     thread::{self, JoinHandle},
+    time::{Duration, Instant},
 };
 
 use message_stream_client::{MessageStream, control};
@@ -39,6 +40,37 @@ pub const DEFAULT_NOISE_PORT: u16 = 5001;
 /// name was plausible enough to be repeated in a paper without anyone
 /// checking it against the build graph.
 pub const DEFAULT_TLS_PORT: u16 = 5002;
+
+/// How long to wait, untimed, between tearing one channel down and timing the
+/// next one up.
+///
+/// A connect issued while the previous connection's teardown is still in
+/// flight is slower, and without this wait a setup figure is roughly twice its
+/// true value and far too noisy to use (plaintext: 33.3 µs ±22% at 0 µs,
+/// 16.4 µs ±1.6% at 200 µs). The effect is a threshold, not a slope -- almost
+/// all of it is recovered by 25 µs -- so 200 µs deliberately over-provisions to
+/// cover the slower VM legs as well.
+///
+/// It is not free: it costs the TLS leg about 2% and Noise about 1%, because
+/// the server thread now goes idle between iterations and the timed handshake
+/// includes waking it. That is a reason to keep it rather than shorten it, as a
+/// real server is not spinning in wait for the next connection.
+///
+/// See the README for the interval sweep, the cost table, and the two
+/// mechanisms that were ruled out.
+pub const SETUP_SETTLE: Duration = Duration::from_micros(200);
+
+/// Spins for `duration` without sleeping.
+///
+/// Deliberately a busy wait, so that the client core stays in the state the
+/// measurement is supposed to characterise rather than paying a wake-up inside
+/// the following timed region.
+pub fn spin_for(duration: Duration) {
+    let start = Instant::now();
+    while start.elapsed() < duration {
+        core::hint::spin_loop();
+    }
+}
 
 static INIT_RUSTLS: Once = Once::new();
 

@@ -248,3 +248,32 @@ rust_binary(
         "@oak_crates_index//:rand_core",
     ],
 )
+
+# Produces the measured per-segment handshake breakdown behind Figure F10.
+#
+# Deliberately not a criterion benchmark. Criterion reports one number per
+# benchmark function and amortises it over an iteration count it chooses; what
+# this needs is every segment of every establishment kept separately, so the
+# raw CSV can be re-aggregated. The `Setup` groups in `:benchmark` remain the
+# authority on the totals, and this binary's own totals are the cross-check.
+rust_binary(
+    name = "handshake_segments",
+    srcs = ["handshake_segments.rs"],
+    data = [":generate_certs"],
+    # Same allocator pinning as `:benchmark`, and for the same reason -- see the
+    # comment on that target. This binary is cross-checked against the `Setup`
+    # groups there, so it must not be measuring a different heap regime.
+    env = {
+        "MALLOC_MMAP_THRESHOLD_": "1073741824",
+        "MALLOC_TRIM_THRESHOLD_": "1073741824",
+    },
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        ":crypto_channel_attestation",
+        ":linux_server",
+        ":message_stream_client",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:rustls",
+        "@oak_crates_index//:rustls-pki-types",
+    ],
+)

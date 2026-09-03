@@ -396,6 +396,204 @@ impl<MS: MessageStream> ClientNoiseMessageStream<MS> {
         }
         NoiseMessageStream { message_stream, session }
     }
+
+    /// Same as [`Self::new_client_with_config`], but appends a timed breakdown
+    /// of the handshake to `trace`.
+    ///
+    /// This is what makes the handshake decomposition a measurement rather than
+    /// a model. Every boundary it times is one this crate already owns: the
+    /// session protocol hands the client a message to send and takes back the
+    /// one that arrives, and the four things that happen between those points
+    /// -- key material produced, bytes on the wire, bytes consumed -- are
+    /// separated by the calls below and by nothing else. No timer is placed
+    /// inside `oak_session`, so nothing about the protocol implementation
+    /// changes to accommodate the measurement.
+    ///
+    /// What each segment is worth reading as:
+    ///
+    /// - [`HandshakeWork::Create`] is `ClientSession::create`: the config is
+    ///   resolved and the client's ephemeral key pair is generated. It happens
+    ///   before any message exists, so it has no phase.
+    /// - [`HandshakeWork::Produce`] is `get_outgoing_message` plus protobuf
+    ///   encoding.
+    /// - [`HandshakeWork::Exchange`] is the send and the blocking read. It
+    ///   contains the wire time and all of the peer's own processing, and on a
+    ///   loopback benchmark it is dominated by the latter. It is not a network
+    ///   cost and must not be reported as one.
+    /// - [`HandshakeWork::Ingest`] is protobuf decoding plus
+    ///   `put_incoming_message`. In the [`HandshakePhase::Attest`] phase this
+    ///   is where the client verifies the server's evidence; in the
+    ///   [`HandshakePhase::Handshake`] phase it is the Noise step and the
+    ///   binding-signature check. The two cannot be separated further without
+    ///   instrumenting `oak_session`.
+    ///
+    /// The phase comes from the protobuf variant actually exchanged, not from
+    /// the round-trip index, so a session that changes shape reports the shape
+    /// it had rather than the one this code expected.
+    #[cfg(feature = "std")]
+    pub fn new_client_with_config_traced(
+        mut message_stream: MS,
+        config: SessionConfig,
+        trace: &mut Vec<HandshakeSegment>,
+    ) -> ClientNoiseMessageStream<MS> {
+        use std::time::Instant;
+
+        let start = Instant::now();
+        let mut session = ClientSession::create(config).unwrap();
+        trace.push(HandshakeSegment {
+            phase: HandshakePhase::None,
+            work: HandshakeWork::Create,
+            duration: start.elapsed(),
+        });
+
+        while !session.is_open() {
+            let start = Instant::now();
+            let init_req = session
+                .get_outgoing_message()
+                .expect("failed to get outgoing handshake message")
+                .expect("expected outgoing message");
+            let encoded = init_req.encode_to_vec();
+            let phase = HandshakePhase::of_request(&init_req);
+            trace.push(HandshakeSegment {
+                phase,
+                work: HandshakeWork::Produce,
+                duration: start.elapsed(),
+            });
+
+            if session.is_open() {
+                // The session opened on an outgoing message, so there is no
+                // response to wait for and the send is the last thing that
+                // happens. Time it as an exchange anyway, so the segments still
+                // sum to the total.
+                let start = Instant::now();
+                message_stream.send_message(encoded.as_slice());
+                trace.push(HandshakeSegment {
+                    phase,
+                    work: HandshakeWork::Exchange,
+                    duration: start.elapsed(),
+                });
+                break;
+            }
+
+            let start = Instant::now();
+            message_stream.send_message(encoded.as_slice());
+            let resp_msg = message_stream.read_message();
+            trace.push(HandshakeSegment {
+                phase,
+                work: HandshakeWork::Exchange,
+                duration: start.elapsed(),
+            });
+
+            let start = Instant::now();
+            let session_response = SessionResponse::decode(resp_msg.as_slice())
+                .expect("failed to decode session response");
+            let phase = HandshakePhase::of_response(&session_response);
+            session.put_incoming_message(session_response).expect("failed to put incoming message");
+            trace.push(HandshakeSegment {
+                phase,
+                work: HandshakeWork::Ingest,
+                duration: start.elapsed(),
+            });
+        }
+
+        NoiseMessageStream { message_stream, session }
+    }
+}
+
+/// Which session-protocol message a handshake segment was spent on.
+#[cfg(feature = "std")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HandshakePhase {
+    /// The attestation exchange: `AttestRequest` out, `AttestResponse` back.
+    ///
+    /// An unattested session still performs this exchange with empty evidence,
+    /// which is what makes the attested and unattested legs comparable segment
+    /// by segment.
+    Attest,
+    /// The handshake exchange: `HandshakeRequest` out, `HandshakeResponse`
+    /// back. The binding signature travels here.
+    Handshake,
+    /// An encrypted message seen before the session reported itself open.
+    ///
+    /// Not expected. Recorded rather than asserted, so that an unexpected
+    /// protocol shape appears in the data instead of aborting the run.
+    Encrypted,
+    /// A message carrying no variant at all, or a segment that belongs to no
+    /// message.
+    None,
+}
+
+#[cfg(feature = "std")]
+impl HandshakePhase {
+    fn of_request(request: &SessionRequest) -> Self {
+        use oak_proto_rust::oak::session::v1::session_request::Request;
+        match request.request {
+            Some(Request::AttestRequest(_)) => Self::Attest,
+            Some(Request::HandshakeRequest(_)) => Self::Handshake,
+            Some(Request::EncryptedMessage(_)) => Self::Encrypted,
+            None => Self::None,
+        }
+    }
+
+    fn of_response(response: &SessionResponse) -> Self {
+        use oak_proto_rust::oak::session::v1::session_response::Response;
+        match response.response {
+            Some(Response::AttestResponse(_)) => Self::Attest,
+            Some(Response::HandshakeResponse(_)) => Self::Handshake,
+            Some(Response::EncryptedMessage(_)) => Self::Encrypted,
+            None => Self::None,
+        }
+    }
+
+    /// A stable name for CSV output.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Attest => "attest",
+            Self::Handshake => "handshake",
+            Self::Encrypted => "encrypted",
+            Self::None => "none",
+        }
+    }
+}
+
+/// What the client was doing during a handshake segment.
+///
+/// See [`ClientNoiseMessageStream::new_client_with_config_traced`] for what
+/// each one contains and, more importantly, what it does not.
+#[cfg(feature = "std")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HandshakeWork {
+    /// `ClientSession::create`.
+    Create,
+    /// `get_outgoing_message` and protobuf encoding.
+    Produce,
+    /// The send, and the blocking read of the peer's reply. Wire time plus the
+    /// peer's processing, inseparably.
+    Exchange,
+    /// Protobuf decoding and `put_incoming_message`. Verification lives here.
+    Ingest,
+}
+
+#[cfg(feature = "std")]
+impl HandshakeWork {
+    /// A stable name for CSV output.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Create => "create",
+            Self::Produce => "produce",
+            Self::Exchange => "exchange",
+            Self::Ingest => "ingest",
+        }
+    }
+}
+
+/// One timed step of a client-side session establishment.
+#[cfg(feature = "std")]
+#[derive(Clone, Copy, Debug)]
+pub struct HandshakeSegment {
+    pub phase: HandshakePhase,
+    pub work: HandshakeWork,
+    pub duration: core::time::Duration,
 }
 
 impl<MS: MessageStream> ServerNoiseMessageStream<MS> {

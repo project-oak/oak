@@ -274,6 +274,80 @@ evidence without comparing measurements against expected digests. That
 comparison is a handful of digest equality checks and is not where the time
 goes.
 
+## Where the handshake time goes
+
+`Setup` is a single number per leg, which is enough to compare legs and not
+enough to say _why_ one is slower. The `handshake_segments` binary in this
+package breaks one session establishment into its constituent steps:
+
+```shell
+bazel run -c opt //oak_benchmarks/oak_paper/crypto_channel:handshake_segments \
+  -- --repetitions=1000 --warmup=20 --output=/tmp/segments.csv
+```
+
+It measures from _outside_ `oak_session`, at the four boundaries the harness
+already owns in `ClientNoiseMessageStream::new_client_with_config`: creating the
+client, `get_outgoing_message`, the write-then-read on the socket, and
+`put_incoming_message`. No timer is added inside the session library, so this
+costs nothing in the shipped code and cannot perturb it.
+
+Each segment is labelled with the phase it belongs to, read off the actual
+protobuf oneof variant on the wire (`AttestRequest`, `HandshakeRequest`,
+`EncryptedMessage`) rather than inferred from the round-trip index, so the
+labelling stays correct if the message count ever changes.
+
+Medians at n = 500, warm-up 20, `-c opt`:
+
+| leg                  | segment            |       µs |
+| -------------------- | ------------------ | -------: |
+| plaintext            | connect            |     15.8 |
+| noise                | connect            |     18.4 |
+| noise                | create             |      0.3 |
+| noise                | attest produce     |      0.2 |
+| noise                | attest exchange    |     15.3 |
+| noise                | attest ingest      |    102.9 |
+| noise                | handshake produce  |      0.2 |
+| noise                | handshake exchange |    220.4 |
+| noise                | handshake ingest   |    100.3 |
+| **noise**            | **total**          |  **458** |
+| noise (attested)     | connect            |     21.0 |
+| noise (attested)     | create             |      0.5 |
+| noise (attested)     | attest produce     |      0.4 |
+| noise (attested)     | attest exchange    |     19.7 |
+| noise (attested)     | attest ingest      |   2102.3 |
+| noise (attested)     | handshake produce  |      0.2 |
+| noise (attested)     | handshake exchange |    348.7 |
+| noise (attested)     | handshake ingest   |    312.3 |
+| **noise (attested)** | **total**          | **2805** |
+| tls (rustls)         | connect            |     20.5 |
+| tls (rustls)         | handshake          |    583.5 |
+| **tls (rustls)**     | **total**          |  **604** |
+
+The decomposition is only worth having if the parts add up to the whole, so the
+same revision was measured with the criterion `Setup` groups as a cross-check:
+
+| leg              | segments sum | criterion `Setup` | delta |
+| ---------------- | -----------: | ----------------: | ----: |
+| plaintext        |      15.8 µs |           15.8 µs | +0.0% |
+| noise            |       458 µs |            486 µs | −5.8% |
+| noise (attested) |      2805 µs |           2945 µs | −4.8% |
+| tls (rustls)     |       604 µs |            600 µs | +0.7% |
+
+The residual is the part of `Setup` that lies outside the four instrumented
+boundaries -- listener setup and teardown, and the settle interval -- so it is
+expected to be small and positive. It is.
+
+Two ways to misread this table:
+
+- **`exchange` is not network time.** On loopback it is the peer's processing
+  plus two context switches, and the peer's work dominates: the 220 µs of
+  `handshake exchange` on the unattested leg is mostly the server's keygen and
+  `ee`, not transport. Do not subtract it to obtain "compute only".
+- **The TLS leg is necessarily coarser.** `rustls`'s `complete_io` drives the
+  whole handshake internally and does not surface the individual flights, so
+  that leg has one `handshake` segment where the Noise legs have six. The totals
+  are comparable; the breakdowns are not.
+
 ## The allocator, and why the large payloads used to move
 
 > [!WARNING] Every large-payload figure in this file, and every figure in any
