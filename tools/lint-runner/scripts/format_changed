@@ -15,7 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 
 # Build once; bazel caches so subsequent runs are near-instant.
-(cd "${REPO_ROOT}" && bazel build //tools/lint-runner:oak_lint_runner 1>/dev/null)
+(cd "${REPO_ROOT}" && bazel build --config=release //tools/lint-runner:oak_lint_runner 1>/dev/null)
 RUNNER_BIN="${REPO_ROOT}/bazel-bin/tools/lint-runner/oak_lint_runner"
 
 # --- Build file list (try jj, then git) ---
