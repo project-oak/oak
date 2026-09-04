@@ -37,6 +37,14 @@ fn set_digest_field_from_map_entry(
             }
             digest.psha2.push_str(value);
         }
+        "sha1" => {
+            #[allow(deprecated)]
+            if !digest.sha1.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            #[allow(deprecated)]
+            digest.sha1.push_str(value);
+        }
         "sha256" | "sha2_256" => {
             if !digest.sha2_256.is_empty() {
                 anyhow::bail!("duplicate key {}", key);
@@ -118,6 +126,7 @@ pub fn hex_to_set_digest(hex_digest: &HexDigest) -> DigestSet {
     }
 
     insert_if_present!(psha2);
+    insert_if_present!(sha1);
     insert_if_present_with_custom_key!(sha2_256, "sha256");
     insert_if_present_with_custom_key!(sha2_512, "sha512");
     insert_if_present!(sha3_512);

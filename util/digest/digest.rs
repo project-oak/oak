@@ -91,7 +91,7 @@ macro_rules! derive_inherent_named_digest {
 }
 
 derive_inherent_named_digest!(
-    Psha2, Sha256, Sha384, Sha512, Sha3_224, Sha3_256, Sha3_384, Sha3_512, Digest
+    Psha2, Sha1, Sha256, Sha384, Sha512, Sha3_224, Sha3_256, Sha3_384, Sha3_512, Digest
 );
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -106,6 +106,15 @@ impl Psha2 {
 impl TypedDigest for Psha2 {
     fn r#type(&self) -> &'static str {
         "psha2"
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Sha1([u8; 20]);
+
+impl TypedDigest for Sha1 {
+    fn r#type(&self) -> &'static str {
+        "sha1"
     }
 }
 
@@ -201,6 +210,11 @@ impl From<Vec<u8>> for Psha2 {
         Self(v)
     }
 }
+impl From<[u8; 20]> for Sha1 {
+    fn from(v: [u8; 20]) -> Self {
+        Self(v)
+    }
+}
 impl TryFrom<Vec<u8>> for Sha256 {
     type Error = DigestError;
     fn try_from(v: Vec<u8>) -> Result<Self, Self::Error> {
@@ -252,6 +266,11 @@ impl AsRef<[u8]> for Psha2 {
         &self.0
     }
 }
+impl AsRef<[u8]> for Sha1 {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
 impl AsRef<[u8]> for Sha256 {
     fn as_ref(&self) -> &[u8] {
         &self.0
@@ -293,6 +312,11 @@ impl From<Psha2> for Vec<u8> {
         val.0
     }
 }
+impl From<Sha1> for Vec<u8> {
+    fn from(val: Sha1) -> Self {
+        val.0.to_vec()
+    }
+}
 impl From<Sha256> for Vec<u8> {
     fn from(val: Sha256) -> Self {
         val.0.to_vec()
@@ -329,6 +353,11 @@ impl From<Sha3_512> for Vec<u8> {
     }
 }
 
+impl From<Sha1> for [u8; 20] {
+    fn from(val: Sha1) -> Self {
+        val.0
+    }
+}
 impl From<Sha256> for [u8; 32] {
     fn from(val: Sha256) -> Self {
         val.0
@@ -369,6 +398,7 @@ impl From<Sha3_512> for [u8; 64] {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Digest {
     Psha2(Psha2),
+    Sha1(Sha1),
     Sha256(Sha256),
     Sha384(Sha384),
     Sha512(Sha512),
@@ -390,6 +420,15 @@ impl Digest {
         })?;
         match alg {
             "psha2" => Ok(Digest::Psha2(Psha2::from(decoded_hash))),
+            "sha1" => {
+                let array: [u8; 20] =
+                    decoded_hash.try_into().map_err(|_| DigestError::HexDecodingError {
+                        name: alg.to_string(),
+                        value: hash.to_string(),
+                        error_details: hex::FromHexError::InvalidStringLength.to_string(),
+                    })?;
+                Ok(Digest::Sha1(Sha1::from(array)))
+            }
             "sha256" | "sha2_256" | "sha2-256" => {
                 let array: [u8; 32] =
                     decoded_hash.try_into().map_err(|_| DigestError::HexDecodingError {
@@ -462,6 +501,7 @@ impl AsRef<[u8]> for Digest {
     fn as_ref(&self) -> &[u8] {
         match self {
             Digest::Psha2(h) => h.as_ref(),
+            Digest::Sha1(h) => h.as_ref(),
             Digest::Sha256(h) => h.as_ref(),
             Digest::Sha384(h) => h.as_ref(),
             Digest::Sha512(h) => h.as_ref(),
@@ -477,6 +517,7 @@ impl TypedDigest for Digest {
     fn r#type(&self) -> &'static str {
         match self {
             Digest::Psha2(h) => h.r#type(),
+            Digest::Sha1(h) => h.r#type(),
             Digest::Sha256(h) => h.r#type(),
             Digest::Sha384(h) => h.r#type(),
             Digest::Sha512(h) => h.r#type(),
@@ -491,6 +532,11 @@ impl TypedDigest for Digest {
 impl From<Psha2> for Digest {
     fn from(h: Psha2) -> Self {
         Digest::Psha2(h)
+    }
+}
+impl From<Sha1> for Digest {
+    fn from(h: Sha1) -> Self {
+        Digest::Sha1(h)
     }
 }
 impl From<Sha256> for Digest {
@@ -533,6 +579,8 @@ impl From<Digest> for RawDigest {
     fn from(digest: Digest) -> Self {
         match digest {
             Digest::Psha2(h) => RawDigest { psha2: h.as_ref().to_vec(), ..Default::default() },
+            #[allow(deprecated)]
+            Digest::Sha1(h) => RawDigest { sha1: h.as_ref().to_vec(), ..Default::default() },
             Digest::Sha256(h) => RawDigest { sha2_256: h.as_ref().to_vec(), ..Default::default() },
             Digest::Sha384(h) => RawDigest { sha2_384: h.as_ref().to_vec(), ..Default::default() },
             Digest::Sha512(h) => RawDigest { sha2_512: h.as_ref().to_vec(), ..Default::default() },
@@ -556,6 +604,8 @@ impl From<Digest> for HexDigest {
     fn from(digest: Digest) -> Self {
         match digest {
             Digest::Psha2(h) => HexDigest { psha2: hex::encode(h), ..Default::default() },
+            #[allow(deprecated)]
+            Digest::Sha1(h) => HexDigest { sha1: hex::encode(h), ..Default::default() },
             Digest::Sha256(h) => HexDigest { sha2_256: hex::encode(h), ..Default::default() },
             Digest::Sha384(h) => HexDigest { sha2_384: hex::encode(h), ..Default::default() },
             Digest::Sha512(h) => HexDigest { sha2_512: hex::encode(h), ..Default::default() },
