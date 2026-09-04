@@ -34,11 +34,21 @@ default:
 # -- DEVELOPER WORKFLOW TOOLS --
 
 # Convenience bundle of tests and checks prior to sending a change for review.
+#
+# Order matters here (a bit): keep different platforms grouped together so that
+# Bazel can reuse its analysis cache more effectively.
+#
+# Keep this rule updated if you change `build-and-test` or `clippy` recipes.
 presubmit: \
     verify-bazelisk \
     format \
-    build-and-test \
-    clippy \
+    std-crates \
+    std-clippy \
+    bare-metal-crates \
+    bare-metal-clippy \
+    wasm-crates \
+    wasm-clippy \
+    test-codelab \
     cargo-audit \
     private_memory_presubmit
 
@@ -123,6 +133,9 @@ bare_metal_crates_query := "kind(\"rust_.*\", //...) intersect attr(\"target_com
 wasm_crates_query := "kind(\"rust_.*\", //...) intersect attr(\"target_compatible_with\", \"wasm32-none-setting\", //...)"
 
 # Build and test all targets.
+#
+# IMPORTANT: When you modify this recipe, also change the `presubmit` recipe
+# above.
 build-and-test: \
     std-crates \
     bare-metal-crates \
@@ -161,6 +174,8 @@ crypto-channel-benchmark:
 
 benchmarks: rk-comms-benchmark
 
+# IMPORTANT: When you modify this recipe, also change the `presubmit` recipe
+# above.
 bazel-clippy: bare-metal-clippy std-clippy wasm-clippy
 
 std-clippy:
