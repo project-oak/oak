@@ -368,6 +368,16 @@ register_toolchains("@rules_rust_bindgen//:default_bindgen_toolchain")
 # https://github.com/bazel-contrib/rules_foreign_cc
 bazel_dep(name = "rules_foreign_cc", version = "0.15.0")
 
+register_toolchains(
+    "@rules_foreign_cc//toolchains:preinstalled_autoconf_toolchain",
+    "@rules_foreign_cc//toolchains:preinstalled_automake_toolchain",
+    "@rules_foreign_cc//toolchains:preinstalled_cmake_toolchain",
+    "@rules_foreign_cc//toolchains:preinstalled_m4_toolchain",
+    "@rules_foreign_cc//toolchains:preinstalled_make_toolchain",
+    "@rules_foreign_cc//toolchains:preinstalled_ninja_toolchain",
+    "@rules_foreign_cc//toolchains:preinstalled_pkgconfig_toolchain",
+)
+
 # C++ CBOR support.
 # https://android.googlesource.com/platform/external/libcppbor
 git_repository(

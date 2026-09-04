@@ -91,6 +91,16 @@ register_toolchains("@llvm_toolchain//:all")
 
 register_toolchains("@umoci//:umoci_toolchain")
 
+register_toolchains(
+    "@rules_foreign_cc//toolchains:preinstalled_autoconf_toolchain",
+    "@rules_foreign_cc//toolchains:preinstalled_automake_toolchain",
+    "@rules_foreign_cc//toolchains:preinstalled_cmake_toolchain",
+    "@rules_foreign_cc//toolchains:preinstalled_m4_toolchain",
+    "@rules_foreign_cc//toolchains:preinstalled_make_toolchain",
+    "@rules_foreign_cc//toolchains:preinstalled_ninja_toolchain",
+    "@rules_foreign_cc//toolchains:preinstalled_pkgconfig_toolchain",
+)
+
 # Matches the version of protobuf used by Oak.
 bazel_dep(name = "protobuf", version = "30.0", repo_name = "com_google_protobuf")
 
