@@ -21,8 +21,17 @@ check_buildconfig() {
   # shellcheck source=/dev/null
   source "${buildconfig}"
 
-  # Build the binary target.
-  "${BUILD_COMMAND[@]}"
+  # Build the binary target. If already in a nix shell, avoid nested nix develop.
+  cmd=("${BUILD_COMMAND[@]}")
+  if [ -n "${IN_NIX_SHELL:-}" ] && [ "${cmd[0]}" = "nix" ] && [ "${cmd[1]}" = "develop" ]; then
+    for i in "${!cmd[@]}"; do
+      if [ "${cmd[${i}]}" = "--command" ]; then
+        cmd=("${cmd[@]:$((i + 1))}")
+        break
+      fi
+    done
+  fi
+  "${cmd[@]}"
 
   for f in "${SUBJECT_PATHS[@]}"; do
     if [ ! -f "${f}" ]; then
