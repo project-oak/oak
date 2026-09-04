@@ -8,28 +8,28 @@
 # This target expects a rule that outputs one binary, and copies it to artifacts/binaries with the given name.
 [private]
 copy-binary target dest platform="":
-    bazel build {{target}} --config=release --platforms={{platform}}
+    bazel build {{target}} --config=release {{ if platform != "" { "--platforms=" + platform } else { "" } }}
     mkdir --parents artifacts/binaries
     cp --force --preserve=timestamps --no-preserve=mode \
-        $(bazel cquery --config=release --platforms={{platform}} {{target}} --output files) \
+        $(bazel cquery --config=release {{ if platform != "" { "--platforms=" + platform } else { "" } }} {{target}} --output files) \
         artifacts/binaries/{{dest}}
 
 # This file copies all outputs of the given target to the artifacts/subjects subdirectory.
 [private]
 copy-subjects target dest platform="":
     mkdir --parents artifacts/subjects/{{dest}}
-    bazel build {{target}} --config=release --platforms={{platform}}
+    bazel build {{target}} --config=release {{ if platform != "" { "--platforms=" + platform } else { "" } }}
     cp --force --preserve=timestamps --no-preserve=mode \
-        $(bazel cquery --config=release --platforms={{platform}} {{target}} --output files) \
+        $(bazel cquery --config=release {{ if platform != "" { "--platforms=" + platform } else { "" } }} {{target}} --output files) \
         artifacts/subjects/{{dest}}
 
 # This rule copies all file outputs of the given target to the artifacts/binaries.
 [private]
 copy-binaries target dest platform="":
     #!/bin/sh
-    bazel build {{target}} --platforms={{platform}}
+    bazel build {{target}} --config=release {{ if platform != "" { "--platforms=" + platform } else { "" } }}
     mkdir --parents artifacts/binaries/{{dest}}
-    for output in $(bazel cquery --platforms={{platform}} {{target}} --output files)
+    for output in $(bazel cquery --config=release {{ if platform != "" { "--platforms=" + platform } else { "" } }} {{target}} --output files)
     do
         if [ -f "$output" ]
         then
@@ -40,7 +40,7 @@ copy-binaries target dest platform="":
 [private]
 copy-all target dest platform="":
     mkdir --parents artifacts/{{dest}}
-    bazel build {{target}} --config=release --platforms={{platform}}
+    bazel build {{target}} --config=release {{ if platform != "" { "--platforms=" + platform } else { "" } }}
     cp --recursive --force --preserve=timestamps --no-preserve=mode \
-        $(bazel cquery --config=release --platforms={{platform}} {{target}} --output files) \
+        $(bazel cquery --config=release {{ if platform != "" { "--platforms=" + platform } else { "" } }} {{target}} --output files) \
         artifacts/{{dest}}
