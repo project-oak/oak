@@ -30,6 +30,6 @@ def xz_compress(name, target, out, **kwargs):
         name = name,
         srcs = [target],
         outs = [out],
-        cmd = "xz --force $(SRCS) --stdout > $(OUTS)",
+        cmd = "xz -T0 --force $(SRCS) --stdout > $(OUTS)",
         **kwargs
     )
