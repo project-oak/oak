@@ -452,6 +452,14 @@ OakSessionTlsInitializer::CreateServer(
     return initializer.status();
   }
 
+  // Client authentication policy is installed on each new SSL instance. A
+  // resumed session would reuse authentication state from an earlier policy
+  // generation and skip the current trust anchors and custom verifier.
+  if ((SSL_get_verify_mode((*initializer)->ssl_.get()) & SSL_VERIFY_PEER) !=
+      0) {
+    SSL_set_options((*initializer)->ssl_.get(), SSL_OP_NO_TICKET);
+  }
+
   // Set this SSL instance into server mode.
   SSL_set_accept_state((*initializer)->ssl_.get());
 
