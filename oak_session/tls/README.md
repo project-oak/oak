@@ -60,6 +60,14 @@ The custom verifier receives the standard verification result (as an error code
 in C++, or a `Result` in Rust) and must return a status indicating whether to
 accept or reject the certificate.
 
+## Session Resumption
+
+The C++ server disables TLS session resumption when client authentication is
+configured. Trust anchors and custom certificate verifiers are resolved for
+each new session and may change during the lifetime of a context. Disabling
+resumption ensures every new connection is checked against the current client
+authentication policy instead of authentication state from an earlier session.
+
 ## Server Name and SAN Verification
 
 By default, the library uses `"oak-session-tls"` as the server identity for both
