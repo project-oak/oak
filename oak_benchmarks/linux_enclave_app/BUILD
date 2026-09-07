@@ -26,6 +26,7 @@ package(
 rust_binary(
     name = "linux_enclave_app_base",
     srcs = ["main.rs"],
+    tags = ["manual"],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_benchmarks/benchmark:benchmark_std",
@@ -41,6 +42,7 @@ rust_binary(
 matched_isa_binary(
     name = "linux_enclave_app",
     binary = ":linux_enclave_app_base",
+    tags = ["manual"],
 )
 
 vm_disk_image(

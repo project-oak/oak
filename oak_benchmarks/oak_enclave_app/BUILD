@@ -30,6 +30,7 @@ rust_binary(
     rustc_flags = [
         "--codegen=link-arg=-Wl,-zmax-page-size=0x200000",
     ],
+    tags = ["manual"],
     target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "//micro_rpc",
@@ -45,6 +46,7 @@ rust_binary(
 matched_isa_binary(
     name = "oak_enclave_app",
     binary = ":oak_enclave_app_base",
+    tags = ["manual"],
 )
 
 # Provide the `oak_enclave_app_run` target to execute the benchmark seamlessly.
@@ -63,4 +65,5 @@ sh_binary(
         "//oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin",
         "//stage0_bin",
     ],
+    tags = ["manual"],
 )

@@ -78,7 +78,11 @@ $(location //oak_benchmarks/linux_vm:prepare_image.sh) \
         ),
         visibility = visibility,
         # This rule requires guestfish which may not be available in all environments
-        tags = ["local", "no-sandbox"],
+        tags = [
+            "local",
+            "manual",
+            "no-sandbox",
+        ],
     )
 
     # Automatically generate a `<name>_run` target to execute the benchmark.
@@ -95,5 +99,6 @@ $(location //oak_benchmarks/linux_vm:prepare_image.sh) \
             "$(location :" + name + ")",
             "$(location //oak_benchmarks/linux_vm:run_vm.sh)",
         ],
+        tags = ["manual"],
         visibility = visibility,
     )
