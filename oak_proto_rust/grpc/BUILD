@@ -70,10 +70,12 @@ cargo_build_script(
         "//proto/session:session.proto",
         "//third_party/google:profile.proto",
         "@com_google_protobuf//:descriptor_proto_srcs",
-        "@com_google_protobuf//:protoc",
         "@com_google_protobuf//:well_known_type_protos",
     ],
     target_compatible_with = ["@platforms//os:linux"],
+    tools = [
+        "@com_google_protobuf//:protoc",
+    ],
     deps = [
         "//oak_grpc_utils",
         "//oak_proto_build_utils",
