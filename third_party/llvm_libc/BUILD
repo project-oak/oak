@@ -91,7 +91,7 @@ copy_to_directory(
 
 cmake(
     name = "llvm_libc",
-    build_args = ["-j4"],
+    build_args = ["-j$$(nproc)"],
     cache_entries = {
         "CMAKE_SYSTEM_NAME": "Generic",
         "CMAKE_SYSTEM_PROCESSOR": "x86_64",
@@ -192,7 +192,7 @@ cmake(
 # so static destructors registered via `__cxa_atexit` need never run.
 cmake(
     name = "llvm_libcxx",
-    build_args = ["-j4"],
+    build_args = ["-j$$(nproc)"],
     build_data = [
         ":pyyaml_site_packages",
     ],
