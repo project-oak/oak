@@ -193,6 +193,7 @@ rust_library(
         "//oak_channel:oak_channel_client",
         "//oak_file_utils",
         "//oak_launcher_utils",
+        "@oak_crates_index//:clap",
         "@oak_crates_index//:which",
     ],
 )

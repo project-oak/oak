@@ -32,7 +32,7 @@ use linux_server::{
     load_certs_and_key, spin_for,
 };
 use message_stream_client::{BufferedStream, MessageStream, NoiseMessageStream, control};
-use rk_launcher::{OakClientChannelMessageStream, start_rk_enclave_server};
+use rk_launcher::{OakClientChannelMessageStream, start_rk_enclave_server, vm_type_infix};
 use rustls::{ClientConfig, ServerConfig};
 use rustls_pki_types::ServerName;
 
@@ -572,7 +572,8 @@ fn plaintext_rk_benchmark(c: &mut Criterion) {
     let (guest_instance, oak_client_channel) =
         rt.block_on(async { start_rk_enclave_server(b"plaintext").await });
 
-    benchmark_wrapper(TEST_SIZES, "RK Plaintext Message Exchange", c, || {
+    let tee = vm_type_infix();
+    benchmark_wrapper(TEST_SIZES, &format!("RK{tee} Plaintext Message Exchange"), c, || {
         Box::new(OakClientChannelMessageStream::new(&oak_client_channel))
     });
     // Degenerate, and reported only so the row is not silently missing:
@@ -581,7 +582,7 @@ fn plaintext_rk_benchmark(c: &mut Criterion) {
     // `Setup` at least includes a connect, this is not a transport baseline and
     // must not be subtracted from `RK Noise Setup` -- that would charge Noise
     // for the enclave channel round trips the plaintext row never performs.
-    handshake_wrapper("RK Plaintext Setup", c, || {
+    handshake_wrapper(&format!("RK{tee} Plaintext Setup"), c, || {
         Box::new(OakClientChannelMessageStream::new(&oak_client_channel))
     });
     futures::executor::block_on(async { guest_instance.kill().await })
@@ -594,12 +595,13 @@ fn noise_rk_benchmark(c: &mut Criterion) {
     let (guest_instance, oak_client_channel) =
         rt.block_on(async { start_rk_enclave_server(b"noise").await });
 
-    benchmark_wrapper(TEST_SIZES, "RK Noise Message Exchange", c, || {
+    let tee = vm_type_infix();
+    benchmark_wrapper(TEST_SIZES, &format!("RK{tee} Noise Message Exchange"), c, || {
         Box::new(NoiseMessageStream::new_client(OakClientChannelMessageStream::new(
             &oak_client_channel,
         )))
     });
-    handshake_wrapper("RK Noise Setup", c, || {
+    handshake_wrapper(&format!("RK{tee} Noise Setup"), c, || {
         Box::new(NoiseMessageStream::new_client(OakClientChannelMessageStream::new(
             &oak_client_channel,
         )))

@@ -14,12 +14,71 @@
 // limitations under the License.
 //
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, env, fs, path::PathBuf, rc::Rc};
 
+use clap::ValueEnum;
 use message_stream_client::MessageStream;
 use oak_channel::message::RequestMessage;
 use oak_file_utils::data_path;
 use oak_launcher_utils::launcher;
+
+/// Selects the VM type, taking the same values as the launcher's `--vm-type`.
+const VM_TYPE_ENV: &str = "RK_VM_TYPE";
+/// Overrides the QEMU binary, which on a TEE host is often not on `PATH`.
+const VMM_BINARY_ENV: &str = "RK_VMM_BINARY";
+
+/// Which VM type the enclave legs launch.
+///
+/// Unset is `default`, an ordinary KVM guest with no memory encryption, which
+/// is the only thing this benchmark could ask for before.
+pub fn vm_type() -> launcher::VmType {
+    let Ok(value) = env::var(VM_TYPE_ENV) else {
+        return launcher::VmType::Default;
+    };
+    launcher::VmType::from_str(&value, true)
+        .unwrap_or_else(|error| panic!("{VM_TYPE_ENV}={value}: {error}"))
+}
+
+/// Benchmark name infix for the VM type, empty for `default`.
+///
+/// A confidential guest is a different series, not a rerun of the same one.
+/// `default` stays unmarked so names match logs taken before this existed.
+pub fn vm_type_infix() -> String {
+    match vm_type() {
+        launcher::VmType::Default => String::new(),
+        other => {
+            format!(" [{}]", other.to_possible_value().expect("vm type is nameable").get_name())
+        }
+    }
+}
+
+/// QEMU to launch.
+fn vmm_binary() -> PathBuf {
+    match env::var(VMM_BINARY_ENV) {
+        Ok(path) => PathBuf::from(path),
+        Err(_) => which::which("qemu-system-x86_64").expect("no qemu-system-x86_64 on PATH"),
+    }
+}
+
+/// Checks `/dev/sev` before asking QEMU for an SEV guest.
+///
+/// QEMU reports this as a generic launch failure after the benchmark has
+/// already started, and the fix is a udev rule on the host, not a code change.
+fn check_sev_device(vm_type: &launcher::VmType) {
+    use launcher::VmType::{Default, Tdx};
+    if matches!(vm_type, Default | Tdx) {
+        return;
+    }
+    if let Err(error) = fs::OpenOptions::new().read(true).write(true).open("/dev/sev") {
+        panic!(
+            "{VM_TYPE_ENV} asks for an SEV guest but /dev/sev is unusable: {error}\n\
+             grant the kvm group access, then log back in:\n  \
+             echo 'KERNEL==\"sev\", MODE=\"0660\", GROUP=\"kvm\"' | \
+             sudo tee /etc/udev/rules.d/71-sev.rules\n  \
+             sudo udevadm control --reload && sudo udevadm trigger --name-match=sev"
+        );
+    }
+}
 
 pub struct OakClientChannelMessageStream {
     oak_client_channel: Rc<RefCell<oak_channel::client::ClientChannelHandle>>,
@@ -63,9 +122,11 @@ pub async fn start_rk_enclave_server(
     );
 
     let app = data_path("oak_benchmarks/oak_paper/crypto_channel/rk_app");
+    let vm_type = vm_type();
+    check_sev_device(&vm_type);
     let params = launcher::Params {
         kernel,
-        vmm_binary: which::which("qemu-system-x86_64").unwrap(),
+        vmm_binary: vmm_binary(),
         app_binary: Some(app),
         bios_binary: data_path("stage0_bin/stage0_bin"),
         gdb: None,
@@ -74,7 +135,7 @@ pub async fn start_rk_enclave_server(
         pci_passthrough: None,
         initial_data_version,
         communication_channel,
-        vm_type: launcher::VmType::Default,
+        vm_type,
     };
     println!("launcher params: {:?}", params);
 

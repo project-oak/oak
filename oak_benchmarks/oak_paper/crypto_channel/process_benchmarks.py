@@ -166,26 +166,37 @@ def generate_plot(results, output_image):
 
   plt.figure(figsize=(12, 7))
 
-  # Marker per environment, line style and colour per protocol. The two VM
-  # legs differ only in host networking, so they get neighbouring markers.
-  # Plain "VM" is what logs from before the two legs were split look like; the
-  # regex still accepts them, so the plot has to as well.
-  env_markers = {
+  # Marker per leg, line style and colour per protocol. The two VM legs differ
+  # only in host networking, so they get neighbouring markers. Plain "VM" is
+  # what logs from before the two legs were split look like; the regex still
+  # accepts them, so the plot has to as well.
+  leg_markers = {
       "Local": "o",
       "VM": "s",
       "VM (user-mode net)": "s",
       "VM (vhost-net)": "D",
       "RK": "^",
   }
+  # Any leg can in principle run in a TEE, and listing the combinations would
+  # need a marker per combination. A TEE variant instead keeps the marker of
+  # the leg it is a variant of and is drawn hollow, which stays readable as
+  # more legs gain one, and means a new variant plots without a change here.
+  env_markers = {leg: (marker, "full") for leg, marker in leg_markers.items()}
+  for leg, marker in leg_markers.items():
+    for tee in ("sev", "sev-es", "sev-snp"):
+      # "RK [sev-snp]" parses to "RK (sev-snp)", and a VM leg carrying both a
+      # networking mode and a TEE to "VM (vhost-net, sev-snp)".
+      key = f"{leg[:-1]}, {tee})" if leg.endswith(")") else f"{leg} ({tee})"
+      env_markers[key] = (marker, "none")
   protocol_styles = {
       "Plaintext": ("-", "tab:blue"),
       "Noise": ("--", "tab:orange"),
       "TLS (rustls)": (":", "tab:green"),
   }
   styles = {
-      f"{protocol} {env}": (f"{marker}{line}", colour)
+      f"{protocol} {env}": (f"{marker}{line}", colour, fill)
       for protocol, (line, colour) in protocol_styles.items()
-      for env, marker in env_markers.items()
+      for env, (marker, fill) in env_markers.items()
   }
 
   # A series the table shows but the plot has no style for would otherwise just
@@ -199,8 +210,8 @@ def generate_plot(results, output_image):
     if label in graph_data and graph_data[label]["sizes"]:
       sizes = graph_data[label]["sizes"]
       thrpt = graph_data[label]["thrpt"]
-      style, color = style_color
-      plt.plot(sizes, thrpt, style, label=label, color=color)
+      style, color, fill = style_color
+      plt.plot(sizes, thrpt, style, label=label, color=color, fillstyle=fill)
       plot_count += 1
 
   if plot_count == 0:

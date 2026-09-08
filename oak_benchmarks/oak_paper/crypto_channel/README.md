@@ -934,8 +934,66 @@ otherwise gives a connection refused.
 Press `Ctrl+C` in the terminal running the VM to stop it (or kill the process if
 running with `--headless`).
 
+## Running the Enclave Legs on a TEE
+
+By default the `RK` legs run in an ordinary KVM guest, so they measure the
+Restricted Kernel without any of the cost of memory encryption. On a host with
+SEV, ask for a confidential guest:
+
+```bash
+RK_VM_TYPE=sev-snp bazel run -c opt //oak_benchmarks/oak_paper/crypto_channel:benchmark -- --bench
+```
+
+The type goes into the benchmark name, so `RK [sev-snp] Noise Message Exchange`
+and `RK Noise Message Exchange` are separate series and can be compared. The
+host needs `/dev/sev` to be readable and writable by the invoking user; the
+benchmark checks that up front and prints the udev rule if it is not.
+
+Some TEE hosts carry a patched QEMU outside `PATH`. Point `RK_VMM_BINARY` at it:
+
+```bash
+RK_VM_TYPE=sev-snp RK_VMM_BINARY=/oak/qemu/qemu-system-x86_64 \
+    bazel run -c opt //oak_benchmarks/oak_paper/crypto_channel:benchmark -- --bench
+```
+
+`RK_VM_TYPE=tdx` is accepted by the flag but rejected by the launcher: the
+Restricted Kernel does not support TDX yet.
+
+### Hosts with an older glibc
+
+TEE hosts tend to run older distributions, and two things then go wrong. Oak
+links host binaries against a Debian 13 sysroot (glibc 2.41) but leaves the
+host's ELF interpreter in place, so at run time they load the host's libc and
+die on a missing `GLIBC_2.39`; `rules_rust`'s `process_wrapper` goes first and
+takes the build with it. Separately, bazel runs actions with `env -`, so a
+binary needing a shared library from the dev shell has no `LD_LIBRARY_PATH` to
+find it by: `cert_gen` links the nix OpenSSL and then cannot load `libssl.so.3`.
+
+Both go away once the runtime search path mirrors the link-time one. Put the dev
+shell's own `-L` directories into the RUNPATH and take the interpreter from the
+glibc among them, in `.local.bazelrc`, which `.bazelrc` already imports if
+present:
+
+```bash
+nix develop --command bash -c 'echo $NIX_LDFLAGS' |
+  tr ' ' '\n' | sed -n 's/^-L//p' | awk '!seen[$0]++' >/tmp/libdirs
+glibc=$(grep -m1 -- '-glibc-[0-9.]\+-[0-9]\+/lib$' /tmp/libdirs)
+for cfg in linkopt host_linkopt; do
+  echo "build --${cfg}=-Wl,--dynamic-linker=${glibc}/ld-linux-x86-64.so.2"
+  sed "s|^|build --${cfg}=-Wl,-rpath,|" /tmp/libdirs
+done >.local.bazelrc
+```
+
+`--host_linkopt` is what fixes the build tools, `--linkopt` the benchmark binary
+itself. RUNPATH rather than `LD_LIBRARY_PATH`, because the latter would also
+apply to host programs an action invokes such as `/bin/bash`, and feeding nix's
+glibc to a Debian binary under Debian's loader breaks it.
+
 ## Environment Variables
 
+- `RK_VM_TYPE`: VM type for the enclave legs, taking the same values as the
+  launcher's `--vm-type` (default: `default`, i.e. no memory encryption)
+- `RK_VMM_BINARY`: QEMU to launch (default: `qemu-system-x86_64` from `PATH`)
 - `VM_NET`: How the host moves the VM's packets, `user` (default) or `vhost`.
   This only labels the benchmark and picks a default address; the VM has to have
   been started in the matching mode.
