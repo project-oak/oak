@@ -94,32 +94,43 @@ impl Framed {
         &mut self,
         message_buffer: &'a mut BytesMut,
     ) -> anyhow::Result<(Frame<'a>, Timer)> {
-        {
-            let mut padding_bytes = [0; PADDING_SIZE];
-            self.inner.read_exact(&mut padding_bytes)?;
-        };
+        let mut padding_bytes = [0; PADDING_SIZE];
+        self.inner.read_exact(&mut padding_bytes)?;
         // As the read() above can block indefinitely we'll start measuring the time it
         // took to read the data _after_ we've read the padding bytes. Strictly
         // speaking we should start measuring the time as we're reading the
         // first padding byte, but this should be close enough to get a rough
         // idea.
         let timer = Timer::new_rdtsc();
+        if padding_bytes != [0; PADDING_SIZE] {
+            anyhow::bail!("frame stream is desynchronised: header padding is {padding_bytes:02x?}");
+        }
         let length: usize = {
             let mut length_bytes = [0; LENGTH_SIZE];
             self.inner.read_exact(&mut length_bytes)?;
             let length = Length::from_le_bytes(length_bytes).into();
             if length <= BODY_OFFSET {
-                return Err(anyhow::Error::msg("frame is too small"));
+                anyhow::bail!(
+                    "frame stream is desynchronised: frame length {length} does not exceed the {BODY_OFFSET}-byte header"
+                );
             };
             if length > MAX_SIZE {
-                return Err(anyhow::Error::msg("frame exceeds the maximum frame size"));
+                anyhow::bail!(
+                    "frame stream is desynchronised: frame length {length} exceeds the {MAX_SIZE}-byte maximum"
+                );
             };
             length
         };
         let flags = {
             let mut flags_bytes = [0; FLAGS_SIZE];
             self.inner.read_exact(&mut flags_bytes)?;
-            Flags::from_bits_truncate(u16::from_le_bytes(flags_bytes))
+            let bits = u16::from_le_bytes(flags_bytes);
+            let Some(flags) = Flags::from_bits(bits) else {
+                anyhow::bail!(
+                    "frame stream is desynchronised: header flags {bits:#06x} have undefined bits set"
+                );
+            };
+            flags
         };
 
         let body = {

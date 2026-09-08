@@ -18,7 +18,11 @@
 
 extern crate std;
 
-use alloc::{collections::VecDeque, vec};
+use alloc::{
+    collections::VecDeque,
+    string::{String, ToString},
+    vec,
+};
 
 use super::*;
 use crate::message::{Message, RequestMessage};
@@ -225,4 +229,83 @@ fn test_receive_raw_without_remainder() -> anyhow::Result<()> {
     assert_eq!(acks, vec![4096u32; payload.len() / 4096]);
 
     Ok(())
+}
+
+/// Builds a header with values `Frame::write` would never produce.
+fn raw_header(padding: [u8; frame::PADDING_SIZE], length: u16, flags: u16) -> Vec<u8> {
+    let mut header = Vec::with_capacity(frame::BODY_OFFSET);
+    header.extend_from_slice(&padding);
+    header.extend_from_slice(&length.to_le_bytes());
+    header.extend_from_slice(&flags.to_le_bytes());
+    header
+}
+
+fn encode_frame(flags: u16, body: &[u8]) -> Vec<u8> {
+    let length = u16::try_from(frame::BODY_OFFSET + body.len()).unwrap();
+    let mut frame = raw_header([0; frame::PADDING_SIZE], length, flags);
+    frame.extend_from_slice(body);
+    frame
+}
+
+fn read_frame_error(bytes: &[u8]) -> String {
+    let mut store = MessageStore::default();
+    store.write_all(bytes).unwrap();
+    let mut framed = frame::Framed::new(Box::new(store));
+    let mut message_buffer = BytesMut::new();
+    framed.read_frame(&mut message_buffer).unwrap_err().to_string()
+}
+
+#[test]
+fn test_read_frame_rejects_nonzero_padding() {
+    let error = read_frame_error(&raw_header([0, 0, 1, 0], 16, frame::Flags::START.bits()));
+    assert!(error.contains("desynchronised"), "{error}");
+    assert!(error.contains("padding"), "{error}");
+}
+
+#[test]
+fn test_read_frame_rejects_undefined_flags() {
+    // START | END is 3, so 4 is the lowest bit the frame layer does not define.
+    let error = read_frame_error(&raw_header([0; frame::PADDING_SIZE], 16, 4));
+    assert!(error.contains("desynchronised"), "{error}");
+    assert!(error.contains("flags"), "{error}");
+}
+
+#[test]
+fn test_read_frame_rejects_a_length_that_leaves_no_body() {
+    let length = u16::try_from(frame::BODY_OFFSET).unwrap();
+    let error =
+        read_frame_error(&raw_header([0; frame::PADDING_SIZE], length, frame::Flags::END.bits()));
+    assert!(error.contains("desynchronised"), "{error}");
+}
+
+#[test]
+fn test_read_frame_rejects_a_length_beyond_the_maximum() {
+    let length = u16::try_from(frame::MAX_SIZE + 1).unwrap();
+    let error =
+        read_frame_error(&raw_header([0; frame::PADDING_SIZE], length, frame::Flags::END.bits()));
+    assert!(error.contains("desynchronised"), "{error}");
+}
+
+#[test]
+fn test_read_frame_rejects_a_stream_that_lost_bytes() {
+    // What the header checks are for: a transport that discards part of a
+    // write and still reports success.
+    let body = vec![7u8; 64];
+    let mut stream = encode_frame(frame::Flags::START.bits(), &body);
+    stream.extend_from_slice(&encode_frame(frame::Flags::END.bits(), &body));
+    let lost = 20..23;
+    stream.drain(lost);
+
+    let mut store = MessageStore::default();
+    store.write_all(&stream).unwrap();
+    let mut framed = frame::Framed::new(Box::new(store));
+
+    // The first frame still parses: its header survived, so the reader trusts
+    // the length and reads on into the second frame's header.
+    let mut message_buffer = BytesMut::new();
+    framed.read_frame(&mut message_buffer).unwrap();
+
+    let mut message_buffer = BytesMut::new();
+    let error = framed.read_frame(&mut message_buffer).unwrap_err().to_string();
+    assert!(error.contains("desynchronised"), "{error}");
 }
