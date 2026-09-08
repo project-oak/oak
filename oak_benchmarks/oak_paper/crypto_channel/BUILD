@@ -234,6 +234,8 @@ vm_disk_image(
     binary = ":crypto_channel_server",
     command = "/opt/app/crypto_channel_server --host 0.0.0.0 --plaintext-port 5000 --noise-port 5001 --tls-port 5002",
     data = [":generate_certs"],
+    # The guest end of run_vm.sh --net=tap. Unused under user networking.
+    extra_ip = "198.18.0.2/30",
 )
 
 # Backs the README's "What the `Setup` comparison does not show" section.

@@ -22,6 +22,7 @@ def vm_disk_image(
         command = None,
         data = [],
         install_path = "/opt/app",
+        extra_ip = None,
         visibility = None):
     """Creates a QCOW2 VM image with the specified binary pre-installed.
 
@@ -35,6 +36,10 @@ def vm_disk_image(
         command: Command to run the binary (default: {install_path}/{binary_name}).
         data: Additional data files to install alongside the binary.
         install_path: Path where the binary is installed in the VM (default: /opt/app).
+        extra_ip: Address in CIDR form to add to the guest's first non-loopback
+            interface before the service starts, e.g. "198.18.0.2/30". Needed by
+            run_vm.sh --net=tap, where there is no DHCP server; harmless under
+            user networking, where it is simply unused.
         visibility: Visibility of the target.
 
     Example:
@@ -55,6 +60,8 @@ def vm_disk_image(
     for d in data:
         data_args += " --data=$(location {})".format(d)
 
+    extra_ip_arg = " --extra-ip={}".format(extra_ip) if extra_ip else ""
+
     native.genrule(
         name = name,
         srcs = [
@@ -69,12 +76,13 @@ $(location //oak_benchmarks/linux_vm:prepare_image.sh) \
     --base-image=$(location @debian_nocloud_qcow2//file) \
     --output=$@ \
     --command="{command}" \
-    --install-path="{install_path}"{data_args}
+    --install-path="{install_path}"{data_args}{extra_ip_arg}
 """.format(
             binary = binary,
             command = effective_command,
             install_path = install_path,
             data_args = data_args,
+            extra_ip_arg = extra_ip_arg,
         ),
         visibility = visibility,
         # This rule requires guestfish which may not be available in all environments

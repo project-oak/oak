@@ -32,6 +32,8 @@ INTERACTIVE=false
 HEADLESS=false
 ENABLE_SNP=false
 QEMU_BINARY="qemu-system-x86_64"
+NET="user"
+TAP_DEVICE="oaktap0"
 
 usage() {
   cat <<EOF
@@ -43,11 +45,21 @@ Required:
 Optional:
   --memory=SIZE        Memory size (default: 1G)
   --cpus=N             Number of CPUs (default: 2)
-  --port=PORT          Forward host PORT to guest PORT (can be repeated)
+  --port=PORT          Forward host PORT to guest PORT (user networking only,
+                       can be repeated)
+  --net=MODE           user (default) or tap. See below.
+  --tap-device=NAME    Tap device for --net=tap (default: oaktap0)
   --interactive        Attach to VM console (default if no --headless)
   --headless           Run VM in background without console
   --enable-snp         Enable AMD SEV-SNP (requires compatible hardware)
   --qemu=PATH          Path to QEMU binary (default: qemu-system-x86_64)
+
+Network modes:
+  user  QEMU's user-mode (SLIRP) stack, reached through --port forwards. Needs
+        no privileges, and is much slower than a real NIC, so it is a
+        pessimistic baseline for anything that measures the network.
+  tap   A pre-created tap device with the in-kernel vhost datapath. --port is
+        ignored; reach the guest on its own address. Setup is in README.md.
 
 Examples:
   # Interactive session with console
@@ -55,6 +67,9 @@ Examples:
 
   # Run in background with multiple port forwards
   $0 --image=/tmp/my-vm.qcow2 --port=5000 --port=8080 --headless
+
+  # Over a real NIC rather than SLIRP
+  $0 --image=/tmp/my-vm.qcow2 --net=tap --headless
 
   # With SEV-SNP enabled
   $0 --image=/tmp/my-vm.qcow2 --port=5000 --enable-snp
@@ -79,6 +94,12 @@ for arg in "$@"; do
       ;;
     --port=*)
       PORTS+=("${arg#*=}")
+      ;;
+    --net=*)
+      NET="${arg#*=}"
+      ;;
+    --tap-device=*)
+      TAP_DEVICE="${arg#*=}"
       ;;
     --interactive)
       INTERACTIVE=true
@@ -133,15 +154,48 @@ QEMU_ARGS=(
   "-m" "${MEMORY}"
   "-smp" "${CPUS}"
   "-drive" "file=${IMAGE},format=qcow2,snapshot=on"
-  "-net" "nic,model=virtio"
 )
 
-# Build network arguments with port forwards.
-NET_USER_ARGS="user"
-for port in "${PORTS[@]}"; do
-  NET_USER_ARGS+=",hostfwd=tcp:127.0.0.1:${port}-:${port}"
-done
-QEMU_ARGS+=("-net" "${NET_USER_ARGS}")
+# Networking. The legacy `-net nic` form and the `-netdev` form cannot be mixed:
+# together they give the guest two NICs, and the guest configures whichever it
+# sees first.
+case ${NET} in
+  user)
+    NET_USER_ARGS="user"
+    for port in "${PORTS[@]}"; do
+      NET_USER_ARGS+=",hostfwd=tcp:127.0.0.1:${port}-:${port}"
+    done
+    QEMU_ARGS+=("-net" "nic,model=virtio" "-net" "${NET_USER_ARGS}")
+    ;;
+  tap)
+    if [[ ! -d /sys/class/net/${TAP_DEVICE} ]]; then
+      echo "Error: tap device not found: ${TAP_DEVICE}"
+      echo "Create it once, as root:"
+      echo "  sudo ip tuntap add dev ${TAP_DEVICE} mode tap user \${USER}"
+      echo "  sudo ip addr add 198.18.0.1/30 dev ${TAP_DEVICE}"
+      echo "  sudo ip link set ${TAP_DEVICE} up"
+      exit 1
+    fi
+    if [[ ! -w /dev/vhost-net ]]; then
+      echo "Error: /dev/vhost-net is not writable, so this mode would measure"
+      echo "QEMU's userspace NIC emulation instead of the kernel datapath."
+      echo "Grant access once, as root:"
+      echo "  sudo setfacl -m u:\${USER}:rw /dev/vhost-net"
+      exit 1
+    fi
+    if [[ ${#PORTS[@]} -gt 0 ]]; then
+      echo "Note: --port is ignored with --net=tap; the guest has its own address."
+    fi
+    QEMU_ARGS+=(
+      "-netdev" "tap,id=net0,ifname=${TAP_DEVICE},script=no,downscript=no,vhost=on"
+      "-device" "virtio-net-pci,netdev=net0"
+    )
+    ;;
+  *)
+    echo "Error: unknown --net mode: ${NET} (expected user or tap)"
+    exit 1
+    ;;
+esac
 
 # Add SEV-SNP if requested.
 if [[ ${ENABLE_SNP} == true ]]; then
@@ -161,7 +215,12 @@ if [[ ${INTERACTIVE} == true ]]; then
   echo "  Image:  ${IMAGE}"
   echo "  Memory: ${MEMORY}"
   echo "  CPUs:   ${CPUS}"
-  if [[ ${#PORTS[@]} -gt 0 ]]; then
+  if [[ ${NET} == tap ]]; then
+    echo "  Net:    tap ${TAP_DEVICE}, vhost=on"
+  else
+    echo "  Net:    user-mode (SLIRP)"
+  fi
+  if [[ ${#PORTS[@]} -gt 0 ]] && [[ ${NET} == user ]]; then
     echo "  Ports:  ${PORTS[*]}"
   fi
   if [[ ${ENABLE_SNP} == true ]]; then
@@ -184,7 +243,12 @@ else
   echo "  Image:  ${IMAGE}"
   echo "  Memory: ${MEMORY}"
   echo "  CPUs:   ${CPUS}"
-  if [[ ${#PORTS[@]} -gt 0 ]]; then
+  if [[ ${NET} == tap ]]; then
+    echo "  Net:    tap ${TAP_DEVICE}, vhost=on"
+  else
+    echo "  Net:    user-mode (SLIRP)"
+  fi
+  if [[ ${#PORTS[@]} -gt 0 ]] && [[ ${NET} == user ]]; then
     echo "  Ports:  ${PORTS[*]}"
   fi
   if [[ ${ENABLE_SNP} == true ]]; then

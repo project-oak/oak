@@ -34,6 +34,7 @@ COMMAND=""
 SERVICE_NAME="app"
 INSTALL_PATH="/opt/app"
 DATA_FILES=()
+EXTRA_IP=""
 
 usage() {
   cat <<EOF
@@ -49,6 +50,10 @@ Optional:
   --data=PATH          Additional file to inject (can be repeated)
   --service-name=NAME  Name for the systemd service (default: app)
   --install-path=PATH  Where to install the app in the VM (default: /opt/app)
+  --extra-ip=CIDR      Address to add to the guest's first non-loopback
+                       interface before the service starts, e.g. 198.18.0.2/30.
+                       Added alongside DHCP, not instead of it, so one image
+                       serves both of run_vm.sh's network modes.
 
 For Bazel targets, use the vm_disk_image() macro instead:
 
@@ -88,6 +93,9 @@ for arg in "$@"; do
       ;;
     --data=*)
       DATA_FILES+=("${arg#*=}")
+      ;;
+    --extra-ip=*)
+      EXTRA_IP="${arg#*=}"
       ;;
     --help | -h)
       usage
@@ -143,6 +151,9 @@ echo "  Binary:        ${BINARY}"
 echo "  Output:        ${OUTPUT}"
 echo "  Service:       ${SERVICE_NAME}.service"
 echo "  Command:       ${COMMAND}"
+if [[ -n ${EXTRA_IP} ]]; then
+  echo "  Extra address: ${EXTRA_IP}"
+fi
 echo "  Install path:  ${INSTALL_PATH}"
 
 # Create temporary directory for staging.
@@ -159,6 +170,31 @@ chmod +x "${TEMP_DIR}/${BINARY_BASENAME}"
 
 # Copy base image.
 cp "${BASE_IMAGE}" "${OUTPUT}"
+
+# The base image configures its interfaces with netplan: /etc/netplan/90-default.yaml
+# matches `en*` and asks for DHCP, which systemd-networkd renders into
+# /run/systemd/network/10-netplan-all-en.network. Reuse the same `all-en` ID so
+# this file merges into that definition rather than creating a second one, and
+# repeat the DHCP keys so the address is added to DHCP rather than replacing it.
+# `optional` keeps systemd-networkd-wait-online from blocking the boot under
+# --net=tap, where nothing answers DHCP.
+# https://netplan.readthedocs.io/en/stable/netplan-yaml/
+if [[ -n ${EXTRA_IP} ]]; then
+  NETPLAN_FILE="${TEMP_DIR}/99-extra-ip.yaml"
+  cat >"${NETPLAN_FILE}" <<NETPLANEOF
+network:
+  version: 2
+  ethernets:
+    all-en:
+      match:
+        name: en*
+      dhcp4: true
+      dhcp6: true
+      optional: true
+      addresses:
+        - ${EXTRA_IP}
+NETPLANEOF
+fi
 
 # Create systemd service file.
 SERVICE_FILE="${TEMP_DIR}/${SERVICE_NAME}.service"
@@ -189,6 +225,14 @@ chmod 0755 ${INSTALL_PATH}/${BINARY_BASENAME}
 upload ${SERVICE_FILE} /etc/systemd/system/${SERVICE_NAME}.service
 ln-sf /etc/systemd/system/${SERVICE_NAME}.service /etc/systemd/system/multi-user.target.wants/${SERVICE_NAME}.service
 EOF
+
+# netplan ignores, and warns about, a file that is group- or world-readable.
+if [[ -n ${EXTRA_IP} ]]; then
+  cat >>"${GF_SCRIPT}" <<EOF
+upload ${NETPLAN_FILE} /etc/netplan/99-extra-ip.yaml
+chmod 0600 /etc/netplan/99-extra-ip.yaml
+EOF
+fi
 
 # Add data files to guestfish commands.
 for data_file in "${DATA_FILES[@]}"; do

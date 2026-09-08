@@ -833,6 +833,23 @@ The server serves all three protocols simultaneously on different ports:
 | Noise     | 5001         |
 | TLS       | 5002         |
 
+### Networking modes
+
+The VM leg can be run two ways, and the choice changes the result by more than
+an order of magnitude at large payloads:
+
+| `VM_NET` | `run_vm.sh` flag | Path                                |
+| -------- | ---------------- | ----------------------------------- |
+| `user`   | `--net=user`     | QEMU user-mode networking (SLIRP)   |
+| `vhost`  | `--net=tap`      | tap device with `vhost-net` offload |
+
+SLIRP needs no privileges, which is why it is the default, but it is a weak
+baseline: reporting it alone flatters whatever it is compared against.
+`vhost-net` is what a Linux CVM would be deployed with. Both are reported.
+
+`--net=tap` needs a one-off privileged setup; see
+[`oak_benchmarks/linux_vm/README.md`](../../linux_vm/README.md).
+
 ### Prerequisites
 
 Install the required tools:
@@ -902,6 +919,16 @@ bazel run -c opt //oak_benchmarks/oak_paper/crypto_channel:benchmark -- --bench
 This will run all three protocol benchmarks (plaintext, noise, TLS)
 automatically, connecting to the appropriate port for each.
 
+For a VM started with `--net=tap`, set `VM_NET` to match:
+
+```bash
+VM_NET=vhost bazel run -c opt //oak_benchmarks/oak_paper/crypto_channel:benchmark -- --bench
+```
+
+Pointing `VM_HOST` at the other mode's default address is rejected, but nothing
+else checks that `VM_NET` agrees with how the VM was booted. Getting it wrong
+otherwise gives a connection refused.
+
 ### 4. Stop the VM
 
 Press `Ctrl+C` in the terminal running the VM to stop it (or kill the process if
@@ -909,7 +936,11 @@ running with `--headless`).
 
 ## Environment Variables
 
-- `VM_HOST`: Host address of the VM (default: `127.0.0.1`)
+- `VM_NET`: How the host moves the VM's packets, `user` (default) or `vhost`.
+  This only labels the benchmark and picks a default address; the VM has to have
+  been started in the matching mode.
+- `VM_HOST`: Host address of the VM (default: `127.0.0.1` under `VM_NET=user`,
+  `198.18.0.2` under `VM_NET=vhost`)
 - `VM_PLAINTEXT_PORT`: Port for plaintext protocol (default: `5000`)
 - `VM_NOISE_PORT`: Port for Noise protocol (default: `5001`)
 - `VM_TLS_PORT`: Port for the TLS protocol (default: `5002`)

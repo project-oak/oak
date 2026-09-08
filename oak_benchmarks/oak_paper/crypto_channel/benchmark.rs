@@ -36,12 +36,73 @@ use rk_launcher::{OakClientChannelMessageStream, start_rk_enclave_server};
 use rustls::{ClientConfig, ServerConfig};
 use rustls_pki_types::ServerName;
 
-/// Default VM host address.
-const DEFAULT_VM_HOST: &str = "127.0.0.1";
+/// How the guest is attached to the network, from `VM_NET`.
+///
+/// `user` is QEMU's user-mode (SLIRP) stack, reached through host port
+/// forwards; `vhost` is a tap device with the in-kernel datapath. They differ
+/// by more than 10x at large payloads, so the mode goes into the benchmark
+/// name. Set the VM side to match with `run_vm.sh --net`.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum VmNet {
+    UserMode,
+    VhostNet,
+}
+
+impl VmNet {
+    fn from_env() -> Self {
+        match env::var("VM_NET").as_deref() {
+            Ok("user") | Err(_) => VmNet::UserMode,
+            Ok("vhost") => VmNet::VhostNet,
+            Ok(other) => panic!("unknown VM_NET={other}, expected user or vhost"),
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            VmNet::UserMode => "user-mode net",
+            VmNet::VhostNet => "vhost-net",
+        }
+    }
+
+    /// Where the server is reachable when `VM_HOST` says nothing.
+    ///
+    /// A tap has no port forwards, so the guest is reached on the address the
+    /// image gives itself; see `extra_ip` on the `crypto_channel_vm` target.
+    fn default_host(self) -> &'static str {
+        match self {
+            VmNet::UserMode => "127.0.0.1",
+            VmNet::VhostNet => "198.18.0.2",
+        }
+    }
+
+    fn other(self) -> Self {
+        match self {
+            VmNet::UserMode => VmNet::VhostNet,
+            VmNet::VhostNet => VmNet::UserMode,
+        }
+    }
+}
 
 /// Get the VM host from VM_HOST environment variable, or use the default.
+///
+/// Pointing `VM_HOST` at the other mode's address is rejected, because the
+/// result would be a run that crosses one network path and is named after the
+/// other. Any other address is allowed; only this one is unambiguously wrong.
 fn get_vm_host() -> String {
-    env::var("VM_HOST").unwrap_or_else(|_| DEFAULT_VM_HOST.to_string())
+    let net = VmNet::from_env();
+    match env::var("VM_HOST") {
+        Ok(host) => {
+            assert_ne!(
+                host,
+                net.other().default_host(),
+                "VM_HOST={host} is the default for {}, but VM_NET says {}",
+                net.other().label(),
+                net.label(),
+            );
+            host
+        }
+        Err(_) => net.default_host().to_string(),
+    }
 }
 
 /// Get the VM address for a specific protocol.
@@ -453,8 +514,14 @@ fn plaintext_vm_tcp_benchmark(c: &mut Criterion) {
         Box::new(BufferedStream::new(linux_server::connect(addr).expect(VM_CONNECT_HELP)))
     };
 
-    benchmark_wrapper(TEST_SIZES, "VM TCP Plaintext Message Exchange", c, connect);
-    handshake_wrapper("VM TCP Plaintext Setup", c, connect);
+    let net = VmNet::from_env().label();
+    benchmark_wrapper(
+        TEST_SIZES,
+        &format!("VM TCP [{net}] Plaintext Message Exchange"),
+        c,
+        connect,
+    );
+    handshake_wrapper(&format!("VM TCP [{net}] Plaintext Setup"), c, connect);
 }
 
 fn new_noise_client_stream(addr: SocketAddr) -> Box<dyn MessageStream> {
@@ -466,10 +533,11 @@ fn noise_vm_tcp_benchmark(c: &mut Criterion) {
     let addr = get_vm_addr("noise", DEFAULT_NOISE_PORT);
     println!("Connecting to VM at {} for noise benchmark", addr);
 
-    benchmark_wrapper(TEST_SIZES, "VM TCP Noise Message Exchange", c, || {
+    let net = VmNet::from_env().label();
+    benchmark_wrapper(TEST_SIZES, &format!("VM TCP [{net}] Noise Message Exchange"), c, || {
         new_noise_client_stream(addr)
     });
-    handshake_wrapper("VM TCP Noise Setup", c, || new_noise_client_stream(addr));
+    handshake_wrapper(&format!("VM TCP [{net}] Noise Setup"), c, || new_noise_client_stream(addr));
 }
 
 fn tls_vm_tcp_benchmark(c: &mut Criterion) {
@@ -488,8 +556,14 @@ fn tls_vm_tcp_benchmark(c: &mut Criterion) {
         new_tls_client_stream(tcp_stream, client_config.clone())
     };
 
-    benchmark_wrapper(TEST_SIZES, "VM TCP TLS (rustls) Message Exchange", c, tls_connect);
-    handshake_wrapper("VM TCP TLS (rustls) Setup", c, tls_connect);
+    let net = VmNet::from_env().label();
+    benchmark_wrapper(
+        TEST_SIZES,
+        &format!("VM TCP [{net}] TLS (rustls) Message Exchange"),
+        c,
+        tls_connect,
+    );
+    handshake_wrapper(&format!("VM TCP [{net}] TLS (rustls) Setup"), c, tls_connect);
 }
 
 fn plaintext_rk_benchmark(c: &mut Criterion) {

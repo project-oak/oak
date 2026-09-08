@@ -33,15 +33,16 @@ def convert_to_mib(value, unit):
 def parse_log(log_file):
   """Parse Criterion log file and extract time and throughput."""
   # Regex patterns
-  # The TLS leg is rustls, not BoringSSL, and the benchmark names say so. The
-  # parentheses in "TLS (rustls)" are literal, hence the escaping. A name that
-  # no longer matches would not raise here, it would silently drop every TLS
-  # row from the table and the plot, so this pattern and the benchmark names in
-  # `benchmark.rs` have to be changed together.
+  # These have to change together with the benchmark names in `benchmark.rs`.
+  # A pattern that stops matching does not raise, it silently drops every row
+  # it used to match. The parentheses in "TLS (rustls)" are literal. The VM
+  # legs carry their networking mode in brackets, e.g. "VM TCP [vhost-net]",
+  # and stay separate series because the two modes differ by more than an order
+  # of magnitude at large payloads.
   bench_pattern = re.compile(
-      r"Benchmarking (RK|Local TCP|VM TCP)"
-      r" (Plaintext|Noise|TLS \(rustls\)) Message"
-      r" Exchange/(\d+)"
+      r"Benchmarking (?P<env>RK|Local TCP|VM TCP)(?: \[(?P<net>[^]]+)\])?"
+      r" (?P<protocol>Plaintext|Noise|TLS \(rustls\)) Message"
+      r" Exchange/(?P<size>\d+)"
   )
 
   results = {}
@@ -57,10 +58,12 @@ def parse_log(log_file):
     for line in f:
       bench_match = bench_pattern.search(line)
       if bench_match:
-        env, protocol, size = bench_match.groups()
-        current_env = env.replace(" TCP", "")
-        current_protocol = protocol
-        current_size = int(size)
+        env = bench_match["env"].replace(" TCP", "")
+        if bench_match["net"]:
+          env = f"{env} ({bench_match['net']})"
+        current_env = env
+        current_protocol = bench_match["protocol"]
+        current_size = int(bench_match["size"])
         key = (current_env, current_protocol, current_size)
         if key not in results:
           results[key] = {}
@@ -163,17 +166,33 @@ def generate_plot(results, output_image):
 
   plt.figure(figsize=(12, 7))
 
-  # Define styles for consistency
-  styles = {
-      "Plaintext Local": ("o-", "tab:blue"),
-      "Plaintext VM": ("s-", "tab:blue"),
-      "Plaintext RK": ("^-", "tab:blue"),
-      "Noise Local": ("o--", "tab:orange"),
-      "Noise VM": ("s--", "tab:orange"),
-      "Noise RK": ("^--", "tab:orange"),
-      "TLS (rustls) Local": ("o:", "tab:green"),
-      "TLS (rustls) VM": ("s:", "tab:green"),
+  # Marker per environment, line style and colour per protocol. The two VM
+  # legs differ only in host networking, so they get neighbouring markers.
+  # Plain "VM" is what logs from before the two legs were split look like; the
+  # regex still accepts them, so the plot has to as well.
+  env_markers = {
+      "Local": "o",
+      "VM": "s",
+      "VM (user-mode net)": "s",
+      "VM (vhost-net)": "D",
+      "RK": "^",
   }
+  protocol_styles = {
+      "Plaintext": ("-", "tab:blue"),
+      "Noise": ("--", "tab:orange"),
+      "TLS (rustls)": (":", "tab:green"),
+  }
+  styles = {
+      f"{protocol} {env}": (f"{marker}{line}", colour)
+      for protocol, (line, colour) in protocol_styles.items()
+      for env, marker in env_markers.items()
+  }
+
+  # A series the table shows but the plot has no style for would otherwise just
+  # vanish from the graph.
+  unstyled = sorted(set(graph_data) - set(styles))
+  if unstyled:
+    raise ValueError(f"no plot style for: {', '.join(unstyled)}")
 
   plot_count = 0
   for label, style_color in styles.items():
