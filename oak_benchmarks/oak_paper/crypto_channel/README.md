@@ -357,29 +357,18 @@ attested rows are inflated by 1.0 ms because that revision generates legacy-AAD
 evidence; the same table with the domain-separated AAD totals 1796 µs, of which
 `attest ingest` is 1120 µs. See the previous section.
 
-| leg                  | segment            |       µs |
-| plaintext            | connect            |     15.8 |
-| noise                | connect            |     18.4 |
-| noise                | create             |      0.3 |
-| noise                | attest produce     |      0.2 |
-| noise                | attest exchange    |     15.3 |
-| noise                | attest ingest      |    102.9 |
-| noise                | handshake produce  |      0.2 |
-| noise                | handshake exchange |    220.4 |
-| noise                | handshake ingest   |    100.3 |
-| **noise**            | **total**          |  **458** |
-| noise (attested)     | connect            |     21.0 |
-| noise (attested)     | create             |      0.5 |
-| noise (attested)     | attest produce     |      0.4 |
-| noise (attested)     | attest exchange    |     19.7 |
-| noise (attested)     | attest ingest      |   2102.3 |
-| noise (attested)     | handshake produce  |      0.2 |
-| noise (attested)     | handshake exchange |    348.7 |
-| noise (attested)     | handshake ingest   |    312.3 |
-| **noise (attested)** | **total**          | **2805** |
-| tls (rustls)         | connect            |     20.5 |
-| tls (rustls)         | handshake          |    583.5 |
-| **tls (rustls)**     | **total**          |  **604** |
+| leg | segment | µs | | plaintext | connect | 15.8 | | noise | connect | 18.4 |
+| noise | create | 0.3 | | noise | attest produce | 0.2 | | noise | attest
+exchange | 15.3 | | noise | attest ingest | 102.9 | | noise | handshake produce
+| 0.2 | | noise | handshake exchange | 220.4 | | noise | handshake ingest |
+100.3 | | **noise** | **total** | **458** | | noise (attested) | connect | 21.0
+| | noise (attested) | create | 0.5 | | noise (attested) | attest produce | 0.4
+| | noise (attested) | attest exchange | 19.7 | | noise (attested) | attest
+ingest | 2102.3 | | noise (attested) | handshake produce | 0.2 | | noise
+(attested) | handshake exchange | 348.7 | | noise (attested) | handshake ingest
+| 312.3 | | **noise (attested)** | **total** | **2805** | | tls (rustls) |
+connect | 20.5 | | tls (rustls) | handshake | 583.5 | | **tls (rustls)** |
+**total** | **604** |
 
 The decomposition is only worth having if the parts add up to the whole, so the
 same revision was measured with the criterion `Setup` groups as a cross-check:

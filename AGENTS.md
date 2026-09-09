@@ -73,15 +73,14 @@ group, since the device is `root:kvm` mode `660`:
 sudo usermod -aG kvm "$USER" # then log out and back in
 ```
 
-> [!IMPORTANT]
-> Agents must not run that command. It needs `sudo`, and it changes the
-> developer's account. Ask them to run it and to confirm they have logged back
-> in before you re-run the tests.
+> [!IMPORTANT] Agents must not run that command. It needs `sudo`, and it changes
+> the developer's account. Ask them to run it and to confirm they have logged
+> back in before you re-run the tests.
 
 Entering the nix shell attempts `modprobe vhost_vsock` and prints
-`Failed to install vhost_vsock module, some integration tests may not work`
-when it cannot. **That message is usually a red herring.** `/dev/vhost-vsock` is
-a *static* device node, created from the module's `devname` alias (see
+`Failed to install vhost_vsock module, some integration tests may not work` when
+it cannot. **That message is usually a red herring.** `/dev/vhost-vsock` is a
+_static_ device node, created from the module's `devname` alias (see
 `kmod static-nodes`), so it exists even while the module is unloaded, and the
 kernel autoloads the module when a permitted process opens it. An unprivileged
 `modprobe` failing therefore says nothing about whether vsock works. Check the
@@ -97,10 +96,10 @@ which means the kernel has no `vhost_vsock` support to load
 that case; do not run it yourself.
 
 KVM working is not evidence that vsock will. `/dev/kvm` is usually granted
-through a per-user POSIX ACL (`user:<you>:rw-`, visible with
-`getfacl /dev/kvm`) rather than through the group, and that ACL is not extended
-to `/dev/vhost-vsock`. So the usual symptom is that everything else runs and
-only these two targets fail.
+through a per-user POSIX ACL (`user:<you>:rw-`, visible with `getfacl /dev/kvm`)
+rather than through the group, and that ACL is not extended to
+`/dev/vhost-vsock`. So the usual symptom is that everything else runs and only
+these two targets fail.
 
 ## Rust
 
