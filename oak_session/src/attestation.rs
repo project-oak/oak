@@ -739,17 +739,26 @@ fn combine_legacy_and_assertion_aggregated_verification(
 /// Serializes a map of assertions into a deterministic byte vector.
 ///
 /// The serialization format is `id:content|id:content|...`, where `id` is the
-/// assertion ID string, encoded as a protobuf message. This is used to create a
-/// stable input for the attestation binding token.
+/// assertion ID string, and content is encoded as a length-prefixed protobuf
+/// message. This is used to create a stable input for the attestation binding
+/// token.
 fn serialize_assertions(attestations: &BTreeMap<String, Assertion>) -> Vec<u8> {
-    attestations
-        .iter()
-        .map(|(id, assertion)| {
-            let mut result = id.encode_to_vec();
-            result.push(b':');
-            result.extend(assertion.content.clone());
-            result.push(b'|');
-            result
-        })
-        .concat()
+    // Prefix with a fixed-width entry count so that concatenating two
+    // serialized maps (client-half || server-half) is injective: a MITM cannot
+    // move an entry across the boundary without changing at least one count.
+    let mut out = (attestations.len() as u64).to_le_bytes().to_vec();
+    out.extend(
+        attestations
+            .iter()
+            .map(|(id, assertion)| {
+                let mut result = id.encode_to_vec();
+                result.push(b':');
+                result.extend((assertion.content.len() as u64).to_le_bytes());
+                result.extend(assertion.content.clone());
+                result.push(b'|');
+                result
+            })
+            .concat(),
+    );
+    out
 }
