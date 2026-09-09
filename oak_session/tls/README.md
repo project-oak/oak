@@ -63,8 +63,8 @@ accept or reject the certificate.
 ## Session Resumption
 
 The C++ server disables TLS session resumption when client authentication is
-configured. Trust anchors and custom certificate verifiers are resolved for
-each new session and may change during the lifetime of a context. Disabling
+configured. Trust anchors and custom certificate verifiers are resolved for each
+new session and may change during the lifetime of a context. Disabling
 resumption ensures every new connection is checked against the current client
 authentication policy instead of authentication state from an earlier session.
 
