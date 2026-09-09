@@ -154,7 +154,7 @@ bazel run -c opt //oak_benchmarks/linux_enclave_app:linux_enclave_image_run -- \
     --iterations=10000
 ```
 
-Use `--enable-snp` for SEV-SNP measurements. See
+Use `--vm-type=sev-snp --bios=<path>` for SEV-SNP measurements. See
 [`linux_vm/README.md`](linux_vm/README.md) for more details on the VM image.
 
 ### Linux Baseline (Standalone Mode)

@@ -23,6 +23,20 @@ use std::{
 };
 
 use anyhow::{Context, Result, anyhow};
+use clap::ValueEnum;
+
+/// VM type for the guest, taking the names `run_vm.sh --vm-type` takes.
+///
+/// Spelled out here rather than reused from `oak_launcher_utils`: that enum
+/// also has `Tdx`, which `run_vm.sh` rejects, and accepting a value the callee
+/// can never honour is worse than repeating four names.
+#[derive(Clone, Copy, Debug, ValueEnum)]
+pub enum VmType {
+    Default,
+    Sev,
+    SevEs,
+    SevSnp,
+}
 
 /// Configuration for launching a Linux VM.
 pub struct VmConfig<'a> {
@@ -39,8 +53,10 @@ pub struct VmConfig<'a> {
     /// The restricted kernel runs on a single vCPU and cannot be given more,
     /// so a comparison is only matched when the VM gets one as well.
     pub cpus: u8,
-    /// Enable AMD SEV-SNP.
-    pub enable_snp: bool,
+    /// VM type for the guest.
+    pub vm_type: VmType,
+    /// Firmware for the VM, which a confidential guest needs.
+    pub bios: Option<&'a Path>,
 }
 
 /// A running Linux VM instance.
@@ -65,11 +81,15 @@ impl LinuxVm {
             &format!("--port={}", config.port),
             &format!("--memory={}", config.memory_size),
             &format!("--cpus={}", config.cpus),
+            &format!(
+                "--vm-type={}",
+                config.vm_type.to_possible_value().expect("vm type is nameable").get_name()
+            ),
             "--headless",
         ]);
 
-        if config.enable_snp {
-            cmd.arg("--enable-snp");
+        if let Some(bios) = config.bios {
+            cmd.arg(format!("--bios={}", bios.display()));
         }
 
         // The script reports its own failures on stdout, so discarding stdout

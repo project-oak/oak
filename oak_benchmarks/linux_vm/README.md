@@ -75,8 +75,18 @@ Runs a VM image:
     --port=<port>             # Optional: Port forward (repeatable, user net only)
     --net=<user|tap>          # Optional: Network mode (default: user)
     --headless                # Optional: Run in background
-    --enable-snp              # Optional: Enable AMD SEV-SNP
+    --vm-type=<type>          # Optional: default, sev, sev-es or sev-snp
+    --bios=<path>             # Optional: firmware, required by a confidential guest
+    --cbitpos=<n>             # Optional: encryption bit position (default: 51)
 ```
+
+A confidential guest needs firmware carrying a SEV metadata table, and its NIC
+is given `iommu_platform=on`, without which the guest kernel refuses to probe
+it. `--cbitpos` is the one SEV value QEMU checks against the host: 51 is right
+for Milan and Genoa, 47 for Naples and Rome.
+
+**No `--vm-type` other than `default` has been run on SEV hardware.** The QEMU
+arguments follow AMD's reference invocation rather than a guest that booted.
 
 ## Networking
 

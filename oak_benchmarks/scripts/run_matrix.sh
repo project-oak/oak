@@ -32,13 +32,11 @@ ITERATIONS="${ITERATIONS:-10000}"
 MEMORY_WORKING_SET="${MEMORY_WORKING_SET:-268435456}"
 # Run the confidential-computing legs. Off by default because it needs an
 # SEV-SNP host: on anything else QEMU refuses to start and every sample fails.
-#
-# The two runners spell it differently because each inherits the option from a
-# different launcher: the enclave goes through `oak_launcher_utils`, whose
-# `--vm-type` also covers sev, sev-es and tdx, while `linux_cli` drives
-# `run_vm.sh` and has a plain boolean. Nothing here has been run on SNP
-# hardware yet.
+# Nothing here has been run on SNP hardware yet.
 SNP="${SNP:-0}"
+# Firmware for the VM legs' guest, which SNP needs and the distribution's
+# SeaBIOS cannot provide. The enclave legs bring their own, Stage 0.
+VM_BIOS="${VM_BIOS:-}"
 OUT_DIR="${OUT_DIR:-/tmp/oak_matrix_$(date +%Y%m%d_%H%M%S)}"
 PLATFORMS="${PLATFORMS:-native oak vm}"
 
@@ -94,13 +92,23 @@ iterations_for() {
 # iteration, so its footprint follows iterations_for. The service gives it a
 # one-entry pre-built map whatever this flag says, so passing a size would
 # change nothing.
-# Per-runner SNP arguments, empty unless SNP=1. See the note on SNP above for
-# why the two spellings differ.
+# Per-runner arguments for the confidential legs, empty unless SNP=1.
 OAK_SNP_ARGS=()
 VM_SNP_ARGS=()
 if [[ ${SNP} == 1 ]]; then
   OAK_SNP_ARGS=(--vm-type=sev-snp)
-  VM_SNP_ARGS=(--enable-snp)
+  # Only the VM legs need firmware; the enclave legs bring Stage 0.
+  if [[ ${PLATFORMS} == *vm* ]]; then
+    if [[ -z ${VM_BIOS} ]]; then
+      echo "SNP=1 needs VM_BIOS pointing at firmware that boots a confidential guest" >&2
+      exit 1
+    fi
+    if [[ ! -f ${VM_BIOS} ]]; then
+      echo "VM_BIOS is not a file: ${VM_BIOS}" >&2
+      exit 1
+    fi
+    VM_SNP_ARGS=(--vm-type=sev-snp --bios="${VM_BIOS}")
+  fi
 fi
 
 working_set_for() {
@@ -158,6 +166,7 @@ Environment variables:
                              the two VM legs are given a guest to match.
   SNP=0                      Set to 1 to run the SEV-SNP legs. Needs an SNP
                              host; untested, as no such host is available yet.
+  VM_BIOS=<path>             Firmware for the VM legs' guest, required by SNP
   BENCHMARKS_OVERRIDE=...    Space-separated benchmark names, to narrow the run
                              to a subset of the matrix.
   PLATFORMS="native oak vm"  Which platforms to measure
@@ -206,6 +215,7 @@ write_manifest() {
     echo "guest memory: ${GUEST_MEMORY} (VM legs only; native runs on the host)"
     echo "benchmarks: ${BENCHMARKS[*]}"
     echo "sev-snp: ${SNP}"
+    echo "vm firmware: ${VM_BIOS:-none}"
     echo "revision: $(jj --ignore-working-copy log -r @ --no-graph -T 'commit_id' 2>/dev/null || echo unknown)"
     echo
     echo "not controlled:"

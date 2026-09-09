@@ -38,7 +38,7 @@ use oak_benchmark_proto_rust::oak::benchmark::{
     BenchmarkType, RunBenchmarkRequest, RunBenchmarkResponse,
 };
 use tonic::transport::Channel;
-use vm::{LinuxVm, VmConfig};
+use vm::{LinuxVm, VmConfig, VmType};
 
 #[derive(Parser, Debug)]
 #[command(name = "linux_cli")]
@@ -69,9 +69,13 @@ struct Args {
     #[arg(long, default_value = "1")]
     vm_cpus: u8,
 
-    /// Enable AMD SEV-SNP for the VM.
-    #[arg(long)]
-    enable_snp: bool,
+    /// VM type for the guest.
+    #[arg(long, value_enum, default_value_t = VmType::Default)]
+    vm_type: VmType,
+
+    /// Firmware for the VM, which a confidential guest needs.
+    #[arg(long, value_name = "FILE")]
+    bios: Option<PathBuf>,
 
     /// Timeout for VM boot in seconds.
     #[arg(long, default_value = "60")]
@@ -291,7 +295,8 @@ async fn main() -> Result<()> {
         memory_size: &args.memory_size,
         port: args.port,
         cpus: args.vm_cpus,
-        enable_snp: args.enable_snp,
+        vm_type: args.vm_type,
+        bios: args.bios.as_deref(),
     };
     // The clock for the boot measurement starts here, before the VMM exists,
     // so that everything the host does to bring the guest up is inside it.

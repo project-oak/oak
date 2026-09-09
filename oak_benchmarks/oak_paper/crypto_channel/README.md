@@ -934,7 +934,9 @@ otherwise gives a connection refused.
 Press `Ctrl+C` in the terminal running the VM to stop it (or kill the process if
 running with `--headless`).
 
-## Running the Enclave Legs on a TEE
+## Running on a TEE
+
+### The enclave legs
 
 By default the `RK` legs run in an ordinary KVM guest, so they measure the
 Restricted Kernel without any of the cost of memory encryption. On a host with
@@ -958,6 +960,32 @@ RK_VM_TYPE=sev-snp RK_VMM_BINARY=/oak/qemu/qemu-system-x86_64 \
 
 `RK_VM_TYPE=tdx` is accepted by the flag but rejected by the launcher: the
 Restricted Kernel does not support TDX yet.
+
+### The Linux VM leg
+
+The Linux guest is booted by `run_vm.sh` rather than from the benchmark, so the
+VM type is a flag there and `VM_TYPE` only names it:
+
+```bash
+./oak_benchmarks/linux_vm/run_vm.sh --image=<path> --net=tap --headless \
+    --vm-type=sev-snp --bios=<ovmf>
+VM_NET=vhost VM_TYPE=sev-snp \
+    bazel run -c opt //oak_benchmarks/oak_paper/crypto_channel:benchmark -- --bench
+```
+
+That gives `VM TCP [vhost-net, sev-snp]`, and with it the cost of memory
+encryption on its own: the `RK` legs differ from the plain VM legs in both the
+kernel and the encryption, and this leg moves only one of the two.
+
+A confidential guest boots firmware carrying a SEV metadata table, so `--bios`
+is required; SeaBIOS does not have one, and neither does most packaged OVMF. The
+NIC also gains `iommu_platform=on`, without which Linux refuses to probe a
+virtio device in an encrypted guest and the VM comes up with no network.
+
+**This path has not been run on SEV hardware.** The QEMU arguments come from
+AMD's reference invocation and from what the guest kernel requires, not from a
+guest that has booted. The enclave legs have run under `sev-snp`; these have
+not.
 
 ### Hosts with an older glibc
 
@@ -997,6 +1025,9 @@ glibc to a Debian binary under Debian's loader breaks it.
 - `VM_NET`: How the host moves the VM's packets, `user` (default) or `vhost`.
   This only labels the benchmark and picks a default address; the VM has to have
   been started in the matching mode.
+- `VM_TYPE`: VM type the Linux guest was booted with, taking the same values as
+  `run_vm.sh --vm-type` (default: `default`). Like `VM_NET` it only names the
+  run; the VM has to have been started that way.
 - `VM_HOST`: Host address of the VM (default: `127.0.0.1` under `VM_NET=user`,
   `198.18.0.2` under `VM_NET=vhost`)
 - `VM_PLAINTEXT_PORT`: Port for plaintext protocol (default: `5000`)

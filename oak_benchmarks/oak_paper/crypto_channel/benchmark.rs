@@ -83,6 +83,25 @@ impl VmNet {
     }
 }
 
+/// What goes in brackets after `VM TCP`: the network mode, and the VM type when
+/// the guest is confidential.
+///
+/// `VM_TYPE` takes the values `run_vm.sh --vm-type` takes, and like `VM_NET` it
+/// only names what the VM was already booted as. A confidential guest is a
+/// separate series, so `VM TCP [vhost-net, sev-snp]` and `VM TCP [vhost-net]`
+/// can be compared. The set is the script's rather than the launcher's, which
+/// is wider: a type the script would refuse cannot label a run.
+fn vm_leg_label() -> String {
+    let net = VmNet::from_env().label();
+    match env::var("VM_TYPE").as_deref() {
+        Ok("default") | Err(_) => net.to_string(),
+        Ok(vm_type @ ("sev" | "sev-es" | "sev-snp")) => format!("{net}, {vm_type}"),
+        Ok(other) => {
+            panic!("unknown VM_TYPE={other}, expected default, sev, sev-es or sev-snp")
+        }
+    }
+}
+
 /// Get the VM host from VM_HOST environment variable, or use the default.
 ///
 /// Pointing `VM_HOST` at the other mode's address is rejected, because the
@@ -514,14 +533,14 @@ fn plaintext_vm_tcp_benchmark(c: &mut Criterion) {
         Box::new(BufferedStream::new(linux_server::connect(addr).expect(VM_CONNECT_HELP)))
     };
 
-    let net = VmNet::from_env().label();
+    let leg = vm_leg_label();
     benchmark_wrapper(
         TEST_SIZES,
-        &format!("VM TCP [{net}] Plaintext Message Exchange"),
+        &format!("VM TCP [{leg}] Plaintext Message Exchange"),
         c,
         connect,
     );
-    handshake_wrapper(&format!("VM TCP [{net}] Plaintext Setup"), c, connect);
+    handshake_wrapper(&format!("VM TCP [{leg}] Plaintext Setup"), c, connect);
 }
 
 fn new_noise_client_stream(addr: SocketAddr) -> Box<dyn MessageStream> {
@@ -533,11 +552,11 @@ fn noise_vm_tcp_benchmark(c: &mut Criterion) {
     let addr = get_vm_addr("noise", DEFAULT_NOISE_PORT);
     println!("Connecting to VM at {} for noise benchmark", addr);
 
-    let net = VmNet::from_env().label();
-    benchmark_wrapper(TEST_SIZES, &format!("VM TCP [{net}] Noise Message Exchange"), c, || {
+    let leg = vm_leg_label();
+    benchmark_wrapper(TEST_SIZES, &format!("VM TCP [{leg}] Noise Message Exchange"), c, || {
         new_noise_client_stream(addr)
     });
-    handshake_wrapper(&format!("VM TCP [{net}] Noise Setup"), c, || new_noise_client_stream(addr));
+    handshake_wrapper(&format!("VM TCP [{leg}] Noise Setup"), c, || new_noise_client_stream(addr));
 }
 
 fn tls_vm_tcp_benchmark(c: &mut Criterion) {
@@ -556,14 +575,14 @@ fn tls_vm_tcp_benchmark(c: &mut Criterion) {
         new_tls_client_stream(tcp_stream, client_config.clone())
     };
 
-    let net = VmNet::from_env().label();
+    let leg = vm_leg_label();
     benchmark_wrapper(
         TEST_SIZES,
-        &format!("VM TCP [{net}] TLS (rustls) Message Exchange"),
+        &format!("VM TCP [{leg}] TLS (rustls) Message Exchange"),
         c,
         tls_connect,
     );
-    handshake_wrapper(&format!("VM TCP [{net}] TLS (rustls) Setup"), c, tls_connect);
+    handshake_wrapper(&format!("VM TCP [{leg}] TLS (rustls) Setup"), c, tls_connect);
 }
 
 fn plaintext_rk_benchmark(c: &mut Criterion) {
