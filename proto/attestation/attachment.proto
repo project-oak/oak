@@ -74,4 +74,7 @@ message MpmAttachment {
 
   // The version of the MPM.
   string package_version = 2;
+
+  // SHA2-256 digest of the package_name entry.
+  HexDigest package_name_digest = 3;
 }

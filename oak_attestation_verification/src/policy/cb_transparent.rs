@@ -436,8 +436,11 @@ mod tests {
         use prost::Message;
         use verify_endorsement::MPM_CLAIM_TYPE;
 
-        let mpm_attachment_1 =
-            MpmAttachment { package_name: "other".into(), package_version: "other/2.0".into() };
+        let mpm_attachment_1 = MpmAttachment {
+            package_name: "other".into(),
+            package_version: "other/2.0".into(),
+            ..Default::default()
+        };
         let end1 = test_util::make_signed_endorsement_for_contents(
             &mpm_attachment_1.encode_to_vec(),
             not_before,
@@ -445,8 +448,11 @@ mod tests {
             &signing_key,
             vec![MPM_CLAIM_TYPE],
         );
-        let mpm_attachment_2 =
-            MpmAttachment { package_name: "test".into(), package_version: "test/1.0".into() };
+        let mpm_attachment_2 = MpmAttachment {
+            package_name: "test".into(),
+            package_version: "test/1.0".into(),
+            ..Default::default()
+        };
         let end2 = test_util::make_signed_endorsement_for_contents(
             &mpm_attachment_2.encode_to_vec(),
             not_before,
@@ -758,8 +764,11 @@ mod tests {
         let verify_time = make_instant!("2025-10-15T00:00:00Z");
         let (signing_key, public_key) = test_util::new_random_signing_keypair();
 
-        let mpm_attachment =
-            MpmAttachment { package_name: "test_pkg".into(), package_version: "test/1.0".into() };
+        let mpm_attachment = MpmAttachment {
+            package_name: "test_pkg".into(),
+            package_version: "test/1.0".into(),
+            ..Default::default()
+        };
         let binary_mpm_signed = test_util::make_signed_endorsement_for_contents(
             &mpm_attachment.encode_to_vec(),
             not_before,
@@ -817,6 +826,7 @@ mod tests {
         let mpm_attachment = MpmAttachment {
             package_name: "test_pkg".into(),
             package_version: "endorsed/2.0".into(),
+            ..Default::default()
         };
         let binary_mpm_signed = test_util::make_signed_endorsement_for_contents(
             &mpm_attachment.encode_to_vec(),
@@ -869,8 +879,11 @@ mod tests {
         let verify_time = make_instant!("2025-10-15T00:00:00Z");
         let (signing_key, public_key) = test_util::new_random_signing_keypair();
 
-        let mpm_attachment =
-            MpmAttachment { package_name: "test_pkg".into(), package_version: "test/1.0".into() };
+        let mpm_attachment = MpmAttachment {
+            package_name: "test_pkg".into(),
+            package_version: "test/1.0".into(),
+            ..Default::default()
+        };
         let binary_mpm_signed = test_util::make_signed_endorsement_for_contents(
             &mpm_attachment.encode_to_vec(),
             not_before,
@@ -931,8 +944,11 @@ mod tests {
         let (signing_key, _unused_key) = test_util::new_random_signing_keypair();
         let (_other_key, other_public_key) = test_util::new_random_signing_keypair();
 
-        let mpm_attachment =
-            MpmAttachment { package_name: "test_pkg".into(), package_version: "test/1.0".into() };
+        let mpm_attachment = MpmAttachment {
+            package_name: "test_pkg".into(),
+            package_version: "test/1.0".into(),
+            ..Default::default()
+        };
         let binary_mpm_signed = test_util::make_signed_endorsement_for_contents(
             &mpm_attachment.encode_to_vec(),
             not_before,
@@ -995,8 +1011,11 @@ mod tests {
         let verify_time = make_instant!("2025-10-15T00:00:00Z");
         let (signing_key, _) = test_util::new_random_signing_keypair();
 
-        let mpm_attachment =
-            MpmAttachment { package_name: "test_pkg".into(), package_version: "test/1.0".into() };
+        let mpm_attachment = MpmAttachment {
+            package_name: "test_pkg".into(),
+            package_version: "test/1.0".into(),
+            ..Default::default()
+        };
         let binary_mpm_signed = test_util::make_signed_endorsement_for_contents(
             &mpm_attachment.encode_to_vec(),
             not_before,

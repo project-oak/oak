@@ -834,6 +834,9 @@ pub struct MpmAttachment {
     /// The version of the MPM.
     #[prost(string, tag = "2")]
     pub package_version: ::prost::alloc::string::String,
+    /// SHA2-256 digest of the package_name entry.
+    #[prost(message, optional, tag = "3")]
+    pub package_name_digest: ::core::option::Option<super::super::HexDigest>,
 }
 /// Represents the Layer 1 (or Stage 1) event of CB that is externally sharable
 /// (i.e. it does not contain sensitive internal data).
