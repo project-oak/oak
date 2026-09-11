@@ -595,15 +595,12 @@ fn plaintext_rk_benchmark(c: &mut Criterion) {
     benchmark_wrapper(TEST_SIZES, &format!("RK{tee} Plaintext Message Exchange"), c, || {
         Box::new(OakClientChannelMessageStream::new(&oak_client_channel))
     });
-    // Degenerate, and reported only so the row is not silently missing:
-    // `OakClientChannelMessageStream::new` is an `Rc::clone`, so this times a
-    // refcount bump and nothing else. Unlike the TCP legs, whose plaintext
-    // `Setup` at least includes a connect, this is not a transport baseline and
-    // must not be subtracted from `RK Noise Setup` -- that would charge Noise
-    // for the enclave channel round trips the plaintext row never performs.
-    handshake_wrapper(&format!("RK{tee} Plaintext Setup"), c, || {
-        Box::new(OakClientChannelMessageStream::new(&oak_client_channel))
-    });
+    // There is deliberately no `RK Plaintext Setup` row. The TCP legs have one
+    // because their plaintext setup performs a connect, which is the transport
+    // cost that `Noise Setup` should be compared against. Here
+    // `OakClientChannelMessageStream::new` is an `Rc::clone`, so the equivalent
+    // row would time a refcount bump. Subtracting it from `RK Noise Setup`
+    // would charge Noise for enclave channel round trips it does not make.
     futures::executor::block_on(async { guest_instance.kill().await })
         .expect("failed to kill instance");
 }

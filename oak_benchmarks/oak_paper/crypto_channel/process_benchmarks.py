@@ -30,6 +30,25 @@ def convert_to_mib(value, unit):
     raise ValueError(f"Unknown unit: {unit}")
 
 
+# Criterion picks the unit per row, so a table is the only way to read the
+# numbers back. It emits "us" only when the output stream is not UTF-8.
+TIME_UNITS_S = {
+    "ps": 1e-12,
+    "ns": 1e-9,
+    "µs": 1e-6,
+    "us": 1e-6,
+    "ms": 1e-3,
+    "s": 1.0,
+}
+
+
+def convert_to_seconds(value, unit):
+  """Convert a Criterion time value to seconds."""
+  if unit not in TIME_UNITS_S:
+    raise ValueError(f"Unknown unit: {unit}")
+  return float(value) * TIME_UNITS_S[unit]
+
+
 def parse_log(log_file):
   """Parse Criterion log file and extract time and throughput."""
   # Regex patterns
@@ -109,10 +128,32 @@ def parse_log(log_file):
             results[(current_env, current_protocol, current_size)][
                 "time_raw"
             ] = f"{val} {unit}"
+            results[(current_env, current_protocol, current_size)]["time_s"] = (
+                convert_to_seconds(val, unit)
+            )
         except IndexError:
           pass
 
   return results
+
+
+def format_exchange_rate(time_s):
+  """Format the request rate a single sequential client can sustain.
+
+  `benchmark_wrapper` reports `(send + recv) / 2`, so a full exchange takes
+  `2 * time_s` and the rate is `1 / (2 * time_s)`. Dividing into the reported
+  figure directly would overstate the rate by exactly a factor of two.
+
+  This is a closed-loop rate for one client, not server capacity: the harness
+  never has more than one exchange in flight, so it says nothing about what the
+  server sustains under concurrency.
+  """
+  if not time_s:
+    return "N/A"
+  rate = 1.0 / (2.0 * time_s)
+  if rate >= 1000:
+    return f"{rate / 1000:,.1f}k"
+  return f"{rate:,.1f}"
 
 
 def print_markdown_table(results):
@@ -120,9 +161,9 @@ def print_markdown_table(results):
   print("\n## Performance Benchmark Results\n")
   print(
       "| Protocol | Environment | Size (Bytes) | Time (Mean) | Throughput"
-      " (Mean) |"
+      " (Mean) | Exchanges/s |"
   )
-  print("| :--- | :--- | ---: | ---: | ---: |")
+  print("| :--- | :--- | ---: | ---: | ---: | ---: |")
 
   sorted_keys = sorted(results.keys(), key=lambda x: (x[1], x[0], x[2]))
 
@@ -138,11 +179,22 @@ def print_markdown_table(results):
 
     time_str = data.get("time_raw", "N/A")
     thrpt_str = data.get("thrpt_raw", "N/A")
+    rate_str = format_exchange_rate(data.get("time_s"))
 
-    print(f"| {p_str} | {e_str} | {size:,} | {time_str} | {thrpt_str} |")
+    print(
+        f"| {p_str} | {e_str} | {size:,} | {time_str} | {thrpt_str} |"
+        f" {rate_str} |"
+    )
 
     current_p = protocol
     current_e = env
+
+  print(
+      "\n`Exchanges/s` is the rate one client achieves by sending the next"
+      " message only after the previous reply arrives: `1 / (send + recv)`."
+      " It is not server capacity, which is bounded by concurrency this"
+      " harness does not exercise."
+  )
 
 
 def generate_plot(results, output_image):

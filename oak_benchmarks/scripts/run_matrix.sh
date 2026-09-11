@@ -32,11 +32,18 @@ ITERATIONS="${ITERATIONS:-10000}"
 MEMORY_WORKING_SET="${MEMORY_WORKING_SET:-268435456}"
 # Run the confidential-computing legs. Off by default because it needs an
 # SEV-SNP host: on anything else QEMU refuses to start and every sample fails.
-# Nothing here has been run on SNP hardware yet.
 SNP="${SNP:-0}"
 # Firmware for the VM legs' guest, which SNP needs and the distribution's
 # SeaBIOS cannot provide. The enclave legs bring their own, Stage 0.
 VM_BIOS="${VM_BIOS:-}"
+# Message sizes to sweep the size-sensitive benchmarks over, space separated.
+#
+# Empty by default, which leaves every benchmark at the CLI's own default and
+# measures each one once, as before. Setting it asks the question the overhead
+# curve is about: how the gap between the platforms moves as the work per call
+# grows. Only hashing and AEAD are swept, because they are the benchmarks whose
+# `--data-size` means "bytes processed"; see data_sizes_for.
+DATA_SIZES="${DATA_SIZES:-}"
 OUT_DIR="${OUT_DIR:-/tmp/oak_matrix_$(date +%Y%m%d_%H%M%S)}"
 PLATFORMS="${PLATFORMS:-native oak vm}"
 
@@ -73,6 +80,31 @@ iterations_for() {
     p256-sign) echo 5000 ;;
     memory-insert | memory-lookup | memory-churn) echo 1000000 ;;
     *) echo "${ITERATIONS}" ;;
+  esac
+}
+
+# Which data sizes a given benchmark is measured at, or `default` to leave the
+# choice to the CLI.
+#
+# The sentinel keeps the caller's loop uniform: without it an empty list would
+# skip the benchmark entirely rather than measure it once.
+#
+# The sweep deliberately covers hashing and AEAD only. `--data-size` does not
+# mean the same thing everywhere: for alloc-churn it selects the allocation
+# size and 0 selects the varied schedule, so sweeping it there would quietly
+# replace one benchmark with several different ones. The public-key and memory
+# benchmarks ignore the flag altogether, so sweeping them would measure the
+# same thing repeatedly under different row labels.
+sizes_or_default() {
+  if [[ -z ${DATA_SIZES} ]]; then
+    echo "default"
+    return
+  fi
+  case "$1" in
+    sha256 | sha512 | sha3-256 | sha3-512 | aes256gcm-seal | aes256gcm-open)
+      echo "${DATA_SIZES}"
+      ;;
+    *) echo "default" ;;
   esac
 }
 
@@ -165,8 +197,15 @@ Environment variables:
                              bytes. Use 1073741824 for the plan's >=1 GiB point;
                              the two VM legs are given a guest to match.
   SNP=0                      Set to 1 to run the SEV-SNP legs. Needs an SNP
-                             host; untested, as no such host is available yet.
-  VM_BIOS=<path>             Firmware for the VM legs' guest, required by SNP
+                             host, and VM_BIOS for the VM legs.
+  VM_BIOS=<path>             Firmware for the VM legs' guest, required by SNP.
+                             It has to be recent: edk2 2022.11 carries the SEV
+                             metadata table but still fails to boot a
+                             confidential guest.
+  DATA_SIZES=...             Space-separated byte counts to sweep hashing and
+                             AEAD over, for the overhead-versus-intensity
+                             curve. Unset measures each benchmark once at the
+                             CLI's default size, as before.
   BENCHMARKS_OVERRIDE=...    Space-separated benchmark names, to narrow the run
                              to a subset of the matrix.
   PLATFORMS="native oak vm"  Which platforms to measure
@@ -214,6 +253,7 @@ write_manifest() {
     echo "memory working set: ${MEMORY_WORKING_SET} bytes"
     echo "guest memory: ${GUEST_MEMORY} (VM legs only; native runs on the host)"
     echo "benchmarks: ${BENCHMARKS[*]}"
+    echo "data sizes: ${DATA_SIZES:-cli default}"
     echo "sev-snp: ${SNP}"
     echo "vm firmware: ${VM_BIOS:-none}"
     echo "revision: $(jj --ignore-working-copy log -r @ --no-graph -T 'commit_id' 2>/dev/null || echo unknown)"
@@ -266,12 +306,17 @@ run_native() {
     local n w
     n="$(iterations_for "${b}")"
     w="$(working_set_for "${b}")"
-    echo "native ${b} (${n} iterations)" >&2
-    "${PIN[@]}" "${BAZEL[@]}" run -c opt //oak_benchmarks/linux_enclave_app -- \
-      --benchmark="${b}" --iterations="${n}" --working-set-size="${w}" \
-      --repetitions="${REPETITIONS}" --output=csv ${header} \
-      2>>"${log}" >>"${out}"
-    header=""
+    for d in $(sizes_or_default "${b}"); do
+      local size_arg=()
+      [[ ${d} != default ]] && size_arg=(--data-size="${d}")
+      echo "native ${b} (${n} iterations, data size ${d})" >&2
+      "${PIN[@]}" "${BAZEL[@]}" run -c opt //oak_benchmarks/linux_enclave_app -- \
+        --benchmark="${b}" --iterations="${n}" --working-set-size="${w}" \
+        "${size_arg[@]}" \
+        --repetitions="${REPETITIONS}" --output=csv ${header} \
+        2>>"${log}" >>"${out}"
+      header=""
+    done
   done
   echo "wrote ${out}"
 }
@@ -286,14 +331,18 @@ run_oak() {
     local n w
     n="$(iterations_for "${b}")"
     w="$(working_set_for "${b}")"
-    echo "oak ${b} (${n} iterations)" >&2
-    "${PIN[@]}" "${BAZEL[@]}" run -c opt \
-      //oak_benchmarks/oak_enclave_app:oak_enclave_app_run -- \
-      --memory-size="${GUEST_MEMORY}" --benchmark="${b}" --iterations="${n}" \
-      --working-set-size="${w}" \
-      --repetitions="${REPETITIONS}" --output=csv ${header} "${OAK_SNP_ARGS[@]}" \
-      2>>"${log}" >>"${out}"
-    header=""
+    for d in $(sizes_or_default "${b}"); do
+      local size_arg=()
+      [[ ${d} != default ]] && size_arg=(--data-size="${d}")
+      echo "oak ${b} (${n} iterations, data size ${d})" >&2
+      "${PIN[@]}" "${BAZEL[@]}" run -c opt \
+        //oak_benchmarks/oak_enclave_app:oak_enclave_app_run -- \
+        --memory-size="${GUEST_MEMORY}" --benchmark="${b}" --iterations="${n}" \
+        --working-set-size="${w}" "${size_arg[@]}" \
+        --repetitions="${REPETITIONS}" --output=csv ${header} "${OAK_SNP_ARGS[@]}" \
+        2>>"${log}" >>"${out}"
+      header=""
+    done
   done
   echo "wrote ${out}"
 }
@@ -308,14 +357,18 @@ run_vm() {
     local n w
     n="$(iterations_for "${b}")"
     w="$(working_set_for "${b}")"
-    echo "vm ${b} (${n} iterations)" >&2
-    "${PIN[@]}" "${BAZEL[@]}" run -c opt \
-      //oak_benchmarks/linux_enclave_app:linux_enclave_image_run -- \
-      --memory-size="${GUEST_MEMORY}" --benchmark="${b}" --iterations="${n}" \
-      --working-set-size="${w}" \
-      --repetitions="${REPETITIONS}" --output=csv ${header} "${VM_SNP_ARGS[@]}" \
-      2>>"${log}" >>"${out}"
-    header=""
+    for d in $(sizes_or_default "${b}"); do
+      local size_arg=()
+      [[ ${d} != default ]] && size_arg=(--data-size="${d}")
+      echo "vm ${b} (${n} iterations, data size ${d})" >&2
+      "${PIN[@]}" "${BAZEL[@]}" run -c opt \
+        //oak_benchmarks/linux_enclave_app:linux_enclave_image_run -- \
+        --memory-size="${GUEST_MEMORY}" --benchmark="${b}" --iterations="${n}" \
+        --working-set-size="${w}" "${size_arg[@]}" \
+        --repetitions="${REPETITIONS}" --output=csv ${header} "${VM_SNP_ARGS[@]}" \
+        2>>"${log}" >>"${out}"
+      header=""
+    done
   done
   echo "wrote ${out}"
 }

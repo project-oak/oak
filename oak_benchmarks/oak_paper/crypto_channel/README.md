@@ -633,11 +633,11 @@ round trip**. Do not quote it as an RTT.
 legs the plaintext leg has no handshake, so its `Setup` figure is the transport
 cost alone and is the floor the other legs on that transport are read against.
 
-> [!WARNING] That does _*not*_ hold for the restricted-kernel legs.
-> `OakClientChannelMessageStream::new` is an `Rc::clone`, so
-> `RK Plaintext Setup` times a refcount bump rather than a transport. It is not
-> a floor, and subtracting it from `RK Noise Setup` charges Noise for the
-> enclave channel round trips the plaintext row never performs.
+> [!WARNING] The restricted-kernel legs have no such floor.
+> `OakClientChannelMessageStream::new` is an `Rc::clone`, so an
+> `RK Plaintext Setup` row would time a refcount bump rather than a transport.
+> It is therefore not measured, and nothing should be subtracted from
+> `RK Noise Setup`.
 
 The two groups are the two arms the evaluation plan asks for: `Message Exchange`
 holds **one channel open** for the whole measurement, `Setup` performs a
@@ -978,14 +978,13 @@ encryption on its own: the `RK` legs differ from the plain VM legs in both the
 kernel and the encryption, and this leg moves only one of the two.
 
 A confidential guest boots firmware carrying a SEV metadata table, so `--bios`
-is required; SeaBIOS does not have one, and neither does most packaged OVMF. The
-NIC also gains `iommu_platform=on`, without which Linux refuses to probe a
-virtio device in an encrypted guest and the VM comes up with no network.
+is required; SeaBIOS does not have one. The NIC also gains `iommu_platform=on`,
+without which Linux refuses to probe a virtio device in an encrypted guest and
+the VM comes up with no network.
 
-**This path has not been run on SEV hardware.** The QEMU arguments come from
-AMD's reference invocation and from what the guest kernel requires, not from a
-guest that has booted. The enclave legs have run under `sev-snp`; these have
-not.
+Packaged OVMF is often too old even when it does carry the table: Debian 12's
+edk2 2022.11 leaves the guest in xAPIC mode and QEMU then dies on the page state
+change the guest issues for the APIC MMIO page. edk2 202511 boots.
 
 ### Hosts with an older glibc
 
@@ -1016,6 +1015,17 @@ done >.local.bazelrc
 itself. RUNPATH rather than `LD_LIBRARY_PATH`, because the latter would also
 apply to host programs an action invokes such as `/bin/bash`, and feeding nix's
 glibc to a Debian binary under Debian's loader breaks it.
+
+`--linkopt` also reaches `crypto_channel_server`, which runs in the guest rather
+than on this host, and the guest has no `/nix`. It is left with an interpreter
+that does not exist, so the service never starts and every VM leg fails as a
+connection error. The binary needs no more than `GLIBC_2.34`, which the guest
+has; only the interpreter is wrong, so point it back before building the image:
+
+```bash
+patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --remove-rpath \
+    bazel-bin/oak_benchmarks/oak_paper/crypto_channel/crypto_channel_server
+```
 
 ## Environment Variables
 

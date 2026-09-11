@@ -85,8 +85,14 @@ is given `iommu_platform=on`, without which the guest kernel refuses to probe
 it. `--cbitpos` is the one SEV value QEMU checks against the host: 51 is right
 for Milan and Genoa, 47 for Naples and Rome.
 
-**No `--vm-type` other than `default` has been run on SEV hardware.** The QEMU
-arguments follow AMD's reference invocation rather than a guest that booted.
+The firmware also has to be recent. Debian 12's `/usr/share/ovmf/OVMF.fd` (edk2
+2022.11) carries the metadata table but leaves the guest in xAPIC mode, and the
+page state change it then issues on the APIC MMIO page kills QEMU with
+`Convert non guest_memfd backed memory region (0xfee00000 ,+ 0x1000) to private`.
+An edk2 202511 build boots the same image in x2APIC mode.
+
+`default`, `sev` and `sev-snp` have each booted Debian 12 to a login prompt with
+a working virtio NIC, on an EPYC 9124 host.
 
 ## Networking
 
