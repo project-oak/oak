@@ -189,16 +189,27 @@
                 echo "You need libxml2.so.2 to build some Bazel targets. It isn't provided by nix flakes. See scripts/install-libxml2-legacy for details."
               '';
               packages = [
+                # `MODULE.bazel` registers the `preinstalled_*` toolchains from
+                # `rules_foreign_cc`, which resolve these tools from `PATH`
+                # rather than building them hermetically. They must therefore
+                # come from this shell; otherwise they are picked up from the
+                # host system, which works on a workstation but not inside the
+                # CI container.
                 autoconf
                 autogen
                 automake
+                cmake
+                gnumake
+                m4
+                ninja
+                pkg-config
+
                 jdk17_headless
                 libxml2
                 bazelisk-as-bazel
                 androidSdk
                 bazel-buildtools
                 openssl
-                pkg-config
               ];
             };
             # Shell for building containers system image. This is not included in the
