@@ -15,7 +15,7 @@
 //
 use anyhow::Context;
 use external_db_client::{DataBlobHandler, MetadataPersistResult};
-use log::{error, info};
+use log::{error, info, warn};
 use metrics::get_global_metrics;
 use oak_private_memory_database::encryption::{decrypt_database, encrypt_database};
 use prost::Message;
@@ -51,9 +51,10 @@ async fn try_persist_database(
     let db_size = database.data.len();
     let max_database_size = user_context.database.max_size();
     if db_size > max_database_size {
-        // Database exceeds the maximum allowed size.
-        info!("Database is too large to save: {} (limit: {})", db_size, max_database_size);
-        anyhow::bail!("Database is too large to save: {} (limit: {})", db_size, max_database_size);
+        warn!(
+            "Database exceeds maximum size limit: {} (limit: {}), saving anyway to prevent data loss",
+            db_size, max_database_size
+        );
     }
     info!("Saving db size: {}", db_size);
     get_global_metrics().record_db_size(db_size as u64);
@@ -118,17 +119,34 @@ async fn pull_and_rebase(
     Ok(())
 }
 
+fn maybe_optimize(database: &mut oak_private_memory_database::Database) -> anyhow::Result<()> {
+    let info = database.get_optimize_info().context("getting optimize info")?;
+    if info.optimizable_docs() > OPTIMIZE_DOC_THRESHOLD {
+        info!("optimizing database ({} optimizable docs)", info.optimizable_docs());
+        let now = Instant::now();
+        database.optimize().context("optimizing database")?;
+        let elapsed = now.elapsed();
+        get_global_metrics().record_db_optimize_latency(elapsed.as_millis() as u64);
+    }
+    Ok(())
+}
+
 /// Synchronously persist the database.
 ///
 /// This is the public API for the SyncDatabase RPC handler. It pulls the latest
 /// remote state (which may include writes from other sessions), rebases the
-/// local database, then pushes any local changes.
+/// local database, optimizes if needed, then pushes any local changes.
 pub async fn sync_persist_database(
     user_context: &mut UserSessionContext,
 ) -> anyhow::Result<SyncDatabaseResponse> {
     // Pull: fetch the latest remote blob and rebase so that remote changes
     // become visible in this session's local database.
     pull_and_rebase(user_context, /* require_blob= */ false).await?;
+
+    // Optimize is expensive (~1s for a 30MB database) and always rebuilds
+    // the entire index. Use GetOptimizeInfo (~0.16ms) to check whether
+    // there are enough deleted/expired documents to warrant optimization.
+    maybe_optimize(&mut user_context.database)?;
 
     // Push: persist any local changes (now rebased on top of the latest remote
     // state).
@@ -181,21 +199,8 @@ pub async fn run_persistence_service(mut rx: mpsc::UnboundedReceiver<UserSession
         // Optimize is expensive (~1s for a 30MB database) and always rebuilds
         // the entire index. Use GetOptimizeInfo (~0.16ms) to check whether
         // there are enough deleted/expired documents to warrant optimization.
-        match user_context.database.get_optimize_info() {
-            Ok(info) if info.optimizable_docs() > OPTIMIZE_DOC_THRESHOLD => {
-                info!("optimizing database ({} optimizable docs)", info.optimizable_docs());
-                let now = Instant::now();
-                if let Err(e) = user_context.database.optimize() {
-                    error!("optimizing database: {e:?}");
-                } else {
-                    let elapsed = now.elapsed();
-                    get_global_metrics().record_db_optimize_latency(elapsed.as_millis() as u64);
-                }
-            }
-            Err(e) => {
-                error!("getting optimize info: {e:?}");
-            }
-            _ => {}
+        if let Err(e) = maybe_optimize(&mut user_context.database) {
+            error!("optimizing database: {e:?}");
         }
 
         if let Err(e) = persist_database(&mut user_context).await {
