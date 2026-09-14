@@ -64,7 +64,7 @@ fn boot_and_dump() -> anyhow::Result<GuestDump> {
         .initrd(initrd)
         .machine("microvm,acpi=on,pcie=on")
         .memory("1G")
-        .extra_args(["-append", "console=ttyS0 panic=-1 loglevel=7 --"])
+        .extra_args(["-append", "console=ttyS0 panic=0 loglevel=7 --"])
         .boot_and_dump(PANIC_MARKER)?;
 
     let layer1_key = dump
