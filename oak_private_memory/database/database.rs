@@ -33,7 +33,7 @@ use crate::{
 
 // Maximum size of the database (metadata blob). This can exceed the gRPC
 // message size limit because streaming read/write is used for persistence.
-pub const MAX_DATABASE_SIZE: usize = 250 * 1024 * 1024; // 250 MB
+pub const MAX_DATABASE_SIZE: usize = 512 * 1024 * 1024; // 512 MB
 
 // Maximum gRPC decode size for non-streaming messages.
 pub const MAX_GRPC_DECODE_SIZE: usize = 100 * 1024 * 1024; // 100 MB

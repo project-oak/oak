@@ -114,7 +114,7 @@ know:
 - **`num_to_score`**: Set to `i32::MAX` to remove the default 30k scoring cap.
   Do not revert this — the default causes silent truncation of older documents
   from search results.
-- **Database size limit**: `MAX_DATABASE_SIZE` (250 MB) for metadata blobs,
+- **Database size limit**: `MAX_DATABASE_SIZE` (512 MB) for metadata blobs,
   `MAX_GRPC_DECODE_SIZE` (100 MB) for gRPC messages. Streaming RPCs bypass the
   gRPC limit.
 

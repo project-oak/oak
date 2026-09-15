@@ -33,7 +33,7 @@ pub use persistence_worker::run_persistence_service;
 pub struct ApplicationConfig {
     pub database_service_host: SocketAddr,
 
-    /// Maximum database size in bytes. Default: 250 MB.
+    /// Maximum database size in bytes. Default: 512 MB.
     #[serde(default = "default_max_database_size_bytes")]
     pub max_database_size_bytes: usize,
 
