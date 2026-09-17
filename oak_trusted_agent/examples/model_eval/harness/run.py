@@ -92,8 +92,8 @@ def main(argv: list[str] | None = None) -> None:
       report, identity, predicate_path, out_dir / "signed.json"
   )
   if args.upload_to:
-    subdir = (
-        f"{identity.name}/{benchmark.name}".replace(":", "-").replace("_", "-")
+    subdir = f"{identity.name}/{benchmark.name}".replace(":", "-").replace(
+        "_", "-"
     )
     uri = GcsStorage.from_uri(args.upload_to).upload_dir(out_dir, subdir=subdir)
     print(f"uploaded:  {uri}", file=sys.stderr)

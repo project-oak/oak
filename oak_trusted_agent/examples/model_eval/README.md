@@ -13,7 +13,7 @@ refuse to talk to a model whose published evaluation it cannot verify.
 harness/                 runs a benchmark, builds the predicate, calls the signer
 benchmarks/<name>/       one directory per benchmark
 image/                   the container that runs in the TEE
-terraform/               the deployment                              (not yet)
+terraform/               the deployment
 ```
 
 A benchmark is a Python package under `benchmarks/` defining a `Benchmark`
@@ -82,6 +82,37 @@ docker run --rm \
   -e NO_ATTESTATION=true \
   -v /tmp/model_eval:/out \
   us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/model-eval/gemma4-e2b-it-qat:latest
+```
+
+## Deploying to Confidential Space
+
+`terraform/` provisions a batch Confidential Space VM
+(`tee-restart-policy=Never`) and a workload service account granted access to
+the `oak-trusted-agent` GCS bucket (`gs://oak-trusted-agent/model-eval/`), where
+the container uploads `report.jsonl`, `predicate.json`, and `signed.json`.
+
+```shell
+cd oak_trusted_agent/examples/model_eval
+./image/publish_docker.sh
+
+cd terraform
+terraform init
+terraform apply
+```
+
+## Verifying the results
+
+Signed evaluation bundles are published to
+`gs://oak-trusted-agent/model-eval/<model>/<benchmark>/`:
+
+```shell
+gcloud storage cp -r gs://oak-trusted-agent/model-eval/gemma4-e2b-it-qat/hello-world /tmp/eval_out
+bazel run //oak_trusted_agent/eval/verifier:oak_trusted_agent_eval_verifier -- \
+  --statement=/tmp/eval_out/hello-world/signed.json \
+  --subject=/tmp/eval_out/hello-world/report.jsonl \
+  --unchecked-subject=gemma4:e2b-it-qat \
+  --expected-image-prefix=us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/model-eval/gemma4-e2b-it-qat \
+  --expected-predicate-type=https://project-oak.dev/attestation/model-eval/v1
 ```
 
 ## Benchmarks
