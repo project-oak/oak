@@ -115,6 +115,8 @@
                 just
                 ps
                 which
+                nodejs
+                esbuild
               ]
               ++
               # Linux-specific dependencies.
@@ -210,6 +212,8 @@
                 androidSdk
                 bazel-buildtools
                 openssl
+                nodejs
+                esbuild
               ];
             };
             # Shell for building containers system image. This is not included in the
