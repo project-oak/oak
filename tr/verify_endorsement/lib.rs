@@ -296,6 +296,18 @@ fn verify_tlog(
         t_log_reference_values::Strategy::Any(_) => {
             // At least one populated verification must pass.
             let mut errors: Vec<String> = Vec::new();
+            // PES is checked first in case there are several, don't change
+            if let Some(pes) = tlog.pes.as_ref() {
+                match pes::verify_pes_confirmation(
+                    &signed_endorsement.pes_confirmation,
+                    pes.key_set.as_ref().context("missing PES key set")?,
+                    &endorsement.serialized,
+                    Some(trusted_endorser_key),
+                ) {
+                    Ok(()) => return Ok(()),
+                    Err(e) => errors.push(alloc::format!("verifying PES confirmation: {e}")),
+                }
+            }
             if let Some(rekor) = tlog.rekor.as_ref() {
                 let rekor_result = verify_rekor_log_entry(
                     &signed_endorsement.rekor_log_entry,
@@ -321,17 +333,6 @@ fn verify_tlog(
                 ) {
                     Ok(()) => return Ok(()),
                     Err(e) => errors.push(alloc::format!("verifying C2SP tlog proof: {e}")),
-                }
-            }
-            if let Some(pes) = tlog.pes.as_ref() {
-                match pes::verify_pes_confirmation(
-                    &signed_endorsement.pes_confirmation,
-                    pes.key_set.as_ref().context("missing PES key set")?,
-                    &endorsement.serialized,
-                    Some(trusted_endorser_key),
-                ) {
-                    Ok(()) => return Ok(()),
-                    Err(e) => errors.push(alloc::format!("verifying PES confirmation: {e}")),
                 }
             }
             if errors.is_empty() {
@@ -414,7 +415,7 @@ mod tests {
     use c2sp::{Checkpoint, NoteSigningKey, SigningKey};
     use oak_crypto_tink::ml_dsa_44;
     use oak_proto_rust::oak::attestation::v1::{
-        C2sptLogProofReferenceValue, Endorsement, SignedEndorsement,
+        C2sptLogProofReferenceValue, Endorsement, PesReferenceValue, SignedEndorsement,
     };
     use oak_time::Instant;
     use test_util::EndorsementData;
@@ -1061,6 +1062,48 @@ mod tests {
         // Both errors should appear in the message.
         assert!(err.contains("Rekor"), "expected Rekor error in: {err}");
         assert!(err.contains("C2SP"), "expected C2SP error in: {err}");
+    }
+
+    #[test]
+    fn verify_tlog_any_evaluates_pes_first() {
+        // Struct fields are initialized with an offset of -1 (c2sp, pes, rekor)
+        // to show that verification execution order is driven by verify_tlog logic
+        // rather than struct field ordering.
+        let tlog = TLogReferenceValues {
+            strategy: Some(t_log_reference_values::Strategy::Any(())),
+            c2sp: Some(C2sptLogProofReferenceValue { policy: make_log_policy("bad+vkey+here") }),
+            pes: Some(PesReferenceValue {
+                key_set: Some(VerifyingKeySet {
+                    keys: vec![VerifyingKey::default()],
+                    ..Default::default()
+                }),
+            }),
+            rekor: Some(VerifyingKeySet {
+                keys: vec![make_dummy_rekor_key()],
+                ..Default::default()
+            }),
+        };
+        let signed_endorsement = SignedEndorsement {
+            endorsement: Some(Endorsement::default()),
+            c2sp_tlog_proof: b"not a valid proof".to_vec(),
+            pes_confirmation: b"invalid pes confirmation".to_vec(),
+            rekor_log_entry: b"not valid json".to_vec(),
+            ..Default::default()
+        };
+
+        let result = verify_tlog(&tlog, &signed_endorsement, &VerifyingKey::default(), 0);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+
+        let pes_idx = err.find("verifying PES confirmation").expect("expected PES error");
+        let rekor_idx = err.find("Rekor verification failed").expect("expected Rekor error");
+        let c2sp_idx = err.find("verifying C2SP tlog proof").expect("expected C2SP error");
+
+        // The error list accumulates failures in sequential evaluation order.
+        assert!(
+            pes_idx < rekor_idx && rekor_idx < c2sp_idx,
+            "expected evaluation order PES < Rekor < C2SP, but got: {err}"
+        );
     }
 
     #[test]
