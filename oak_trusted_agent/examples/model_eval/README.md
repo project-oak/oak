@@ -12,7 +12,7 @@ refuse to talk to a model whose published evaluation it cannot verify.
 ```text
 harness/                 runs a benchmark, builds the predicate, calls the signer
 benchmarks/<name>/       one directory per benchmark
-image/                   the container that runs in the TEE          (not yet)
+image/                   the container that runs in the TEE
 terraform/               the deployment                              (not yet)
 ```
 
@@ -67,6 +67,22 @@ This writes `report.jsonl`, `predicate.json` and `signed.json` to
 > the verifier rejects it. It is for checking the plumbing, not for producing
 > anything anyone should believe. A real run happens inside Confidential Space,
 > where the launcher issues a token naming the image that asked for it.
+
+## Building the container image
+
+`image/Dockerfile` bakes Ollama, the `gemma4:e2b-it-qat` weights, the harness,
+and the Bazel-built `signer` binary into a single Confidential Space image so
+that the model weights are covered by the attested `image_digest`.
+
+```shell
+cd oak_trusted_agent/examples/model_eval
+PUSH=false ./image/publish_docker.sh
+
+docker run --rm \
+  -e NO_ATTESTATION=true \
+  -v /tmp/model_eval:/out \
+  us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/model-eval/gemma4-e2b-it-qat:latest
+```
 
 ## Benchmarks
 
