@@ -3,11 +3,14 @@ resource "google_compute_instance" "confidential_space_instance" {
   machine_type     = var.machine_type
   zone             = var.zone
   min_cpu_platform = "Intel Sapphire Rapids"
+  tags             = var.tags
 
   # This instance will be terminated and re-created on maintenance events.
   scheduling {
     automatic_restart   = false
     on_host_maintenance = "TERMINATE"
+    provisioning_model  = var.use_spot_vm ? "SPOT" : "STANDARD"
+    preemptible         = var.use_spot_vm
   }
 
   # The boot disk is configured to use the Confidential Space image.
@@ -18,6 +21,7 @@ resource "google_compute_instance" "confidential_space_instance" {
         ? "projects/confidential-space-images/global/images/family/confidential-space-debug"
         : "projects/confidential-space-images/global/images/family/confidential-space"
       )
+      size = var.boot_disk_size
     }
   }
 
@@ -33,6 +37,7 @@ resource "google_compute_instance" "confidential_space_instance" {
   # The service account needs access to cloud-platform scopes to be able
   # to pull the container image and write logs.
   service_account {
+    email  = var.service_account_email
     scopes = ["cloud-platform"]
   }
 
@@ -45,11 +50,23 @@ resource "google_compute_instance" "confidential_space_instance" {
     }
   }
 
+  dynamic "guest_accelerator" {
+    for_each = var.accelerator_type != null ? [1] : []
+    content {
+      type  = var.accelerator_type
+      count = var.accelerator_count
+    }
+  }
+
   # Metadata required by Confidential Space to launch the container.
-  metadata = merge({
-    tee-image-reference        = var.image_digest
-    tee-container-log-redirect = "true"
-  }, var.metadata)
+  metadata = merge(
+    {
+      tee-image-reference        = var.image_digest
+      tee-container-log-redirect = "true"
+    },
+    var.accelerator_type != null ? { tee-install-gpu-driver = "true" } : {},
+    var.metadata,
+  )
 
   # Allow Terraform to delete the instance.
   allow_stopping_for_update = true

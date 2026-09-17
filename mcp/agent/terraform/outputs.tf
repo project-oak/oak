@@ -1,19 +1,19 @@
 output "instance_name" {
   description = "The name of the private agent VM."
-  value       = google_compute_instance.private_agent.name
+  value       = module.confidential_space_instance.instance_name
 }
 
 output "internal_ip" {
   description = "The internal IP address of the private agent VM."
-  value       = google_compute_instance.private_agent.network_interface[0].network_ip
+  value       = module.confidential_space_instance.instance_network_ip
 }
 
 output "external_ip" {
   description = "The external IP address of the private agent VM."
-  value       = google_compute_instance.private_agent.network_interface[0].access_config[0].nat_ip
+  value       = module.confidential_space_instance.instance_external_ip
 }
 
 output "self_link" {
   description = "The self-link of the private agent VM."
-  value       = google_compute_instance.private_agent.self_link
+  value       = module.confidential_space_instance.instance_self_link
 }

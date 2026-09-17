@@ -21,8 +21,44 @@ variable "machine_type" {
 
 variable "use_debug_image" {
   type        = bool
-  description = "Whether or not to use the Confidential Space image"
+  description = "Whether or not to use the Confidential Space debug image."
   default     = false
+}
+
+variable "boot_disk_size" {
+  type        = number
+  description = "Optional boot disk size in GB."
+  default     = null
+}
+
+variable "use_spot_vm" {
+  type        = bool
+  description = "Whether to provision the instance as a Spot preemptible VM."
+  default     = false
+}
+
+variable "accelerator_type" {
+  type        = string
+  description = "Optional guest accelerator type, e.g. 'nvidia-h100-80gb'."
+  default     = null
+}
+
+variable "accelerator_count" {
+  type        = number
+  description = "Number of guest accelerators to attach when accelerator_type is set."
+  default     = 1
+}
+
+variable "service_account_email" {
+  type        = string
+  description = "Optional service account email to attach to the instance."
+  default     = null
+}
+
+variable "tags" {
+  type        = list(string)
+  description = "Network tags to apply to the instance."
+  default     = []
 }
 
 variable "image_digest" {
