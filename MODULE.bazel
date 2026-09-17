@@ -408,6 +408,20 @@ http_archive(
 )
 
 http_archive(
+    name = "wasi_snapshot_preview2",
+    build_file_content = """
+filegroup(
+    name = "wit_files",
+    srcs = glob(["**/*.wit"]),
+    visibility = ["//visibility:public"],
+)
+""",
+    sha256 = "4fe75635c2b9b63b6af541f80ebbdbca4c84ad2879553685d1df74a44f82e605",
+    strip_prefix = "WASI-0.2.0/preview2",
+    urls = ["https://github.com/WebAssembly/WASI/archive/refs/tags/v0.2.0.tar.gz"],
+)
+
+http_archive(
     name = "e2fsprogs",
     build_file = "//:third_party/BUILD.e2fsprogs",
     sha256 = "144af53f2bbd921cef6f8bea88bb9faddca865da3fbc657cc9b4d2001097d5db",

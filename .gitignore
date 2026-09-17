@@ -32,8 +32,12 @@ cargo-timing*.html
 **/__pycache__/
 **/*.pyc
 
-# Node modules.
+# Node modules and build outputs
 **/node_modules/
+**/dist/
+
+# WebAssembly binaries
+*.wasm
 
 # Generated vscode files.
 **/.vscode/**
@@ -127,6 +131,7 @@ toolchain/toolchain.tar.bz2
 
 # Python environment
 **/.venv/
+**/venv/
 
 # Nix outputs
 /result
@@ -158,4 +163,8 @@ terraform.tfstate.backup
 
 # Local sqlite database files.
 *.db
+
+# macOS artifacts
+.DS_Store
+**/.DS_Store
 
