@@ -6,11 +6,11 @@
          "@oak_std_crates_index__pprof-0.15.0//:build_script_build",
 -        "@oak_std_crates_index__prost-0.12.6//:prost",
 +        "@oak_std_crates_index__prost-0.14.3//:prost",
-         "@oak_std_crates_index__smallvec-1.15.2//:smallvec",
-         "@oak_std_crates_index__spin-0.10.0//:spin",
+         "@oak_std_crates_index__smallvec-1.16.1//:smallvec",
+         "@oak_std_crates_index__spin-0.10.1//:spin",
          "@oak_std_crates_index__symbolic-demangle-12.18.3//:symbolic_demangle",
 @@ -46,7 +46,7 @@
-         "@oak_std_crates_index__thiserror-2.0.18//:thiserror",
+         "@oak_std_crates_index__thiserror-2.0.20//:thiserror",
      ],
      proc_macro_deps = [
 -        "@oak_std_crates_index__prost-derive-0.12.6//:prost_derive",
@@ -18,7 +18,7 @@
      ],
      compile_data = glob(
          allow_empty = True,
-@@ -145,7 +145,7 @@
+@@ -147,7 +147,7 @@
          ],
      ),
      deps = [

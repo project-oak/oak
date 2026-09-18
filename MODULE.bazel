@@ -1549,7 +1549,7 @@ crate.spec(
     ],
     package = "rustls",
     repositories = ALL_STD,
-    version = "0.23.36",
+    version = "0.23.45",
 )
 crate.spec(
     default_features = True,
