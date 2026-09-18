@@ -557,6 +557,84 @@ TEST(OakSessionTlsTest, CreateAndUseMtlsSession) {
                               "hello from server");
 }
 
+TEST(OakSessionTlsTest, ClientAuthenticatedServerDoesNotIssueSessionTickets) {
+  auto server_identity_provider =
+      util::CreateFromFiles(kTestServerKeyPath, kTestServerCertPath);
+  ASSERT_THAT(server_identity_provider, IsOk());
+  auto server_identity = (*server_identity_provider)->GetIdentity();
+  ASSERT_THAT(server_identity, IsOk());
+
+  auto client_trust_anchor_provider =
+      util::CreateTrustAnchorFromFile(kTestCaCertPath);
+  ASSERT_THAT(client_trust_anchor_provider, IsOk());
+  auto client_trust_anchors =
+      (*client_trust_anchor_provider)->GetTrustAnchors();
+  ASSERT_THAT(client_trust_anchors, IsOk());
+
+  bssl::UniquePtr<SSL_CTX> server_ssl_ctx(SSL_CTX_new(TLS_server_method()));
+  ASSERT_NE(server_ssl_ctx, nullptr);
+  ASSERT_EQ(SSL_CTX_set_min_proto_version(server_ssl_ctx.get(), TLS1_3_VERSION),
+            1);
+  SSL_CTX_set_verify(server_ssl_ctx.get(),
+                     SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                     nullptr);
+
+  int new_session_ticket_count = 0;
+  SSL_CTX_set_msg_callback(
+      server_ssl_ctx.get(), [](int is_write, int, int content_type,
+                               const void* buf, size_t len, SSL*, void* arg) {
+        if (is_write == 1 && content_type == SSL3_RT_HANDSHAKE && len > 0 &&
+            static_cast<const uint8_t*>(buf)[0] == SSL3_MT_NEW_SESSION_TICKET) {
+          ++*static_cast<int*>(arg);
+        }
+      });
+  SSL_CTX_set_msg_callback_arg(server_ssl_ctx.get(), &new_session_ticket_count);
+
+  auto client_identity_provider =
+      util::CreateFromFiles(kTestClientKeyPath, kTestClientCertPath);
+  ASSERT_THAT(client_identity_provider, IsOk());
+  auto client_identity = (*client_identity_provider)->GetIdentity();
+  ASSERT_THAT(client_identity, IsOk());
+
+  auto server_trust_anchor_provider =
+      util::CreateTrustAnchorFromFile(kTestCaCertPath);
+  ASSERT_THAT(server_trust_anchor_provider, IsOk());
+  auto server_trust_anchors =
+      (*server_trust_anchor_provider)->GetTrustAnchors();
+  ASSERT_THAT(server_trust_anchors, IsOk());
+
+  bssl::UniquePtr<SSL_CTX> client_ssl_ctx(SSL_CTX_new(TLS_client_method()));
+  ASSERT_NE(client_ssl_ctx, nullptr);
+  ASSERT_EQ(SSL_CTX_set_min_proto_version(client_ssl_ctx.get(), TLS1_3_VERSION),
+            1);
+  SSL_CTX_set_verify(client_ssl_ctx.get(), SSL_VERIFY_PEER, nullptr);
+  SSL_CTX_set_session_cache_mode(client_ssl_ctx.get(), SSL_SESS_CACHE_CLIENT);
+
+  auto server_initializer = OakSessionTlsInitializer::CreateServer(
+      server_ssl_ctx.get(), &*server_identity, *client_trust_anchors);
+  ASSERT_THAT(server_initializer, IsOk());
+  auto client_initializer = OakSessionTlsInitializer::CreateClient(
+      client_ssl_ctx.get(), kDefaultServerName, &*client_identity,
+      *server_trust_anchors);
+  ASSERT_THAT(client_initializer, IsOk());
+
+  HandshakeToClientReady(**server_initializer, **client_initializer);
+  auto client_result = (*client_initializer)->GetOpenSession();
+  ASSERT_THAT(client_result, IsOk());
+  CompleteServerHandshakeWithData(**server_initializer, *client_result->session,
+                                  "hello server");
+
+  auto server_result = (*server_initializer)->GetOpenSession();
+  ASSERT_THAT(server_result, IsOk());
+  auto encrypted_response = server_result->session->Encrypt("hello client");
+  ASSERT_THAT(encrypted_response, IsOk());
+
+  // BoringSSL sends two TLS 1.3 NewSessionTicket messages by default.
+  // Client-authenticated sessions must not send one because it could bypass a
+  // refreshed trust-anchor or custom-verifier policy.
+  EXPECT_EQ(new_session_ticket_count, 0);
+}
+
 TEST(OakSessionTlsTest, ClientSetsTlsIdentServerDoesntRequest) {
   // Do not enable a trust anchor so the server does not request a client
   // certificate.
