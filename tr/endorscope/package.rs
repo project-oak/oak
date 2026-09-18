@@ -123,8 +123,10 @@ impl Package {
     ) -> Result<DefaultStatement> {
         let signed_endorsement = self.get_signed_endorsement()?;
         let ref_value = self.get_reference_value(claim_types);
-        verify_endorsement(now_utc_millis, &signed_endorsement, &ref_value)
-            .context("verifying endorsement")
+        let (statement, _tlog_verification) =
+            verify_endorsement(now_utc_millis, &signed_endorsement, &ref_value)
+                .context("verifying endorsement")?;
+        Ok(statement)
     }
 }
 

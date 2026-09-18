@@ -24,7 +24,7 @@ use oak_proto_rust::oak::{
         CbLayer1TransparentReferenceValues, CbLayer2TransparentEndorsement,
         CbLayer2TransparentEvent, CbLayer2TransparentReferenceValues, EventAttestationResults,
         KernelEndorsement, KernelLayerReferenceValues, MpmAttachment, SignedEndorsement,
-        Stage0TransparentMeasurements,
+        Stage0TransparentMeasurements, TLogVerificationResults,
     },
 };
 use oak_time::Instant;
@@ -74,7 +74,7 @@ impl Policy<[u8]> for TransparentStage0Policy {
         let endorsement: Option<KernelEndorsement> =
             endorsement.try_into().map_err(anyhow::Error::msg)?;
 
-        let expected_values = acquire_kernel_event_expected_values(
+        let (expected_values, tlog_records) = acquire_kernel_event_expected_values(
             verification_time.into_unix_millis(),
             endorsement.as_ref(),
             &self.reference_values,
@@ -98,7 +98,10 @@ impl Policy<[u8]> for TransparentStage0Policy {
             expected_values.acpi.as_ref().and_then(expected_digests_validity).cloned(),
         ]);
 
-        let mut result = EventAttestationResults::default();
+        let mut result = EventAttestationResults {
+            tlog_verifications: tlog_records.into_iter().collect(),
+            ..Default::default()
+        };
         if let Some(v) = validity {
             set_validity(&mut result, v);
         }
@@ -148,7 +151,7 @@ impl Policy<[u8]> for TransparentLayer1Policy {
             sha2_256: event.runtime_agent_binary_measurement.clone(),
             ..Default::default()
         };
-        let runtime_expected = acquire_expected_digests(
+        let (runtime_expected, runtime_record) = acquire_expected_digests(
             verification_time.into_unix_millis(),
             endorsement.as_ref().and_then(|e| e.runtime_agent_binary.as_ref()),
             runtime_agent_binary_ref_value,
@@ -163,7 +166,7 @@ impl Policy<[u8]> for TransparentLayer1Policy {
             self.reference_values.userspace.as_ref().context("no userspace reference value")?;
         let userspace_measurement =
             RawDigest { sha2_256: event.userspace_measurement.clone(), ..Default::default() };
-        let userspace_expected = acquire_expected_digests(
+        let (userspace_expected, userspace_record) = acquire_expected_digests(
             verification_time.into_unix_millis(),
             endorsement.as_ref().and_then(|e| e.userspace.as_ref()),
             userspace_ref_value,
@@ -177,7 +180,10 @@ impl Policy<[u8]> for TransparentLayer1Policy {
         // the reference values and the validity of the endorsements.
         let validity = intersect_all_validity(endorsement_validities);
 
-        let mut result = EventAttestationResults::default();
+        let mut result = EventAttestationResults {
+            tlog_verifications: [runtime_record, userspace_record].into_iter().flatten().collect(),
+            ..Default::default()
+        };
         if let Some(v) = validity {
             set_validity(&mut result, v);
         }
@@ -260,6 +266,8 @@ impl Policy<[u8]> for TransparentLayer2Policy {
 
         let mut package_validities: alloc::vec::Vec<Option<Validity>> =
             alloc::vec::Vec::with_capacity(event.packages.len());
+        let mut package_verifications: alloc::vec::Vec<TLogVerificationResults> =
+            alloc::vec::Vec::new();
 
         for (i, package) in event.packages.iter().enumerate() {
             // The ordering of the endorsements must match the order of the packages in the
@@ -282,7 +290,7 @@ impl Policy<[u8]> for TransparentLayer2Policy {
             let mut verified = false;
             let mut matched_validity: Option<Validity> = None;
             for ref_val in &ref_values {
-                if let Ok((expected, validity)) = acquire_mpm_expected_values(
+                if let Ok((expected, validity, tlog_record)) = acquire_mpm_expected_values(
                     verification_time.into_unix_millis(),
                     Some(matching_endorsement),
                     ref_val,
@@ -290,6 +298,7 @@ impl Policy<[u8]> for TransparentLayer2Policy {
                 {
                     verified = true;
                     matched_validity = validity;
+                    package_verifications.extend(tlog_record);
                     break;
                 }
             }
@@ -299,7 +308,10 @@ impl Policy<[u8]> for TransparentLayer2Policy {
 
         let validity = intersect_all_validity(package_validities);
 
-        let mut result = EventAttestationResults::default();
+        let mut result = EventAttestationResults {
+            tlog_verifications: package_verifications,
+            ..Default::default()
+        };
         if let Some(v) = validity {
             set_validity(&mut result, v);
         }

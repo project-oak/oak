@@ -126,7 +126,7 @@ pub(crate) fn verify_endorsement_wrapper(
         Some(binary_reference_value::Type::Endorsement(val)) => {
             let signed_endorsement = signed_endorsement
                 .ok_or(ConfidentialSpaceVerificationError::MissingWorkloadEndorsementError)?;
-            let statement =
+            let (statement, _tlog_verification) =
                 verify_endorsement(verification_time.into_unix_millis(), signed_endorsement, val)
                     .map_err(|err| EVError(format!("{err:#}")))?;
             statement

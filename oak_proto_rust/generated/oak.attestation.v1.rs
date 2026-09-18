@@ -2093,6 +2093,80 @@ pub struct EventAttestationResults {
     /// reference values were Skip or raw digests).
     #[prost(message, optional, tag = "2")]
     pub valid: ::core::option::Option<super::super::Validity>,
+    /// T-log verification results for the endorsements verified by this policy.
+    /// This field is only populated by policies that collect these results.
+    #[prost(message, repeated, tag = "3")]
+    pub tlog_verifications: ::prost::alloc::vec::Vec<TLogVerificationResults>,
+}
+/// Per-log verification results for a single endorsement.
+///
+/// These results are for observability only and are not authoritative; they
+/// must not be used for security-critical decisions.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct TLogVerificationResults {
+    #[prost(enumeration = "t_log_verification_results::Status", tag = "1")]
+    pub rekor: i32,
+    #[prost(enumeration = "t_log_verification_results::Status", tag = "2")]
+    pub c2sp: i32,
+    #[prost(enumeration = "t_log_verification_results::Status", tag = "3")]
+    pub pes: i32,
+    /// Name of the endorsed subject, or its digest if unnamed.
+    #[prost(string, tag = "4")]
+    pub subject: ::prost::alloc::string::String,
+    /// Error messages from any failed verifications, for logging.
+    #[prost(string, tag = "5")]
+    pub detail: ::prost::alloc::string::String,
+}
+/// Nested message and enum types in `TLogVerificationResults`.
+pub mod t_log_verification_results {
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum Status {
+        Unspecified = 0,
+        /// Verification was not configured in the reference values.
+        NotConfigured = 1,
+        /// Verification was configured, but the endorsement did not contain the
+        /// corresponding proof or log entry.
+        Absent = 2,
+        Passed = 3,
+        Failed = 4,
+    }
+    impl Status {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                Self::Unspecified => "STATUS_UNSPECIFIED",
+                Self::NotConfigured => "STATUS_NOT_CONFIGURED",
+                Self::Absent => "STATUS_ABSENT",
+                Self::Passed => "STATUS_PASSED",
+                Self::Failed => "STATUS_FAILED",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "STATUS_UNSPECIFIED" => Some(Self::Unspecified),
+                "STATUS_NOT_CONFIGURED" => Some(Self::NotConfigured),
+                "STATUS_ABSENT" => Some(Self::Absent),
+                "STATUS_PASSED" => Some(Self::Passed),
+                "STATUS_FAILED" => Some(Self::Failed),
+                _ => None,
+            }
+        }
+    }
 }
 /// Details about the endorsement statement which can be passed across FFI
 /// boundaries.

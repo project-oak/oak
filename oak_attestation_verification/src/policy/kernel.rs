@@ -133,7 +133,7 @@ impl Policy<[u8]> for KernelPolicy {
         let endorsement: Option<KernelEndorsement> =
             endorsement.try_into().map_err(anyhow::Error::msg)?;
 
-        let expected_values = acquire_kernel_event_expected_values(
+        let (expected_values, _tlog_verifications) = acquire_kernel_event_expected_values(
             verification_time.into_unix_millis(),
             endorsement.as_ref(),
             &self.reference_values,

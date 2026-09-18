@@ -321,7 +321,7 @@ fn verify_print_package(
     )
     .context("verifying endorsement");
     match result {
-        Ok(statement) => {
+        Ok((statement, _tlog_verification)) => {
             println!("    ✅  {endorsement_hash}");
             let details = statement.get_details().expect("failed to get endorsement details");
             match &details.subject_digest {

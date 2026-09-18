@@ -88,6 +88,41 @@ message EventAttestationResults {
   // may be absent when no endorsement-derived validity applies (e.g. all
   // reference values were Skip or raw digests).
   oak.Validity valid = 2;
+
+  // T-log verification results for the endorsements verified by this policy.
+  // This field is only populated by policies that collect these results.
+  repeated TLogVerificationResults tlog_verifications = 3;
+}
+
+// Per-log verification results for a single endorsement.
+//
+// These results are for observability only and are not authoritative; they
+// must not be used for security-critical decisions.
+message TLogVerificationResults {
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+
+    // Verification was not configured in the reference values.
+    STATUS_NOT_CONFIGURED = 1;
+
+    // Verification was configured, but the endorsement did not contain the
+    // corresponding proof or log entry.
+    STATUS_ABSENT = 2;
+
+    STATUS_PASSED = 3;
+
+    STATUS_FAILED = 4;
+  }
+
+  Status rekor = 1;
+  Status c2sp = 2;
+  Status pes = 3;
+
+  // Name of the endorsed subject, or its digest if unnamed.
+  string subject = 4;
+
+  // Error messages from any failed verifications, for logging.
+  string detail = 5;
 }
 
 // Details about the endorsement statement which can be passed across FFI

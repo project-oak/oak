@@ -43,11 +43,11 @@ use oak_proto_rust::oak::{
         PesEndorsementReferenceValue, RawDigests, ReferenceValues, RootLayerEndorsements,
         RootLayerExpectedValues, RootLayerReferenceValues, Signature, SignedEndorsement,
         SystemEndorsement, SystemLayerEndorsements, SystemLayerExpectedValues,
-        SystemLayerReferenceValues, TcbVersionExpectedValue, TcbVersionReferenceValue,
-        TdxTcbSvnExpectedValue, TdxTcbSvnReferenceValue, TextExpectedValue, TextReferenceValue,
-        TransparentReleaseEndorsement, VerificationSkipped, binary_reference_value,
-        endorsement::Format, endorsements, expected_digests, expected_values,
-        kernel_binary_reference_value, mpm_reference_value, reference_values,
+        SystemLayerReferenceValues, TLogVerificationResults, TcbVersionExpectedValue,
+        TcbVersionReferenceValue, TdxTcbSvnExpectedValue, TdxTcbSvnReferenceValue,
+        TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
+        binary_reference_value, endorsement::Format, endorsements, expected_digests,
+        expected_values, kernel_binary_reference_value, mpm_reference_value, reference_values,
         tcb_version_expected_value, tcb_version_reference_value, tdx_tcb_svn_expected_value,
         tdx_tcb_svn_reference_value, text_expected_value, text_reference_value,
     },
@@ -380,60 +380,59 @@ pub(crate) fn acquire_kernel_event_expected_values(
     now_utc_millis: i64,
     endorsement: Option<&KernelEndorsement>,
     reference_values: &KernelLayerReferenceValues,
-) -> anyhow::Result<KernelLayerExpectedValues> {
-    Ok(KernelLayerExpectedValues {
-        kernel: Some(
-            acquire_kernel_expected_values(
-                now_utc_millis,
-                endorsement.and_then(|value| value.kernel.as_ref()),
-                reference_values.kernel.as_ref().context("no kernel reference value")?,
-            )
-            .context("getting kernel values")?,
-        ),
+) -> anyhow::Result<(KernelLayerExpectedValues, Vec<TLogVerificationResults>)> {
+    let (kernel, kernel_record) = acquire_kernel_expected_values(
+        now_utc_millis,
+        endorsement.and_then(|value| value.kernel.as_ref()),
+        reference_values.kernel.as_ref().context("no kernel reference value")?,
+    )
+    .context("getting kernel values")?;
 
-        // TODO: b/331252282 - Remove temporary workaround for cmd line.
-        kernel_cmd_line_text: Some(
-            acquire_text_expected_values(
-                now_utc_millis,
-                endorsement.and_then(|value| value.kernel_cmd_line.as_ref()),
-                reference_values
-                    .kernel_cmd_line_text
-                    .as_ref()
-                    .context("no kernel command line text reference values")?,
-            )
-            .context("getting kernel command line values")?,
-        ),
+    // TODO: b/331252282 - Remove temporary workaround for cmd line.
+    let (kernel_cmd_line_text, cmd_line_record) = acquire_text_expected_values(
+        now_utc_millis,
+        endorsement.and_then(|value| value.kernel_cmd_line.as_ref()),
+        reference_values
+            .kernel_cmd_line_text
+            .as_ref()
+            .context("no kernel command line text reference values")?,
+    )
+    .context("getting kernel command line values")?;
 
-        init_ram_fs: Some(
-            acquire_expected_digests(
-                now_utc_millis,
-                endorsement.and_then(|value| value.init_ram_fs.as_ref()),
-                reference_values
-                    .init_ram_fs
-                    .as_ref()
-                    .context("no initial RAM disk reference value")?,
-            )
-            .context("getting initramfs values")?,
-        ),
+    let (init_ram_fs, init_ram_fs_record) = acquire_expected_digests(
+        now_utc_millis,
+        endorsement.and_then(|value| value.init_ram_fs.as_ref()),
+        reference_values.init_ram_fs.as_ref().context("no initial RAM disk reference value")?,
+    )
+    .context("getting initramfs values")?;
 
-        memory_map: Some(
-            acquire_expected_digests(
-                now_utc_millis,
-                endorsement.and_then(|value| value.memory_map.as_ref()),
-                reference_values.memory_map.as_ref().context("no memory map reference value")?,
-            )
-            .context("getting memory map values")?,
-        ),
+    let (memory_map, memory_map_record) = acquire_expected_digests(
+        now_utc_millis,
+        endorsement.and_then(|value| value.memory_map.as_ref()),
+        reference_values.memory_map.as_ref().context("no memory map reference value")?,
+    )
+    .context("getting memory map values")?;
 
-        acpi: Some(
-            acquire_expected_digests(
-                now_utc_millis,
-                endorsement.and_then(|value| value.acpi.as_ref()),
-                reference_values.acpi.as_ref().context("no ACPI reference value")?,
-            )
-            .context("getting acpi values")?,
-        ),
-    })
+    let (acpi, acpi_record) = acquire_expected_digests(
+        now_utc_millis,
+        endorsement.and_then(|value| value.acpi.as_ref()),
+        reference_values.acpi.as_ref().context("no ACPI reference value")?,
+    )
+    .context("getting acpi values")?;
+
+    Ok((
+        KernelLayerExpectedValues {
+            kernel: Some(kernel),
+            kernel_cmd_line_text: Some(kernel_cmd_line_text),
+            init_ram_fs: Some(init_ram_fs),
+            memory_map: Some(memory_map),
+            acpi: Some(acpi),
+        },
+        [kernel_record, cmd_line_record, init_ram_fs_record, memory_map_record, acpi_record]
+            .into_iter()
+            .flatten()
+            .collect(),
+    ))
 }
 
 pub(crate) fn acquire_event_expected_values(
@@ -469,15 +468,13 @@ pub(crate) fn acquire_system_event_expected_values(
     endorsement: Option<&SystemEndorsement>,
     reference_values: &SystemLayerReferenceValues,
 ) -> anyhow::Result<SystemLayerExpectedValues> {
-    let system_image = Some(
-        acquire_expected_digests(
-            now_utc_millis,
-            endorsement.and_then(|value| value.system_image.as_ref()),
-            reference_values.system_image.as_ref().context("system image reference value")?,
-        )
-        .context("getting system image values")?,
-    );
-    Ok(SystemLayerExpectedValues { system_image })
+    let (system_image, _tlog_verification) = acquire_expected_digests(
+        now_utc_millis,
+        endorsement.and_then(|value| value.system_image.as_ref()),
+        reference_values.system_image.as_ref().context("system image reference value")?,
+    )
+    .context("getting system image values")?;
+    Ok(SystemLayerExpectedValues { system_image: Some(system_image) })
 }
 
 pub(crate) fn get_application_layer_expected_values(
@@ -509,26 +506,19 @@ pub(crate) fn acquire_application_event_expected_values(
     endorsement: Option<&ApplicationEndorsement>,
     reference_values: &ApplicationLayerReferenceValues,
 ) -> anyhow::Result<ApplicationLayerExpectedValues> {
-    let binary = Some(
-        acquire_expected_digests(
-            now_utc_millis,
-            endorsement.and_then(|value| value.binary.as_ref()),
-            reference_values.binary.as_ref().context("application binary reference value")?,
-        )
-        .context("getting application binary values")?,
-    );
-    let configuration = Some(
-        acquire_expected_digests(
-            now_utc_millis,
-            endorsement.and_then(|value| value.configuration.as_ref()),
-            reference_values
-                .configuration
-                .as_ref()
-                .context("application config reference value")?,
-        )
-        .context("getting application config values")?,
-    );
-    Ok(ApplicationLayerExpectedValues { binary, configuration })
+    let (binary, _tlog_verification) = acquire_expected_digests(
+        now_utc_millis,
+        endorsement.and_then(|value| value.binary.as_ref()),
+        reference_values.binary.as_ref().context("application binary reference value")?,
+    )
+    .context("getting application binary values")?;
+    let (configuration, _tlog_verification) = acquire_expected_digests(
+        now_utc_millis,
+        endorsement.and_then(|value| value.configuration.as_ref()),
+        reference_values.configuration.as_ref().context("application config reference value")?,
+    )
+    .context("getting application config values")?;
+    Ok(ApplicationLayerExpectedValues { binary: Some(binary), configuration: Some(configuration) })
 }
 
 pub(crate) fn get_container_layer_expected_values(
@@ -560,23 +550,19 @@ pub(crate) fn acquire_container_event_expected_values(
     endorsement: Option<&ContainerEndorsement>,
     reference_values: &ContainerLayerReferenceValues,
 ) -> anyhow::Result<ContainerLayerExpectedValues> {
-    let bundle = Some(
-        acquire_expected_digests(
-            now_utc_millis,
-            endorsement.and_then(|value| value.binary.as_ref()),
-            reference_values.binary.as_ref().context("container binary reference value")?,
-        )
-        .context("getting container binary values")?,
-    );
-    let config = Some(
-        acquire_expected_digests(
-            now_utc_millis,
-            endorsement.and_then(|value| value.configuration.as_ref()),
-            reference_values.configuration.as_ref().context("container config reference value")?,
-        )
-        .context("getting container config values")?,
-    );
-    Ok(ContainerLayerExpectedValues { bundle, config })
+    let (bundle, _tlog_verification) = acquire_expected_digests(
+        now_utc_millis,
+        endorsement.and_then(|value| value.binary.as_ref()),
+        reference_values.binary.as_ref().context("container binary reference value")?,
+    )
+    .context("getting container binary values")?;
+    let (config, _tlog_verification) = acquire_expected_digests(
+        now_utc_millis,
+        endorsement.and_then(|value| value.configuration.as_ref()),
+        reference_values.configuration.as_ref().context("container config reference value")?,
+    )
+    .context("getting container config values")?;
+    Ok(ContainerLayerExpectedValues { bundle: Some(bundle), config: Some(config) })
 }
 
 // Generate the expected measurement digest values for the provided endorsement
@@ -620,31 +606,37 @@ pub(crate) fn get_expected_measurement_digest(
 }
 
 // Generic helper to extract digest values for the provided endorsement and
-// binary reference value. The resulting values can be cached by the client to
+// binary reference value. The resulting digests can be cached by the client to
 // avoid re-computation later.
 pub(crate) fn acquire_expected_digests(
     now_utc_millis: i64,
     signed_endorsement: Option<&SignedEndorsement>,
     reference_value: &BinaryReferenceValue,
-) -> anyhow::Result<ExpectedDigests> {
+) -> anyhow::Result<(ExpectedDigests, Option<TLogVerificationResults>)> {
     match reference_value.r#type.as_ref() {
-        Some(binary_reference_value::Type::Skip(_)) => Ok(ExpectedDigests {
-            r#type: Some(expected_digests::Type::Skipped(VerificationSkipped {})),
-        }),
+        Some(binary_reference_value::Type::Skip(_)) => Ok((
+            ExpectedDigests {
+                r#type: Some(expected_digests::Type::Skipped(VerificationSkipped {})),
+            },
+            None,
+        )),
         Some(binary_reference_value::Type::Endorsement(ref_value)) => {
-            let statement = verify_endorsement(
+            let (statement, tlog_verification) = verify_endorsement(
                 now_utc_millis,
                 signed_endorsement.context("endorsement missing")?,
                 ref_value,
             )
             .context("verifying generic endorsement")?;
-            Ok(to_expected_digests(
-                &[hex_to_raw_digest(&get_hex_digest_from_statement(&statement)?)?],
-                statement.predicate.validity.as_ref(),
+            Ok((
+                to_expected_digests(
+                    &[hex_to_raw_digest(&get_hex_digest_from_statement(&statement)?)?],
+                    statement.predicate.validity.as_ref(),
+                ),
+                tlog_verification,
             ))
         }
         Some(binary_reference_value::Type::Digests(expected_digests)) => {
-            Ok(to_expected_digests(&expected_digests.digests, None))
+            Ok((to_expected_digests(&expected_digests.digests, None), None))
         }
         Some(binary_reference_value::Type::PesEndorsement(ref_value)) => {
             let signed_endorsement = signed_endorsement.context("endorsement missing")?;
@@ -659,9 +651,12 @@ pub(crate) fn acquire_expected_digests(
                 ref_value,
             )
             .context("verifying generic PES endorsement")?;
-            Ok(to_expected_digests(
-                &[hex_to_raw_digest(&get_hex_digest_from_statement(&statement)?)?],
-                statement.predicate.validity.as_ref(),
+            Ok((
+                to_expected_digests(
+                    &[hex_to_raw_digest(&get_hex_digest_from_statement(&statement)?)?],
+                    statement.predicate.validity.as_ref(),
+                ),
+                None,
             ))
         }
         None => Err(anyhow::anyhow!("empty binary reference value")),
@@ -697,9 +692,10 @@ fn acquire_verified_stage0_attachment(
     now_utc_millis: i64,
     signed_endorsement: &SignedEndorsement,
     ref_value: &EndorsementReferenceValue,
-) -> anyhow::Result<(FirmwareAttachment, DefaultStatement)> {
-    let statement = verify_endorsement(now_utc_millis, signed_endorsement, ref_value)
-        .context("verifying firmware endorsement")?;
+) -> anyhow::Result<(FirmwareAttachment, DefaultStatement, Option<TLogVerificationResults>)> {
+    let (statement, tlog_verification) =
+        verify_endorsement(now_utc_millis, signed_endorsement, ref_value)
+            .context("verifying firmware endorsement")?;
     if !is_firmware_type(&statement) {
         anyhow::bail!("expected endorsement for firmware-type binary");
     }
@@ -711,7 +707,7 @@ fn acquire_verified_stage0_attachment(
     statement.validate_subject(&endorsement.subject)?;
     let decoded = FirmwareAttachment::decode(&*endorsement.subject)
         .map_err(|_| anyhow::anyhow!("couldn't parse firmware attachment"))?;
-    Ok((decoded, statement))
+    Ok((decoded, statement, tlog_verification))
 }
 
 fn acquire_verified_pes_stage0_attachment(
@@ -785,16 +781,19 @@ pub(crate) fn acquire_stage0_expected_values(
     now_utc_millis: i64,
     endorsement: Option<&FirmwareEndorsement>,
     reference_value: &BinaryReferenceValue,
-) -> anyhow::Result<ExpectedDigests> {
+) -> anyhow::Result<(ExpectedDigests, Option<TLogVerificationResults>)> {
     match reference_value.r#type.as_ref() {
-        Some(binary_reference_value::Type::Skip(_)) => Ok(ExpectedDigests {
-            r#type: Some(expected_digests::Type::Skipped(VerificationSkipped {})),
-        }),
+        Some(binary_reference_value::Type::Skip(_)) => Ok((
+            ExpectedDigests {
+                r#type: Some(expected_digests::Type::Skipped(VerificationSkipped {})),
+            },
+            None,
+        )),
         Some(binary_reference_value::Type::Endorsement(ref_value)) => {
             let signed_endorsement = endorsement
                 .and_then(|value| value.firmware.as_ref())
                 .context("missing firmware endorsement")?;
-            let (firmware_attachment, statement) =
+            let (firmware_attachment, statement, tlog_verification) =
                 acquire_verified_stage0_attachment(now_utc_millis, signed_endorsement, ref_value)
                     .context("getting verified stage0 attachment")?;
 
@@ -809,10 +808,13 @@ pub(crate) fn acquire_stage0_expected_values(
                     .context("converting TDX hex to raw digest in firmware attachment")?;
                 raw_digests.push(raw);
             }
-            Ok(to_expected_digests(&raw_digests, statement.predicate.validity.as_ref()))
+            Ok((
+                to_expected_digests(&raw_digests, statement.predicate.validity.as_ref()),
+                tlog_verification,
+            ))
         }
         Some(binary_reference_value::Type::Digests(expected_digests)) => {
-            Ok(to_expected_digests(expected_digests.digests.as_slice(), None))
+            Ok((to_expected_digests(expected_digests.digests.as_slice(), None), None))
         }
         Some(binary_reference_value::Type::PesEndorsement(ref_value)) => {
             let signed_endorsement = endorsement
@@ -836,7 +838,7 @@ pub(crate) fn acquire_stage0_expected_values(
                     .context("converting TDX hex to raw digest in firmware attachment")?;
                 raw_digests.push(raw);
             }
-            Ok(to_expected_digests(&raw_digests, statement.predicate.validity.as_ref()))
+            Ok((to_expected_digests(&raw_digests, statement.predicate.validity.as_ref()), None))
         }
         None => Err(anyhow::anyhow!("empty stage0 reference value")),
     }
@@ -871,9 +873,10 @@ fn acquire_verified_kernel_attachment(
     now_utc_millis: i64,
     signed_endorsement: &SignedEndorsement,
     ref_value: &EndorsementReferenceValue,
-) -> anyhow::Result<(KernelAttachment, DefaultStatement)> {
-    let statement = verify_endorsement(now_utc_millis, signed_endorsement, ref_value)
-        .context("verifying kernel endorsement")?;
+) -> anyhow::Result<(KernelAttachment, DefaultStatement, Option<TLogVerificationResults>)> {
+    let (statement, tlog_verification) =
+        verify_endorsement(now_utc_millis, signed_endorsement, ref_value)
+            .context("verifying kernel endorsement")?;
     if !is_kernel_type(&statement) {
         anyhow::bail!("expected endorsement for kernel-type binary");
     }
@@ -885,7 +888,7 @@ fn acquire_verified_kernel_attachment(
     statement.validate_subject(&endorsement.subject)?;
     let decoded = KernelAttachment::decode(&*endorsement.subject)
         .map_err(|_| anyhow::anyhow!("couldn't parse kernel attachment"))?;
-    Ok((decoded, statement))
+    Ok((decoded, statement, tlog_verification))
 }
 
 fn acquire_verified_pes_kernel_attachment(
@@ -990,23 +993,27 @@ fn acquire_kernel_expected_values(
     now_utc_millis: i64,
     signed_endorsement: Option<&SignedEndorsement>,
     reference_value: &KernelBinaryReferenceValue,
-) -> anyhow::Result<KernelExpectedValues> {
+) -> anyhow::Result<(KernelExpectedValues, Option<TLogVerificationResults>)> {
     match reference_value.r#type.as_ref() {
-        Some(kernel_binary_reference_value::Type::Skip(_)) => Ok(KernelExpectedValues {
-            image: Some(ExpectedDigests {
-                r#type: Some(expected_digests::Type::Skipped(VerificationSkipped {})),
-            }),
-            setup_data: Some(ExpectedDigests {
-                r#type: Some(expected_digests::Type::Skipped(VerificationSkipped {})),
-            }),
-        }),
+        Some(kernel_binary_reference_value::Type::Skip(_)) => Ok((
+            KernelExpectedValues {
+                image: Some(ExpectedDigests {
+                    r#type: Some(expected_digests::Type::Skipped(VerificationSkipped {})),
+                }),
+                setup_data: Some(ExpectedDigests {
+                    r#type: Some(expected_digests::Type::Skipped(VerificationSkipped {})),
+                }),
+            },
+            None,
+        )),
         Some(kernel_binary_reference_value::Type::Endorsement(public_keys)) => {
-            let (kernel_attachment, statement) = acquire_verified_kernel_attachment(
-                now_utc_millis,
-                signed_endorsement.context("endorsement not found")?,
-                public_keys,
-            )
-            .context("getting verified kernel attachment")?;
+            let (kernel_attachment, statement, tlog_verification) =
+                acquire_verified_kernel_attachment(
+                    now_utc_millis,
+                    signed_endorsement.context("endorsement not found")?,
+                    public_keys,
+                )
+                .context("getting verified kernel attachment")?;
             let expected_image = kernel_attachment
                 .image
                 .ok_or_else(|| anyhow::anyhow!("no image digest in kernel attachment"))?;
@@ -1014,19 +1021,22 @@ fn acquire_kernel_expected_values(
                 .setup_data
                 .ok_or_else(|| anyhow::anyhow!("no setup data digest in kernel attachment"))?;
 
-            Ok(KernelExpectedValues {
-                image: Some(to_expected_digests(
-                    &[hex_to_raw_digest(&expected_image)?],
-                    statement.predicate.validity.as_ref(),
-                )),
-                setup_data: Some(to_expected_digests(
-                    &[hex_to_raw_digest(&expected_setup_data)?],
-                    statement.predicate.validity.as_ref(),
-                )),
-            })
+            Ok((
+                KernelExpectedValues {
+                    image: Some(to_expected_digests(
+                        &[hex_to_raw_digest(&expected_image)?],
+                        statement.predicate.validity.as_ref(),
+                    )),
+                    setup_data: Some(to_expected_digests(
+                        &[hex_to_raw_digest(&expected_setup_data)?],
+                        statement.predicate.validity.as_ref(),
+                    )),
+                },
+                tlog_verification,
+            ))
         }
-        Some(kernel_binary_reference_value::Type::Digests(expected_digests)) => {
-            Ok(KernelExpectedValues {
+        Some(kernel_binary_reference_value::Type::Digests(expected_digests)) => Ok((
+            KernelExpectedValues {
                 image: Some(to_expected_digests(
                     &expected_digests
                         .image
@@ -1043,8 +1053,9 @@ fn acquire_kernel_expected_values(
                         .digests,
                     None,
                 )),
-            })
-        }
+            },
+            None,
+        )),
         Some(kernel_binary_reference_value::Type::PesEndorsement(ref_value)) => {
             let (kernel_attachment, statement) = acquire_verified_pes_kernel_attachment(
                 now_utc_millis,
@@ -1059,16 +1070,19 @@ fn acquire_kernel_expected_values(
                 .setup_data
                 .ok_or_else(|| anyhow::anyhow!("no setup data digest in kernel attachment"))?;
 
-            Ok(KernelExpectedValues {
-                image: Some(to_expected_digests(
-                    &[hex_to_raw_digest(&expected_image)?],
-                    statement.predicate.validity.as_ref(),
-                )),
-                setup_data: Some(to_expected_digests(
-                    &[hex_to_raw_digest(&expected_setup_data)?],
-                    statement.predicate.validity.as_ref(),
-                )),
-            })
+            Ok((
+                KernelExpectedValues {
+                    image: Some(to_expected_digests(
+                        &[hex_to_raw_digest(&expected_image)?],
+                        statement.predicate.validity.as_ref(),
+                    )),
+                    setup_data: Some(to_expected_digests(
+                        &[hex_to_raw_digest(&expected_setup_data)?],
+                        statement.predicate.validity.as_ref(),
+                    )),
+                },
+                None,
+            ))
         }
         None => Err(anyhow::anyhow!("empty binary reference value")),
     }
@@ -1086,9 +1100,14 @@ fn acquire_verified_mpm_attachment(
     now_utc_millis: i64,
     signed_endorsement: &SignedEndorsement,
     ref_value: &EndorsementReferenceValue,
-) -> anyhow::Result<(MpmAttachment, Option<oak_proto_rust::oak::Validity>)> {
-    let statement = verify_endorsement(now_utc_millis, signed_endorsement, ref_value)
-        .context("verifying mpm endorsement")?;
+) -> anyhow::Result<(
+    MpmAttachment,
+    Option<oak_proto_rust::oak::Validity>,
+    Option<TLogVerificationResults>,
+)> {
+    let (statement, tlog_verification) =
+        verify_endorsement(now_utc_millis, signed_endorsement, ref_value)
+            .context("verifying mpm endorsement")?;
     if !is_mpm_type(&statement) {
         anyhow::bail!("expected endorsement for mpm-type binary");
     }
@@ -1102,7 +1121,7 @@ fn acquire_verified_mpm_attachment(
     let decoded = MpmAttachment::decode(&*endorsement.subject)
         .map_err(|_| anyhow::anyhow!("couldn't parse mpm attachment"))?;
     let validity = statement.predicate.validity.as_ref().map(|v| v.into());
-    Ok((decoded, validity))
+    Ok((decoded, validity, tlog_verification))
 }
 
 fn acquire_verified_pes_mpm_attachment(
@@ -1142,16 +1161,21 @@ pub(crate) fn acquire_mpm_expected_values(
     now_utc_millis: i64,
     signed_endorsement: Option<&SignedEndorsement>,
     reference_value: &MpmReferenceValue,
-) -> anyhow::Result<(TextExpectedValue, Option<oak_proto_rust::oak::Validity>)> {
+) -> anyhow::Result<(
+    TextExpectedValue,
+    Option<oak_proto_rust::oak::Validity>,
+    Option<TLogVerificationResults>,
+)> {
     match reference_value.r#type.as_ref() {
         Some(mpm_reference_value::Type::Skip(_)) => Ok((
             TextExpectedValue {
                 r#type: Some(text_expected_value::Type::Skipped(VerificationSkipped {})),
             },
             None,
+            None,
         )),
         Some(mpm_reference_value::Type::Endorsement(ref_value)) => {
-            let (mpm_attachment, validity) = acquire_verified_mpm_attachment(
+            let (mpm_attachment, validity, tlog_verification) = acquire_verified_mpm_attachment(
                 now_utc_millis,
                 signed_endorsement.context("endorsement not found")?,
                 ref_value,
@@ -1165,6 +1189,7 @@ pub(crate) fn acquire_mpm_expected_values(
                     )),
                 },
                 validity,
+                tlog_verification,
             ))
         }
         Some(mpm_reference_value::Type::Versions(version_ids)) => Ok((
@@ -1173,6 +1198,7 @@ pub(crate) fn acquire_mpm_expected_values(
                     value: version_ids.versions.clone(),
                 })),
             },
+            None,
             None,
         )),
         Some(mpm_reference_value::Type::PesEndorsement(ref_value)) => {
@@ -1190,6 +1216,7 @@ pub(crate) fn acquire_mpm_expected_values(
                     )),
                 },
                 validity,
+                None,
             ))
         }
         None => Err(anyhow::anyhow!("empty mpm reference value")),
@@ -1247,36 +1274,47 @@ pub(crate) fn acquire_text_expected_values(
     now_utc_millis: i64,
     signed_endorsement: Option<&SignedEndorsement>,
     value: &TextReferenceValue,
-) -> anyhow::Result<TextExpectedValue> {
+) -> anyhow::Result<(TextExpectedValue, Option<TLogVerificationResults>)> {
     match value.r#type.as_ref() {
-        Some(text_reference_value::Type::Skip(_)) => Ok(TextExpectedValue {
-            r#type: Some(text_expected_value::Type::Skipped(VerificationSkipped {})),
-        }),
+        Some(text_reference_value::Type::Skip(_)) => Ok((
+            TextExpectedValue {
+                r#type: Some(text_expected_value::Type::Skipped(VerificationSkipped {})),
+            },
+            None,
+        )),
         Some(text_reference_value::Type::Endorsement(ref_value)) => {
             let signed = signed_endorsement.context("missing signed endorsement")?;
-            let statement = verify_endorsement(now_utc_millis, signed, ref_value)
-                .context("verifying text endorsement")?;
+            let (statement, tlog_verification) =
+                verify_endorsement(now_utc_millis, signed, ref_value)
+                    .context("verifying text endorsement")?;
             let endorsement = signed.endorsement.as_ref().context("missing endorsement")?;
             statement.validate_subject(&endorsement.subject)?;
             // Compare the actual command line against the one inlined in the endorsement.
             let regex = String::from_utf8(endorsement.subject.clone())
                 .context("endorsement subject is not utf8")?;
-            Ok(TextExpectedValue {
-                r#type: Some(text_expected_value::Type::Regex(ExpectedRegex { value: regex })),
-            })
+            Ok((
+                TextExpectedValue {
+                    r#type: Some(text_expected_value::Type::Regex(ExpectedRegex { value: regex })),
+                },
+                tlog_verification,
+            ))
         }
-        Some(text_reference_value::Type::Regex(regex)) => Ok(TextExpectedValue {
-            r#type: Some(text_expected_value::Type::Regex(ExpectedRegex {
-                value: regex.value.clone(),
-            })),
-        }),
-        Some(text_reference_value::Type::StringLiterals(string_literals)) => {
-            Ok(TextExpectedValue {
+        Some(text_reference_value::Type::Regex(regex)) => Ok((
+            TextExpectedValue {
+                r#type: Some(text_expected_value::Type::Regex(ExpectedRegex {
+                    value: regex.value.clone(),
+                })),
+            },
+            None,
+        )),
+        Some(text_reference_value::Type::StringLiterals(string_literals)) => Ok((
+            TextExpectedValue {
                 r#type: Some(text_expected_value::Type::StringLiterals(ExpectedStringLiterals {
                     value: string_literals.value.clone(),
                 })),
-            })
-        }
+            },
+            None,
+        )),
         Some(text_reference_value::Type::PesEndorsement(ref_value)) => {
             let signed = signed_endorsement.context("missing signed endorsement")?;
             let endorsement = signed.endorsement.as_ref().context("missing endorsement")?;
@@ -1291,9 +1329,12 @@ pub(crate) fn acquire_text_expected_values(
             // Compare the actual command line against the one inlined in the endorsement.
             let regex = String::from_utf8(endorsement.subject.clone())
                 .context("endorsement subject is not utf8")?;
-            Ok(TextExpectedValue {
-                r#type: Some(text_expected_value::Type::Regex(ExpectedRegex { value: regex })),
-            })
+            Ok((
+                TextExpectedValue {
+                    r#type: Some(text_expected_value::Type::Regex(ExpectedRegex { value: regex })),
+                },
+                None,
+            ))
         }
         None => Err(anyhow::anyhow!("missing skip or value in the text reference value")),
     }
@@ -1355,7 +1396,7 @@ fn verify_endorsement_wrapper(
         };
 
         let result = verify_endorsement(now_utc_millis, &signed_endorsement, ref_value);
-        if let Ok(statement) = result {
+        if let Ok((statement, _tlog_verification)) = result {
             return Ok(statement);
         }
         err = result.err().unwrap();

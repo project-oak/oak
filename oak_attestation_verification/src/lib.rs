@@ -82,8 +82,9 @@ pub fn verify_endorsement(
     signed_endorsement: &SignedEndorsement,
     ref_value: &EndorsementReferenceValue,
 ) -> anyhow::Result<EndorsementDetails> {
-    let s = verify_endorsement::verify_endorsement(now_utc_millis, signed_endorsement, ref_value)?;
-    s.get_details()
+    let (statement, _tlog_verification) =
+        verify_endorsement::verify_endorsement(now_utc_millis, signed_endorsement, ref_value)?;
+    statement.get_details()
 }
 
 /// Verifies a PES signed endorsement against a reference value.

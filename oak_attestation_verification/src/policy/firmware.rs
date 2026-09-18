@@ -54,7 +54,7 @@ impl Policy<[u8]> for FirmwarePolicy {
         let endorsement: Option<FirmwareEndorsement> =
             endorsement.try_into().map_err(anyhow::Error::msg)?;
 
-        let expected_values = acquire_stage0_expected_values(
+        let (expected_values, tlog_record) = acquire_stage0_expected_values(
             verification_time.into_unix_millis(),
             endorsement.as_ref(),
             &self.reference_values,
@@ -64,7 +64,10 @@ impl Policy<[u8]> for FirmwarePolicy {
         compare_firmware_layer_measurement_digests(evidence, &expected_values)
             .context("comparing firmware digests")?;
 
-        Ok(EventAttestationResults { ..Default::default() })
+        Ok(EventAttestationResults {
+            tlog_verifications: tlog_record.into_iter().collect(),
+            ..Default::default()
+        })
     }
 }
 

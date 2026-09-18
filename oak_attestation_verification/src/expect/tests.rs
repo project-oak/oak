@@ -24,7 +24,8 @@ use oak_proto_rust::oak::{
     HexDigest,
     attestation::v1::{
         ExpectedDigests, ExpectedRegex, FirmwareAttachment, KernelAttachment, RawDigests,
-        TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement, expected_digests,
+        TLogVerificationResults, TextExpectedValue, TextReferenceValue,
+        TransparentReleaseEndorsement, expected_digests, t_log_verification_results::Status,
         text_expected_value, text_reference_value,
     },
 };
@@ -296,7 +297,7 @@ fn test_acquire_text_expected_values_validity() {
     );
     assert!(result.is_ok(), "expected success, got: {:?}", result.err());
 
-    let expected = result.unwrap();
+    let (expected, tlog_record) = result.unwrap();
     assert_eq!(
         expected,
         TextExpectedValue {
@@ -304,6 +305,16 @@ fn test_acquire_text_expected_values_validity() {
                 value: "^some regex$".to_string(),
             })),
         }
+    );
+    assert_eq!(
+        tlog_record,
+        Some(TLogVerificationResults {
+            rekor: Status::NotConfigured.into(),
+            c2sp: Status::NotConfigured.into(),
+            pes: Status::NotConfigured.into(),
+            subject: "fake_subject_name".to_string(),
+            detail: String::new(),
+        })
     );
 }
 
