@@ -1,2 +1,4 @@
+agentdojo==0.1.35
 google-cloud-storage>=2.14.0
 ollama>=0.6.0
+pydantic>=2.0.0

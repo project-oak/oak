@@ -117,10 +117,12 @@ bazel run //oak_trusted_agent/eval/verifier:oak_trusted_agent_eval_verifier -- \
 
 ## Benchmarks
 
-| Name          | Measures                                              |
-| ------------- | ----------------------------------------------------- |
-| `hello_world` | nothing; it exists to test the pipeline without a GPU |
+| Name          | Measures                                                      |
+| ------------- | ------------------------------------------------------------- |
+| `hello_world` | nothing; it exists to test the pipeline without a GPU         |
+| `agentdojo`   | prompt-injection resistance on the [AgentDojo] `travel` suite |
 
+[AgentDojo]: https://github.com/ethz-spylab/agentdojo
 [Confidential Space]:
   https://cloud.google.com/confidential-computing/confidential-space/docs/confidential-space-overview
 [Ollama]: https://ollama.com
