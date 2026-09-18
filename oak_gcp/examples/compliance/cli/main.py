@@ -29,17 +29,19 @@ import os
 import sys
 import time
 import uuid
-from typing import Dict, List, Optional
+from typing import Any
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from client import ComplianceEnclaveClient
-import httpx
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-console = Console()
+console = Console(
+    force_terminal=True if os.environ.get("FORCE_COLOR") else None,
+    color_system="truecolor" if os.environ.get("FORCE_COLOR") else None,
+)
 
 
 def _ensure_text(data_b64_or_raw: str) -> str:
@@ -63,7 +65,10 @@ def display_attestation_claims(client: ComplianceEnclaveClient) -> bool:
   anon_att = client.get_attestation_claims("anonymizer")
 
   att_table = Table(
-      title="🔐 Hardware Attestation & TEE Claims (Oak Proxy L7 Inspection)"
+      title=(
+          "[TEE] Tunnel-Enforced Hardware Attestation & Peer TEE Claims (Oak"
+          " Proxy)"
+      )
   )
   att_table.add_column("Enclave Node", style="bold cyan")
   att_table.add_column("Status", justify="center")
@@ -78,7 +83,7 @@ def display_attestation_claims(client: ComplianceEnclaveClient) -> bool:
       ("Party A (Anonymizer)", anon_att),
   ]:
     if claims and claims.get("status") == "verified":
-      status_text = "[bold green]✔ VERIFIED[/bold green]"
+      status_text = "[bold green]✓ VERIFIED[/bold green]"
       root = claims.get("root_layer", {})
       platform = root.get("platform") or "AMD_SEV_SNP (Confidential Space)"
       allow_debug = (
@@ -93,7 +98,7 @@ def display_attestation_claims(client: ComplianceEnclaveClient) -> bool:
       )
       vtime = claims.get("verification_time", "N/A")
     else:
-      status_text = "[bold yellow]⚠ UNVERIFIED / TCP[/bold yellow]"
+      status_text = "[bold yellow]! UNVERIFIED / TCP[/bold yellow]"
       platform = "Direct / L4"
       allow_debug = "N/A"
       handle = "N/A"
@@ -113,13 +118,13 @@ def run_compliance_pipeline(
     epsilon: float,
     max_rounds: int = 3,
     show_attestation: bool = True,
-    certificate_output: Optional[str] = None,
-    quasi_identifiers: Optional[List[str]] = None,
+    certificate_output: str | None = None,
+    quasi_identifiers: list[str] | None = None,
 ) -> None:
   """Executes automated multi-round compliance remediation pipeline across enclaves."""
   pipeline_start = time.perf_counter()
 
-  with open(input_file, "r", encoding="utf-8") as f:
+  with open(input_file, encoding="utf-8") as f:
     raw_csv = f.read()
 
   # Detect active quasi-identifiers from header if not explicitly provided
@@ -148,14 +153,14 @@ def run_compliance_pipeline(
           f" [yellow]{output_file}[/yellow]\nDefault Policy Bounds:"
           f" [bold]k={k}, epsilon={epsilon}[/bold]\nMax Remediation Rounds:"
           f" [bold]{max_rounds}[/bold]",
-          title="🛡 Project Oak • GCP Confidential Space",
+          title="[OAK] Project Oak • GCP Confidential Space",
       )
   )
 
   if show_attestation:
     console.print(
-        "\n[bold]Step 0: Verifying Confidential Space Hardware Attestation"
-        " Claims...[/bold]"
+        "\n[bold]Step 0: Inspecting Peer Attestation Claims Enforced by Oak"
+        " Proxy Tunnel...[/bold]"
     )
     if not display_attestation_claims(client):
       console.print(
@@ -246,7 +251,7 @@ def run_compliance_pipeline(
       )
       break
 
-    # Phase 2: Targeted Remediation by Party A Enclave (Progressive Escalation from fresh raw_csv)
+    # Phase 2: Targeted Remediation by Party A Enclave
     console.print(
         f"\n[bold yellow]── Round {round_num} • Phase 2: Progressive"
         " Remediation (Party A Enclave) ──[/bold yellow]"
@@ -286,6 +291,11 @@ def run_compliance_pipeline(
           "epsilon", epsilon if target_intensity == "level_2" else 0.5
       )
 
+      console.print(
+          "  [dim]→ Invoking Party A Anonymizer Enclave"
+          f" (strategy={target_intensity}, k={level_k},"
+          f" DP={level_dp})...[/dim]"
+      )
       anon_resp = client.anonymize(
           raw_csv,
           k=level_k,
@@ -314,7 +324,7 @@ def run_compliance_pipeline(
   total_time = time.perf_counter() - pipeline_start
 
   # Determine compliance and attestation status
-  attestation_claims: Dict[str, Any] = {}
+  attestation_claims: dict[str, Any] = {}
   if show_attestation:
     try:
       # Use single health check per enclave (NIT-02)
@@ -400,7 +410,7 @@ def run_compliance_pipeline(
     )
 
   if certificate_output:
-    with open(output_file, "r", encoding="utf-8") as f:
+    with open(output_file, encoding="utf-8") as f:
       output_csv = f.read()
     output_hash = hashlib.sha256(output_csv.encode()).hexdigest()
 

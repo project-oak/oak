@@ -13,7 +13,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 WORKDIR /builder
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --require-hashes -r requirements.txt
 
 # Stage 3: Final Confidential Space image.
 FROM python:3.12-slim as final
