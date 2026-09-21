@@ -1,7 +1,7 @@
 # Attested model server
 
 Runs [Gemma] on [Ollama] inside [Confidential Space], fronted by [Oak Proxy] so
-that a client can establish an end-to-end encrypted, hardware-attested channel
+that an agent can establish an end-to-end encrypted, hardware-attested channel
 to the model and verify that the exact weights evaluated in
 [`../examples/model_eval`](../examples/model_eval) are the ones answering.
 
@@ -9,8 +9,7 @@ to the model and verify that the exact weights evaluated in
 
 ```text
 image/                   container image (Ollama + Gemma 4 + oak_proxy_server)
-terraform/               Confidential Space deployment (not yet)
-oak_proxy_client.toml    client-side Oak Proxy configuration (not yet)
+terraform/               Confidential Space deployment (VM, IAM, firewall)
 ```
 
 ## Building the container image
@@ -27,6 +26,30 @@ Oak Session handshake.
 ```shell
 cd oak_trusted_agent/model
 PUSH=false ./image/publish_docker.sh
+```
+
+## Deploying to Confidential Space
+
+`terraform/` provisions a Confidential Space VM, a least-privilege workload
+service account, and a firewall rule opening TCP port `8080` for the Oak Session
+WebSocket tunnel.
+
+```shell
+cd oak_trusted_agent/model
+./image/publish_docker.sh
+
+cd terraform
+terraform init
+terraform apply
+```
+
+To deploy on an NVIDIA H100 Confidential GPU (`a3-highgpu-1g`):
+
+```shell
+terraform apply \
+  -var="zone=us-east5-a" \
+  -var="machine_type=a3-highgpu-1g" \
+  -var="accelerator_type=nvidia-h100-80gb"
 ```
 
 [Confidential Space]:
