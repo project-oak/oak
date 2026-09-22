@@ -28,7 +28,7 @@ resource "google_storage_bucket_iam_member" "results_writer" {
 }
 
 module "confidential_space_instance" {
-  source = "../../../../terraform/modules/confidential_space_instance"
+  source = "../../../terraform/modules/confidential_space_instance"
 
   gcp_project_id        = var.gcp_project_id
   zone                  = var.zone

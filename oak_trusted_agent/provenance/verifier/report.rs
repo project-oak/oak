@@ -18,7 +18,7 @@
 
 use std::{fmt::Display, io::Write, process::ExitCode};
 
-use oak_trusted_agent_eval_common::statement::InTotoStatement;
+use oak_trusted_agent_provenance_common::statement::InTotoStatement;
 
 use crate::workload::Workload;
 

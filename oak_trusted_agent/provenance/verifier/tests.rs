@@ -15,7 +15,7 @@
 //
 
 use clap::CommandFactory;
-use oak_trusted_agent_eval_common::statement::Predicate;
+use oak_trusted_agent_provenance_common::statement::Predicate;
 
 use super::*;
 

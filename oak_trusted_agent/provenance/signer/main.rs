@@ -29,7 +29,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use oak_attestation_gcp::assertions::GcpAssertionGenerator;
 use oak_digest::DigestSet;
-use oak_trusted_agent_eval_common::{
+use oak_trusted_agent_provenance_common::{
     AUDIENCE,
     envelope::Envelope,
     flags,

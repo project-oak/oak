@@ -2,8 +2,8 @@
 
 Runs [Gemma] on [Ollama] inside [Confidential Space], fronted by [Oak Proxy] so
 that an agent can establish an end-to-end encrypted, hardware-attested channel
-to the model and verify that the exact weights evaluated in
-[`../examples/model_eval`](../examples/model_eval) are the ones answering.
+to the model and verify that the exact weights evaluated in [`../eval`](../eval)
+are the ones answering.
 
 ## Layout
 

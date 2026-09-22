@@ -20,7 +20,7 @@ use std::{fs, io, path::PathBuf, process::ExitCode};
 
 use anyhow::{Context, Result, anyhow};
 use clap::Parser;
-use oak_trusted_agent_eval_common::{
+use oak_trusted_agent_provenance_common::{
     AUDIENCE,
     envelope::{Envelope, PAYLOAD_TYPE},
     flags, statement,

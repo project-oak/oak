@@ -14,45 +14,32 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
 
-package(
-    default_visibility = ["//oak_trusted_agent:__subpackages__"],
-    licenses = ["notice"],
-)
+package(licenses = ["notice"])
 
-# Statement construction, signing and decoding, shared by both binaries.
-rust_library(
-    name = "oak_trusted_agent_eval_common",
+# Runs inside Confidential Space, in the same image as the workload.
+rust_binary(
+    name = "oak_trusted_agent_provenance_signer",
     srcs = [
-        "envelope.rs",
-        "flags.rs",
-        "lib.rs",
-        "statement.rs",
+        "main.rs",
         "tests.rs",
     ],
     target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
     deps = [
-        "//oak_attestation_types",
-        "//oak_proto_rust",
-        "//tr/intoto",
+        "//oak_attestation_gcp",
+        "//oak_trusted_agent/provenance/common",
         "//util/digest:oak_digest",
         "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:base64",
-        "@oak_crates_index//:prost",
-        "@oak_crates_index//:serde",
+        "@oak_crates_index//:clap",
         "@oak_crates_index//:serde_json",
     ],
 )
 
-alias(
-    name = "common",
-    actual = ":oak_trusted_agent_eval_common",
-)
-
 rust_test(
-    name = "oak_trusted_agent_eval_common_test",
-    crate = ":oak_trusted_agent_eval_common",
+    name = "oak_trusted_agent_provenance_signer_test",
+    crate = ":oak_trusted_agent_provenance_signer",
     target_compatible_with = ["@platforms//os:linux"],
     deps = ["@oak_crates_index//:tempfile"],
 )

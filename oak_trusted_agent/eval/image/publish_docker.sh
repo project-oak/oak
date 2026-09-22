@@ -21,8 +21,8 @@ set -o nounset
 set -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MODEL_EVAL_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-REPO_ROOT="$(cd "${MODEL_EVAL_DIR}/../../.." && pwd)"
+EVAL_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "${EVAL_DIR}/../.." && pwd)"
 
 PROJECT_ID="${1:-oak-examples-477357}"
 REPOSITORY_NAME="${2:-oak-trusted-agent}"
@@ -36,10 +36,10 @@ IMAGE_URL="us-east5-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY_NAME}/${IMAGE_NAME
 # Stage signer inside the build context because Docker cannot follow external symlinks.
 trap 'rm -rf "${SCRIPT_DIR}/bin"' EXIT
 mkdir -p "${SCRIPT_DIR}/bin"
-SIGNER_BIN="$(cd "${REPO_ROOT}" && bazel build --config=release //oak_trusted_agent/eval/signer:oak_trusted_agent_eval_signer && bazel cquery --config=release --output=files //oak_trusted_agent/eval/signer:oak_trusted_agent_eval_signer)"
+SIGNER_BIN="$(cd "${REPO_ROOT}" && bazel build --config=release //oak_trusted_agent/provenance/signer:oak_trusted_agent_provenance_signer && bazel cquery --config=release --output=files //oak_trusted_agent/provenance/signer:oak_trusted_agent_provenance_signer)"
 install -m 0755 "${REPO_ROOT}/${SIGNER_BIN}" "${SCRIPT_DIR}/bin/signer"
 
-docker build --file="${SCRIPT_DIR}/Dockerfile" --tag="${IMAGE_URL}" "${MODEL_EVAL_DIR}"
+docker build --file="${SCRIPT_DIR}/Dockerfile" --tag="${IMAGE_URL}" "${EVAL_DIR}"
 
 if [[ ${PUSH:-true} == "true" ]]; then
   docker push "${IMAGE_URL}"

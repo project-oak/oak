@@ -1,143 +1,128 @@
-# Trusted evaluation
+# Attested model evaluation
 
-Publishes results computed inside [Confidential Space] so that a third party can
-check what produced them without trusting whoever reports them.
+Runs a benchmark against a model inside [Confidential Space] and signs the
+result, so that a third party can check which model scored what, and which image
+measured it, without trusting whoever reports the number.
 
-Two binaries and a shared library:
+The signed statement is produced here and consumed elsewhere: a client can
+refuse to talk to a model whose published evaluation it cannot verify.
 
-|             |                                                                  |
-| ----------- | ---------------------------------------------------------------- |
-| `signer/`   | runs in the TEE, beside the workload, and signs what it produced |
-| `verifier/` | runs anywhere, including a laptop with no TEE                    |
-| `common/`   | the in-toto `statement` and the `envelope` around it             |
-
-`common/statement.rs` both builds statements and checks the artifacts they name,
-because the two sides have to agree on the digest algorithm and its spelling.
-
-## What gets signed
-
-The signer hashes the artifacts named on the command line, wraps their digests
-in an [in-toto Statement], and asks the Confidential Space launcher for a token
-whose `eat_nonce` is the digest of that statement. The launcher stamps the image
-digest into the token, so the resulting claim reads: _the image that asked for
-this token vouches for artifacts with these digests, and here is the predicate
-describing them_.
-
-The predicate is opaque to both binaries. Whoever adds a benchmark picks a
-`predicateType` URI and emits whatever JSON object matches it, rather than
-changing any Rust.
-
-## Signing
-
-```shell
-signer \
-  --subject        /out/report.jsonl \
-  --subject-digest gpt-oss:20b=sha256:2f1e… \
-  --predicate-type https://project-oak.dev/attestation/model-eval/v1 \
-  --predicate      /out/predicate.json \
-  --out            /out/signed_statement.json
-```
-
-Outside a TEE, pass `--no-attestation` to emit the statement with an empty
-`assertions` map. The verifier rejects it.
-
-## Verifying
-
-```shell
-verifier \
-  --statement              /out/signed_statement.json \
-  --subject                /out/report.jsonl \
-  --unchecked-subject      gpt-oss:20b \
-  --expected-image-prefix  europe-docker.pkg.dev/oak/trusted-eval/ \
-  --expected-image-digest  sha256:dead… \
-  --expected-predicate-type https://project-oak.dev/attestation/model-eval/v1
-```
+## Layout
 
 ```text
-Checks
-  ✅ the envelope declares the in-toto media type
-  ✅ the payload is an in-toto v1 Statement
-  ✅ the predicate type is the expected one
-  ✅ report.jsonl matches the digest in the statement
-  ✅ every subject was re-hashed or waived
-  ✅ a Confidential Space token binds this exact statement
-  ✅ the workload image is the expected one
-VERIFIED
-  produced by  europe-docker.pkg.dev/oak/trusted-eval/garak:v1
-  image        sha256:dead…
-  attested at  2026-09-11T16:00:00Z
+harness/                 runs a benchmark, builds the predicate, calls the signer
+benchmarks/<name>/       one directory per benchmark
+image/                   the container that runs in the TEE
+terraform/               the deployment
 ```
 
-Checks accumulate rather than short-circuit, so one failure does not hide the
-others. Exit status is non-zero unless every check passes.
+A benchmark is a Python package under `benchmarks/` defining a `Benchmark`
+subclass:
 
-`--expected-image-prefix` matches the start of the image reference, so it pins
-the _repository path_ rather than an image: anyone who can push there passes it.
-`--expected-image-digest` pins the image itself, by comparing the
-`submods.container.image_digest` claim. Use both for anything that matters.
+```python
+from benchmarks.benchmark import Benchmark
 
-A subject that is neither re-hashed with `--subject` nor waived with
-`--unchecked-subject` fails the run, so a statement cannot quietly pass while
-half of what it covers went unexamined. Waiving is for subjects that cannot be
-re-hashed locally, such as a model known only by digest.
 
-The token is verified at its own `iat`. Confidential Space tokens expire after
-about an hour, so verifying a stored statement at the current time would fail
-the morning after it was produced. Do not work around this by writing a
-timestamp into the envelope: it would be an unauthenticated copy of a claim the
-token already makes.
+class MyBenchmark(Benchmark):
+  version = "1"
 
-## Envelope
-
-```json
-{
-  "payloadType": "application/vnd.in-toto+json",
-  "payload": "<base64 in-toto Statement>",
-  "assertions": {
-    "49128794-6056-4999-ab3b-00d22d8c2eee": "<base64 oak.attestation.v1.Assertion>"
-  }
-}
+  def run(self, model, out_dir) -> pathlib.Path:  # writes a report, returns its path
+  def score(self, report) -> dict:                # {"score": float, "detail": {...}}
 ```
 
-The payload is base64 rather than inline JSON because assertions bind the digest
-of those exact bytes, which re-serialization would not preserve.
+Nothing else in the tree knows what any particular benchmark is. `harness/`
+knows about Ollama and about the predicate shape; the signer knows about in-toto
+and Confidential Space and does not read the predicate at all. Adding a
+benchmark is therefore a new directory under `benchmarks/`, never a change to
+the harness and never a change to any Rust.
 
-This is not a [DSSE] envelope. DSSE expects a detached signature over the
-payload; Confidential Space instead returns a token whose nonce commits to the
-payload digest, so the binding is checked differently and the field names would
-mislead. Two costs follow. `payloadType` sits outside the signed bytes, so the
-verifier asserts the expected constant rather than trusting what it reads. And
-standard in-toto or cosign tooling cannot consume this envelope.
+A benchmark reports a **score**, the harness wraps it in a **predicate**, and
+the signer wraps that in a **statement**. The predicate shape is fixed by
+[`predicate_schema.md`](predicate_schema.md). Benchmarks vary only in `detail`.
 
-The assertion key is a random UUID, as Oak names attestation types in
-`oak_proto_rust::attestation`. It denotes a Confidential Space token whose
-`eat_nonce` commits to the payload digest, and it is defined as `ASSERTION_ID`
-in `common/envelope.rs`. The verifier looks the assertion up by that ID rather
-than iterating the map, because requiring every entry to pass would accept an
-unsigned envelope vacuously.
+## Running it locally
 
-## What the claim does and does not prove
+Needs [Ollama] on the host, and no accelerator if the model is small enough.
 
-The token proves that the named image asked for a nonce over this statement. It
-does not by itself prove the image _computed_ the artifacts rather than hashing
-bytes handed to it from outside.
+```shell
+ollama serve &
+ollama pull gemma4:e2b
 
-The gap closes because Confidential Space does not let the VM operator change
-what the container runs unless the image opts in. Any image using the signer
-must therefore leave `tee.launch_policy.allow_cmd_override` unset, and must keep
-`tee.launch_policy.allow_env_override` narrow enough that nothing in it can
-redirect which files are hashed.
+cd oak_trusted_agent/eval
+pip install -r requirements.txt
+bazel build //oak_trusted_agent/provenance/signer:oak_trusted_agent_provenance_signer
 
-## Where the signer has to run
+python -m harness.run \
+  --benchmark=hello_world \
+  --model=gemma4:e2b \
+  --out-dir=/tmp/model_eval \
+  --signer=../../bazel-bin/oak_trusted_agent/provenance/signer/oak_trusted_agent_provenance_signer \
+  --no-attestation
+```
 
-In the same image as the workload that produced the artifacts. The launcher
-issues tokens naming whoever asks, so a standalone signing image would attest
-only itself, saying nothing about the benchmark or the model. Any process in the
-container can reach `/run/container_launcher/teeserver.sock`, so the signer adds
-no privilege that a shell script in the same image lacks.
+This writes `report.jsonl`, `predicate.json` and `signed.json` to
+`/tmp/model_eval/hello_world/`.
 
+> [!WARNING] `--no-attestation` produces a statement with no proof in it, and
+> the verifier rejects it. It is for checking the plumbing, not for producing
+> anything anyone should believe. A real run happens inside Confidential Space,
+> where the launcher issues a token naming the image that asked for it.
+
+## Building the container image
+
+`image/Dockerfile` bakes Ollama, the `gemma4:e2b-it-qat` weights, the harness,
+and the Bazel-built `signer` binary into a single Confidential Space image so
+that the model weights are covered by the attested `image_digest`.
+
+```shell
+cd oak_trusted_agent/eval
+PUSH=false ./image/publish_docker.sh
+
+docker run --rm \
+  -e NO_ATTESTATION=true \
+  -v /tmp/model_eval:/out \
+  us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/model-eval/gemma4-e2b-it-qat:latest
+```
+
+## Deploying to Confidential Space
+
+`terraform/` provisions a batch Confidential Space VM
+(`tee-restart-policy=Never`) and a workload service account granted access to
+the `oak-trusted-agent` GCS bucket (`gs://oak-trusted-agent/model-eval/`), where
+the container uploads `report.jsonl`, `predicate.json`, and `signed.json`.
+
+```shell
+cd oak_trusted_agent/eval
+./image/publish_docker.sh
+
+cd terraform
+terraform init
+terraform apply
+```
+
+## Verifying the results
+
+Signed evaluation bundles are published to
+`gs://oak-trusted-agent/model-eval/<model>/<benchmark>/`:
+
+```shell
+gcloud storage cp -r gs://oak-trusted-agent/model-eval/gemma4-e2b-it-qat/hello-world /tmp/eval_out
+bazel run //oak_trusted_agent/provenance/verifier:oak_trusted_agent_provenance_verifier -- \
+  --statement=/tmp/eval_out/hello-world/signed.json \
+  --subject=/tmp/eval_out/hello-world/report.jsonl \
+  --unchecked-subject=gemma4:e2b-it-qat \
+  --expected-image-prefix=us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/model-eval/gemma4-e2b-it-qat \
+  --expected-predicate-type=https://project-oak.dev/attestation/model-eval/v1
+```
+
+## Benchmarks
+
+| Name          | Measures                                                      |
+| ------------- | ------------------------------------------------------------- |
+| `hello_world` | nothing; it exists to test the pipeline without a GPU         |
+| `agentdojo`   | prompt-injection resistance on the [AgentDojo] `travel` suite |
+
+[AgentDojo]: https://github.com/ethz-spylab/agentdojo
 [Confidential Space]:
   https://cloud.google.com/confidential-computing/confidential-space/docs/confidential-space-overview
-[DSSE]: https://github.com/secure-systems-lab/dsse
-[in-toto Statement]:
-  https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md
+[Ollama]: https://ollama.com

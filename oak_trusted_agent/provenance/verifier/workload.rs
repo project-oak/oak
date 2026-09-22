@@ -29,7 +29,7 @@ use oak_proto_rust::oak::attestation::v1::{
     confidential_space_reference_values::ContainerImage,
 };
 use oak_time::Instant;
-use oak_trusted_agent_eval_common::envelope::Envelope;
+use oak_trusted_agent_provenance_common::envelope::Envelope;
 use oci_spec::distribution::Reference as OciReference;
 use prost::Message;
 

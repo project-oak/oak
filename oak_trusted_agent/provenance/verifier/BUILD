@@ -18,28 +18,33 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
 
 package(licenses = ["notice"])
 
-# Runs inside Confidential Space, in the same image as the workload.
+# Runs anywhere, including on a laptop with no TEE.
 rust_binary(
-    name = "oak_trusted_agent_eval_signer",
+    name = "oak_trusted_agent_provenance_verifier",
     srcs = [
         "main.rs",
+        "report.rs",
         "tests.rs",
+        "workload.rs",
     ],
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "//oak_attestation_gcp",
-        "//oak_trusted_agent/eval/common",
-        "//util/digest:oak_digest",
+        "//oak_attestation_verification_types",
+        "//oak_proto_rust",
+        "//oak_time",
+        "//oak_trusted_agent/provenance/common",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
-        "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:jwt",
+        "@oak_crates_index//:oci-spec",
+        "@oak_crates_index//:prost",
     ],
 )
 
 rust_test(
-    name = "oak_trusted_agent_eval_signer_test",
-    crate = ":oak_trusted_agent_eval_signer",
+    name = "oak_trusted_agent_provenance_verifier_test",
+    crate = ":oak_trusted_agent_provenance_verifier",
     target_compatible_with = ["@platforms//os:linux"],
-    deps = ["@oak_crates_index//:tempfile"],
 )
