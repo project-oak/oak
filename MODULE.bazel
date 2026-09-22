@@ -25,6 +25,9 @@ typescript = use_extension("@aspect_rules_ts//ts:extensions.bzl", "typescript")
 typescript.deps(version = "5.6.2")
 use_repo(typescript, "npm_typescript")
 
+# https://github.com/aspect-build/rules_esbuild
+bazel_dep(name = "aspect_rules_esbuild", version = "0.21.0")
+
 # https://github.com/aspect-build/rules_js
 bazel_dep(name = "aspect_rules_js", version = "2.0.0")
 
@@ -41,6 +44,7 @@ bazel_dep(name = "rules_nodejs", version = "6.3.0")
 
 node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
 node.toolchain(node_version = "20.17.0")
+use_repo(node, "nodejs")
 
 # https://github.com/grpc/grpc-java
 bazel_dep(name = "grpc-java", version = "1.71.0", repo_name = "io_grpc_grpc_java")

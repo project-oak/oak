@@ -5,6 +5,7 @@
   "dependencies": {
     "@bytecodealliance/componentize-js": "0.22.0",
     "@bytecodealliance/preview2-shim": "^0.25.0",
+    "@google/adk": "2.1.0",
     "commander": "^12.1.0",
     "esbuild": "0.25.0"
   },
