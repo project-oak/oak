@@ -14,10 +14,14 @@
 # limitations under the License.
 #
 
+load("@npm//:defs.bzl", "npm_link_all_packages")
+
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
+
+npm_link_all_packages(name = "node_modules")
 
 filegroup(
     name = "wit_files",

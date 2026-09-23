@@ -5,3 +5,4 @@ linter
 oak_containers/sysroot
 tools/lint-runner/bazel-*
 tmp
+oak_trusted_agent/sandbox/node_modules

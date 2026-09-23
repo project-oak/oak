@@ -1,0 +1,27 @@
+{
+  "name": "agent_ts",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@bytecodealliance/componentize-js": "0.22.0",
+    "@bytecodealliance/preview2-shim": "^0.25.0",
+    "commander": "^12.1.0",
+    "esbuild": "0.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ],
+    "packageExtensions": {
+      "@bytecodealliance/componentize-js": {
+        "dependencies": {
+          "@bytecodealliance/preview2-shim": "^0.25.0",
+          "commander": "^12.1.0"
+        }
+      }
+    }
+  }
+}

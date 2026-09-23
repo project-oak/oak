@@ -117,6 +117,7 @@
                 which
                 nodejs
                 esbuild
+                nodePackages.pnpm
               ]
               ++
               # Linux-specific dependencies.
@@ -214,6 +215,7 @@
                 openssl
                 nodejs
                 esbuild
+                nodePackages.pnpm
               ];
             };
             # Shell for building containers system image. This is not included in the

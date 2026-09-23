@@ -367,7 +367,8 @@
     "https://bcr.bazel.build/modules/rules_nixpkgs_core/0.13.0/source.json": "c542b96a9d6ab189bd1a65da43e6c7b8be5f1099876ffba35cd9d2275f82740e",
     "https://bcr.bazel.build/modules/rules_nodejs/5.8.2/MODULE.bazel": "6bc03c8f37f69401b888023bf511cb6ee4781433b0cb56236b2e55a21e3a026a",
     "https://bcr.bazel.build/modules/rules_nodejs/6.2.0/MODULE.bazel": "ec27907f55eb34705adb4e8257952162a2d4c3ed0f0b3b4c3c1aad1fac7be35e",
-    "https://bcr.bazel.build/modules/rules_nodejs/6.2.0/source.json": "a77c307175a82982f0847fd6a8660db5b21440d8a9d073642cb4afa7a18612ff",
+    "https://bcr.bazel.build/modules/rules_nodejs/6.3.0/MODULE.bazel": "45345e4aba35dd6e4701c1eebf5a4e67af4ed708def9ebcdc6027585b34ee52d",
+    "https://bcr.bazel.build/modules/rules_nodejs/6.3.0/source.json": "1254ffd8d0d908a19c67add7fb5e2a1f604df133bc5d206425264293e2e537fc",
     "https://bcr.bazel.build/modules/rules_oci/2.2.6/MODULE.bazel": "2ba6ddd679269e00aeffe9ca04faa2d0ca4129650982c9246d0d459fe2da47d9",
     "https://bcr.bazel.build/modules/rules_oci/2.2.6/source.json": "94e7decb8f95d9465b0bbea71c65064cd16083be1350c7468f131818641dc4a5",
     "https://bcr.bazel.build/modules/rules_perl/0.2.4/MODULE.bazel": "5f5af7be4bf5fb88d91af7469518f0fd2161718aefc606188f7cd51f436ca938",
@@ -902,7 +903,7 @@
         "bzlTransitiveDigest": "IIspOFb2zj/H+Hcij9i5MHLFU9VOavZTaA+///L/76w=",
         "usagesDigest": "WqFS+erRQO0FnSIuWY/4A0BgxztdEULNjavEWxi0j0c=",
         "recordedFileInputs": {
-          "@@oak+//MODULE.bazel": "a41012bec85064ea71d8285c2231cb6da7f5d8a7007391ef99ae656549e1db2d"
+          "@@oak+//MODULE.bazel": "2a30fd723c63b7ddecf8da86da0844171298eb78be7eab90f792ee30fa9af13d"
         },
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -2722,8 +2723,8 @@
     },
     "@@rules_nodejs+//nodejs:extensions.bzl%node": {
       "general": {
-        "bzlTransitiveDigest": "0IJr1Jg3Dns9QKY65MtauFLtHjjP3n1DgN0+ZAjFYXo=",
-        "usagesDigest": "lYnf78fCR7lvI17f6EaZO0GCSdImBY/Loh6ocUce2GI=",
+        "bzlTransitiveDigest": "SqbzUarOVzAfK28Ca5+NIU3LUwnW/b3h0xXBUS97oyI=",
+        "usagesDigest": "1wQMxz3WKiI6Xc5jGXGU2rbR2FcRGWC5577bgauLrtA=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -2736,7 +2737,7 @@
               "node_urls": [
                 "https://nodejs.org/dist/v{version}/{filename}"
               ],
-              "node_version": "18.20.3",
+              "node_version": "20.17.0",
               "include_headers": false,
               "platform": "linux_amd64"
             }
@@ -2749,7 +2750,7 @@
               "node_urls": [
                 "https://nodejs.org/dist/v{version}/{filename}"
               ],
-              "node_version": "18.20.3",
+              "node_version": "20.17.0",
               "include_headers": false,
               "platform": "linux_arm64"
             }
@@ -2762,7 +2763,7 @@
               "node_urls": [
                 "https://nodejs.org/dist/v{version}/{filename}"
               ],
-              "node_version": "18.20.3",
+              "node_version": "20.17.0",
               "include_headers": false,
               "platform": "linux_s390x"
             }
@@ -2775,7 +2776,7 @@
               "node_urls": [
                 "https://nodejs.org/dist/v{version}/{filename}"
               ],
-              "node_version": "18.20.3",
+              "node_version": "20.17.0",
               "include_headers": false,
               "platform": "linux_ppc64le"
             }
@@ -2788,7 +2789,7 @@
               "node_urls": [
                 "https://nodejs.org/dist/v{version}/{filename}"
               ],
-              "node_version": "18.20.3",
+              "node_version": "20.17.0",
               "include_headers": false,
               "platform": "darwin_amd64"
             }
@@ -2801,7 +2802,7 @@
               "node_urls": [
                 "https://nodejs.org/dist/v{version}/{filename}"
               ],
-              "node_version": "18.20.3",
+              "node_version": "20.17.0",
               "include_headers": false,
               "platform": "darwin_arm64"
             }
@@ -2814,7 +2815,7 @@
               "node_urls": [
                 "https://nodejs.org/dist/v{version}/{filename}"
               ],
-              "node_version": "18.20.3",
+              "node_version": "20.17.0",
               "include_headers": false,
               "platform": "windows_amd64"
             }
