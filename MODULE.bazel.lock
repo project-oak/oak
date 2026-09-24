@@ -492,7 +492,7 @@
         "bzlTransitiveDigest": "IIspOFb2zj/H+Hcij9i5MHLFU9VOavZTaA+///L/76w=",
         "usagesDigest": "ffrD7viG/EiFoE/Z900CCeB39GTRKrpPHl2eqqG/Ynk=",
         "recordedFileInputs": {
-          "@@//MODULE.bazel": "a49503ff7a989936177545aad32d85bb6c4f706a1b090468978a3ff73d531f0c"
+          "@@//MODULE.bazel": "c88337ca02d9bab6013a1fc4019910cfcf6f4d394d7555a4358d1f10485a0891"
         },
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -2979,7 +2979,7 @@
     "@@rules_oci+//oci:extensions.bzl%oci": {
       "general": {
         "bzlTransitiveDigest": "jeibSWgC83kjU/eWUGqR6pV5wIG/lttxu/KWUfA9k+s=",
-        "usagesDigest": "WYBHXV0vUy/o4LscCxgprvYpryatM5bCCmWg+uOUJa8=",
+        "usagesDigest": "CS+TtPUoNtbSLC4F3d20y8hDsGPHOH7pN6GOl0YiHCA=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -3010,6 +3010,35 @@
                 "@@platforms//cpu:x86_64": "@distroless_cc_debian12_linux_amd64"
               },
               "bzlmod_repository": "distroless_cc_debian12",
+              "reproducible": true
+            }
+          },
+          "ollama_linux_amd64": {
+            "repoRuleId": "@@rules_oci+//oci/private:pull.bzl%oci_pull",
+            "attributes": {
+              "www_authenticate_challenges": {},
+              "scheme": "https",
+              "registry": "index.docker.io",
+              "repository": "ollama/ollama",
+              "identifier": "sha256:0c0a83210471fb50226bcdc2d6611d20ab13ae87e024cc304c94a6a5765c5e65",
+              "platform": "linux/amd64",
+              "target_name": "ollama_linux_amd64",
+              "bazel_tags": []
+            }
+          },
+          "ollama": {
+            "repoRuleId": "@@rules_oci+//oci/private:pull.bzl%oci_alias",
+            "attributes": {
+              "target_name": "ollama",
+              "www_authenticate_challenges": {},
+              "scheme": "https",
+              "registry": "index.docker.io",
+              "repository": "ollama/ollama",
+              "identifier": "sha256:0c0a83210471fb50226bcdc2d6611d20ab13ae87e024cc304c94a6a5765c5e65",
+              "platforms": {
+                "@@platforms//cpu:x86_64": "@ollama_linux_amd64"
+              },
+              "bzlmod_repository": "ollama",
               "reproducible": true
             }
           },
@@ -3131,7 +3160,9 @@
           "explicitRootModuleDirectDeps": [],
           "explicitRootModuleDirectDevDeps": [
             "distroless_cc_debian12",
-            "distroless_cc_debian12_linux_amd64"
+            "distroless_cc_debian12_linux_amd64",
+            "ollama",
+            "ollama_linux_amd64"
           ],
           "useAllRepos": "NO",
           "reproducible": false
