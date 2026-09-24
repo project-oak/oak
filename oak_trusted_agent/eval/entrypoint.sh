@@ -45,4 +45,4 @@ if [[ -n ${RESULTS_BUCKET:-} ]]; then
   ARGS+=("--upload-to=gs://${RESULTS_BUCKET}/eval")
 fi
 
-python3 -m harness.run "${ARGS[@]}"
+/workspace/run "${ARGS[@]}"

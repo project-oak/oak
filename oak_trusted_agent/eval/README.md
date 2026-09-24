@@ -10,9 +10,10 @@ refuse to talk to a model whose published evaluation it cannot verify.
 ## Layout
 
 ```text
-harness/                 runs a benchmark, builds the predicate, calls the signer
+BUILD                    container image targets (:image_gemma4_e2b_it_qat, :push_gemma4_e2b_it_qat)
 benchmarks/<name>/       one directory per benchmark
-image/                   the container that runs in the TEE
+entrypoint.sh            container entrypoint starting Ollama and the harness
+harness/                 runs a benchmark, builds the predicate, calls the signer
 terraform/               the deployment
 ```
 
@@ -49,15 +50,12 @@ Needs [Ollama] on the host, and no accelerator if the model is small enough.
 ollama serve &
 ollama pull gemma4:e2b
 
-cd oak_trusted_agent/eval
-pip install -r requirements.txt
 bazel build //oak_trusted_agent/provenance/signer:oak_trusted_agent_provenance_signer
-
-python -m harness.run \
+bazel run //oak_trusted_agent/eval:run -- \
   --benchmark=hello_world \
   --model=gemma4:e2b \
   --out-dir=/tmp/eval \
-  --signer=../../bazel-bin/oak_trusted_agent/provenance/signer/oak_trusted_agent_provenance_signer \
+  --signer="$(pwd)/bazel-bin/oak_trusted_agent/provenance/signer/oak_trusted_agent_provenance_signer" \
   --no-attestation
 ```
 
@@ -71,34 +69,30 @@ This writes `report.jsonl`, `predicate.json` and `signed.json` to
 
 ## Building the container image
 
-`image/Dockerfile` bakes Ollama, the `gemma4:e2b-it-qat` weights, the harness,
-and the Bazel-built `signer` binary into a single Confidential Space image so
-that the model weights are covered by the attested `image_digest`.
+`BUILD` assembles a reproducible OCI image from the pinned `ollama/ollama` base
+image, the `gemma4:e2b-it-qat` weights layers (shared with the `model` image),
+the hermetic Python harness (`:run`), and the `signer` binary.
 
 ```shell
-cd oak_trusted_agent/eval
-PUSH=false ./image/publish_docker.sh
-
-docker run --rm \
-  -e NO_ATTESTATION=true \
-  -v /tmp/eval:/out \
-  us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/eval/gemma4-e2b-it-qat:latest
+bazel build --config=release //oak_trusted_agent/eval:image_gemma4_e2b_it_qat
+jq -r '.manifests[0].digest' bazel-bin/oak_trusted_agent/eval/image_gemma4_e2b_it_qat/index.json
 ```
 
 ## Deploying to Confidential Space
 
 `terraform/` provisions a batch Confidential Space VM
 (`tee-restart-policy=Never`) and a workload service account granted access to
-the `oak-trusted-agent` GCS bucket (`gs://oak-trusted-agent/eval/`), where
-the container uploads `report.jsonl`, `predicate.json`, and `signed.json`.
+the `oak-trusted-agent` GCS bucket (`gs://oak-trusted-agent/eval/`), where the
+container uploads `report.jsonl`, `predicate.json`, and `signed.json`.
 
 ```shell
-cd oak_trusted_agent/eval
-./image/publish_docker.sh
+bazel run --config=release //oak_trusted_agent/eval:push_gemma4_e2b_it_qat
+DIGEST="$(jq -r '.manifests[0].digest' bazel-bin/oak_trusted_agent/eval/image_gemma4_e2b_it_qat/index.json)"
 
-cd terraform
+cd oak_trusted_agent/eval/terraform
 terraform init
-terraform apply
+terraform apply \
+  -var="image_digest=us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/eval/gemma4-e2b-it-qat@${DIGEST}"
 ```
 
 ## Verifying the results
