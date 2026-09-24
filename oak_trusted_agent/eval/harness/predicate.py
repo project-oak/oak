@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-"""The predicate body, as described by `../predicate_schema.md`."""
+"""The predicate body, as described by `docs/trusted_agent/eval_v1.md`."""
 
 import datetime
 from typing import Any
@@ -25,7 +25,7 @@ from benchmarks.benchmark import Benchmark
 
 # A verifier pins this with `--expected-predicate-type`, so a change that is not
 # backwards compatible needs a new URI.
-PREDICATE_TYPE = "https://project-oak.dev/attestation/model-eval/v1"
+PREDICATE_TYPE = "https://project-oak.github.io/oak/trusted_agent/eval/v1"
 
 
 # Shapes that exist only as parts of a `Predicate`. Module level rather than

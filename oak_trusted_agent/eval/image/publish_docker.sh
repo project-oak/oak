@@ -27,7 +27,7 @@ REPO_ROOT="$(cd "${EVAL_DIR}/../.." && pwd)"
 PROJECT_ID="${1:-oak-examples-477357}"
 REPOSITORY_NAME="${2:-oak-trusted-agent}"
 MODEL_SLUG="${MODEL_SLUG:-gemma4-e2b-it-qat}"
-IMAGE_NAME="model-eval/${MODEL_SLUG}"
+IMAGE_NAME="eval/${MODEL_SLUG}"
 IMAGE_URL="us-east5-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY_NAME}/${IMAGE_NAME}:latest"
 
 # Pin Python dependencies:

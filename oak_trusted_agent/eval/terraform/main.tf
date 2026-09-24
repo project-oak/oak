@@ -1,4 +1,4 @@
-resource "google_service_account" "model_eval" {
+resource "google_service_account" "trusted_eval" {
   account_id   = "${var.instance_name}-sa"
   display_name = "Confidential Space workload SA for ${var.instance_name}"
 }
@@ -6,25 +6,25 @@ resource "google_service_account" "model_eval" {
 resource "google_project_iam_member" "workload_user" {
   project = var.gcp_project_id
   role    = "roles/confidentialcomputing.workloadUser"
-  member  = "serviceAccount:${google_service_account.model_eval.email}"
+  member  = "serviceAccount:${google_service_account.trusted_eval.email}"
 }
 
 resource "google_project_iam_member" "log_writer" {
   project = var.gcp_project_id
   role    = "roles/logging.logWriter"
-  member  = "serviceAccount:${google_service_account.model_eval.email}"
+  member  = "serviceAccount:${google_service_account.trusted_eval.email}"
 }
 
 resource "google_project_iam_member" "artifact_reader" {
   project = var.gcp_project_id
   role    = "roles/artifactregistry.reader"
-  member  = "serviceAccount:${google_service_account.model_eval.email}"
+  member  = "serviceAccount:${google_service_account.trusted_eval.email}"
 }
 
 resource "google_storage_bucket_iam_member" "results_writer" {
   bucket = var.results_bucket_name
   role   = "roles/storage.objectAdmin"
-  member = "serviceAccount:${google_service_account.model_eval.email}"
+  member = "serviceAccount:${google_service_account.trusted_eval.email}"
 }
 
 module "confidential_space_instance" {
@@ -40,7 +40,7 @@ module "confidential_space_instance" {
   use_spot_vm           = var.use_spot_vm
   accelerator_type      = var.accelerator_type
   accelerator_count     = var.accelerator_count
-  service_account_email = google_service_account.model_eval.email
+  service_account_email = google_service_account.trusted_eval.email
 
   metadata = {
     # Prevent the batch evaluation container from looping endlessly after signing.

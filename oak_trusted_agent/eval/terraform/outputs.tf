@@ -10,5 +10,5 @@ output "results_bucket" {
 
 output "results_gcs_uri" {
   description = "The GCS URI prefix where signed evaluation bundles are uploaded."
-  value       = "gs://${var.results_bucket_name}/model-eval/"
+  value       = "gs://${var.results_bucket_name}/eval/"
 }

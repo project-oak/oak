@@ -42,7 +42,7 @@ impl AssertionGenerator for RecordingGenerator {
 fn statement_about(contents: &[u8]) -> InTotoStatement {
     statement::new(
         vec![statement::subject("report.jsonl", contents)],
-        "https://project-oak.dev/attestation/model-eval/v1".to_string(),
+        "https://project-oak.github.io/oak/trusted_agent/eval/v1".to_string(),
         Predicate::new(),
     )
     .unwrap()
@@ -144,7 +144,10 @@ mod statement_tests {
         let json: serde_json::Value =
             serde_json::from_slice(&serde_json::to_vec(&statement()).unwrap()).unwrap();
         assert_eq!(json["_type"], IN_TOTO_TYPE);
-        assert_eq!(json["predicateType"], "https://project-oak.dev/attestation/model-eval/v1");
+        assert_eq!(
+            json["predicateType"],
+            "https://project-oak.github.io/oak/trusted_agent/eval/v1"
+        );
         assert_eq!(json["subject"][0]["name"], "report.jsonl");
     }
 

@@ -32,7 +32,7 @@ RUN /bin/ollama serve & \
     until ollama list >/dev/null 2>&1; do sleep 1; done && \
     ollama pull ${MODEL}:${MODEL_PARAMS}
 
-# Verify the manifest digest to guarantee the exact same weights evaluated in model_eval.
+# Verify the manifest digest to guarantee the exact same weights measured by the eval image.
 ARG MODEL_SHA256SUM=07ea59a474013479c8b6b802bef095c40e964a1d776ba02f264c0e30e1aede0c
 RUN bash -o pipefail -c 'echo "${MODEL_SHA256SUM}  ${MODELS_DIR}/manifests/registry.ollama.ai/library/${MODEL}/${MODEL_PARAMS}" | sha256sum --check'
 

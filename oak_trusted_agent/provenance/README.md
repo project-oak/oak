@@ -33,7 +33,7 @@ changing any Rust.
 signer \
   --subject        /out/report.jsonl \
   --subject-digest gpt-oss:20b=sha256:2f1e… \
-  --predicate-type https://project-oak.dev/attestation/model-eval/v1 \
+  --predicate-type https://project-oak.github.io/oak/trusted_agent/eval/v1 \
   --predicate      /out/predicate.json \
   --out            /out/signed_statement.json
 ```
@@ -50,7 +50,7 @@ verifier \
   --unchecked-subject      gpt-oss:20b \
   --expected-image-prefix  europe-docker.pkg.dev/oak/trusted-eval/ \
   --expected-image-digest  sha256:dead… \
-  --expected-predicate-type https://project-oak.dev/attestation/model-eval/v1
+  --expected-predicate-type https://project-oak.github.io/oak/trusted_agent/eval/v1
 ```
 
 ```text

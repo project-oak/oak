@@ -42,7 +42,7 @@ if [[ ${NO_ATTESTATION:-false} == "true" ]]; then
   ARGS+=("--no-attestation")
 fi
 if [[ -n ${RESULTS_BUCKET:-} ]]; then
-  ARGS+=("--upload-to=gs://${RESULTS_BUCKET}/model-eval")
+  ARGS+=("--upload-to=gs://${RESULTS_BUCKET}/eval")
 fi
 
 python3 -m harness.run "${ARGS[@]}"

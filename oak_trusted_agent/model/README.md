@@ -15,7 +15,7 @@ terraform/               Confidential Space deployment (VM, IAM, firewall)
 ## Building the container image
 
 `image/Dockerfile` bakes Ollama, the `gemma4:e2b-it-qat` weights (verified
-against the same `MODEL_SHA256SUM` used in `model_eval`), and the Bazel-built
+against the same `MODEL_SHA256SUM` used by the `eval` image), and the Bazel-built
 `//oak_proxy/server` binary into a single Confidential Space image.
 
 Inside the container, Ollama binds exclusively to `127.0.0.1:11434` and is

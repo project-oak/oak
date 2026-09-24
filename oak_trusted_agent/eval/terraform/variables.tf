@@ -13,7 +13,7 @@ variable "zone" {
 variable "instance_name" {
   type        = string
   description = "The name of the Confidential Space GCE instance."
-  default     = "model-eval"
+  default     = "trusted-eval"
 }
 
 variable "machine_type" {
@@ -55,7 +55,7 @@ variable "use_debug_image" {
 variable "image_digest" {
   type        = string
   description = "The container image reference to run, ideally pinned by '@sha256:DIGEST'."
-  default     = "us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/model-eval/gemma4-e2b-it-qat:latest"
+  default     = "us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/eval/gemma4-e2b-it-qat:latest"
 }
 
 variable "benchmark" {

@@ -1,6 +1,6 @@
-# Model evaluation predicate
+# Trusted Agent Evaluation Predicate V1
 
-`https://project-oak.dev/attestation/model-eval/v1`
+`https://project-oak.github.io/oak/trusted_agent/eval/v1`
 
 The predicate body carried by statements that report a model evaluation. The
 signer does not interpret it, so this document, rather than any code, is what

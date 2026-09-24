@@ -38,7 +38,8 @@ the harness and never a change to any Rust.
 
 A benchmark reports a **score**, the harness wraps it in a **predicate**, and
 the signer wraps that in a **statement**. The predicate shape is fixed by
-[`predicate_schema.md`](predicate_schema.md). Benchmarks vary only in `detail`.
+[`docs/trusted_agent/eval_v1.md`](../../docs/trusted_agent/eval_v1.md).
+Benchmarks vary only in `detail`.
 
 ## Running it locally
 
@@ -55,13 +56,13 @@ bazel build //oak_trusted_agent/provenance/signer:oak_trusted_agent_provenance_s
 python -m harness.run \
   --benchmark=hello_world \
   --model=gemma4:e2b \
-  --out-dir=/tmp/model_eval \
+  --out-dir=/tmp/eval \
   --signer=../../bazel-bin/oak_trusted_agent/provenance/signer/oak_trusted_agent_provenance_signer \
   --no-attestation
 ```
 
 This writes `report.jsonl`, `predicate.json` and `signed.json` to
-`/tmp/model_eval/hello_world/`.
+`/tmp/eval/hello_world/`.
 
 > [!WARNING] `--no-attestation` produces a statement with no proof in it, and
 > the verifier rejects it. It is for checking the plumbing, not for producing
@@ -80,15 +81,15 @@ PUSH=false ./image/publish_docker.sh
 
 docker run --rm \
   -e NO_ATTESTATION=true \
-  -v /tmp/model_eval:/out \
-  us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/model-eval/gemma4-e2b-it-qat:latest
+  -v /tmp/eval:/out \
+  us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/eval/gemma4-e2b-it-qat:latest
 ```
 
 ## Deploying to Confidential Space
 
 `terraform/` provisions a batch Confidential Space VM
 (`tee-restart-policy=Never`) and a workload service account granted access to
-the `oak-trusted-agent` GCS bucket (`gs://oak-trusted-agent/model-eval/`), where
+the `oak-trusted-agent` GCS bucket (`gs://oak-trusted-agent/eval/`), where
 the container uploads `report.jsonl`, `predicate.json`, and `signed.json`.
 
 ```shell
@@ -103,16 +104,16 @@ terraform apply
 ## Verifying the results
 
 Signed evaluation bundles are published to
-`gs://oak-trusted-agent/model-eval/<model>/<benchmark>/`:
+`gs://oak-trusted-agent/eval/<model>/<benchmark>/`:
 
 ```shell
-gcloud storage cp -r gs://oak-trusted-agent/model-eval/gemma4-e2b-it-qat/hello-world /tmp/eval_out
+gcloud storage cp -r gs://oak-trusted-agent/eval/gemma4-e2b-it-qat/hello-world /tmp/eval_out
 bazel run //oak_trusted_agent/provenance/verifier:oak_trusted_agent_provenance_verifier -- \
   --statement=/tmp/eval_out/hello-world/signed.json \
   --subject=/tmp/eval_out/hello-world/report.jsonl \
   --unchecked-subject=gemma4:e2b-it-qat \
-  --expected-image-prefix=us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/model-eval/gemma4-e2b-it-qat \
-  --expected-predicate-type=https://project-oak.dev/attestation/model-eval/v1
+  --expected-image-prefix=us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/eval/gemma4-e2b-it-qat \
+  --expected-predicate-type=https://project-oak.github.io/oak/trusted_agent/eval/v1
 ```
 
 ## Benchmarks
