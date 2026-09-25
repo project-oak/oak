@@ -14,7 +14,9 @@
 
 /**
  * Google ADK BaseLlm implementations for the TypeScript ADK Agent.
- * Supports live model execution via WASI Preview 2 HTTP fetch().
+ * Dispatches model execution requests to the host across the WIT
+ * boundary (oak:agent/model@0.1.0). The host provides model metadata
+ * via getModelInfo() and issues the actual model calls on behalf of the sandbox.
  */
 
 import {
@@ -23,111 +25,61 @@ import {
   LlmRequest,
   LlmResponse,
 } from '@google/adk';
+import type { ModelInfo, ModelProvider } from 'oak:agent/model@0.1.0';
 
 type Content = NonNullable<LlmResponse['content']>;
-type Part = NonNullable<Content['parts']>[number];
 
-interface GenerateContentApiResponse {
+export interface GenerateContentApiResponse {
   candidates?: Array<{
     content?: Content;
+    finishReason?: string;
+    finishMessage?: string;
   }>;
-}
-
-export interface ModelResponse {
-  thought?: string;
-  toolCall?: {
-    name: string;
-    args: Record<string, unknown>;
+  promptFeedback?: {
+    blockReason?: string;
+    blockReasonMessage?: string;
   };
-  finalAnswer?: string;
-}
-
-export interface HistoryItem {
-  role: 'user' | 'model' | 'tool';
-  content: string;
-}
-
-export interface Model {
-  generate(
-    prompt: string,
-    history: HistoryItem[],
-  ): Promise<ModelResponse> | ModelResponse;
 }
 
 /**
- * Live Google ADK BaseLlm implementation targeting an attested Ollama / host
- * HTTP model endpoint over WASI Preview 2 HTTP fetch().
- *
- * NOTE: The agent inside the Wasm sandbox does not hold raw API keys or secrets.
- * Model requests are routed to the host or an attested proxy container (e.g.,
- * oak_proxy_server fronting Ollama in Confidential Space).
+ * Interface representing the WIT `oak:agent/model@0.1.0` host import module.
+ * Across the WebAssembly Component Model boundary, the host exposes model
+ * configuration via `getModelInfo` and processes model execution requests via `callModel`.
  */
-export class OllamaWasiModel extends BaseLlm implements Model {
-  private readonly endpointUrl: string;
-  private readonly modelName: string;
+export interface WitModel {
+  getModelInfo(): ModelInfo;
+  callModel(request: string): string;
+}
 
-  constructor(
-    endpointUrl: string = 'http://127.0.0.1:8080',
-    modelName: string = 'gemma4:e2b-it-qat',
-  ) {
-    super({ model: modelName });
-    this.endpointUrl = endpointUrl;
-    this.modelName = modelName;
+export type { ModelInfo, ModelProvider };
+
+/**
+ * Google ADK BaseLlm implementation targeting the host model provider
+ * across the WIT `oak:agent/model@0.1.0` interface.
+ */
+export class OakModel extends BaseLlm {
+  private readonly witModel: WitModel;
+  private modelInfo?: ModelInfo;
+
+  constructor(witModel: WitModel) {
+    super({ model: 'oak-model' });
+    this.witModel = witModel;
   }
 
-  public async generate(
-    prompt: string,
-    history: HistoryItem[],
-  ): Promise<ModelResponse> {
-    const url = `${this.endpointUrl}/v1beta/models/${this.modelName}:generateContent`;
-
-    const contents = history.map((item) => ({
-      role: item.role === 'model' ? 'model' : 'user',
-      parts: [{ text: item.content }],
-    }));
-    contents.push({
-      role: 'user',
-      parts: [{ text: prompt }],
-    });
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ contents }),
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `Ollama API error: ${response.status} ${response.statusText}`,
-      );
+  public getModelInfo(): ModelInfo {
+    if (!this.modelInfo) {
+      this.modelInfo = this.witModel.getModelInfo();
     }
-
-    const data = (await response.json()) as GenerateContentApiResponse;
-    const candidateParts: Part[] = data.candidates?.[0]?.content?.parts ?? [];
-    const fnCallPart = candidateParts.find((p: Part) => p.functionCall);
-    if (fnCallPart?.functionCall?.name) {
-      return {
-        toolCall: {
-          name: fnCallPart.functionCall.name,
-          args: (fnCallPart.functionCall.args as Record<string, unknown>) ?? {},
-        },
-      };
-    }
-
-    const candidateText = candidateParts.find((p: Part) => p.text)?.text ?? '';
-    return {
-      finalAnswer: candidateText,
-    };
+    return this.modelInfo;
   }
 
   override async *generateContentAsync(
     llmRequest: LlmRequest,
   ): AsyncGenerator<LlmResponse, void> {
-    const url = `${this.endpointUrl}/v1beta/models/${this.modelName}:generateContent`;
-
+    const info = this.getModelInfo();
     const requestBody: Record<string, unknown> = {
+      model: info.name,
+      provider: info.provider,
       contents: llmRequest.contents,
     };
     if (llmRequest.config?.systemInstruction) {
@@ -137,27 +89,73 @@ export class OllamaWasiModel extends BaseLlm implements Model {
       requestBody.tools = llmRequest.config.tools;
     }
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `Ollama API error: ${response.status} ${response.statusText}`,
-      );
+    const rawResult = this.witModel.callModel(JSON.stringify(requestBody));
+    let data: GenerateContentApiResponse;
+    try {
+      data = JSON.parse(rawResult) as GenerateContentApiResponse;
+    } catch (e) {
+      yield {
+        content: { role: 'model', parts: [] },
+        errorMessage: `Failed to parse host model response as JSON: ${e}`,
+      };
+      return;
     }
 
-    const data = (await response.json()) as GenerateContentApiResponse;
-    const candidateContent = data.candidates?.[0]?.content;
+    if (data.promptFeedback?.blockReason) {
+      const reason = data.promptFeedback.blockReason;
+      const msg =
+        data.promptFeedback.blockReasonMessage ||
+        'Prompt was blocked by safety filters';
+      yield {
+        content: {
+          role: 'model',
+          parts: [{ text: `[Blocked: ${reason}] ${msg}` }],
+        },
+        errorMessage: `Model prompt blocked: ${reason}`,
+      };
+      return;
+    }
+
+    const candidate = data.candidates?.[0];
+    if (!candidate) {
+      yield {
+        content: { role: 'model', parts: [] },
+        errorMessage: 'Model returned no candidate answers.',
+      };
+      return;
+    }
+
+    const candidateContent = candidate.content;
+    const finishReason = candidate.finishReason;
+
+    // Handle case where call succeeds but contains no answer (e.g. SAFETY, MAX_TOKENS)
+    if (
+      (!candidateContent?.parts || candidateContent.parts.length === 0) &&
+      finishReason &&
+      finishReason !== 'STOP'
+    ) {
+      const finishMsg =
+        candidate.finishMessage ||
+        `Model generation stopped with reason: ${finishReason}`;
+      yield {
+        content: {
+          role: 'model',
+          parts: [
+            { text: `[Generation stopped: ${finishReason}] ${finishMsg}` },
+          ],
+        },
+        errorMessage: finishMsg,
+        finishReason: finishReason as any,
+      };
+      return;
+    }
+
     yield {
       content: candidateContent ?? {
         role: 'model',
         parts: [],
       },
+      finishReason: finishReason as any,
     };
   }
 
@@ -165,3 +163,6 @@ export class OllamaWasiModel extends BaseLlm implements Model {
     throw new Error('Live streaming connections are not supported in sandbox');
   }
 }
+
+// Backwards-compatible alias
+export { OakModel as HostModel };

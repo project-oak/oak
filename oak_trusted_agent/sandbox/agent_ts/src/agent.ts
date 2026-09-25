@@ -12,24 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {
-  BaseLlm,
-  BaseLlmConnection,
-  InMemoryRunner,
-  LlmAgent,
-  LlmRequest,
-  LlmResponse,
-} from '@google/adk';
-import { HistoryItem, Model, ModelResponse } from './models';
-import { HostToolRegistry } from './tools';
-
-type Part = NonNullable<NonNullable<LlmResponse['content']>['parts']>[number];
+import { BaseLlm, InMemoryRunner, LlmAgent } from '@google/adk';
+import { OakToolset } from './tools';
 
 export interface AgentConfig {
   name?: string;
   instruction?: string;
-  model: Model | BaseLlm;
-  toolRegistry?: HostToolRegistry;
+  model: BaseLlm;
+  toolset?: OakToolset;
+  toolRegistry?: OakToolset;
   maxSteps?: number;
 }
 
@@ -40,7 +31,7 @@ export interface AgentConfig {
 export class TrustedAgent {
   public readonly name: string;
   public readonly instruction: string;
-  public readonly toolRegistry: HostToolRegistry;
+  public readonly toolset: OakToolset;
   public readonly model: BaseLlm;
   public readonly maxSteps: number;
   public readonly llmAgent: LlmAgent;
@@ -50,9 +41,10 @@ export class TrustedAgent {
     this.instruction =
       config.instruction ||
       'You are an Oak Trusted Agent running inside an attested WebAssembly sandbox. Use available tools to answer user questions truthfully and securely.';
-    this.toolRegistry =
+    this.toolset =
+      config.toolset ??
       config.toolRegistry ??
-      new HostToolRegistry({
+      new OakToolset({
         listTools: () => [],
         callTool: () => {
           throw new Error('No host tools configured');
@@ -60,19 +52,20 @@ export class TrustedAgent {
       });
     if (!config.model) {
       throw new Error('A model must be provided in AgentConfig.');
-    } else if (config.model instanceof BaseLlm) {
-      this.model = config.model;
-    } else {
-      this.model = new ModelAdapter(config.model);
     }
+    this.model = config.model;
     this.maxSteps = config.maxSteps || 5;
 
     this.llmAgent = new LlmAgent({
       name: this.name,
       instruction: this.instruction,
       model: this.model,
-      tools: [this.toolRegistry],
+      tools: [this.toolset],
     });
+  }
+
+  public get toolRegistry(): OakToolset {
+    return this.toolset;
   }
 
   /**
@@ -84,7 +77,7 @@ export class TrustedAgent {
     traceLogs.push(`=== Agent Session: ${this.name} ===`);
     traceLogs.push(`[Preamble] ${this.instruction}`);
     traceLogs.push(
-      `[Available Tools] ${this.toolRegistry
+      `[Available Tools] ${this.toolset
         .listTools()
         .map((t) => t.name)
         .join(', ')}`,
@@ -132,72 +125,5 @@ export class TrustedAgent {
 
     traceLogs.push('======================================');
     return traceLogs.join('\n');
-  }
-}
-
-/**
- * Adapter wrapping a plain `Model` interface as an ADK `BaseLlm` instance.
- */
-class ModelAdapter extends BaseLlm {
-  private readonly delegate: Model;
-
-  constructor(delegate: Model) {
-    super({ model: 'custom-model' });
-    this.delegate = delegate;
-  }
-
-  override async *generateContentAsync(
-    llmRequest: LlmRequest,
-  ): AsyncGenerator<LlmResponse, void> {
-    let prompt = '';
-    const history: HistoryItem[] = [];
-
-    for (const content of llmRequest.contents || []) {
-      for (const part of content.parts || []) {
-        if (part.functionResponse) {
-          const respObj = part.functionResponse.response || {};
-          history.push({
-            role: 'tool',
-            content: JSON.stringify(respObj),
-          });
-        } else if (part.text) {
-          if (content.role === 'user' && !prompt) {
-            prompt = part.text;
-          } else {
-            history.push({
-              role: content.role === 'model' ? 'model' : 'user',
-              content: part.text,
-            });
-          }
-        }
-      }
-    }
-
-    const step: ModelResponse = await this.delegate.generate(prompt, history);
-    const parts: Part[] = [];
-    if (step.thought) {
-      parts.push({ text: step.thought, thought: true });
-    }
-    if (step.toolCall) {
-      parts.push({
-        functionCall: {
-          name: step.toolCall.name,
-          args: step.toolCall.args,
-        },
-      });
-    } else if (step.finalAnswer) {
-      parts.push({ text: step.finalAnswer });
-    }
-
-    yield {
-      content: {
-        role: 'model',
-        parts,
-      },
-    };
-  }
-
-  override async connect(_llmRequest: LlmRequest): Promise<BaseLlmConnection> {
-    throw new Error('Live streaming connections are not supported in sandbox');
   }
 }

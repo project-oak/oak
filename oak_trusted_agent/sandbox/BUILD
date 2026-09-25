@@ -92,20 +92,9 @@ esbuild(
 
 copy_to_directory(
     name = "staged_wit",
-    srcs = [
-        ":wit_files",
-        "@wasi_snapshot_preview2//:wit_files",
-    ],
-    include_external_repositories = ["**"],
+    srcs = [":wit_files"],
     replace_prefixes = {
         "wit/": "",
-        "cli/": "deps/cli/",
-        "clocks/": "deps/clocks/",
-        "filesystem/": "deps/filesystem/",
-        "http/": "deps/http/",
-        "io/": "deps/io/",
-        "random/": "deps/random/",
-        "sockets/": "deps/sockets/",
     },
     target_compatible_with = ["@platforms//os:linux"],
 )
@@ -116,6 +105,11 @@ componentize_js_bin.componentize_js_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# @bytecodealliance/componentize-js (version 0.22.0) enables default WASI features
+# (DEFAULT_FEATURES = ['stdio', 'random', 'clocks', 'http', 'fetch-event']), which
+# automatically splice wasi:cli, wasi:clocks, wasi:random, and wasi:http imports into
+# the output component. Our minimal Oak agent interface only requires oak:agent/tools
+# and oak:agent/model, so we explicitly disable all default WASI features.
 js_run_binary(
     name = "adk_agent_ts",
     srcs = [
@@ -129,6 +123,16 @@ js_run_binary(
         "staged_wit",
         "--world-name",
         "oak-agent",
+        "--disable",
+        "http",
+        "--disable",
+        "fetch-event",
+        "--disable",
+        "clocks",
+        "--disable",
+        "random",
+        "--disable",
+        "stdio",
         "-o",
         "adk_agent_ts.wasm",
     ],

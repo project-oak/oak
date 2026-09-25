@@ -22,3 +22,14 @@ declare module 'oak:agent/tools@0.1.0' {
     inputSchema: string;
   }
 }
+
+declare module 'oak:agent/model@0.1.0' {
+  /** @module Interface oak:agent/model@0.1.0 **/
+  export function getModelInfo(): ModelInfo;
+  export function callModel(request: string): string;
+  export type ModelProvider = 'ollama' | 'gemini';
+  export interface ModelInfo {
+    name: string;
+    provider: ModelProvider;
+  }
+}

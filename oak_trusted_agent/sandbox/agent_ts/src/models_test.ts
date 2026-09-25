@@ -14,72 +14,161 @@
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { OllamaWasiModel } from './models';
+import { LlmRequest } from '@google/adk';
+import { OakModel, WitModel } from './models';
 
-describe('OllamaWasiModel', () => {
-  it('sends generateContent requests without raw API key headers', async (t) => {
-    let capturedUrl = '';
-    let capturedInit: RequestInit | undefined;
+describe('OakModel', () => {
+  it('forwards generateContent requests with model info from getModelInfo()', async () => {
+    let capturedRequest = '';
 
-    t.mock.method(
-      globalThis,
-      'fetch',
-      async (
-        input: RequestInfo | URL,
-        init?: RequestInit,
-      ): Promise<Response> => {
-        capturedUrl = String(input);
-        capturedInit = init;
-        return {
-          ok: true,
-          status: 200,
-          statusText: 'OK',
-          json: async () => ({
-            candidates: [
-              {
-                content: {
-                  parts: [{ text: 'Attested response from Ollama proxy' }],
-                },
+    const mockWitModel: WitModel = {
+      getModelInfo: () => ({
+        name: 'gemma4:e2b-it-qat',
+        provider: 'ollama',
+      }),
+      callModel: (request: string): string => {
+        capturedRequest = request;
+        return JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [{ text: 'Attested response from host model' }],
               },
-            ],
-          }),
-        } as Response;
+              finishReason: 'STOP',
+            },
+          ],
+        });
       },
-    );
+    };
 
-    const model = new OllamaWasiModel(
-      'http://127.0.0.1:8080',
-      'gemma4:e2b-it-qat',
-    );
-    const response = await model.generate('Summarize security properties', [
-      { role: 'user', content: 'Previous turn' },
-    ]);
+    const model = new OakModel(mockWitModel);
+    const llmRequest = {
+      contents: [
+        { role: 'user', parts: [{ text: 'Summarize security properties' }] },
+      ],
+    } as LlmRequest;
 
+    const responses = [];
+    for await (const resp of model.generateContentAsync(llmRequest)) {
+      responses.push(resp);
+    }
+
+    assert.equal(responses.length, 1);
     assert.equal(
-      capturedUrl,
-      'http://127.0.0.1:8080/v1beta/models/gemma4:e2b-it-qat:generateContent',
+      responses[0].content?.parts?.[0]?.text,
+      'Attested response from host model',
     );
-    const headers = (capturedInit?.headers || {}) as Record<string, string>;
-    assert.equal(headers['Content-Type'], 'application/json');
-    assert.equal(headers['x-goog-api-key'], undefined);
-    assert.equal(response.finalAnswer, 'Attested response from Ollama proxy');
+
+    const parsedRequest = JSON.parse(capturedRequest) as Record<
+      string,
+      unknown
+    >;
+    assert.equal(parsedRequest.model, 'gemma4:e2b-it-qat');
+    assert.equal(parsedRequest.provider, 'ollama');
+    assert.ok(Array.isArray(parsedRequest.contents));
   });
 
-  it('throws an Error on non-OK HTTP status', async (t) => {
-    t.mock.method(globalThis, 'fetch', async (): Promise<Response> => {
-      return {
-        ok: false,
-        status: 503,
-        statusText: 'Service Unavailable',
-      } as Response;
-    });
+  it('handles safety finishReason when candidate contains no parts', async () => {
+    const mockWitModel: WitModel = {
+      getModelInfo: () => ({
+        name: 'gemma4:e2b-it-qat',
+        provider: 'ollama',
+      }),
+      callModel: (): string => {
+        return JSON.stringify({
+          candidates: [
+            {
+              content: { parts: [] },
+              finishReason: 'SAFETY',
+              finishMessage: 'Response blocked for safety reasons',
+            },
+          ],
+        });
+      },
+    };
 
-    const model = new OllamaWasiModel(
-      'http://127.0.0.1:8080',
-      'gemma4:e2b-it-qat',
+    const model = new OakModel(mockWitModel);
+    const llmRequest = {
+      contents: [{ role: 'user', parts: [{ text: 'Blocked prompt test' }] }],
+    } as LlmRequest;
+
+    const responses = [];
+    for await (const resp of model.generateContentAsync(llmRequest)) {
+      responses.push(resp);
+    }
+
+    assert.equal(responses.length, 1);
+    assert.equal(
+      responses[0].errorMessage,
+      'Response blocked for safety reasons',
     );
+    assert.equal(responses[0].finishReason, 'SAFETY');
+    assert.ok(
+      responses[0].content?.parts?.[0]?.text?.includes(
+        '[Generation stopped: SAFETY]',
+      ),
+    );
+  });
+
+  it('handles blocked prompt in promptFeedback', async () => {
+    const mockWitModel: WitModel = {
+      getModelInfo: () => ({
+        name: 'gemma4:e2b-it-qat',
+        provider: 'gemini',
+      }),
+      callModel: (): string => {
+        return JSON.stringify({
+          promptFeedback: {
+            blockReason: 'PROHIBITED_CONTENT',
+            blockReasonMessage: 'Content violates usage guidelines',
+          },
+        });
+      },
+    };
+
+    const model = new OakModel(mockWitModel);
+    const llmRequest = {
+      contents: [{ role: 'user', parts: [{ text: 'Prohibited prompt test' }] }],
+    } as LlmRequest;
+
+    const responses = [];
+    for await (const resp of model.generateContentAsync(llmRequest)) {
+      responses.push(resp);
+    }
+
+    assert.equal(responses.length, 1);
+    assert.equal(
+      responses[0].errorMessage,
+      'Model prompt blocked: PROHIBITED_CONTENT',
+    );
+    assert.ok(
+      responses[0].content?.parts?.[0]?.text?.includes(
+        '[Blocked: PROHIBITED_CONTENT]',
+      ),
+    );
+  });
+
+  it('propagates host model errors when callModel throws', async () => {
+    const mockWitModel: WitModel = {
+      getModelInfo: () => ({
+        name: 'gemma4:e2b-it-qat',
+        provider: 'ollama',
+      }),
+      callModel: (): string => {
+        throw new Error('Host model execution failed: 503 Service Unavailable');
+      },
+    };
+
+    const model = new OakModel(mockWitModel);
+    const llmRequest = {
+      contents: [{ role: 'user', parts: [{ text: 'Test failure' }] }],
+    } as LlmRequest;
+
     await assert.rejects(async () => {
-      await model.generate('Test HTTP failure', []);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for await (const _ of model.generateContentAsync(llmRequest)) {
+        // should throw
+      }
     }, /503 Service Unavailable/);
   });
 });

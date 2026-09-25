@@ -15,7 +15,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { ToolDescription } from 'oak:agent/tools@0.1.0';
-import { HostToolRegistry, WitTools } from './tools';
+import { OakToolset, WitTools } from './tools';
 
 interface MockToolSpec {
   name: string;
@@ -85,10 +85,10 @@ function createMockWitTools(initialTools?: MockToolSpec[]): {
   };
 }
 
-describe('HostToolRegistry', () => {
+describe('OakToolset', () => {
   it('discovers and invokes host tools and supports dynamic tool addition', () => {
     const { witTools, setTools } = createMockWitTools();
-    const registry = new HostToolRegistry(witTools);
+    const registry = new OakToolset(witTools);
 
     const tools = registry.listTools();
     assert.equal(tools.length, 2);
@@ -128,7 +128,7 @@ describe('HostToolRegistry', () => {
         inputSchema: '{invalid-json',
       },
     ]);
-    const registry = new HostToolRegistry(witTools);
+    const registry = new OakToolset(witTools);
 
     assert.throws(() => {
       registry.listTools();

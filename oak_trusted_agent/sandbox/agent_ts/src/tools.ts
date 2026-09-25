@@ -50,7 +50,7 @@ export interface HostTool {
 /**
  * Google ADK BaseTool implementation backed by a WIT host tool import.
  */
-export class WitHostTool extends BaseTool implements HostTool {
+export class OakTool extends BaseTool implements HostTool {
   public readonly inputSchema: Record<string, unknown>;
   private readonly callToolFn: (name: string, args: string) => string;
 
@@ -91,15 +91,15 @@ export class WitHostTool extends BaseTool implements HostTool {
 
 /**
  * Google ADK BaseToolset that dynamically discovers and invokes host-provided
- * tools across the WIT boundary.
+ * tools across the WIT boundary (oak:agent/tools@0.1.0).
  *
  * NOTE: Tool discovery is performed lazily at runtime, NOT at module load time.
  * This is essential for Wizer build-time snapshotting, which forbids calling host
  * imports during module pre-initialization.
  */
-export class HostToolRegistry extends BaseToolset {
+export class OakToolset extends BaseToolset {
   private readonly witTools: WitTools;
-  private readonly tools: Map<string, WitHostTool> = new Map();
+  private readonly tools: Map<string, OakTool> = new Map();
 
   constructor(witTools: WitTools) {
     super([]);
@@ -123,21 +123,21 @@ export class HostToolRegistry extends BaseToolset {
 
       this.tools.set(
         t.name,
-        new WitHostTool(t.name, t.description, schemaObj, (name, args) =>
+        new OakTool(t.name, t.description, schemaObj, (name, args) =>
           this.witTools.callTool(name, args),
         ),
       );
     }
   }
 
-  public getTool(name: string): WitHostTool | undefined {
+  public getTool(name: string): OakTool | undefined {
     if (!this.tools.has(name)) {
       this.discoverHostTools();
     }
     return this.tools.get(name);
   }
 
-  public listTools(): WitHostTool[] {
+  public listTools(): OakTool[] {
     this.discoverHostTools();
     return Array.from(this.tools.values());
   }
@@ -156,3 +156,6 @@ export class HostToolRegistry extends BaseToolset {
     return tool.execute(args);
   }
 }
+
+// Backwards-compatible aliases
+export { OakToolset as HostToolRegistry, OakTool as WitHostTool };

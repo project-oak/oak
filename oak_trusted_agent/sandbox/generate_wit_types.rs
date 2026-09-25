@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use std::{env, fs, path::PathBuf};
+use std::{collections::HashSet, env, fs, path::PathBuf};
 
 fn kebab_to_camel(s: &str) -> String {
     let mut parts = s.split('-');
@@ -61,12 +61,21 @@ fn wit_type_to_ts(wit_type: &str) -> String {
     }
 }
 
-/// Generates TypeScript ambient module declarations for the `tools` interface
-/// in `agent.wit`.
+struct WitInterface {
+    name: String,
+    functions: Vec<String>,
+    records: Vec<(String, Vec<(String, String)>)>,
+    enums: Vec<(String, Vec<String>)>,
+}
+
+/// Generates TypeScript ambient module declarations for interfaces in
+/// `agent.wit`.
 pub fn generate_ts_declarations(wit_src: &str) -> String {
     let mut package_name = String::new();
     let mut package_version = String::new();
+    let mut imported_interfaces = HashSet::new();
 
+    let mut in_world = false;
     for line in wit_src.lines() {
         let trimmed = line.trim();
         if let Some(rest) = trimmed.strip_prefix("package ") {
@@ -77,17 +86,22 @@ pub fn generate_ts_declarations(wit_src: &str) -> String {
             } else {
                 package_name = pkg.to_string();
             }
-            break;
+        } else if trimmed.starts_with("world ") && trimmed.ends_with('{') {
+            in_world = true;
+        } else if in_world {
+            if trimmed == "}" {
+                in_world = false;
+            } else if let Some(rest) = trimmed.strip_prefix("import ") {
+                let iface = rest.trim_end_matches(';').trim();
+                imported_interfaces.insert(iface.to_string());
+            }
         }
     }
 
-    let module_id = format!("{package_name}/tools{package_version}");
-
-    let mut functions = Vec::new();
-    let mut records = Vec::new();
-
-    let mut in_tools_interface = false;
+    let mut interfaces: Vec<WitInterface> = Vec::new();
+    let mut current_interface: Option<WitInterface> = None;
     let mut current_record: Option<(String, Vec<(String, String)>)> = None;
+    let mut current_enum: Option<(String, Vec<String>)> = None;
 
     for line in wit_src.lines() {
         let trimmed = line.trim();
@@ -95,54 +109,82 @@ pub fn generate_ts_declarations(wit_src: &str) -> String {
             continue;
         }
 
-        if !in_tools_interface {
-            if trimmed.starts_with("interface tools") && trimmed.ends_with('{') {
-                in_tools_interface = true;
+        if let Some(ref mut iface) = current_interface {
+            if let Some((ref enum_name, ref mut cases)) = current_enum {
+                if trimmed == "}" {
+                    iface.enums.push((enum_name.clone(), std::mem::take(cases)));
+                    current_enum = None;
+                } else {
+                    let case = trimmed.trim_end_matches(',').trim();
+                    if !case.is_empty() {
+                        cases.push(case.to_string());
+                    }
+                }
+                continue;
             }
-            continue;
-        }
 
-        if let Some((ref rec_name, ref mut fields)) = current_record {
+            if let Some((ref rec_name, ref mut fields)) = current_record {
+                if trimmed == "}" {
+                    iface.records.push((rec_name.clone(), std::mem::take(fields)));
+                    current_record = None;
+                } else if let Some((field_name, field_type)) =
+                    trimmed.trim_end_matches(',').split_once(':')
+                {
+                    fields.push((
+                        kebab_to_camel(field_name.trim()),
+                        wit_type_to_ts(field_type.trim()),
+                    ));
+                }
+                continue;
+            }
+
             if trimmed == "}" {
-                records.push((rec_name.clone(), std::mem::take(fields)));
-                current_record = None;
-            } else if let Some((field_name, field_type)) =
-                trimmed.trim_end_matches(',').split_once(':')
-            {
-                fields.push((kebab_to_camel(field_name.trim()), wit_type_to_ts(field_type.trim())));
+                interfaces.push(current_interface.take().unwrap());
+                continue;
             }
-            continue;
-        }
 
-        if trimmed == "}" {
-            break;
-        }
-
-        if let Some(rest) = trimmed.strip_prefix("record ") {
-            let rec_name = rest.trim_end_matches('{').trim();
-            current_record = Some((kebab_to_pascal(rec_name), Vec::new()));
-        } else if let Some((fn_name, sig)) = trimmed.trim_end_matches(';').split_once(": func(")
-            && let Some((params_str, ret_part)) = sig.split_once(')')
+            if let Some(rest) = trimmed.strip_prefix("enum ") {
+                let enum_name = rest.trim_end_matches('{').trim();
+                current_enum = Some((kebab_to_pascal(enum_name), Vec::new()));
+            } else if let Some(rest) = trimmed.strip_prefix("record ") {
+                let rec_name = rest.trim_end_matches('{').trim();
+                current_record = Some((kebab_to_pascal(rec_name), Vec::new()));
+            } else if let Some((fn_name, sig)) = trimmed.trim_end_matches(';').split_once(": func(")
+                && let Some((params_str, ret_part)) = sig.split_once(')')
+            {
+                let params: Vec<String> = params_str
+                    .split(',')
+                    .filter(|s| !s.trim().is_empty())
+                    .map(|p| {
+                        let (p_name, p_type) = p.split_once(':').expect("Invalid WIT param");
+                        format!("{}: {}", kebab_to_camel(p_name.trim()), wit_type_to_ts(p_type))
+                    })
+                    .collect();
+                let ret_type = ret_part
+                    .trim()
+                    .strip_prefix("->")
+                    .map(|r| wit_type_to_ts(r.trim()))
+                    .unwrap_or_else(|| "void".to_string());
+                iface.functions.push(format!(
+                    "  export function {}({}): {};",
+                    kebab_to_camel(fn_name.trim()),
+                    params.join(", "),
+                    ret_type
+                ));
+            }
+        } else if let Some(rest) = trimmed.strip_prefix("interface ")
+            && let Some((iface_name, _)) = rest.split_once('{')
         {
-            let params: Vec<String> = params_str
-                .split(',')
-                .filter(|s| !s.trim().is_empty())
-                .map(|p| {
-                    let (p_name, p_type) = p.split_once(':').expect("Invalid WIT param");
-                    format!("{}: {}", kebab_to_camel(p_name.trim()), wit_type_to_ts(p_type))
-                })
-                .collect();
-            let ret_type = ret_part
-                .trim()
-                .strip_prefix("->")
-                .map(|r| wit_type_to_ts(r.trim()))
-                .unwrap_or_else(|| "void".to_string());
-            functions.push(format!(
-                "  export function {}({}): {};",
-                kebab_to_camel(fn_name.trim()),
-                params.join(", "),
-                ret_type
-            ));
+            let name = iface_name.trim().to_string();
+            // Dynamically include interfaces declared as imported in world
+            if imported_interfaces.contains(&name) {
+                current_interface = Some(WitInterface {
+                    name,
+                    functions: Vec::new(),
+                    records: Vec::new(),
+                    enums: Vec::new(),
+                });
+            }
         }
     }
 
@@ -162,20 +204,31 @@ pub fn generate_ts_declarations(wit_src: &str) -> String {
          // limitations under the License.\n\n",
     );
 
-    out.push_str(&format!("declare module '{module_id}' {{\n"));
-    out.push_str(&format!("  /** @module Interface {module_id} **/\n"));
-    for func in &functions {
-        out.push_str(func);
-        out.push('\n');
-    }
-    for (rec_name, fields) in &records {
-        out.push_str(&format!("  export interface {rec_name} {{\n"));
-        for (f_name, f_type) in fields {
-            out.push_str(&format!("    {f_name}: {f_type};\n"));
+    for (i, iface) in interfaces.iter().enumerate() {
+        if i > 0 {
+            out.push('\n');
         }
-        out.push_str("  }\n");
+        let module_id = format!("{package_name}/{}{package_version}", iface.name);
+        out.push_str(&format!("declare module '{module_id}' {{\n"));
+        out.push_str(&format!("  /** @module Interface {module_id} **/\n"));
+        for func in &iface.functions {
+            out.push_str(func);
+            out.push('\n');
+        }
+        for (enum_name, cases) in &iface.enums {
+            let union_type = cases.iter().map(|c| format!("'{c}'")).collect::<Vec<_>>().join(" | ");
+            out.push_str(&format!("  export type {enum_name} = {union_type};\n"));
+        }
+        for (rec_name, fields) in &iface.records {
+            out.push_str(&format!("  export interface {rec_name} {{\n"));
+            for (f_name, f_type) in fields {
+                out.push_str(&format!("    {f_name}: {f_type};\n"));
+            }
+            out.push_str("  }\n");
+        }
+        out.push_str("}\n");
     }
-    out.push_str("}\n");
+
     out
 }
 

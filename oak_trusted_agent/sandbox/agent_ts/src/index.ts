@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import * as witModel from 'oak:agent/model@0.1.0';
 import * as witTools from 'oak:agent/tools@0.1.0';
 import { TrustedAgent } from './agent';
-import { OllamaWasiModel } from './models';
-import { HostToolRegistry } from './tools';
+import { OakModel } from './models';
+import { OakToolset } from './tools';
 
 const trustedAgent = new TrustedAgent({
-  model: new OllamaWasiModel(),
-  toolRegistry: new HostToolRegistry(witTools),
+  model: new OakModel(witModel),
+  toolset: new OakToolset(witTools),
 });
 
 /**

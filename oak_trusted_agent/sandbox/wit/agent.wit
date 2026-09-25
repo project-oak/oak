@@ -27,15 +27,28 @@ interface tools {
     call-tool: func(name: string, arguments: string) -> result<string, string>;
 }
 
+interface model {
+    enum model-provider {
+        ollama,
+        gemini,
+    }
+
+    record model-info {
+        name: string,
+        provider: model-provider,
+    }
+
+    get-model-info: func() -> model-info;
+    call-model: func(request: string) -> result<string, string>;
+}
+
 interface agent {
     run: func(user-message: string) -> result<string, string>;
 }
 
 world oak-agent {
-    import wasi:http/outgoing-handler@0.2.0;
-    import wasi:clocks/wall-clock@0.2.0;
-    import wasi:random/random@0.2.0;
     import tools;
+    import model;
 
     export agent;
 }
