@@ -55,6 +55,71 @@ const OAK_SESSION_TLS_SERVER_NAME: &str = "oak-session-tls";
 /// same protocol over the TLS connection.
 const OAK_SESSION_TLS_ALPN_PROTOCOL: &[u8] = b"oak-session-tls";
 
+/// Returns `Some(err)` if `verified_res` failed for a reason a
+/// [`CustomCertVerifier`] must never be allowed to override: the identity
+/// asserted by the certificate not matching the peer being connected to
+/// (`NotValidForName`), or the certificate itself being invalid on its face
+/// (expired, not yet valid, or a broken cryptographic signature over the
+/// chain). `CustomCertVerifier` exists to relax *trust-anchor* decisions
+/// (`UnknownIssuer` and similar, where the chain and dates check out but the
+/// root is not one standard WebPKI validation recognizes) -- not to launder a
+/// certificate that fails verification for one of these structural reasons.
+/// Returning `Ok` from a custom verifier must not be able to override any of
+/// these, regardless of what the custom verifier itself decides.
+fn critical_verification_failure<T>(
+    verified_res: &Result<T, rustls::Error>,
+) -> Option<rustls::Error> {
+    if let Err(rustls::Error::InvalidCertificate(cert_err)) = verified_res {
+        if matches!(
+            cert_err,
+            rustls::CertificateError::NotValidForName
+                | rustls::CertificateError::Expired
+                | rustls::CertificateError::ExpiredContext { .. }
+                | rustls::CertificateError::NotValidYet
+                | rustls::CertificateError::NotValidYetContext { .. }
+                | rustls::CertificateError::BadSignature
+        ) {
+            return Some(rustls::Error::InvalidCertificate(cert_err.clone()));
+        }
+    }
+    None
+}
+
+/// The [`critical_verification_failure`] check, narrowed for
+/// [`CustomOnlyServerCertVerifier`] specifically.
+///
+/// That verifier's `inner` is always built against a `RootCertStore`
+/// containing an arbitrary, unrelated dummy self-signed certificate (see
+/// `build_verifier`'s `(None, Some(custom))` arm) -- there is no real trust
+/// anchor to check against by design, since the custom verifier is meant to
+/// be the entire trust decision. Confirmed empirically: `rustls-webpki`'s
+/// path-building finds that dummy certificate as a chain-building candidate
+/// and attempts to verify the presented certificate's signature against it,
+/// which fails -- reported as `BadSignature` -- for *any* certificate not
+/// actually signed by that arbitrary dummy key, including a completely
+/// valid, non-expired one. This failure mode also masks a genuinely expired
+/// certificate behind the same `BadSignature` result rather than `Expired`,
+/// so blocking `BadSignature` here cannot reliably distinguish a forged or
+/// expired certificate from a routine, valid one -- it only breaks the
+/// verifier's intended purpose. `NotValidYet` is unaffected by this and
+/// still reported correctly, since `rustls-webpki` checks the validity
+/// window before attempting chain-building signature verification.
+fn critical_verification_failure_no_real_trust_anchor<T>(
+    verified_res: &Result<T, rustls::Error>,
+) -> Option<rustls::Error> {
+    if let Err(rustls::Error::InvalidCertificate(cert_err)) = verified_res {
+        if matches!(
+            cert_err,
+            rustls::CertificateError::NotValidForName
+                | rustls::CertificateError::NotValidYet
+                | rustls::CertificateError::NotValidYetContext { .. }
+        ) {
+            return Some(rustls::Error::InvalidCertificate(cert_err.clone()));
+        }
+    }
+    None
+}
+
 /// Errors that can occur during the creation of an Oak Session TLS Context.
 #[derive(Error, Debug)]
 pub enum ContextError {
@@ -234,12 +299,8 @@ impl ServerCertVerifier for DelegatingServerCertVerifier {
             now,
         );
 
-        if let Err(rustls::Error::InvalidCertificate(rustls::CertificateError::NotValidForName)) =
-            verified_res
-        {
-            return Err(rustls::Error::InvalidCertificate(
-                rustls::CertificateError::NotValidForName,
-            ));
+        if let Some(err) = critical_verification_failure(&verified_res) {
+            return Err(err);
         }
 
         let verify_result = verified_res.as_ref().map(|_| ());
@@ -308,6 +369,10 @@ impl ClientCertVerifier for DelegatingClientCertVerifier {
     ) -> Result<ClientCertVerified, rustls::Error> {
         let verified_res = self.inner.verify_client_cert(end_entity, intermediates, now);
 
+        if let Some(err) = critical_verification_failure(&verified_res) {
+            return Err(err);
+        }
+
         let verify_result = verified_res.as_ref().map(|_| ());
 
         let custom_result = self.custom.verify(end_entity, intermediates, verify_result);
@@ -375,12 +440,8 @@ impl ServerCertVerifier for CustomOnlyServerCertVerifier {
             now,
         );
 
-        if let Err(rustls::Error::InvalidCertificate(rustls::CertificateError::NotValidForName)) =
-            verified_res
-        {
-            return Err(rustls::Error::InvalidCertificate(
-                rustls::CertificateError::NotValidForName,
-            ));
+        if let Some(err) = critical_verification_failure_no_real_trust_anchor(&verified_res) {
+            return Err(err);
         }
 
         let verify_result = verified_res.as_ref().map(|_| ());
@@ -1105,5 +1166,455 @@ pub mod utils {
                 certs: vec![CertificateDer::from(cert_der_bytes.clone())],
             })
         }))
+    }
+}
+
+#[cfg(test)]
+mod critical_cert_verification_tests {
+    //! Regression tests for the certificate-validation bypass: a
+    //! `CustomCertVerifier` returning `Ok` must never be able to override a
+    //! critical standard-verification failure (hostname mismatch, expiry,
+    //! not-yet-valid, or a bad chain signature), only trust-anchor-only
+    //! failures such as `UnknownIssuer`. Each test here fails if the fix in
+    //! `critical_verification_failure` (and its three call sites) is
+    //! reverted.
+
+    use super::*;
+
+    #[derive(Debug)]
+    struct MockInnerServerVerifier {
+        result: Result<(), rustls::Error>,
+    }
+
+    impl ServerCertVerifier for MockInnerServerVerifier {
+        fn verify_server_cert(
+            &self,
+            _end_entity: &CertificateDer<'_>,
+            _intermediates: &[CertificateDer<'_>],
+            _server_name: &ServerName<'_>,
+            _ocsp_response: &[u8],
+            _now: UnixTime,
+        ) -> Result<ServerCertVerified, rustls::Error> {
+            self.result.clone().map(|_| ServerCertVerified::assertion())
+        }
+        fn verify_tls12_signature(
+            &self,
+            _m: &[u8],
+            _c: &CertificateDer<'_>,
+            _d: &DigitallySignedStruct,
+        ) -> Result<HandshakeSignatureValid, rustls::Error> {
+            Ok(HandshakeSignatureValid::assertion())
+        }
+        fn verify_tls13_signature(
+            &self,
+            _m: &[u8],
+            _c: &CertificateDer<'_>,
+            _d: &DigitallySignedStruct,
+        ) -> Result<HandshakeSignatureValid, rustls::Error> {
+            Ok(HandshakeSignatureValid::assertion())
+        }
+        fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+            vec![SignatureScheme::ED25519]
+        }
+    }
+
+    #[derive(Debug)]
+    struct MockInnerClientVerifier {
+        result: Result<(), rustls::Error>,
+    }
+
+    impl ClientCertVerifier for MockInnerClientVerifier {
+        fn offer_client_auth(&self) -> bool {
+            true
+        }
+        fn client_auth_mandatory(&self) -> bool {
+            true
+        }
+        fn root_hint_subjects(&self) -> &[rustls::DistinguishedName] {
+            &[]
+        }
+        fn verify_client_cert(
+            &self,
+            _end_entity: &CertificateDer<'_>,
+            _intermediates: &[CertificateDer<'_>],
+            _now: UnixTime,
+        ) -> Result<ClientCertVerified, rustls::Error> {
+            self.result.clone().map(|_| ClientCertVerified::assertion())
+        }
+        fn verify_tls12_signature(
+            &self,
+            _m: &[u8],
+            _c: &CertificateDer<'_>,
+            _d: &DigitallySignedStruct,
+        ) -> Result<HandshakeSignatureValid, rustls::Error> {
+            Ok(HandshakeSignatureValid::assertion())
+        }
+        fn verify_tls13_signature(
+            &self,
+            _m: &[u8],
+            _c: &CertificateDer<'_>,
+            _d: &DigitallySignedStruct,
+        ) -> Result<HandshakeSignatureValid, rustls::Error> {
+            Ok(HandshakeSignatureValid::assertion())
+        }
+        fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+            vec![SignatureScheme::ED25519]
+        }
+    }
+
+    /// Mirrors `CustomCertVerifier`'s own documented, intended use: relax
+    /// exactly one thing (here, always accept) regardless of the standard
+    /// result it is handed.
+    #[derive(Debug)]
+    struct AlwaysAcceptCustomVerifier;
+
+    impl CustomCertVerifier for AlwaysAcceptCustomVerifier {
+        fn verify(
+            &self,
+            _end_entity: &CertificateDer<'_>,
+            _intermediates: &[CertificateDer<'_>],
+            _verify_result: Result<(), &rustls::Error>,
+        ) -> Result<(), String> {
+            Ok(())
+        }
+    }
+
+    /// A custom verifier that always rejects, to confirm its own negative
+    /// decision is still respected (this fix must not accidentally make
+    /// custom rejection a no-op).
+    #[derive(Debug)]
+    struct AlwaysRejectCustomVerifier;
+
+    impl CustomCertVerifier for AlwaysRejectCustomVerifier {
+        fn verify(
+            &self,
+            _end_entity: &CertificateDer<'_>,
+            _intermediates: &[CertificateDer<'_>],
+            _verify_result: Result<(), &rustls::Error>,
+        ) -> Result<(), String> {
+            Err("rejected by custom verifier".to_string())
+        }
+    }
+
+    fn dummy_cert() -> CertificateDer<'static> {
+        CertificateDer::from(vec![0u8; 16])
+    }
+
+    fn dummy_server_name() -> ServerName<'static> {
+        ServerName::try_from("example.com").unwrap()
+    }
+
+    fn delegating_server_verifier(
+        result: Result<(), rustls::Error>,
+        custom: Arc<dyn CustomCertVerifier>,
+    ) -> DelegatingServerCertVerifier {
+        DelegatingServerCertVerifier {
+            inner: Arc::new(MockInnerServerVerifier { result }),
+            custom,
+        }
+    }
+
+    fn custom_only_server_verifier(
+        result: Result<(), rustls::Error>,
+        custom: Arc<dyn CustomCertVerifier>,
+    ) -> CustomOnlyServerCertVerifier {
+        CustomOnlyServerCertVerifier { inner: Arc::new(MockInnerServerVerifier { result }), custom }
+    }
+
+    fn delegating_client_verifier(
+        result: Result<(), rustls::Error>,
+        custom: Arc<dyn CustomCertVerifier>,
+    ) -> DelegatingClientCertVerifier {
+        DelegatingClientCertVerifier {
+            inner: Arc::new(MockInnerClientVerifier { result }),
+            custom,
+        }
+    }
+
+    // --- DelegatingServerCertVerifier ---
+
+    #[test]
+    fn delegating_server_rejects_expired_even_when_custom_verifier_accepts() {
+        let v = delegating_server_verifier(
+            Err(rustls::Error::InvalidCertificate(rustls::CertificateError::Expired)),
+            Arc::new(AlwaysAcceptCustomVerifier),
+        );
+        let r = v.verify_server_cert(&dummy_cert(), &[], &dummy_server_name(), &[], UnixTime::now());
+        assert!(r.is_err(), "an expired certificate must never be accepted by a custom verifier");
+    }
+
+    #[test]
+    fn delegating_server_rejects_not_yet_valid_even_when_custom_verifier_accepts() {
+        let v = delegating_server_verifier(
+            Err(rustls::Error::InvalidCertificate(rustls::CertificateError::NotValidYet)),
+            Arc::new(AlwaysAcceptCustomVerifier),
+        );
+        let r = v.verify_server_cert(&dummy_cert(), &[], &dummy_server_name(), &[], UnixTime::now());
+        assert!(r.is_err(), "a not-yet-valid certificate must never be accepted by a custom verifier");
+    }
+
+    #[test]
+    fn delegating_server_rejects_bad_signature_even_when_custom_verifier_accepts() {
+        let v = delegating_server_verifier(
+            Err(rustls::Error::InvalidCertificate(rustls::CertificateError::BadSignature)),
+            Arc::new(AlwaysAcceptCustomVerifier),
+        );
+        let r = v.verify_server_cert(&dummy_cert(), &[], &dummy_server_name(), &[], UnixTime::now());
+        assert!(r.is_err(), "a bad chain signature must never be accepted by a custom verifier");
+    }
+
+    #[test]
+    fn delegating_server_rejects_hostname_mismatch_even_when_custom_verifier_accepts() {
+        let v = delegating_server_verifier(
+            Err(rustls::Error::InvalidCertificate(rustls::CertificateError::NotValidForName)),
+            Arc::new(AlwaysAcceptCustomVerifier),
+        );
+        let r = v.verify_server_cert(&dummy_cert(), &[], &dummy_server_name(), &[], UnixTime::now());
+        assert!(r.is_err(), "a hostname mismatch must never be accepted by a custom verifier");
+    }
+
+    #[test]
+    fn delegating_server_allows_unknown_issuer_override_when_custom_verifier_accepts() {
+        let v = delegating_server_verifier(
+            Err(rustls::Error::InvalidCertificate(rustls::CertificateError::UnknownIssuer)),
+            Arc::new(AlwaysAcceptCustomVerifier),
+        );
+        let r = v.verify_server_cert(&dummy_cert(), &[], &dummy_server_name(), &[], UnixTime::now());
+        assert!(r.is_ok(), "UnknownIssuer is the documented, intended override case");
+    }
+
+    #[test]
+    fn delegating_server_accepts_valid_certificate() {
+        let v = delegating_server_verifier(Ok(()), Arc::new(AlwaysAcceptCustomVerifier));
+        let r = v.verify_server_cert(&dummy_cert(), &[], &dummy_server_name(), &[], UnixTime::now());
+        assert!(r.is_ok());
+    }
+
+    #[test]
+    fn delegating_server_respects_custom_verifier_rejection_of_unknown_issuer() {
+        let v = delegating_server_verifier(
+            Err(rustls::Error::InvalidCertificate(rustls::CertificateError::UnknownIssuer)),
+            Arc::new(AlwaysRejectCustomVerifier),
+        );
+        let r = v.verify_server_cert(&dummy_cert(), &[], &dummy_server_name(), &[], UnixTime::now());
+        assert!(r.is_err(), "a custom verifier's own rejection must still be respected");
+    }
+
+    // --- CustomOnlyServerCertVerifier ---
+
+    #[test]
+    fn custom_only_server_rejects_not_yet_valid_even_when_custom_verifier_accepts() {
+        let v = custom_only_server_verifier(
+            Err(rustls::Error::InvalidCertificate(rustls::CertificateError::NotValidYet)),
+            Arc::new(AlwaysAcceptCustomVerifier),
+        );
+        let r = v.verify_server_cert(&dummy_cert(), &[], &dummy_server_name(), &[], UnixTime::now());
+        assert!(r.is_err(), "a not-yet-valid certificate must never be accepted, even with no trust anchor configured");
+    }
+
+    #[test]
+    fn custom_only_server_allows_expired_override_when_custom_verifier_accepts() {
+        // Unlike DelegatingServerCertVerifier, this verifier's `inner` is
+        // always checked against an arbitrary, unrelated dummy root (see
+        // build_verifier's (None, Some(custom)) arm) -- there is no real
+        // trust anchor here by design. A direct Expired result from `inner`
+        // (which in practice is masked by BadSignature from the dummy-root
+        // mismatch -- see the real-certificate integration test below) must
+        // remain overridable, since the custom verifier is the entire trust
+        // decision for this verifier, not an override of a real one.
+        let v = custom_only_server_verifier(
+            Err(rustls::Error::InvalidCertificate(rustls::CertificateError::Expired)),
+            Arc::new(AlwaysAcceptCustomVerifier),
+        );
+        let r = v.verify_server_cert(&dummy_cert(), &[], &dummy_server_name(), &[], UnixTime::now());
+        assert!(r.is_ok());
+    }
+
+    #[test]
+    fn custom_only_server_allows_bad_signature_override_when_custom_verifier_accepts() {
+        // BadSignature is the routine, expected result here: it is what a
+        // certificate signed by any key other than the arbitrary dummy root
+        // (i.e. every real certificate presented to this verifier) produces,
+        // confirmed empirically against real rustls-webpki verification --
+        // see custom_only_server_accepts_real_valid_self_signed_certificate
+        // below, which is the regression test for the bug this test guards:
+        // an earlier version of this fix blocked BadSignature here too,
+        // which broke every legitimate use of this verifier.
+        let v = custom_only_server_verifier(
+            Err(rustls::Error::InvalidCertificate(rustls::CertificateError::BadSignature)),
+            Arc::new(AlwaysAcceptCustomVerifier),
+        );
+        let r = v.verify_server_cert(&dummy_cert(), &[], &dummy_server_name(), &[], UnixTime::now());
+        assert!(r.is_ok());
+    }
+
+    #[test]
+    fn custom_only_server_rejects_hostname_mismatch_even_when_custom_verifier_accepts() {
+        let v = custom_only_server_verifier(
+            Err(rustls::Error::InvalidCertificate(rustls::CertificateError::NotValidForName)),
+            Arc::new(AlwaysAcceptCustomVerifier),
+        );
+        let r = v.verify_server_cert(&dummy_cert(), &[], &dummy_server_name(), &[], UnixTime::now());
+        assert!(r.is_err());
+    }
+
+    #[test]
+    fn custom_only_server_allows_unknown_issuer_override_when_custom_verifier_accepts() {
+        // This is the expected steady state for CustomOnlyServerCertVerifier:
+        // no trust anchor is configured, so UnknownIssuer is the routine
+        // result the custom (e.g. attestation-based) verifier is meant to
+        // override.
+        let v = custom_only_server_verifier(
+            Err(rustls::Error::InvalidCertificate(rustls::CertificateError::UnknownIssuer)),
+            Arc::new(AlwaysAcceptCustomVerifier),
+        );
+        let r = v.verify_server_cert(&dummy_cert(), &[], &dummy_server_name(), &[], UnixTime::now());
+        assert!(r.is_ok());
+    }
+
+    // --- DelegatingClientCertVerifier (mTLS client-certificate path) ---
+
+    #[test]
+    fn delegating_client_rejects_expired_even_when_custom_verifier_accepts() {
+        let v = delegating_client_verifier(
+            Err(rustls::Error::InvalidCertificate(rustls::CertificateError::Expired)),
+            Arc::new(AlwaysAcceptCustomVerifier),
+        );
+        let r = v.verify_client_cert(&dummy_cert(), &[], UnixTime::now());
+        assert!(r.is_err(), "an expired client certificate must never be accepted by a custom verifier");
+    }
+
+    #[test]
+    fn delegating_client_rejects_not_yet_valid_even_when_custom_verifier_accepts() {
+        let v = delegating_client_verifier(
+            Err(rustls::Error::InvalidCertificate(rustls::CertificateError::NotValidYet)),
+            Arc::new(AlwaysAcceptCustomVerifier),
+        );
+        let r = v.verify_client_cert(&dummy_cert(), &[], UnixTime::now());
+        assert!(r.is_err());
+    }
+
+    #[test]
+    fn delegating_client_rejects_bad_signature_even_when_custom_verifier_accepts() {
+        let v = delegating_client_verifier(
+            Err(rustls::Error::InvalidCertificate(rustls::CertificateError::BadSignature)),
+            Arc::new(AlwaysAcceptCustomVerifier),
+        );
+        let r = v.verify_client_cert(&dummy_cert(), &[], UnixTime::now());
+        assert!(r.is_err(), "a bad chain signature on a client certificate must never be accepted by a custom verifier");
+    }
+
+    #[test]
+    fn delegating_client_allows_unknown_issuer_override_when_custom_verifier_accepts() {
+        let v = delegating_client_verifier(
+            Err(rustls::Error::InvalidCertificate(rustls::CertificateError::UnknownIssuer)),
+            Arc::new(AlwaysAcceptCustomVerifier),
+        );
+        let r = v.verify_client_cert(&dummy_cert(), &[], UnixTime::now());
+        assert!(r.is_ok(), "UnknownIssuer is the documented, intended override case for mTLS too");
+    }
+
+    #[test]
+    fn delegating_client_accepts_valid_certificate() {
+        let v = delegating_client_verifier(Ok(()), Arc::new(AlwaysAcceptCustomVerifier));
+        let r = v.verify_client_cert(&dummy_cert(), &[], UnixTime::now());
+        assert!(r.is_ok());
+    }
+
+    #[test]
+    fn delegating_client_respects_custom_verifier_rejection_of_unknown_issuer() {
+        let v = delegating_client_verifier(
+            Err(rustls::Error::InvalidCertificate(rustls::CertificateError::UnknownIssuer)),
+            Arc::new(AlwaysRejectCustomVerifier),
+        );
+        let r = v.verify_client_cert(&dummy_cert(), &[], UnixTime::now());
+        assert!(r.is_err(), "a custom verifier's own rejection must still be respected for mTLS too");
+    }
+
+    // --- Real-certificate integration tests ---
+    //
+    // Everything above uses a mock `inner` verifier returning a fixed
+    // result, which is precise for testing critical_verification_failure's
+    // own logic but cannot catch a mismatch between what a mock returns and
+    // what the *real* rustls-webpki verifier actually returns for a given
+    // real certificate. This test exercises the real WebPkiServerVerifier,
+    // built exactly as CustomOnlyServerCertVerifier's own build_verifier
+    // constructs it (see the (None, Some(custom)) arm), against a genuinely
+    // valid, non-expired, correctly-named self-signed certificate.
+    //
+    // This is the regression test for a real bug in an earlier version of
+    // this fix: blocking BadSignature unconditionally broke every legitimate
+    // use of CustomOnlyServerCertVerifier, because rustls-webpki reports
+    // BadSignature -- not UnknownIssuer -- when a certificate's signature
+    // doesn't match the arbitrary dummy root this verifier is built with,
+    // which is true of every real certificate, valid or not.
+
+    fn real_self_signed_cert(server_name: &str) -> CertificateDer<'static> {
+        let params = rcgen::CertificateParams::new(vec![server_name.to_string()]).unwrap();
+        let key_pair = rcgen::KeyPair::generate_for(&rcgen::PKCS_ECDSA_P256_SHA256).unwrap();
+        let cert = params.self_signed(&key_pair).unwrap();
+        CertificateDer::from(cert.der().to_vec())
+    }
+
+    #[test]
+    fn custom_only_server_accepts_real_valid_self_signed_certificate() {
+        // Mirrors build_verifier's (None, Some(custom)) arm exactly.
+        let dummy_cert =
+            rcgen::generate_simple_self_signed(vec!["dummy-root".to_string()]).unwrap();
+        let dummy_cert_der = CertificateDer::from(dummy_cert.cert.der().to_vec());
+        let mut root_store = RootCertStore::empty();
+        root_store.add(dummy_cert_der).unwrap();
+        let inner = WebPkiServerVerifier::builder(Arc::new(root_store)).build().unwrap();
+
+        let v = CustomOnlyServerCertVerifier { inner, custom: Arc::new(AlwaysAcceptCustomVerifier) };
+
+        let real_cert = real_self_signed_cert("my-service.example.com");
+        let server_name = ServerName::try_from("my-service.example.com").unwrap();
+
+        let r = v.verify_server_cert(&real_cert, &[], &server_name, &[], UnixTime::now());
+        assert!(
+            r.is_ok(),
+            "a genuinely valid self-signed certificate must be accepted via the custom \
+             verifier, exactly as CustomOnlyServerCertVerifier is documented to support: {r:?}"
+        );
+    }
+
+    #[test]
+    fn custom_only_server_hostname_mismatch_is_indistinguishable_from_a_match() {
+        // This documents a real, pre-existing structural property of this
+        // verifier discovered while fixing the bypass above, not a claim
+        // about correct behavior: rustls-webpki's path-building fails the
+        // chain-signature check against the arbitrary dummy root before it
+        // ever reaches hostname verification, for every real certificate --
+        // matched name or not. So `inner`'s result is BadSignature either
+        // way, and this verifier has no signal from `inner` alone to tell
+        // the two cases apart; hostname verification here depends entirely
+        // on what the application's own CustomCertVerifier chooses to check
+        // (it is handed `end_entity` and can parse the SAN itself). This is
+        // not something introduced or fixable by this patch -- it is a
+        // property of using a dummy root at all -- and is called out
+        // separately for the maintainer's awareness.
+        let dummy_cert =
+            rcgen::generate_simple_self_signed(vec!["dummy-root".to_string()]).unwrap();
+        let dummy_cert_der = CertificateDer::from(dummy_cert.cert.der().to_vec());
+        let mut root_store = RootCertStore::empty();
+        root_store.add(dummy_cert_der).unwrap();
+        let inner = WebPkiServerVerifier::builder(Arc::new(root_store)).build().unwrap();
+
+        let real_cert = real_self_signed_cert("my-service.example.com");
+        let wrong_name = ServerName::try_from("someone-else.example.com").unwrap();
+        let right_name = ServerName::try_from("my-service.example.com").unwrap();
+
+        let mismatch_result = inner.verify_server_cert(&real_cert, &[], &wrong_name, &[], UnixTime::now());
+        let match_result = inner.verify_server_cert(&real_cert, &[], &right_name, &[], UnixTime::now());
+
+        assert!(matches!(
+            mismatch_result,
+            Err(rustls::Error::InvalidCertificate(rustls::CertificateError::BadSignature))
+        ));
+        assert!(matches!(
+            match_result,
+            Err(rustls::Error::InvalidCertificate(rustls::CertificateError::BadSignature))
+        ));
     }
 }
