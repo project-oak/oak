@@ -132,6 +132,7 @@ oci_load(
 oci_push(
     name = "oak_functions_mcp_server_push",
     image = ":oak_functions_mcp_server_image",
-    repository = "europe-west1-docker.pkg.dev/oak-functions-standalone/oak-functions-mcp-containers/oak-functions-mcp",
+    remote_tags = ["latest"],
+    repository = "us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/mcp/server",
     target_compatible_with = ["@platforms//os:linux"],
 )

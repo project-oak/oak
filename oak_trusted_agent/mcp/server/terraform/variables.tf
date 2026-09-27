@@ -1,7 +1,7 @@
 variable "gcp_project_id" {
   type        = string
   description = "The GCP project ID to deploy the resources in."
-  default     = "oak-functions-standalone"
+  default     = "oak-examples-477357"
 }
 
 variable "zone" {
@@ -25,7 +25,7 @@ variable "machine_type" {
 variable "image_digest" {
   type        = string
   description = "The image digest for the Oak Functions MCP server container."
-  default     = "europe-west1-docker.pkg.dev/oak-functions-standalone/oak-functions-mcp-containers/oak-functions-mcp@sha256:8d936c1108fcce258456943e957d3602de2cb2262c1e46934869bebae467f438"
+  default     = "us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/mcp/server:latest"
 }
 
 variable "wasm_url" {
