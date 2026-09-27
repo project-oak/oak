@@ -1,0 +1,16 @@
+{
+  "name": "query_gp_clinic",
+  "description": "Queries longitudinal patient checkup history and baseline blood test results from City General Practice (GP Clinic).",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "key": {
+        "type": "string",
+        "description": "Lookup key. Use 'FIRSTNAME_LASTNAME' (e.g. 'JOHN_SMITH') to list a patient's annual checkup dates at their GP clinic, or 'FIRSTNAME_LASTNAME:DD-MM-YYYY' (e.g. 'JOHN_SMITH:09-03-2026') to retrieve the detailed lab panel and clinician notes for a specific checkup date."
+      }
+    },
+    "required": [
+      "key"
+    ]
+  }
+}

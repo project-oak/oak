@@ -1,0 +1,43 @@
+# proto-file: proto/oak_functions/service/oak_functions.proto
+# proto-message: oak.functions.LookupDataChunk
+
+items: {
+  key: "JOHN_SMITH"
+  value: "[{\"visit_date\":\"14-03-2024\",\"clinic\":\"City General Practice\",\"reason\":\"Annual preventive checkup and athlete blood panel\",\"summary\":\"Baseline hemoglobin 17.0 g/dL, ferritin 118 ng/mL\"},{\"visit_date\":\"10-03-2025\",\"clinic\":\"City General Practice\",\"reason\":\"Annual preventive checkup and athlete blood panel\",\"summary\":\"Baseline hemoglobin 17.1 g/dL, ferritin 124 ng/mL\"},{\"visit_date\":\"09-03-2026\",\"clinic\":\"City General Practice\",\"reason\":\"Annual preventive checkup and athlete blood panel\",\"summary\":\"Baseline hemoglobin 16.9 g/dL, ferritin 115 ng/mL\"}]"
+}
+items: {
+  key: "JOHN_SMITH:14-03-2024"
+  value: "[{\"visit_date\":\"14-03-2024\",\"clinic\":\"City General Practice\",\"patient\":\"John Smith\",\"lab_results\":{\"hemoglobin_g_dl\":{\"value\":17.0,\"reference_range\":\"13.0 - 17.0 g/dL\",\"status\":\"NORMAL\"},\"hematocrit_pct\":{\"value\":49.4,\"reference_range\":\"38.8 - 50.0 %\",\"status\":\"NORMAL\"},\"ferritin_ng_ml\":{\"value\":118,\"reference_range\":\"24 - 336 ng/mL\",\"status\":\"NORMAL\"},\"wbc_k_ul\":{\"value\":5.8,\"reference_range\":\"4.5 - 11.0 x10^3/uL\",\"status\":\"NORMAL\"}},\"clinician_notes\":\"Routine annual checkup. Healthy endurance athlete; personal baseline hemoglobin is ~17.0 g/dL with strong iron stores.\"}]"
+}
+items: {
+  key: "JOHN_SMITH:10-03-2025"
+  value: "[{\"visit_date\":\"10-03-2025\",\"clinic\":\"City General Practice\",\"patient\":\"John Smith\",\"lab_results\":{\"hemoglobin_g_dl\":{\"value\":17.1,\"reference_range\":\"13.0 - 17.0 g/dL\",\"status\":\"NORMAL\"},\"hematocrit_pct\":{\"value\":49.8,\"reference_range\":\"38.8 - 50.0 %\",\"status\":\"NORMAL\"},\"ferritin_ng_ml\":{\"value\":124,\"reference_range\":\"24 - 336 ng/mL\",\"status\":\"NORMAL\"},\"wbc_k_ul\":{\"value\":6.0,\"reference_range\":\"4.5 - 11.0 x10^3/uL\",\"status\":\"NORMAL\"}},\"clinician_notes\":\"Routine annual checkup. Stable high-normal hemoglobin (17.1 g/dL) and ferritin (124 ng/mL), consistent with 2024 baseline.\"}]"
+}
+items: {
+  key: "JOHN_SMITH:09-03-2026"
+  value: "[{\"visit_date\":\"09-03-2026\",\"clinic\":\"City General Practice\",\"patient\":\"John Smith\",\"lab_results\":{\"hemoglobin_g_dl\":{\"value\":16.9,\"reference_range\":\"13.0 - 17.0 g/dL\",\"status\":\"NORMAL\"},\"hematocrit_pct\":{\"value\":49.2,\"reference_range\":\"38.8 - 50.0 %\",\"status\":\"NORMAL\"},\"ferritin_ng_ml\":{\"value\":115,\"reference_range\":\"24 - 336 ng/mL\",\"status\":\"NORMAL\"},\"wbc_k_ul\":{\"value\":5.9,\"reference_range\":\"4.5 - 11.0 x10^3/uL\",\"status\":\"NORMAL\"}},\"clinician_notes\":\"Routine annual checkup. Personal baseline hemoglobin remains consistently ~17.0 g/dL (16.9 - 17.1 g/dL over 2024-2026) with healthy ferritin levels (>110 ng/mL).\"}]"
+}
+items: {
+  key: "ALICE_TEST"
+  value: "[{\"visit_date\":\"12-04-2026\",\"clinic\":\"City General Practice\",\"reason\":\"[redacted]\",\"summary\":\"[redacted]\"}]"
+}
+items: {
+  key: "ALICE_TEST:12-04-2026"
+  value: "[{\"visit_date\":\"12-04-2026\",\"clinic\":\"City General Practice\",\"patient\":\"Alice Test\",\"lab_results\":\"[redacted]\",\"clinician_notes\":\"[redacted]\"}]"
+}
+items: {
+  key: "BOB_TEST"
+  value: "[{\"visit_date\":\"20-05-2026\",\"clinic\":\"City General Practice\",\"reason\":\"[redacted]\",\"summary\":\"[redacted]\"}]"
+}
+items: {
+  key: "BOB_TEST:20-05-2026"
+  value: "[{\"visit_date\":\"20-05-2026\",\"clinic\":\"City General Practice\",\"patient\":\"Bob Test\",\"lab_results\":\"[redacted]\",\"clinician_notes\":\"[redacted]\"}]"
+}
+items: {
+  key: "CHARLIE_TEST"
+  value: "[{\"visit_date\":\"01-06-2026\",\"clinic\":\"City General Practice\",\"reason\":\"[redacted]\",\"summary\":\"[redacted]\"}]"
+}
+items: {
+  key: "CHARLIE_TEST:01-06-2026"
+  value: "[{\"visit_date\":\"01-06-2026\",\"clinic\":\"City General Practice\",\"patient\":\"Charlie Test\",\"lab_results\":\"[redacted]\",\"clinician_notes\":\"[redacted]\"}]"
+}

@@ -1,0 +1,16 @@
+{
+  "name": "query_walk_in_clinic",
+  "description": "Queries patient visit history and blood test results from Downtown Walk-In Clinic.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "key": {
+        "type": "string",
+        "description": "Lookup key. Use 'FIRSTNAME_LASTNAME' (e.g. 'JOHN_SMITH') to list a patient's visit dates at this clinic, or 'FIRSTNAME_LASTNAME:DD-MM-YYYY' (e.g. 'JOHN_SMITH:04-10-2026') to retrieve the detailed lab panel and clinician notes for a specific visit date."
+      }
+    },
+    "required": [
+      "key"
+    ]
+  }
+}
