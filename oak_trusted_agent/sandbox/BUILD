@@ -20,7 +20,7 @@ load("@aspect_rules_js//js:defs.bzl", "js_run_binary", "js_test")
 load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@npm//oak_trusted_agent/sandbox:@bytecodealliance/componentize-js/package_json.bzl", componentize_js_bin = "bin")
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -210,4 +210,41 @@ rust_test(
         "WIT_FILE": "$(rootpath wit/agent.wit)",
     },
     target_compatible_with = ["@platforms//os:linux"],
+)
+
+rust_library(
+    name = "sandbox",
+    srcs = [
+        "src/agent_host.rs",
+        "src/lib.rs",
+    ],
+    compile_data = [":wit_files"],
+    crate_name = "oak_trusted_agent_sandbox",
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:wasmtime",
+    ],
+)
+
+rust_test(
+    name = "sandbox_test",
+    size = "small",
+    crate = ":sandbox",
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+rust_test(
+    name = "sandbox_integration_test",
+    size = "small",
+    srcs = ["tests/sandbox_integration_test.rs"],
+    data = [":adk_agent_ts"],
+    rustc_env = {
+        "ADK_AGENT_TS_WASM": "$(rootpath :adk_agent_ts)",
+    },
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        ":sandbox",
+    ],
 )
