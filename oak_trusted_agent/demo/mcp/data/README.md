@@ -51,8 +51,8 @@ itself, and while ensuring the server is running on a secure, attested platform.
 
 1. **Data Generation**: The initial step is to generate the raw JSON data using
    the [AI Studio](https://aistudio.google.com/) with configured structured
-   output. Corresponding prompts are available in the [prompts.md](./prompts.md)
-   file.
+   output. Corresponding prompts are available in the
+   [prompts.md](../prompts.md) file.
 
 2. **Data Transformation**: The `create_lookup_data.py` script is used to
    process the raw JSON files. This script reads the input JSON, aggregates the
@@ -62,9 +62,9 @@ itself, and while ensuring the server is running on a secure, attested platform.
    Generate lookup data using the following commands:
 
    ```bash
-   python3 mcp/demo/create_lookup_data.py --input mcp/demo/data/flights.json --output mcp/demo/data/flights.textproto
-   python3 mcp/demo/create_lookup_data.py --input mcp/demo/data/hotels.json mcp/demo/data/hotels_availability.json --output mcp/demo/data/hotels.textproto
-   python3 mcp/demo/create_lookup_data.py --input mcp/demo/data/activities.json --output mcp/demo/data/activities.textproto
+   python3 oak_trusted_agent/mcp/create_lookup_data.py --input oak_trusted_agent/demo/mcp/data/flights.json --output oak_trusted_agent/demo/mcp/data/flights.textproto
+   python3 oak_trusted_agent/mcp/create_lookup_data.py --input oak_trusted_agent/demo/mcp/data/hotels.json oak_trusted_agent/demo/mcp/data/hotels_availability.json --output oak_trusted_agent/demo/mcp/data/hotels.textproto
+   python3 oak_trusted_agent/mcp/create_lookup_data.py --input oak_trusted_agent/demo/mcp/data/activities.json --output oak_trusted_agent/demo/mcp/data/activities.textproto
    ```
 
 3. **Binary Conversion**: The `.textproto` files are then converted into the
@@ -72,9 +72,9 @@ itself, and while ensuring the server is running on a secure, attested platform.
    like `gqui`.
 
    ```bash
-   gqui from textproto:mcp/demo/data/flights.textproto proto oak.functions.LookupDataChunk --outfile=rawproto:mcp/demo/data/flights.binarypb
-   gqui from textproto:mcp/demo/data/hotels.textproto proto oak.functions.LookupDataChunk --outfile=rawproto:mcp/demo/hotels.binarypb
-   gqui from textproto:mcp/demo/data/activities.textproto proto oak.functions.LookupDataChunk --outfile=rawproto:mcp/demo/activities.binarypb
+   gqui from textproto:oak_trusted_agent/demo/mcp/data/flights.textproto proto oak.functions.LookupDataChunk --outfile=rawproto:oak_trusted_agent/demo/mcp/data/flights.binarypb
+   gqui from textproto:oak_trusted_agent/demo/mcp/data/hotels.textproto proto oak.functions.LookupDataChunk --outfile=rawproto:oak_trusted_agent/demo/mcp/data/hotels.binarypb
+   gqui from textproto:oak_trusted_agent/demo/mcp/data/activities.textproto proto oak.functions.LookupDataChunk --outfile=rawproto:oak_trusted_agent/demo/mcp/data/activities.binarypb
    ```
 
 4. **Deployment**: The Terraform configuration in the `terraform/` directory is

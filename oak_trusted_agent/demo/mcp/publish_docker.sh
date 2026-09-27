@@ -31,7 +31,7 @@ IMAGE_NAME="oak-functions-mcp"
 IMAGE_URL="europe-west1-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY_NAME}/${IMAGE_NAME}:latest"
 
 # Build Docker image.
-bazel run //mcp/oak_functions_mcp:oak_functions_mcp_server_load_image
+bazel run //oak_trusted_agent/mcp/server:oak_functions_mcp_server_load_image
 
 # Publish Docker image.
 docker tag "${IMAGE_NAME}":latest "${IMAGE_URL}"

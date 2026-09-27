@@ -66,22 +66,22 @@ Generate lookup data using the following commands.
 For flights:
 
 ```bash
-python3 mcp/demo/create_lookup_data.py --input mcp/demo/data/flights.json --output mcp/demo/data/flights.textproto
-gqui from textproto:mcp/demo/data/flights.textproto proto oak.functions.LookupDataChunk --outfile=rawproto:mcp/demo/data/flights.binarypb
+python3 oak_trusted_agent/mcp/create_lookup_data.py --input_json oak_trusted_agent/demo/mcp/data/flights.json --output_textproto oak_trusted_agent/demo/mcp/data/flights.textproto
+gqui from textproto:oak_trusted_agent/demo/mcp/data/flights.textproto proto oak.functions.LookupDataChunk --outfile=rawproto:oak_trusted_agent/demo/mcp/data/flights.binarypb
 ```
 
 For hotels:
 
 ```bash
-python3 mcp/demo/create_lookup_data.py --input mcp/demo/data/hotels.json mcp/demo/data/hotels_availability.json --output mcp/demo/data/hotels.textproto
-gqui from textproto:mcp/demo/data/hotels.textproto proto oak.functions.LookupDataChunk --outfile=rawproto:mcp/demo/hotels.binarypb
+python3 oak_trusted_agent/mcp/create_lookup_data.py --input_json oak_trusted_agent/demo/mcp/data/hotels.json oak_trusted_agent/demo/mcp/data/hotels_availability.json --output_textproto oak_trusted_agent/demo/mcp/data/hotels.textproto
+gqui from textproto:oak_trusted_agent/demo/mcp/data/hotels.textproto proto oak.functions.LookupDataChunk --outfile=rawproto:oak_trusted_agent/demo/mcp/data/hotels.binarypb
 ```
 
 For activities:
 
 ```bash
-python3 mcp/demo/create_lookup_data.py --input mcp/demo/data/activities.json --output mcp/demo/data/activities.textproto
-gqui from textproto:mcp/demo/data/activities.textproto proto oak.functions.LookupDataChunk --outfile=rawproto:mcp/demo/activities.binarypb
+python3 oak_trusted_agent/mcp/create_lookup_data.py --input_json oak_trusted_agent/demo/mcp/data/activities.json --output_textproto oak_trusted_agent/demo/mcp/data/activities.textproto
+gqui from textproto:oak_trusted_agent/demo/mcp/data/activities.textproto proto oak.functions.LookupDataChunk --outfile=rawproto:oak_trusted_agent/demo/mcp/data/activities.binarypb
 ```
 
 ### System Prompt 2
