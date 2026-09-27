@@ -14,6 +14,12 @@
 // limitations under the License.
 
 pub mod oak {
+    pub mod trusted_agent {
+        pub mod v1 {
+            #![allow(clippy::return_self_not_must_use)]
+            tonic::include_proto!("oak.trusted_agent.v1");
+        }
+    }
     pub mod containers {
         #![allow(clippy::return_self_not_must_use)]
         tonic::include_proto!("oak.containers");

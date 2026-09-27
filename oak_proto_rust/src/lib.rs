@@ -52,6 +52,12 @@ pub mod oak {
 
     include_proto!("oak");
 
+    pub mod trusted_agent {
+        pub mod v1 {
+            include_proto!("oak.trusted_agent.v1");
+        }
+    }
+
     pub mod attestation {
         pub mod v1 {
             include_proto!("oak.attestation.v1");

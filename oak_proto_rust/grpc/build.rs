@@ -30,6 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "../../proto/containers/interfaces.proto",
             "../../proto/containers/orchestrator_crypto.proto",
             "../../proto/session/service_streaming.proto",
+            "../../proto/oak_trusted_agent/service/trusted_agent.proto",
             "../../proto/oak_debug/service/oak_debug.proto",
             "../../proto/oak_functions/service/oak_functions.proto",
             "../../proto/oak_functions/standalone/oak_functions_session.proto",

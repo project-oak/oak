@@ -37,6 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../proto/crypto/crypto.proto",
         "../proto/digest.proto",
         "../proto/google/pes/v1/endorsement.proto",
+        "../proto/oak_trusted_agent/service/trusted_agent.proto",
         "../proto/oak_debug/service/oak_debug.proto",
         "../proto/oak_functions/abi.proto",
         "../proto/oak_functions/application_config.proto",
