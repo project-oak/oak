@@ -21,6 +21,8 @@ package(
     licenses = ["notice"],
 )
 
+exports_files(["data/confidential_space_root.pem"])
+
 rust_library(
     name = "oak_attestation_gcp",
     srcs = glob(["src/**"]),

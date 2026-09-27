@@ -82,7 +82,17 @@ oci_image(
         "PYTHONHASHSEED": "42",
         "PYTHONUNBUFFERED": "1",
     },
-    # Omit allow_cmd_override so callers cannot sign arbitrary commands under this image digest.
+    # Confidential Space launch policy:
+    # - `CONTAINER_IMAGE`: self-reference used by the TEE workload to fetch
+    #   endorsements.
+    # - `BENCHMARK`, `RESULTS_BUCKET`: operator-configured benchmark suite and
+    #   GCS bucket for signed evaluation results.
+    # - Omit `allow_cmd_override` so callers cannot sign arbitrary commands
+    #   under this image digest.
+    # - `log_redirect = "always"`: redirect container stdout/stderr to Cloud
+    #   Logging.
+    #
+    # https://cloud.google.com/confidential-computing/confidential-space/docs/create-customize-workloads#launch_policies
     labels = {
         "tee.launch_policy.allow_env_override": "CONTAINER_IMAGE,BENCHMARK,RESULTS_BUCKET",
         "tee.launch_policy.log_redirect": "always",

@@ -492,7 +492,7 @@
         "bzlTransitiveDigest": "IIspOFb2zj/H+Hcij9i5MHLFU9VOavZTaA+///L/76w=",
         "usagesDigest": "ffrD7viG/EiFoE/Z900CCeB39GTRKrpPHl2eqqG/Ynk=",
         "recordedFileInputs": {
-          "@@//MODULE.bazel": "11db67d84dd51701ca7debc70b5c5db63f3a73392f8cc3df254d1f83df147f46"
+          "@@//MODULE.bazel": "dbe98559f704475bdff43b91002dc328fb714398985da3b14120c5298aa699c7"
         },
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -2979,7 +2979,7 @@
     "@@rules_oci+//oci:extensions.bzl%oci": {
       "general": {
         "bzlTransitiveDigest": "jeibSWgC83kjU/eWUGqR6pV5wIG/lttxu/KWUfA9k+s=",
-        "usagesDigest": "CS+TtPUoNtbSLC4F3d20y8hDsGPHOH7pN6GOl0YiHCA=",
+        "usagesDigest": "+3FCjblcHMLvllzSoXoAjSDWzQk6AoXPBxchX9pBPf4=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -3010,6 +3010,35 @@
                 "@@platforms//cpu:x86_64": "@distroless_cc_debian12_linux_amd64"
               },
               "bzlmod_repository": "distroless_cc_debian12",
+              "reproducible": true
+            }
+          },
+          "distroless_cc_debian13_linux_amd64": {
+            "repoRuleId": "@@rules_oci+//oci/private:pull.bzl%oci_pull",
+            "attributes": {
+              "www_authenticate_challenges": {},
+              "scheme": "https",
+              "registry": "gcr.io",
+              "repository": "distroless/cc-debian13",
+              "identifier": "sha256:4594d59540d1948417f6ca2829ddd9294493a7c68b7528f4dd459de7f203a750",
+              "platform": "linux/amd64",
+              "target_name": "distroless_cc_debian13_linux_amd64",
+              "bazel_tags": []
+            }
+          },
+          "distroless_cc_debian13": {
+            "repoRuleId": "@@rules_oci+//oci/private:pull.bzl%oci_alias",
+            "attributes": {
+              "target_name": "distroless_cc_debian13",
+              "www_authenticate_challenges": {},
+              "scheme": "https",
+              "registry": "gcr.io",
+              "repository": "distroless/cc-debian13",
+              "identifier": "sha256:4594d59540d1948417f6ca2829ddd9294493a7c68b7528f4dd459de7f203a750",
+              "platforms": {
+                "@@platforms//cpu:x86_64": "@distroless_cc_debian13_linux_amd64"
+              },
+              "bzlmod_repository": "distroless_cc_debian13",
               "reproducible": true
             }
           },
@@ -3161,6 +3190,8 @@
           "explicitRootModuleDirectDevDeps": [
             "distroless_cc_debian12",
             "distroless_cc_debian12_linux_amd64",
+            "distroless_cc_debian13",
+            "distroless_cc_debian13_linux_amd64",
             "ollama",
             "ollama_linux_amd64"
           ],

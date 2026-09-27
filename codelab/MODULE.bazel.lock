@@ -1045,7 +1045,7 @@
         "bzlTransitiveDigest": "IIspOFb2zj/H+Hcij9i5MHLFU9VOavZTaA+///L/76w=",
         "usagesDigest": "WqFS+erRQO0FnSIuWY/4A0BgxztdEULNjavEWxi0j0c=",
         "recordedFileInputs": {
-          "@@oak+//MODULE.bazel": "11db67d84dd51701ca7debc70b5c5db63f3a73392f8cc3df254d1f83df147f46"
+          "@@oak+//MODULE.bazel": "dbe98559f704475bdff43b91002dc328fb714398985da3b14120c5298aa699c7"
         },
         "recordedDirentsInputs": {},
         "envVariables": {},

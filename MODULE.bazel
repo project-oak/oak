@@ -228,7 +228,19 @@ oci.pull(
     image = "gcr.io/distroless/cc-debian12",
     platforms = ["linux/amd64"],
 )
-use_repo(oci, "distroless_cc_debian12", "distroless_cc_debian12_linux_amd64")
+oci.pull(
+    name = "distroless_cc_debian13",
+    digest = "sha256:4594d59540d1948417f6ca2829ddd9294493a7c68b7528f4dd459de7f203a750",
+    image = "gcr.io/distroless/cc-debian13",
+    platforms = ["linux/amd64"],
+)
+use_repo(
+    oci,
+    "distroless_cc_debian12",
+    "distroless_cc_debian12_linux_amd64",
+    "distroless_cc_debian13",
+    "distroless_cc_debian13_linux_amd64",
+)
 
 # Base image for the oak_trusted_agent model and eval images: ollama/ollama:0.34.1.
 # To update: `docker buildx imagetools inspect ollama/ollama:<version>`.

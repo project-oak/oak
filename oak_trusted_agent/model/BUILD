@@ -55,7 +55,15 @@ oci_image(
         "RUST_LOG": "info",
     },
     exposed_ports = ["8080/tcp"],
-    # Omit allow_cmd_override so callers cannot bypass oak_proxy_server under this image digest.
+    # Confidential Space launch policy:
+    # - `CONTAINER_IMAGE`: self-reference used by the TEE workload to fetch
+    #   endorsements.
+    # - Omit `allow_cmd_override` so callers cannot bypass `oak_proxy_server`
+    #   under this image digest.
+    # - `log_redirect = "always"`: redirect container stdout/stderr to Cloud
+    #   Logging.
+    #
+    # https://cloud.google.com/confidential-computing/confidential-space/docs/create-customize-workloads#launch_policies
     labels = {
         "tee.launch_policy.allow_env_override": "CONTAINER_IMAGE",
         "tee.launch_policy.log_redirect": "always",

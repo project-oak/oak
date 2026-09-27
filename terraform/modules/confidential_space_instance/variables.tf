@@ -51,7 +51,13 @@ variable "accelerator_count" {
 
 variable "service_account_email" {
   type        = string
-  description = "Optional service account email to attach to the instance."
+  description = "Optional service account email to attach to the instance. When null, a dedicated workload service account with Confidential Space IAM roles is created."
+  default     = null
+}
+
+variable "exposed_port" {
+  type        = number
+  description = "Optional TCP port to expose on the instance via a firewall rule."
   default     = null
 }
 

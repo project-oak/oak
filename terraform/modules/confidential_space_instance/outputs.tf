@@ -25,5 +25,5 @@ output "instance_id" {
 
 output "service_account_email" {
   description = "The email of the service account attached to the GCE instance."
-  value       = google_compute_instance.confidential_space_instance.service_account[0].email
+  value       = local.service_account_email
 }

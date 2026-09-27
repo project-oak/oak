@@ -1,9 +1,85 @@
+resource "google_service_account" "workload" {
+  count = var.service_account_email == null ? 1 : 0
+
+  project      = var.gcp_project_id
+  account_id   = "${trimsuffix(substr(var.instance_name, 0, 27), "-")}-sa"
+  display_name = "Confidential Space workload SA for ${var.instance_name}"
+}
+
+resource "google_project_iam_member" "workload_user" {
+  count = var.service_account_email == null ? 1 : 0
+
+  project = var.gcp_project_id
+  role    = "roles/confidentialcomputing.workloadUser"
+  member  = "serviceAccount:${google_service_account.workload[0].email}"
+}
+
+resource "google_project_iam_member" "log_writer" {
+  count = var.service_account_email == null ? 1 : 0
+
+  project = var.gcp_project_id
+  role    = "roles/logging.logWriter"
+  member  = "serviceAccount:${google_service_account.workload[0].email}"
+}
+
+resource "google_project_iam_member" "artifact_reader" {
+  count = var.service_account_email == null ? 1 : 0
+
+  project = var.gcp_project_id
+  role    = "roles/artifactregistry.reader"
+  member  = "serviceAccount:${google_service_account.workload[0].email}"
+}
+
+resource "google_compute_firewall" "allow_exposed_port" {
+  count = var.exposed_port != null ? 1 : 0
+
+  project = var.gcp_project_id
+  name    = "allow-${var.instance_name}-oak-proxy"
+  network = "default"
+
+  allow {
+    protocol = "tcp"
+    ports    = [tostring(var.exposed_port)]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = [var.instance_name]
+}
+
+# GCP IAM bindings for a newly created service account are eventually consistent
+# and take ~30 seconds to propagate to the Confidential Computing, Artifact
+# Registry, and Cloud Logging APIs. Wait before booting the Confidential Space
+# VM so confidential-space-launcher does not fail and terminate the VM on first
+# boot.
+resource "terraform_data" "iam_propagation" {
+  count = var.service_account_email == null ? 1 : 0
+
+  triggers_replace = [
+    google_project_iam_member.workload_user[0].id,
+    google_project_iam_member.log_writer[0].id,
+    google_project_iam_member.artifact_reader[0].id,
+  ]
+
+  provisioner "local-exec" {
+    command = "sleep 30"
+  }
+}
+
+locals {
+  service_account_email = (
+    var.service_account_email != null
+    ? var.service_account_email
+    : google_service_account.workload[0].email
+  )
+}
+
 resource "google_compute_instance" "confidential_space_instance" {
+  project          = var.gcp_project_id
   name             = var.instance_name
   machine_type     = var.machine_type
   zone             = var.zone
   min_cpu_platform = "Intel Sapphire Rapids"
-  tags             = var.tags
+  tags             = distinct(concat(var.tags, var.exposed_port != null ? [var.instance_name] : []))
 
   # This instance will be terminated and re-created on maintenance events.
   scheduling {
@@ -37,7 +113,7 @@ resource "google_compute_instance" "confidential_space_instance" {
   # The service account needs access to cloud-platform scopes to be able
   # to pull the container image and write logs.
   service_account {
-    email  = var.service_account_email
+    email  = local.service_account_email
     scopes = ["cloud-platform"]
   }
 
@@ -70,4 +146,8 @@ resource "google_compute_instance" "confidential_space_instance" {
 
   # Allow Terraform to delete the instance.
   allow_stopping_for_update = true
+
+  depends_on = [
+    terraform_data.iam_propagation,
+  ]
 }
