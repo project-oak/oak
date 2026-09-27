@@ -51,7 +51,7 @@ endorsement_repository_url = "https://raw.githubusercontent.com/your_org/your_re
 # go install github.com/sigstore/cosign/cmd/cosign@latest
 
 export RUST_LOG=trex_client=debug,mcp_proxy=debug
-bazel run mcp_proxy -- --config=$PWD/mcp_proxy/config.toml
+bazel run //oak_trusted_agent/mcp/proxy:mcp_proxy -- --config=$PWD/oak_trusted_agent/mcp/proxy/config.toml
 ```
 
 The proxy will start on `http://localhost:8080` (or as configured). All requests
