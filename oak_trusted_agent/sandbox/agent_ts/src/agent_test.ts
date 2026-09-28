@@ -156,7 +156,7 @@ function createMockToolset(): OakToolset {
 }
 
 describe('TrustedAgent', () => {
-  it('executes the tool call and observation loop', async () => {
+  it('executes the tool call and observation loop and returns the final answer', async () => {
     const agent = new TrustedAgent({
       name: 'test_agent',
       maxSteps: 4,
@@ -164,22 +164,14 @@ describe('TrustedAgent', () => {
       toolset: createMockToolset(),
     });
 
-    const weatherTrace = await agent.run(
-      'What is the weather in San Francisco?',
-    );
-    assert.ok(weatherTrace.includes('=== Agent Session: test_agent ==='));
-    assert.ok(weatherTrace.includes("[Tool Call] Invoking 'get_weather'"));
+    const response = await agent.run('What is the weather in San Francisco?');
     assert.ok(
-      weatherTrace.includes('[Observation] {"location":"San Francisco"'),
-    );
-    assert.ok(
-      weatherTrace.includes(
-        '[Final Answer] The weather in San Francisco is currently Sunny',
-      ),
+      response.includes('The weather in San Francisco is currently Sunny'),
+      `Expected response to contain final answer, got: ${response}`,
     );
   });
 
-  it('captures tool execution errors gracefully in the trace', async () => {
+  it('captures tool execution errors and returns the final answer', async () => {
     class ErrorTestModel extends BaseLlm {
       private step = 0;
       constructor() {
@@ -221,16 +213,11 @@ describe('TrustedAgent', () => {
       model: new ErrorTestModel(),
     });
 
-    const errorTrace = await errorAgent.run('Trigger tool error');
-    assert.ok(
-      errorTrace.includes(
-        '[Tool Error] Function missing_tool is not found in the toolsDict.',
-      ),
-    );
-    assert.ok(errorTrace.includes('[Final Answer] Recovered from tool error'));
+    const response = await errorAgent.run('Trigger tool error');
+    assert.equal(response, 'Recovered from tool error');
   });
 
-  it('forwards ADK tool declarations when using OakModel', async () => {
+  it('forwards ADK tool declarations when using OakModel and returns answer', async () => {
     let capturedRequest = '';
 
     const mockWitModel: WitModel = {
@@ -258,11 +245,9 @@ describe('TrustedAgent', () => {
       model,
       toolset: createMockToolset(),
     });
-    const liveTrace = await liveAgent.run('Hello via host model');
+    const response = await liveAgent.run('Hello via host model');
     const parsedBody = JSON.parse(capturedRequest) as Record<string, unknown>;
     assert.ok(Array.isArray(parsedBody.tools) && parsedBody.tools.length > 0);
-    assert.ok(
-      liveTrace.includes('[Final Answer] Attested response from host model'),
-    );
+    assert.equal(response, 'Attested response from host model');
   });
 });

@@ -4,7 +4,7 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-packageExtensionsChecksum: c3ce70ab3656f515f0d791251639b72f
+packageExtensionsChecksum: sha256-HGi3JjLfUHDegCGBEZ+5+uvs49M058z+BSW20NazcGo=
 
 importers:
   .:
@@ -24,6 +24,9 @@ importers:
       esbuild:
         specifier: 0.25.0
         version: 0.25.0
+      loglevel:
+        specifier: ^1.9.2
+        version: 1.9.2
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -2628,6 +2631,13 @@ packages:
       }
     engines: { node: '>= 12.0.0' }
 
+  loglevel@1.9.2:
+    resolution:
+      {
+        integrity: sha512-HgMmCqIJSAKqo68l0rS2AanEWfkxaZ5wNiEFb5ggm08lDs9Xl2KxBlX3PTcaD2chBM1gXAYf491/M2Rv8Jwayg==,
+      }
+    engines: { node: '>= 0.6.0' }
+
   long@5.3.2:
     resolution:
       {
@@ -4705,6 +4715,8 @@ snapshots:
       ms: 2.1.3
       safe-stable-stringify: 2.5.0
       triple-beam: 1.4.1
+
+  loglevel@1.9.2: {}
 
   long@5.3.2: {}
 

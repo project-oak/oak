@@ -42,6 +42,7 @@ fn test_agent_sandbox_runs_session_step() {
     assert!(result.is_ok(), "agent step failed: {result:?}");
     let output = result.unwrap();
     assert!(!output.is_empty(), "agent output was unexpectedly empty");
+    assert_eq!(output, "Hello! I am an attested Oak Trusted Agent running inside a Wasm sandbox.");
 }
 
 #[test]

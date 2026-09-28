@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import { BaseLlm, InMemoryRunner, LlmAgent } from '@google/adk';
+import { logger } from './logger';
 import { OakToolset } from './tools';
 
 export interface AgentConfig {
@@ -70,20 +71,23 @@ export class TrustedAgent {
 
   /**
    * Executes the Google ADK `InMemoryRunner` session loop for a user message.
+   *
+   * Intermediate execution events (thoughts, tool calls, observations) are logged
+   * via `tslog` (which prints to stdout in debug/insecure mode and is safely suppressed
+   * when stdio is disabled in secure mode).
+   *
+   * Only the agent's final answer is returned to the user.
    */
   public async run(userMessage: string): Promise<string> {
-    const traceLogs: string[] = [];
-
-    traceLogs.push(`=== Agent Session: ${this.name} ===`);
-    traceLogs.push(`[Preamble] ${this.instruction}`);
-    traceLogs.push(
+    logger.info(`=== Agent Session: ${this.name} ===`);
+    logger.debug(`[Preamble] ${this.instruction}`);
+    logger.debug(
       `[Available Tools] ${this.toolset
         .listTools()
         .map((t) => t.name)
         .join(', ')}`,
     );
-    traceLogs.push(`[User Prompt] "${userMessage}"`);
-    traceLogs.push('--------------------------------------');
+    logger.info(`[User Prompt] "${userMessage}"`);
 
     const runner = new InMemoryRunner({
       agent: this.llmAgent,
@@ -91,6 +95,8 @@ export class TrustedAgent {
     });
 
     let currentStep = 0;
+    let finalAnswer = '';
+
     for await (const event of runner.runEphemeral({
       userId: 'sandbox_user',
       newMessage: {
@@ -104,26 +110,27 @@ export class TrustedAgent {
       for (const part of event?.content?.parts || []) {
         if (part.thought && part.text) {
           currentStep++;
-          traceLogs.push(`[Step ${currentStep} Thought] ${part.text}`);
+          logger.debug(`[Step ${currentStep} Thought] ${part.text}`);
         } else if (part.functionCall) {
           const { name, args } = part.functionCall;
-          traceLogs.push(
+          logger.info(
             `[Tool Call] Invoking '${name}' with args: ${JSON.stringify(args || {})}`,
           );
         } else if (part.functionResponse) {
           const resp = part.functionResponse.response;
           if (resp?.error) {
-            traceLogs.push(`[Tool Error] ${String(resp.error)}`);
+            logger.error(`[Tool Error] ${String(resp.error)}`);
           } else {
-            traceLogs.push(`[Observation] ${JSON.stringify(resp)}`);
+            logger.info(`[Observation] ${JSON.stringify(resp)}`);
           }
         } else if (part.text) {
-          traceLogs.push(`[Final Answer] ${part.text}`);
+          logger.info(`[Final Answer] ${part.text}`);
+          finalAnswer = part.text;
         }
       }
     }
 
-    traceLogs.push('======================================');
-    return traceLogs.join('\n');
+    logger.info('======================================');
+    return finalAnswer;
   }
 }

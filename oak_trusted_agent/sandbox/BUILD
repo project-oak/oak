@@ -47,6 +47,7 @@ ts_project(
     deps = [
         ":node_modules/@google/adk",
         ":node_modules/@types/node",
+        ":node_modules/loglevel",
     ],
 )
 
@@ -70,6 +71,7 @@ ts_project(
         ":agent_ts_lib",
         ":node_modules/@google/adk",
         ":node_modules/@types/node",
+        ":node_modules/loglevel",
     ],
 )
 
@@ -87,7 +89,10 @@ esbuild(
     sourcemap = False,
     target = "es2022",
     target_compatible_with = ["@platforms//os:linux"],
-    deps = [":node_modules/@google/adk"],
+    deps = [
+        ":node_modules/@google/adk",
+        ":node_modules/loglevel",
+    ],
 )
 
 copy_to_directory(
@@ -135,6 +140,41 @@ js_run_binary(
         "stdio",
         "-o",
         "adk_agent_ts.wasm",
+    ],
+    chdir = package_name(),
+    mnemonic = "ComponentizeJs",
+    tags = ["no-sandbox"],
+    target_compatible_with = ["@platforms//os:linux"],
+    tool = ":componentize_js_bin",
+)
+
+# Insecure/debug build of the agent Wasm component.
+# Unlike the secure `adk_agent_ts` target which disables stdio, this target
+# leaves WASI stdio enabled so that tslog / console messages can be printed
+# directly to the host console during development and debugging.
+js_run_binary(
+    name = "adk_agent_ts_insecure",
+    srcs = [
+        ":agent_ts_bundle",
+        ":staged_wit",
+    ],
+    outs = ["adk_agent_ts_insecure.wasm"],
+    args = [
+        "bundle.js",
+        "--wit",
+        "staged_wit",
+        "--world-name",
+        "oak-agent",
+        "--disable",
+        "http",
+        "--disable",
+        "fetch-event",
+        "--disable",
+        "clocks",
+        "--disable",
+        "random",
+        "-o",
+        "adk_agent_ts_insecure.wasm",
     ],
     chdir = package_name(),
     mnemonic = "ComponentizeJs",

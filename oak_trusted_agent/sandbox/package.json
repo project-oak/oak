@@ -7,7 +7,8 @@
     "@bytecodealliance/preview2-shim": "^0.25.0",
     "@google/adk": "2.1.0",
     "commander": "^12.1.0",
-    "esbuild": "0.25.0"
+    "esbuild": "0.25.0",
+    "loglevel": "^1.9.2"
   },
   "devDependencies": {
     "@types/node": "^22.0.0"
