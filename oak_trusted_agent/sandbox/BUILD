@@ -150,7 +150,7 @@ js_run_binary(
 
 # Insecure/debug build of the agent Wasm component.
 # Unlike the secure `adk_agent_ts` target which disables stdio, this target
-# leaves WASI stdio enabled so that tslog / console messages can be printed
+# leaves WASI stdio enabled so that loglevel / console messages can be printed
 # directly to the host console during development and debugging.
 js_run_binary(
     name = "adk_agent_ts_insecure",
@@ -265,6 +265,7 @@ rust_library(
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:serde_json",
         "@oak_crates_index//:wasmtime",
+        "@oak_crates_index//:wasmtime-wasi",
     ],
 )
 
@@ -279,8 +280,12 @@ rust_test(
     name = "sandbox_integration_test",
     size = "small",
     srcs = ["tests/sandbox_integration_test.rs"],
-    data = [":adk_agent_ts"],
+    data = [
+        ":adk_agent_ts",
+        ":adk_agent_ts_insecure",
+    ],
     rustc_env = {
+        "ADK_AGENT_TS_INSECURE_WASM": "$(rootpath :adk_agent_ts_insecure)",
         "ADK_AGENT_TS_WASM": "$(rootpath :adk_agent_ts)",
     },
     target_compatible_with = ["@platforms//os:linux"],

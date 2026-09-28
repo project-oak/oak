@@ -17,6 +17,6 @@
 pub mod agent_host;
 
 pub use agent_host::{
-    AgentGuest, AgentSandbox, AgentSession, HostConfig, HostState, ModelHost, ModelInfo,
-    ModelProvider, ToolDescription, ToolsHost,
+    AgentGuest, AgentSandbox, AgentSession, HostConfig, HostState, MemoryOutputPipe, ModelHost,
+    ModelInfo, ModelProvider, ToolDescription, ToolsHost,
 };

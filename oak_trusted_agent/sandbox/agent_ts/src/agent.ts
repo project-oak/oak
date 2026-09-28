@@ -73,7 +73,7 @@ export class TrustedAgent {
    * Executes the Google ADK `InMemoryRunner` session loop for a user message.
    *
    * Intermediate execution events (thoughts, tool calls, observations) are logged
-   * via `tslog` (which prints to stdout in debug/insecure mode and is safely suppressed
+   * via `loglevel` (which prints to stdout in debug/insecure mode and is safely suppressed
    * when stdio is disabled in secure mode).
    *
    * Only the agent's final answer is returned to the user.
@@ -95,7 +95,7 @@ export class TrustedAgent {
     });
 
     let currentStep = 0;
-    let finalAnswer = '';
+    const finalAnswerParts: string[] = [];
 
     for await (const event of runner.runEphemeral({
       userId: 'sandbox_user',
@@ -125,12 +125,12 @@ export class TrustedAgent {
           }
         } else if (part.text) {
           logger.info(`[Final Answer] ${part.text}`);
-          finalAnswer = part.text;
+          finalAnswerParts.push(part.text);
         }
       }
     }
 
     logger.info('======================================');
-    return finalAnswer;
+    return finalAnswerParts.join('\n');
   }
 }

@@ -19,6 +19,8 @@ use wasmtime::{
     Config, Engine, Store,
     component::{Component, Linker},
 };
+pub use wasmtime_wasi::p2::pipe::MemoryOutputPipe;
+use wasmtime_wasi::{ResourceTable, WasiCtx, WasiCtxBuilder, WasiCtxView, WasiView};
 
 wasmtime::component::bindgen!({
     path: "wit/agent.wit",
@@ -42,12 +44,37 @@ pub struct HostConfig {
 pub struct HostState {
     pub model_info: ModelInfo,
     pub tools: Vec<ToolDescription>,
+    wasi_ctx: WasiCtx,
+    table: ResourceTable,
 }
 
 impl HostState {
-    /// Creates a new `HostState` from the provided `HostConfig`.
+    /// Creates a new `HostState` from the provided `HostConfig`, inheriting
+    /// host stdout and stderr.
     pub fn new(config: HostConfig) -> Self {
-        Self { model_info: config.model_info, tools: config.tools }
+        let wasi_ctx = WasiCtxBuilder::new().inherit_stdout().inherit_stderr().build();
+        let table = ResourceTable::new();
+        Self { model_info: config.model_info, tools: config.tools, wasi_ctx, table }
+    }
+
+    /// Creates a new `HostState` capturing guest WASI stdout and stderr into
+    /// the provided in-memory pipes.
+    ///
+    /// Intended for testing and verifying guest stdio / logging behavior.
+    pub fn new_with_pipes(
+        config: HostConfig,
+        stdout: MemoryOutputPipe,
+        stderr: MemoryOutputPipe,
+    ) -> Self {
+        let wasi_ctx = WasiCtxBuilder::new().stdout(stdout).stderr(stderr).build();
+        let table = ResourceTable::new();
+        Self { model_info: config.model_info, tools: config.tools, wasi_ctx, table }
+    }
+}
+
+impl WasiView for HostState {
+    fn ctx(&mut self) -> WasiCtxView<'_> {
+        WasiCtxView { ctx: &mut self.wasi_ctx, table: &mut self.table }
     }
 }
 
@@ -110,11 +137,24 @@ impl AgentSandbox {
             Engine::new(&config).map_err(|e| anyhow!("failed to create wasmtime engine: {e}"))?;
         let mut linker = Linker::new(&engine);
 
+        // Links the attested oak:agent interfaces defined in wit/agent.wit.
         OakAgent::add_to_linker::<_, wasmtime::component::HasSelf<_>>(
             &mut linker,
             |state: &mut HostState| state,
         )
         .map_err(|e| anyhow!("failed to link OakAgent imports: {e}"))?;
+
+        // Links WASI Preview 2 CLI/IO interfaces.
+        // Note: The attested `wit/agent.wit` interface intentionally does not declare
+        // any WASI dependencies (maintaining a minimal, least-privilege interface for
+        // attestation). Secure components (`adk_agent_ts`) disable WASI stdio
+        // and never import these interfaces. For debug/insecure components
+        // (`adk_agent_ts_insecure`), `componentize-js` automatically
+        // splices WASI stdio imports into the component; linking `wasmtime_wasi` here
+        // dynamically fulfills those imports without requiring WASI to be
+        // exposed in `agent.wit`.
+        wasmtime_wasi::p2::add_to_linker_sync(&mut linker)
+            .map_err(|e| anyhow!("failed to link WASI imports: {e}"))?;
 
         let component = Component::from_binary(&engine, component_bytes)
             .map_err(|e| anyhow!("failed to compile agent component: {e}"))?;
