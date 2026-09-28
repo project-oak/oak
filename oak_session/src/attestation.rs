@@ -212,6 +212,10 @@ pub struct AttestationState {
     /// A token derived from the attestation exchange, intended to be used to
     /// cryptographically bind the session keys to the attestation results.
     pub attestation_binding_token: Vec<u8>,
+    /// Legacy token derived from the attestation exchange without length
+    /// prefixes, retained for backward compatibility with peers running older
+    /// versions of Oak Session.
+    pub legacy_attestation_binding_token: Vec<u8>,
 }
 
 /// Defines the configuration for the attestation flow between two parties.
@@ -277,6 +281,7 @@ pub struct ClientAttestationHandler {
     attestation_result: Option<PeerAttestationVerdict>,
     bindable_assertions: BTreeMap<String, Box<dyn BindableAssertion>>,
     attestation_binding_token: Vec<u8>,
+    legacy_attestation_binding_token: Vec<u8>,
 }
 
 impl ClientAttestationHandler {
@@ -327,6 +332,7 @@ impl ClientAttestationHandler {
             config,
             attestation_result: None,
             attestation_binding_token: Vec::new(),
+            legacy_attestation_binding_token: Vec::new(),
         })
     }
 }
@@ -357,6 +363,7 @@ impl AttestationHandler for ClientAttestationHandler {
             peer_attestation_verdict: verdict,
             self_assertions: self.bindable_assertions,
             attestation_binding_token: self.attestation_binding_token,
+            legacy_attestation_binding_token: self.legacy_attestation_binding_token,
         })
     }
 }
@@ -371,15 +378,13 @@ impl ProtocolEngine for ClientAttestationHandler {
     /// `Some(AttestRequest)` once, after which it will return `Ok(None)` as
     /// the client sends only one attestation message.
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<AttestRequest>> {
-        self.attestation_binding_token.extend(serialize_assertions(
-            &self
-                .bindable_assertions
-                .iter()
-                .map(|(id, bindable_assertion)| {
-                    (id.clone(), bindable_assertion.assertion().clone())
-                })
-                .collect(),
-        ));
+        let self_assertions = self
+            .bindable_assertions
+            .iter()
+            .map(|(id, bindable_assertion)| (id.clone(), bindable_assertion.assertion().clone()))
+            .collect();
+        self.attestation_binding_token.extend(serialize_assertions(&self_assertions));
+        self.legacy_attestation_binding_token.extend(legacy_serialize_assertions(&self_assertions));
         Ok(self.attest_request.take())
     }
 
@@ -400,6 +405,8 @@ impl ProtocolEngine for ClientAttestationHandler {
         incoming_message: AttestResponse,
     ) -> anyhow::Result<Option<()>> {
         self.attestation_binding_token.extend(serialize_assertions(&incoming_message.assertions));
+        self.legacy_attestation_binding_token
+            .extend(legacy_serialize_assertions(&incoming_message.assertions));
 
         if self.attestation_result.is_some() {
             // Attestation result is already obtained - no new messages expected.
@@ -443,6 +450,7 @@ pub struct ServerAttestationHandler {
     attestation_result: Option<PeerAttestationVerdict>,
     bindable_assertions: BTreeMap<String, Box<dyn BindableAssertion>>,
     attestation_binding_token: Vec<u8>,
+    legacy_attestation_binding_token: Vec<u8>,
 }
 
 impl ServerAttestationHandler {
@@ -493,6 +501,7 @@ impl ServerAttestationHandler {
             config,
             attestation_result: None,
             attestation_binding_token: Vec::new(),
+            legacy_attestation_binding_token: Vec::new(),
         })
     }
 }
@@ -523,6 +532,7 @@ impl AttestationHandler for ServerAttestationHandler {
             peer_attestation_verdict: verdict,
             self_assertions: self.bindable_assertions,
             attestation_binding_token: self.attestation_binding_token,
+            legacy_attestation_binding_token: self.legacy_attestation_binding_token,
         })
     }
 }
@@ -538,15 +548,13 @@ impl ProtocolEngine for ServerAttestationHandler {
     /// self-attesting). This method will return `Some(AttestResponse)`
     /// once, after which it will return `Ok(None)`.
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<AttestResponse>> {
-        self.attestation_binding_token.extend(serialize_assertions(
-            &self
-                .bindable_assertions
-                .iter()
-                .map(|(id, bindable_assertion)| {
-                    (id.clone(), bindable_assertion.assertion().clone())
-                })
-                .collect(),
-        ));
+        let self_assertions = self
+            .bindable_assertions
+            .iter()
+            .map(|(id, bindable_assertion)| (id.clone(), bindable_assertion.assertion().clone()))
+            .collect();
+        self.attestation_binding_token.extend(serialize_assertions(&self_assertions));
+        self.legacy_attestation_binding_token.extend(legacy_serialize_assertions(&self_assertions));
         Ok(self.attest_response.take())
     }
 
@@ -566,6 +574,8 @@ impl ProtocolEngine for ServerAttestationHandler {
         incoming_message: AttestRequest,
     ) -> anyhow::Result<Option<()>> {
         self.attestation_binding_token.extend(serialize_assertions(&incoming_message.assertions));
+        self.legacy_attestation_binding_token
+            .extend(legacy_serialize_assertions(&incoming_message.assertions));
         if self.attestation_result.is_some() {
             // Attestation result is already obtained - no new messages expected.
             return Ok(None);
@@ -739,9 +749,33 @@ fn combine_legacy_and_assertion_aggregated_verification(
 /// Serializes a map of assertions into a deterministic byte vector.
 ///
 /// The serialization format is `id:content|id:content|...`, where `id` is the
-/// assertion ID string, encoded as a protobuf message. This is used to create a
-/// stable input for the attestation binding token.
+/// assertion ID string, and content is encoded as a length-prefixed protobuf
+/// message. This is used to create a stable input for the attestation binding
+/// token.
 fn serialize_assertions(attestations: &BTreeMap<String, Assertion>) -> Vec<u8> {
+    // Prefix with a fixed-width entry count so that concatenating two
+    // serialized maps (client-half || server-half) is injective: a MITM cannot
+    // move an entry across the boundary without changing at least one count.
+    let mut out = (attestations.len() as u64).to_le_bytes().to_vec();
+    out.extend(
+        attestations
+            .iter()
+            .map(|(id, assertion)| {
+                let mut result = id.encode_to_vec();
+                result.push(b':');
+                result.extend((assertion.content.len() as u64).to_le_bytes());
+                result.extend(assertion.content.clone());
+                result.push(b'|');
+                result
+            })
+            .concat(),
+    );
+    out
+}
+
+// TODO: b/533986916 - Remove once pre-built enclave binaries have migrated to
+// length-prefixed assertion serialization.
+fn legacy_serialize_assertions(attestations: &BTreeMap<String, Assertion>) -> Vec<u8> {
     attestations
         .iter()
         .map(|(id, assertion)| {

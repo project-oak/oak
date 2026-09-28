@@ -1867,3 +1867,106 @@ fn pairwise_bidirectional_attestation_fails_on_evidence() -> anyhow::Result<()> 
 
     Ok(())
 }
+
+#[googletest::test]
+fn mitm_boundary_shift_assertion_injection_produces_different_tokens() -> anyhow::Result<()> {
+    let client_assertion = Assertion { content: b"client_test".to_vec() };
+    let injected_assertion = Assertion { content: b"injected".to_vec() };
+    let server_assertion = Assertion { content: b"server_test".to_vec() };
+
+    let client_config = AttestationHandlerConfig {
+        self_assertion_generators: BTreeMap::from([(
+            "a_client".to_string(),
+            create_mock_assertion_generator(client_assertion.clone()).into(),
+        )]),
+        peer_assertion_verifiers: BTreeMap::from([(
+            "c_server".to_string(),
+            create_passing_mock_assertion_verifier(server_assertion.clone()).into(),
+        )]),
+        assertion_attestation_aggregator: Box::new(PassThrough {}),
+        ..Default::default()
+    };
+    let server_config = AttestationHandlerConfig {
+        self_assertion_generators: BTreeMap::from([(
+            "c_server".to_string(),
+            create_mock_assertion_generator(server_assertion.clone()).into(),
+        )]),
+        peer_assertion_verifiers: BTreeMap::from([(
+            "a_client".to_string(),
+            create_passing_mock_assertion_verifier(client_assertion.clone()).into(),
+        )]),
+        assertion_attestation_aggregator: Box::new(PassThrough {}),
+        ..Default::default()
+    };
+
+    let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
+    let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
+
+    let mut attest_request = client_attestation_provider
+        .get_outgoing_message()?
+        .expect("An outgoing attest request should be available");
+    // MITM injects `b_injected` into the request seen by the server.
+    attest_request.assertions.insert("b_injected".to_string(), injected_assertion.clone());
+    assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
+
+    let mut attest_response = server_attestation_provider
+        .get_outgoing_message()?
+        .expect("An outgoing attest response should be available");
+    // MITM injects `b_injected` into the response seen by the client.
+    attest_response.assertions.insert("b_injected".to_string(), injected_assertion);
+    assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
+
+    let client_attestation_state = client_attestation_provider.take_attestation_state()?;
+    let server_attestation_state = server_attestation_provider.take_attestation_state()?;
+
+    assert_that!(
+        client_attestation_state.attestation_binding_token,
+        not(eq(&server_attestation_state.attestation_binding_token))
+    );
+
+    Ok(())
+}
+
+#[googletest::test]
+fn assertions_with_delimiters_in_content_produce_different_tokens() -> anyhow::Result<()> {
+    // `\x0a\x01b` is the protobuf encoding of the string `"b"`.
+    let forged_content = b"first|\x0a\x01b:second".to_vec();
+
+    let client_config_single = AttestationHandlerConfig {
+        self_assertion_generators: BTreeMap::from([(
+            "a".to_string(),
+            create_mock_assertion_generator(Assertion { content: forged_content }).into(),
+        )]),
+        ..Default::default()
+    };
+    let client_config_two = AttestationHandlerConfig {
+        self_assertion_generators: BTreeMap::from([
+            (
+                "a".to_string(),
+                create_mock_assertion_generator(Assertion { content: b"first".to_vec() }).into(),
+            ),
+            (
+                "b".to_string(),
+                create_mock_assertion_generator(Assertion { content: b"second".to_vec() }).into(),
+            ),
+        ]),
+        ..Default::default()
+    };
+
+    let mut handler_single = ClientAttestationHandler::create(client_config_single)?;
+    let _ = handler_single.get_outgoing_message()?;
+    handler_single.put_incoming_message(AttestResponse::default())?;
+    let state_single = handler_single.take_attestation_state()?;
+
+    let mut handler_two = ClientAttestationHandler::create(client_config_two)?;
+    let _ = handler_two.get_outgoing_message()?;
+    handler_two.put_incoming_message(AttestResponse::default())?;
+    let state_two = handler_two.take_attestation_state()?;
+
+    assert_that!(
+        state_single.attestation_binding_token,
+        not(eq(&state_two.attestation_binding_token))
+    );
+
+    Ok(())
+}

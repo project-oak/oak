@@ -45,6 +45,7 @@ fn process_kk_handshake() {
             self_assertions: BTreeMap::new(),
             peer_session_binding_verifiers: BTreeMap::new(),
             attestation_binding_token: Vec::new(),
+            legacy_attestation_binding_token: Vec::new(),
         },
     )
     .unwrap();
@@ -64,6 +65,7 @@ fn process_kk_handshake() {
             self_assertions: BTreeMap::new(),
             peer_session_binding_verifiers: BTreeMap::new(),
             attestation_binding_token: Vec::new(),
+            legacy_attestation_binding_token: Vec::new(),
         },
     );
     do_handshake(client_handshaker, server_handshaker);
@@ -86,6 +88,7 @@ fn process_nk_handshake() {
             self_assertions: BTreeMap::new(),
             peer_session_binding_verifiers: BTreeMap::new(),
             attestation_binding_token: Vec::new(),
+            legacy_attestation_binding_token: Vec::new(),
         },
     )
     .unwrap();
@@ -105,6 +108,7 @@ fn process_nk_handshake() {
             self_assertions: BTreeMap::new(),
             peer_session_binding_verifiers: BTreeMap::new(),
             attestation_binding_token: Vec::new(),
+            legacy_attestation_binding_token: Vec::new(),
         },
     );
     do_handshake(client_handshaker, server_handshaker);
@@ -126,6 +130,7 @@ fn process_nn_handshake() {
             self_assertions: BTreeMap::new(),
             peer_session_binding_verifiers: BTreeMap::new(),
             attestation_binding_token: Vec::new(),
+            legacy_attestation_binding_token: Vec::new(),
         },
     )
     .unwrap();
@@ -145,6 +150,7 @@ fn process_nn_handshake() {
             self_assertions: BTreeMap::new(),
             peer_session_binding_verifiers: BTreeMap::new(),
             attestation_binding_token: Vec::new(),
+            legacy_attestation_binding_token: Vec::new(),
         },
     );
     do_handshake(client_handshaker, server_handshaker);
