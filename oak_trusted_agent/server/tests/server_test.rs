@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+use std::sync::Arc;
+
 use oak_grpc::oak::trusted_agent::v1::{
     trusted_agent_service_client::TrustedAgentServiceClient,
     trusted_agent_service_server::TrustedAgentServiceServer,
@@ -22,10 +24,27 @@ use oak_proto_rust::oak::trusted_agent::v1::{
     AgentRequest, UserMessage, agent_request::Request as ProtoRequest,
     agent_response::Response as ProtoResponse,
 };
-use oak_trusted_agent_sandbox::{AgentSandbox, HostConfig, ModelInfo, ModelProvider};
+use oak_trusted_agent_sandbox::{
+    AgentSandbox, HostConfig, ModelBackend, ModelInfo, ModelProvider, NoTools,
+};
 use oak_trusted_agent_server::TrustedAgentServiceImpl;
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
 use tonic::transport::{Channel, Server};
+
+/// Model backend that always answers with the same text.
+struct CannedModel;
+
+impl ModelBackend for CannedModel {
+    fn generate_content(&self, _request: &str) -> anyhow::Result<String> {
+        Ok(serde_json::json!({
+            "candidates": [{
+                "content": {"role": "model", "parts": [{"text": "Hello from the canned model."}]},
+                "finishReason": "STOP",
+            }],
+        })
+        .to_string())
+    }
+}
 
 fn load_test_wasm() -> Vec<u8> {
     let wasm_path = env!("ADK_AGENT_TS_WASM");
@@ -40,7 +59,8 @@ async fn start_service() -> TrustedAgentServiceClient<Channel> {
 
     let host_config = HostConfig {
         model_info: ModelInfo { name: "test-model".to_string(), provider: ModelProvider::Gemini },
-        tools: Vec::new(),
+        model_backend: Arc::new(CannedModel),
+        tool_backend: Arc::new(NoTools),
     };
     let service = TrustedAgentServiceImpl::new(sandbox, host_config);
     let server = TrustedAgentServiceServer::new(service);

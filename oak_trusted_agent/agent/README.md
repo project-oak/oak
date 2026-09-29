@@ -45,6 +45,12 @@ gRPC client -> oak_proxy_client -> (Oak Session over WebSocket)
             -> oak_proxy_server -> agent (127.0.0.1:8081) -> Wasm sandbox
 ```
 
+The sandbox's model calls go to the Ollama chat API (`/api/chat`) served by the
+outbound Model `oak_proxy_client`, and its tool calls go to the MCP servers
+served by the outbound MCP `oak_proxy_client`s. The host translates the guest's
+GenerateContent-style requests to the Ollama API, and exposes the tools of all
+MCP servers to the guest. Tool names must be unique across MCP servers.
+
 The sandbox is configured with the following flags (or environment variables),
 which have no defaults. The container image allows the operator to override them
 via the Confidential Space launch policy.
@@ -52,8 +58,9 @@ via the Confidential Space launch policy.
 - `--wasm-url` (`WASM_URL`): URL of the agent Wasm component, e.g. a GCS object
   built from `//oak_trusted_agent/sandbox/guest/agent_ts:adk_agent_ts`.
 - `--model-config-url` (`MODEL_CONFIG_URL`): URL of the JSON model configuration
-  exposed to the agent. Unknown fields are rejected and `provider` is `ollama`
-  or `gemini`:
+  exposed to the agent. Unknown fields are rejected and `provider` must be
+  `ollama`. `gemini` is part of the guest interface but has no backend yet, so
+  the agent refuses to start with it:
 
   ```json
   { "name": "gemma4:e2b-it-qat", "provider": "ollama" }

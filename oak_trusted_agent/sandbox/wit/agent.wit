@@ -39,6 +39,15 @@ interface model {
     }
 
     get-model-info: func() -> model-info;
+
+    // Sends a request to the model configured by the host.
+    //
+    // `request` is a JSON-encoded Gemini `GenerateContent`-style request
+    // (`contents`, `model` set to `model-info.name`, and optionally
+    // `systemInstruction` and `tools`). On success, the result is a
+    // JSON-encoded `GenerateContent`-style response (`candidates`, and
+    // optionally `promptFeedback`), regardless of the model provider. On
+    // failure, the error is a human-readable message.
     call-model: func(request: string) -> result<string, string>;
 }
 

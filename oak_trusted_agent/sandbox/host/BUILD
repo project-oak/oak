@@ -26,6 +26,8 @@ rust_library(
     srcs = [
         "src/agent_host.rs",
         "src/lib.rs",
+        "src/model_backend.rs",
+        "src/tool_backend.rs",
     ],
     compile_data = ["//oak_trusted_agent/sandbox:wit_files"],
     crate_name = "oak_trusted_agent_sandbox",
@@ -33,6 +35,7 @@ rust_library(
     deps = [
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:ureq",
         "@oak_crates_index//:wasmtime",
         "@oak_crates_index//:wasmtime-wasi",
     ],
@@ -60,5 +63,7 @@ rust_test(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":host",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:serde_json",
     ],
 )

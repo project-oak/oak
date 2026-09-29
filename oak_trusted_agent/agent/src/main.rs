@@ -25,9 +25,14 @@
 //! loopback address. Clients reach it through the inbound `oak_proxy_server`,
 //! which terminates the attested, end-to-end encrypted Oak Session and forwards
 //! the decrypted byte stream to `--listen-address`.
+//!
+//! In the other direction, the sandbox's model calls go to the Ollama API
+//! served by the model `oak_proxy_client`, and its tool calls go to the MCP
+//! servers served by the MCP `oak_proxy_client`s. Both tunnel over attested Oak
+//! Sessions to the remote backends.
 
 use core::{net::SocketAddr, time::Duration};
-use std::{io::Read, path::PathBuf};
+use std::{io::Read, path::PathBuf, sync::Arc};
 
 use anyhow::{Context, ensure};
 use clap::Parser;
@@ -36,7 +41,10 @@ use oak_trusted_agent_lib::{
     AgentError, ModelConfig, ModelConfigProvider, ModelProxyPlan, ProcessSpawner, ProxyBinaryPaths,
     ProxyProcessSpec, plan_mcp_proxies, start_proxy_mesh,
 };
-use oak_trusted_agent_sandbox::{AgentSandbox, HostConfig, ModelInfo, ModelProvider};
+use oak_trusted_agent_sandbox::{
+    AgentSandbox, HostConfig, McpToolBackend, ModelInfo, ModelProvider, MultiToolBackend,
+    OllamaModelBackend, ToolBackend,
+};
 use oak_trusted_agent_server::TrustedAgentServiceImpl;
 use tokio::{
     net::TcpListener,
@@ -48,6 +56,16 @@ use tonic::transport::Server;
 
 /// Upper bound on the time spent fetching each startup resource.
 const FETCH_TIMEOUT: Duration = Duration::from_secs(60);
+
+/// Timeout for each model and tool request. CPU-only model servers can take
+/// minutes to answer.
+const BACKEND_TIMEOUT: Duration = Duration::from_secs(300);
+
+/// How long to keep retrying the initial connection to each MCP server. The
+/// MCP `oak_proxy_client`s start concurrently with the agent and must complete
+/// an attested handshake with the remote server first.
+const MCP_CONNECT_DEADLINE: Duration = Duration::from_secs(120);
+const MCP_CONNECT_RETRY_INTERVAL: Duration = Duration::from_secs(1);
 
 #[derive(Parser, Debug)]
 #[command(author, version, about = "Oak Trusted Agent container entrypoint and host")]
@@ -63,7 +81,8 @@ struct Args {
     wasm_url: String,
 
     /// URL from which the JSON model configuration is fetched at startup, e.g.
-    /// `{"name": "gemma4:e2b-it-qat", "provider": "ollama"}`.
+    /// `{"name": "gemma4:e2b-it-qat", "provider": "ollama"}`. Only the `ollama`
+    /// provider has a backend so far.
     #[arg(long, env = "MODEL_CONFIG_URL")]
     model_config_url: String,
 
@@ -142,6 +161,33 @@ fn fetch_url(url: &str) -> anyhow::Result<Vec<u8>> {
     fetch().with_context(|| format!("fetching {url}"))
 }
 
+/// Connects to the MCP server at `url`, retrying until
+/// [`MCP_CONNECT_DEADLINE`] while its `oak_proxy_client` comes up.
+async fn connect_mcp_server(url: &str) -> anyhow::Result<McpToolBackend> {
+    let deadline = tokio::time::Instant::now() + MCP_CONNECT_DEADLINE;
+    loop {
+        let attempt_url = url.to_string();
+        // Connecting performs blocking HTTP requests.
+        let result = tokio::task::spawn_blocking(move || {
+            McpToolBackend::connect(&attempt_url, BACKEND_TIMEOUT)
+        })
+        .await?;
+        match result {
+            Ok(backend) => {
+                let names: Vec<_> =
+                    backend.list_tools().into_iter().map(|tool| tool.name).collect();
+                log::info!("connected to MCP server at {url} with tools {names:?}");
+                return Ok(backend);
+            }
+            Err(err) if tokio::time::Instant::now() < deadline => {
+                log::warn!("connecting to MCP server at {url} failed, retrying: {err:#}");
+                tokio::time::sleep(MCP_CONNECT_RETRY_INTERVAL).await;
+            }
+            Err(err) => return Err(err.context(format!("connecting to MCP server at {url}"))),
+        }
+    }
+}
+
 struct TokioProcessSpawner;
 
 impl ProcessSpawner for TokioProcessSpawner {
@@ -183,18 +229,13 @@ async fn main() -> anyhow::Result<()> {
     let model_config = ModelConfig::from_json(&model_config_bytes)
         .with_context(|| format!("parsing model config from {}", args.model_config_url))?;
     log::info!("fetched model config from {}: {:?}", args.model_config_url, model_config);
+    ensure!(
+        model_config.provider == ModelConfigProvider::Ollama,
+        "model provider {:?} is not supported yet; only the Ollama backend is available",
+        model_config.provider
+    );
 
     let sandbox = AgentSandbox::new(&wasm_bytes).context("creating agent sandbox")?;
-    let host_config = HostConfig {
-        model_info: ModelInfo {
-            name: model_config.name.clone(),
-            provider: to_sandbox_provider(model_config.provider),
-        },
-        // TODO: b/567481031 - Tool configuration is not exposed yet; the agent
-        // runs without tools.
-        tools: Vec::new(),
-    };
-    let service = TrustedAgentServiceImpl::new(sandbox, host_config);
     let listener =
         TcpListener::bind(args.listen_address).await.context("binding agent backend listener")?;
 
@@ -233,8 +274,23 @@ async fn main() -> anyhow::Result<()> {
         });
     }
 
-    // TODO: b/429197818 - Route sandbox model and tool calls to
-    // `model_plan.local_model_url()` and `local_mcp_urls`.
+    let mut tool_backends: Vec<Box<dyn ToolBackend>> = Vec::new();
+    for url in &local_mcp_urls {
+        tool_backends.push(Box::new(connect_mcp_server(url).await?));
+    }
+    let host_config = HostConfig {
+        model_info: ModelInfo {
+            name: model_config.name.clone(),
+            provider: to_sandbox_provider(model_config.provider),
+        },
+        model_backend: Arc::new(OllamaModelBackend::new(
+            model_plan.local_model_url().as_str(),
+            BACKEND_TIMEOUT,
+        )),
+        tool_backend: Arc::new(MultiToolBackend::new(tool_backends)?),
+    };
+    let service = TrustedAgentServiceImpl::new(sandbox, host_config);
+
     log::info!(
         "serving TrustedAgentService on {} (model: {}, provider: {:?})",
         listener.local_addr()?,

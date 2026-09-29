@@ -53,6 +53,8 @@ rust_test(
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
         "//oak_trusted_agent/sandbox/host",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:serde_json",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",

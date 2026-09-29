@@ -85,12 +85,35 @@ impl TrustedAgentService for TrustedAgentServiceImpl {
 
                 // Errors are not recoverable within the session, so they end the stream.
                 let result = match agent_request.request {
-                    Some(ProtoRequest::UserMessage(user_msg)) => session
-                        .step(&user_msg.text)
-                        .map(|text| AgentResponse {
-                            response: Some(ProtoResponse::AgentMessage(AgentMessage { text })),
+                    Some(ProtoRequest::UserMessage(user_msg)) => {
+                        // The model and tool backends perform blocking I/O, so the
+                        // Wasm step runs on the blocking thread pool. The session is
+                        // moved into the task and handed back with the result.
+                        let step = tokio::task::spawn_blocking(move || {
+                            let result = session.step(&user_msg.text);
+                            (session, result)
                         })
-                        .map_err(|e| Status::internal(format!("agent execution error: {e}"))),
+                        .await;
+                        let (returned_session, result) = match step {
+                            Ok(step) => step,
+                            Err(e) => {
+                                // The session was lost with the panicked task, so the
+                                // stream cannot continue.
+                                let _ = tx
+                                    .send(Err(Status::internal(format!(
+                                        "agent step panicked: {e}"
+                                    ))))
+                                    .await;
+                                break;
+                            }
+                        };
+                        session = returned_session;
+                        result
+                            .map(|text| AgentResponse {
+                                response: Some(ProtoResponse::AgentMessage(AgentMessage { text })),
+                            })
+                            .map_err(|e| Status::internal(format!("agent execution error: {e:#}")))
+                    }
                     None => Err(Status::invalid_argument("empty request received")),
                 };
                 let response = match result {

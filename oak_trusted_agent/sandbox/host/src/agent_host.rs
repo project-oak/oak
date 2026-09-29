@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use wasmtime::{
     Config, Engine, Store,
@@ -33,17 +35,23 @@ pub use oak::agent::{
     tools::{Host as ToolsHost, ToolDescription},
 };
 
+use crate::{model_backend::ModelBackend, tool_backend::ToolBackend};
+
 /// Configuration parameters for initializing the host state.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct HostConfig {
     pub model_info: ModelInfo,
-    pub tools: Vec<ToolDescription>,
+    /// Backend that executes the guest's model requests.
+    pub model_backend: Arc<dyn ModelBackend>,
+    /// Backend that lists and executes the tools exposed to the guest.
+    pub tool_backend: Arc<dyn ToolBackend>,
 }
 
 /// Host state providing implementations for host-imported WIT interfaces.
 pub struct HostState {
     pub model_info: ModelInfo,
-    pub tools: Vec<ToolDescription>,
+    model_backend: Arc<dyn ModelBackend>,
+    tool_backend: Arc<dyn ToolBackend>,
     wasi_ctx: WasiCtx,
     table: ResourceTable,
 }
@@ -53,8 +61,7 @@ impl HostState {
     /// host stdout and stderr.
     pub fn new(config: HostConfig) -> Self {
         let wasi_ctx = WasiCtxBuilder::new().inherit_stdout().inherit_stderr().build();
-        let table = ResourceTable::new();
-        Self { model_info: config.model_info, tools: config.tools, wasi_ctx, table }
+        Self::with_wasi_ctx(config, wasi_ctx)
     }
 
     /// Creates a new `HostState` capturing guest WASI stdout and stderr into
@@ -67,8 +74,17 @@ impl HostState {
         stderr: MemoryOutputPipe,
     ) -> Self {
         let wasi_ctx = WasiCtxBuilder::new().stdout(stdout).stderr(stderr).build();
-        let table = ResourceTable::new();
-        Self { model_info: config.model_info, tools: config.tools, wasi_ctx, table }
+        Self::with_wasi_ctx(config, wasi_ctx)
+    }
+
+    fn with_wasi_ctx(config: HostConfig, wasi_ctx: WasiCtx) -> Self {
+        Self {
+            model_info: config.model_info,
+            model_backend: config.model_backend,
+            tool_backend: config.tool_backend,
+            wasi_ctx,
+            table: ResourceTable::new(),
+        }
     }
 }
 
@@ -80,18 +96,11 @@ impl WasiView for HostState {
 
 impl oak::agent::tools::Host for HostState {
     fn list_tools(&mut self) -> Vec<ToolDescription> {
-        self.tools.clone()
+        self.tool_backend.list_tools()
     }
 
     fn call_tool(&mut self, name: String, arguments: String) -> Result<String, String> {
-        // Stub implementation for now
-        let args_val = serde_json::from_str::<serde_json::Value>(&arguments)
-            .unwrap_or(serde_json::Value::String(arguments));
-        let stub = serde_json::json!({
-            "tool": name,
-            "args": args_val,
-        });
-        Ok(stub.to_string())
+        self.tool_backend.call_tool(&name, &arguments).map_err(|e| format!("{e:#}"))
     }
 }
 
@@ -100,20 +109,8 @@ impl oak::agent::model::Host for HostState {
         self.model_info.clone()
     }
 
-    fn call_model(&mut self, _request: String) -> Result<String, String> {
-        // Stub implementation returning a canned model response
-        let stub_response = serde_json::json!({
-            "candidates": [{
-                "content": {
-                    "role": "model",
-                    "parts": [{
-                        "text": "Hello! I am an attested Oak Trusted Agent running inside a Wasm sandbox."
-                    }]
-                },
-                "finishReason": "STOP"
-            }]
-        });
-        Ok(stub_response.to_string())
+    fn call_model(&mut self, request: String) -> Result<String, String> {
+        self.model_backend.generate_content(&request).map_err(|e| format!("{e:#}"))
     }
 }
 
@@ -206,72 +203,75 @@ impl AgentSession {
 mod tests {
     use super::*;
 
-    fn create_test_config() -> HostConfig {
-        HostConfig {
-            model_info: ModelInfo {
-                name: "test-model".to_string(),
-                provider: ModelProvider::Gemini,
-            },
-            tools: vec![ToolDescription {
-                name: "test_tool".to_string(),
-                description: "A test tool".to_string(),
-                input_schema: "{}".to_string(),
-            }],
+    struct EchoModel;
+
+    impl ModelBackend for EchoModel {
+        fn generate_content(&self, request: &str) -> anyhow::Result<String> {
+            Ok(format!("echo: {request}"))
         }
     }
 
-    #[test]
-    fn test_host_config_and_state_constructor() {
-        let config = create_test_config();
-        let state = HostState::new(config);
-        assert_eq!(state.model_info.name, "test-model");
-        assert!(matches!(state.model_info.provider, ModelProvider::Gemini));
-        assert_eq!(state.tools.len(), 1);
-        assert_eq!(state.tools[0].name, "test_tool");
+    struct FakeTools;
+
+    impl ToolBackend for FakeTools {
+        fn list_tools(&self) -> Vec<ToolDescription> {
+            vec![ToolDescription {
+                name: "test_tool".to_string(),
+                description: "A test tool".to_string(),
+                input_schema: "{}".to_string(),
+            }]
+        }
+
+        fn call_tool(&self, name: &str, arguments: &str) -> anyhow::Result<String> {
+            anyhow::ensure!(name == "test_tool", "unknown tool {name}");
+            Ok(format!("{name}({arguments})"))
+        }
+    }
+
+    fn create_test_state() -> HostState {
+        HostState::new(HostConfig {
+            model_info: ModelInfo {
+                name: "test-model".to_string(),
+                provider: ModelProvider::Ollama,
+            },
+            model_backend: Arc::new(EchoModel),
+            tool_backend: Arc::new(FakeTools),
+        })
     }
 
     #[test]
-    fn test_host_state_tools_implementation() {
-        let mut state = HostState::new(create_test_config());
+    fn test_host_state_delegates_tools_to_backend() {
+        let mut state = create_test_state();
 
         let tools = <HostState as oak::agent::tools::Host>::list_tools(&mut state);
         assert_eq!(tools.len(), 1);
         assert_eq!(tools[0].name, "test_tool");
 
-        let call_res = <HostState as oak::agent::tools::Host>::call_tool(
+        let result = <HostState as oak::agent::tools::Host>::call_tool(
             &mut state,
             "test_tool".to_string(),
             "{\"arg\": 1}".to_string(),
         );
-        assert!(call_res.is_ok());
-        let res_str = call_res.unwrap();
-        assert!(res_str.contains("test_tool"));
-        assert!(res_str.contains("arg"));
-    }
+        assert_eq!(result, Ok("test_tool({\"arg\": 1})".to_string()));
 
-    #[test]
-    fn test_host_state_tools_invalid_json_handling() {
-        let mut state = HostState::new(create_test_config());
-        let call_res = <HostState as oak::agent::tools::Host>::call_tool(
+        let error = <HostState as oak::agent::tools::Host>::call_tool(
             &mut state,
-            "test_tool".to_string(),
-            "plain string argument".to_string(),
+            "missing".to_string(),
+            "{}".to_string(),
         );
-        assert!(call_res.is_ok());
-        let res_str = call_res.unwrap();
-        assert!(res_str.contains("plain string argument"));
+        assert_eq!(error, Err("unknown tool missing".to_string()));
     }
 
     #[test]
-    fn test_host_state_model_implementation() {
-        let mut state = HostState::new(create_test_config());
+    fn test_host_state_delegates_model_to_backend() {
+        let mut state = create_test_state();
+
         let model_info = <HostState as oak::agent::model::Host>::get_model_info(&mut state);
         assert_eq!(model_info.name, "test-model");
+        assert!(matches!(model_info.provider, ModelProvider::Ollama));
 
-        let model_res =
+        let result =
             <HostState as oak::agent::model::Host>::call_model(&mut state, "{}".to_string());
-        assert!(model_res.is_ok());
-        let body = model_res.unwrap();
-        assert!(body.contains("candidates"));
+        assert_eq!(result, Ok("echo: {}".to_string()));
     }
 }

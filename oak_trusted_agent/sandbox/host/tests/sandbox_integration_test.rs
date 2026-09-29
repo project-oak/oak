@@ -14,9 +14,38 @@
 // limitations under the License.
 //
 
+use std::sync::Arc;
+
 use oak_trusted_agent_sandbox::{
-    AgentSandbox, HostConfig, HostState, MemoryOutputPipe, ModelInfo, ModelProvider,
+    AgentSandbox, HostConfig, HostState, MemoryOutputPipe, ModelBackend, ModelInfo, ModelProvider,
+    NoTools,
 };
+
+const CANNED_ANSWER: &str =
+    "Hello! I am an attested Oak Trusted Agent running inside a Wasm sandbox.";
+
+/// Model backend that always answers with `CANNED_ANSWER`.
+struct CannedModel;
+
+impl ModelBackend for CannedModel {
+    fn generate_content(&self, _request: &str) -> anyhow::Result<String> {
+        Ok(serde_json::json!({
+            "candidates": [{
+                "content": {"role": "model", "parts": [{"text": CANNED_ANSWER}]},
+                "finishReason": "STOP",
+            }],
+        })
+        .to_string())
+    }
+}
+
+fn create_host_config(model_name: &str, provider: ModelProvider) -> HostConfig {
+    HostConfig {
+        model_info: ModelInfo { name: model_name.to_string(), provider },
+        model_backend: Arc::new(CannedModel),
+        tool_backend: Arc::new(NoTools),
+    }
+}
 
 // Loads the test Wasm component binary built by Bazel via the `:adk_agent_ts`
 // data dependency and located at the path injected via `ADK_AGENT_TS_WASM`.
@@ -35,10 +64,7 @@ fn load_insecure_test_wasm() -> Vec<u8> {
 }
 
 fn create_test_config() -> HostConfig {
-    HostConfig {
-        model_info: ModelInfo { name: "test-model".to_string(), provider: ModelProvider::Gemini },
-        tools: Vec::new(),
-    }
+    create_host_config("test-model", ModelProvider::Gemini)
 }
 
 fn create_test_host_state() -> HostState {
@@ -55,7 +81,7 @@ fn test_agent_sandbox_runs_session_step() {
     let result = session.step("What is the weather in San Francisco?");
     assert!(result.is_ok(), "agent step failed: {result:?}");
     let output = result.unwrap();
-    assert_eq!(output, "Hello! I am an attested Oak Trusted Agent running inside a Wasm sandbox.");
+    assert_eq!(output, CANNED_ANSWER);
 }
 
 #[test]
@@ -63,11 +89,7 @@ fn test_agent_sandbox_with_custom_host_state() {
     let wasm_bytes = load_test_wasm();
     let sandbox = AgentSandbox::new(&wasm_bytes).expect("failed to create AgentSandbox");
 
-    let config = HostConfig {
-        model_info: ModelInfo { name: "custom-model".to_string(), provider: ModelProvider::Ollama },
-        tools: Vec::new(),
-    };
-    let state = HostState::new(config);
+    let state = HostState::new(create_host_config("custom-model", ModelProvider::Ollama));
     let mut session = sandbox.create_session(state).expect("failed to create agent session");
 
     let result = session.step("Hello with custom state");

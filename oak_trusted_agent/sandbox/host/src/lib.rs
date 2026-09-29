@@ -15,8 +15,12 @@
 //
 
 pub mod agent_host;
+pub mod model_backend;
+pub mod tool_backend;
 
 pub use agent_host::{
     AgentGuest, AgentSandbox, AgentSession, HostConfig, HostState, MemoryOutputPipe, ModelHost,
     ModelInfo, ModelProvider, ToolDescription, ToolsHost,
 };
+pub use model_backend::{ModelBackend, OllamaModelBackend};
+pub use tool_backend::{McpToolBackend, MultiToolBackend, NoTools, ToolBackend};
