@@ -101,6 +101,18 @@ TEST_F(RecipientContextTest, SetupBaseRecipientEmptyEncapKeyReturnsFailure) {
   EXPECT_FALSE(recipient_context.ok());
 }
 
+TEST_F(RecipientContextTest,
+       SetupBaseRecipientMalformedEncapKeyReturnsFailure) {
+  // One byte is not a valid X25519 encapsulated key, so BoringSSL rejects it
+  // after the HPKE context has been allocated.
+  std::string malformed_encap_key(1, '\x01');
+  auto recipient_context = SetupBaseRecipient(
+      malformed_encap_key, recipient_key_pair_, info_string_);
+  EXPECT_FALSE(recipient_context.ok());
+  EXPECT_EQ(recipient_context.status().code(),
+            absl::StatusCode::kInvalidArgument);
+}
+
 TEST_F(RecipientContextTest, SetupBaseRecipientEmptyPublicKeyReturnsFailure) {
   recipient_key_pair_.public_key = "";
   auto recipient_context =
@@ -242,6 +254,14 @@ TEST_F(RecipientContextTest, GenerateKeysAndSetupBaseRecipientSuccess) {
 TEST_F(RecipientContextTest, DeserializeSuccess) {
   auto recipient_context = RecipientContext::Deserialize(crypto_context_);
   EXPECT_TRUE(recipient_context.ok());
+}
+
+TEST_F(RecipientContextTest, DeserializeInvalidResponseKeyReturnsFailure) {
+  // The request key is valid, so its AEAD context is created before the one
+  // byte response key is rejected.
+  crypto_context_.set_response_key(std::string(1, '\x01'));
+  auto recipient_context = RecipientContext::Deserialize(crypto_context_);
+  EXPECT_FALSE(recipient_context.ok());
 }
 
 }  // namespace

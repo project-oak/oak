@@ -40,7 +40,7 @@ struct KeyInfo {
 };
 
 // Generate session key for the AEAD context.
-absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetContext(
+absl::StatusOr<bssl::UniquePtr<EVP_AEAD_CTX>> GetContext(
     EVP_HPKE_CTX* hpke_ctx, absl::string_view key_context_string);
 
 // Generates random nonce for AEAD.

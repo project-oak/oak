@@ -52,11 +52,6 @@ absl::StatusOr<std::string> SenderContext::Open(
   return plaintext;
 }
 
-SenderContext::~SenderContext() {
-  EVP_AEAD_CTX_free(request_aead_context_.release());
-  EVP_AEAD_CTX_free(response_aead_context_.release());
-}
-
 absl::StatusOr<std::unique_ptr<SenderContext>> SetupBaseSender(
     absl::string_view serialized_recipient_public_key, absl::string_view info) {
   // First collect encapsulated public key information and sender request
@@ -75,7 +70,7 @@ absl::StatusOr<std::unique_ptr<SenderContext>> SetupBaseSender(
 
   std::vector<uint8_t> info_bytes(info.begin(), info.end());
 
-  std::unique_ptr<EVP_HPKE_CTX> hpke_sender_context(EVP_HPKE_CTX_new());
+  bssl::UniquePtr<EVP_HPKE_CTX> hpke_sender_context(EVP_HPKE_CTX_new());
   if (hpke_sender_context == nullptr) {
     return absl::InternalError("Unable to generate HPKE sender context");
   }
@@ -124,7 +119,6 @@ absl::StatusOr<std::unique_ptr<SenderContext>> SetupBaseSender(
           /* request_aead_context= */ *std::move(request_aead_context),
           /* response_aead_context= */ *std::move(response_aead_context));
 
-  EVP_HPKE_CTX_free(hpke_sender_context.release());
   return sender_context;
 }
 }  // namespace oak::crypto

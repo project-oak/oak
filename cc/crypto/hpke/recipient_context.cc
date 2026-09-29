@@ -82,7 +82,7 @@ absl::Status ValidateKeys(std::vector<uint8_t>& public_key_bytes,
 
 absl::StatusOr<std::unique_ptr<RecipientContext>> RecipientContext::Deserialize(
     SessionKeys session_keys) {
-  std::unique_ptr<EVP_AEAD_CTX> request_aead_context(EVP_AEAD_CTX_new(
+  bssl::UniquePtr<EVP_AEAD_CTX> request_aead_context(EVP_AEAD_CTX_new(
       /* aead= */ EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm()),
       /* key= */ (uint8_t*)session_keys.request_key().data(),
       /* key_len= */ session_keys.request_key().size(),
@@ -92,7 +92,7 @@ absl::StatusOr<std::unique_ptr<RecipientContext>> RecipientContext::Deserialize(
         GetLastErrorWithPrefix("Unable to deserialize request AEAD context"));
   }
 
-  std::unique_ptr<EVP_AEAD_CTX> response_aead_context(EVP_AEAD_CTX_new(
+  bssl::UniquePtr<EVP_AEAD_CTX> response_aead_context(EVP_AEAD_CTX_new(
       /* aead= */ EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm()),
       /* key= */ (uint8_t*)session_keys.response_key().data(),
       /* key_len= */ session_keys.response_key().size(),
@@ -129,11 +129,6 @@ absl::StatusOr<std::string> RecipientContext::Seal(
   return ciphertext;
 }
 
-RecipientContext::~RecipientContext() {
-  EVP_AEAD_CTX_free(request_aead_context_.release());
-  EVP_AEAD_CTX_free(response_aead_context_.release());
-}
-
 absl::StatusOr<std::unique_ptr<RecipientContext>> SetupBaseRecipient(
     absl::string_view serialized_encapsulated_public_key,
     const KeyPair& recipient_key_pair, absl::string_view info) {
@@ -157,7 +152,7 @@ absl::StatusOr<std::unique_ptr<RecipientContext>> SetupBaseRecipient(
   }
   std::vector<uint8_t> info_bytes(info.begin(), info.end());
 
-  std::unique_ptr<EVP_HPKE_CTX> hpke_recipient_context(EVP_HPKE_CTX_new());
+  bssl::UniquePtr<EVP_HPKE_CTX> hpke_recipient_context(EVP_HPKE_CTX_new());
   if (hpke_recipient_context == nullptr) {
     return absl::InternalError("Unable to generate HPKE recipient context");
   }
@@ -201,7 +196,6 @@ absl::StatusOr<std::unique_ptr<RecipientContext>> SetupBaseRecipient(
           /* request_aead_context= */ *std::move(request_aead_context),
           /* response_aead_context= */ *std::move(response_aead_context));
 
-  EVP_HPKE_CTX_free(hpke_recipient_context.release());
   return recipient_context;
 }
 
