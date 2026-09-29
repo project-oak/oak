@@ -53,7 +53,7 @@ class SenderContextTest : public testing::Test {
   }
 
   SenderContext CreateTestSenderContext(
-      std::unique_ptr<EVP_AEAD_CTX> response_aead_context) {
+      bssl::UniquePtr<EVP_AEAD_CTX> response_aead_context) {
     return SenderContext(
         std::vector<uint8_t>(),
         nullptr,  // Sender request sealing is not tested in this test.
@@ -105,13 +105,22 @@ TEST_F(SenderContextTest, SenderSealsMessageSuccess) {
   EXPECT_THAT(*encrypted_request, StrNe(plaintext));
 }
 
+TEST_F(SenderContextTest, SetupBaseSenderMalformedPublicKeyReturnsFailure) {
+  // One byte is not a valid X25519 public key, so BoringSSL rejects it after
+  // the HPKE context has been allocated.
+  std::string malformed_public_key(1, '\x01');
+  auto sender_context = SetupBaseSender(malformed_public_key, info_string_);
+  EXPECT_FALSE(sender_context.ok());
+  EXPECT_EQ(sender_context.status().code(), absl::StatusCode::kInvalidArgument);
+}
+
 TEST_F(SenderContextTest, SenderOpensEncryptedMessageSuccess) {
   std::vector<uint8_t> associated_data_bytes(associated_data_response_.begin(),
                                              associated_data_response_.end());
 
   // AEAD that Oak uses.
   const EVP_AEAD* aead_version = EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm());
-  std::unique_ptr<EVP_AEAD_CTX> response_aead_context_receive(EVP_AEAD_CTX_new(
+  bssl::UniquePtr<EVP_AEAD_CTX> response_aead_context_receive(EVP_AEAD_CTX_new(
       /* aead= */ aead_version,
       /* key= */ default_response_key_.data(),
       /* key_len= */ default_response_key_.size(),
@@ -126,7 +135,7 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageSuccess) {
   std::vector<uint8_t> plaintext_bytes(plaintext_message.begin(),
                                        plaintext_message.end());
 
-  std::unique_ptr<EVP_AEAD_CTX> response_aead_context_send(EVP_AEAD_CTX_new(
+  bssl::UniquePtr<EVP_AEAD_CTX> response_aead_context_send(EVP_AEAD_CTX_new(
       /* aead= */ aead_version,
       /* key= */ default_response_key_.data(),
       /* key_len= */ default_response_key_.size(),
@@ -153,9 +162,6 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageSuccess) {
   auto decyphered_message = sender_context.Open(
       default_nonce_bytes_, ciphertext, associated_data_response_);
   EXPECT_TRUE(decyphered_message.ok());
-
-  // Cleanup the lingering context.
-  EVP_AEAD_CTX_free(response_aead_context_send.release());
 }
 
 TEST_F(SenderContextTest, SenderOpensEncryptedMessageFailureNoncesNotAligned) {
@@ -168,7 +174,7 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageFailureNoncesNotAligned) {
 
   // AEAD that Oak uses.
   const EVP_AEAD* aead_version = EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm());
-  std::unique_ptr<EVP_AEAD_CTX> response_aead_context_receive(EVP_AEAD_CTX_new(
+  bssl::UniquePtr<EVP_AEAD_CTX> response_aead_context_receive(EVP_AEAD_CTX_new(
       /* aead= */ aead_version,
       /* key= */ default_response_key_.data(),
       /* key_len= */ default_response_key_.size(),
@@ -183,7 +189,7 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageFailureNoncesNotAligned) {
   std::vector<uint8_t> plaintext_bytes(plaintext_message.begin(),
                                        plaintext_message.end());
 
-  std::unique_ptr<EVP_AEAD_CTX> response_aead_context_send(EVP_AEAD_CTX_new(
+  bssl::UniquePtr<EVP_AEAD_CTX> response_aead_context_send(EVP_AEAD_CTX_new(
       /* aead= */ aead_version,
       /* key= */ default_response_key_.data(),
       /* key_len= */ default_response_key_.size(),
@@ -212,9 +218,6 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageFailureNoncesNotAligned) {
   EXPECT_FALSE(decyphered_message.ok());
   EXPECT_EQ(decyphered_message.status().code(),
             absl::StatusCode::kInvalidArgument);
-
-  // Cleanup the lingering context.
-  EVP_AEAD_CTX_free(response_aead_context_send.release());
 }
 
 TEST_F(SenderContextTest,
@@ -224,7 +227,7 @@ TEST_F(SenderContextTest,
 
   // AEAD that Oak uses.
   const EVP_AEAD* aead_version = EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm());
-  std::unique_ptr<EVP_AEAD_CTX> response_aead_context_receive(EVP_AEAD_CTX_new(
+  bssl::UniquePtr<EVP_AEAD_CTX> response_aead_context_receive(EVP_AEAD_CTX_new(
       /* aead= */ aead_version,
       /* key= */ default_response_key_.data(),
       /* key_len= */ default_response_key_.size(),
@@ -239,7 +242,7 @@ TEST_F(SenderContextTest,
   std::vector<uint8_t> plaintext_bytes(plaintext_message.begin(),
                                        plaintext_message.end());
 
-  std::unique_ptr<EVP_AEAD_CTX> response_aead_context_send(EVP_AEAD_CTX_new(
+  bssl::UniquePtr<EVP_AEAD_CTX> response_aead_context_send(EVP_AEAD_CTX_new(
       /* aead= */ aead_version,
       /* key= */ default_response_key_.data(),
       /* key_len= */ default_response_key_.size(),
@@ -270,9 +273,6 @@ TEST_F(SenderContextTest,
   EXPECT_FALSE(decyphered_message.ok());
   EXPECT_EQ(decyphered_message.status().code(),
             absl::StatusCode::kInvalidArgument);
-
-  // Cleanup the lingering context.
-  EVP_AEAD_CTX_free(response_aead_context_send.release());
 }
 
 TEST_F(SenderContextTest, SenderOpensEmptyEncryptedMessageFailure) {
@@ -281,7 +281,7 @@ TEST_F(SenderContextTest, SenderOpensEmptyEncryptedMessageFailure) {
 
   // AEAD that Oak uses.
   const EVP_AEAD* aead_version = EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm());
-  std::unique_ptr<EVP_AEAD_CTX> response_aead_context_receive(EVP_AEAD_CTX_new(
+  bssl::UniquePtr<EVP_AEAD_CTX> response_aead_context_receive(EVP_AEAD_CTX_new(
       /* aead= */ aead_version,
       /* key= */ default_response_key_.data(),
       /* key_len= */ default_response_key_.size(),

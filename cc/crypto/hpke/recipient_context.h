@@ -39,8 +39,8 @@ struct KeyPair {
 
 class RecipientContext {
  public:
-  RecipientContext(std::unique_ptr<EVP_AEAD_CTX> request_aead_context,
-                   std::unique_ptr<EVP_AEAD_CTX> response_aead_context)
+  RecipientContext(bssl::UniquePtr<EVP_AEAD_CTX> request_aead_context,
+                   bssl::UniquePtr<EVP_AEAD_CTX> response_aead_context)
       : request_aead_context_(std::move(request_aead_context)),
         response_aead_context_(std::move(response_aead_context)) {}
 
@@ -60,11 +60,9 @@ class RecipientContext {
                                    absl::string_view plaintext,
                                    absl::string_view associated_data);
 
-  ~RecipientContext();
-
  private:
-  std::unique_ptr<EVP_AEAD_CTX> request_aead_context_;
-  std::unique_ptr<EVP_AEAD_CTX> response_aead_context_;
+  bssl::UniquePtr<EVP_AEAD_CTX> request_aead_context_;
+  bssl::UniquePtr<EVP_AEAD_CTX> response_aead_context_;
 };
 
 // Sets up an HPKE recipient by creating a recipient context.

@@ -36,8 +36,8 @@ namespace oak::crypto {
 class SenderContext {
  public:
   SenderContext(std::vector<uint8_t> encapsulated_public_key,
-                std::unique_ptr<EVP_AEAD_CTX> request_aead_context,
-                std::unique_ptr<EVP_AEAD_CTX> response_aead_context)
+                bssl::UniquePtr<EVP_AEAD_CTX> request_aead_context,
+                bssl::UniquePtr<EVP_AEAD_CTX> response_aead_context)
       : serialized_encapsulated_public_key_(encapsulated_public_key.begin(),
                                             encapsulated_public_key.end()),
         request_aead_context_(std::move(request_aead_context)),
@@ -60,12 +60,10 @@ class SenderContext {
                                    absl::string_view ciphertext,
                                    absl::string_view associated_data);
 
-  ~SenderContext();
-
  private:
   std::string serialized_encapsulated_public_key_;
-  std::unique_ptr<EVP_AEAD_CTX> request_aead_context_;
-  std::unique_ptr<EVP_AEAD_CTX> response_aead_context_;
+  bssl::UniquePtr<EVP_AEAD_CTX> request_aead_context_;
+  bssl::UniquePtr<EVP_AEAD_CTX> response_aead_context_;
 };
 
 // Sets up an HPKE sender by generating an ephemeral keypair (and serializing

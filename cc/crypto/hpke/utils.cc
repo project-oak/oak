@@ -39,7 +39,7 @@ namespace oak::crypto {
 constexpr size_t kAeadAlgorithmKeySizeBytes = 32;
 constexpr size_t kAeadNonceSizeBytes = 12;
 
-absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetContext(
+absl::StatusOr<bssl::UniquePtr<EVP_AEAD_CTX>> GetContext(
     EVP_HPKE_CTX* hpke_ctx, absl::string_view key_context_string) {
   std::vector<uint8_t> key(kAeadAlgorithmKeySizeBytes);
   std::vector<uint8_t> key_context_bytes(key_context_string.begin(),
@@ -54,7 +54,7 @@ absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetContext(
     return absl::InternalError(GetLastErrorWithPrefix("Unable to export key"));
   }
 
-  std::unique_ptr<EVP_AEAD_CTX> aead_context(EVP_AEAD_CTX_new(
+  bssl::UniquePtr<EVP_AEAD_CTX> aead_context(EVP_AEAD_CTX_new(
       /* aead= */ EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm()),
       /* key= */ key.data(),
       /* key_len= */ key.size(),
