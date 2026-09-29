@@ -142,6 +142,8 @@ impl DataBlobHandler for ExternalDbClient {
                     version: metadata_blob.version,
                 }),
                 coarsened_expiration_timestamp: Some(coarsened_expiration_timestamp),
+                lock_token: String::new(),
+                unencrypted_data_blob: None,
             })
             .await;
 
@@ -181,12 +183,16 @@ impl DataBlobHandler for ExternalDbClient {
                 },
             )),
             coarsened_expiration_timestamp: Some(coarsened_expiration_timestamp),
+            lock_token: String::new(),
+            unencrypted_data_blob: None,
         }];
 
         for chunk in chunks {
             messages.push(WriteMetadataBlobStreamRequest {
                 request: Some(write_metadata_blob_stream_request::Request::Chunk(chunk.to_vec())),
                 coarsened_expiration_timestamp: None,
+                lock_token: String::new(),
+                unencrypted_data_blob: None,
             });
         }
 
@@ -377,6 +383,7 @@ impl DataBlobHandler for ExternalDbClient {
         let db_response = self
             .write_unencrypted_data_blob(WriteUnencryptedDataBlobRequest {
                 data_blob: Some(data_blob_with_id),
+                lock_token: String::new(),
             })
             .await
             .map_err(anyhow::Error::msg)?

@@ -21,6 +21,7 @@ syntax = "proto3";
 
 package oak.private_memory;
 
+import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "google/rpc/status.proto";
 
@@ -32,6 +33,21 @@ message DataBlob {
 
 message WriteUnencryptedDataBlobRequest {
   DataBlob data_blob = 1;
+
+  // The lock token returned by AcquireUnencryptedDataBlobLock, or empty if the
+  // caller does not hold a lock.
+  //
+  // The write is rejected with ABORTED if it is empty and the row is locked, or
+  // if it is set but the lock it refers to is no longer held - because it
+  // expired, or because another caller took the row over. The latter tells a
+  // caller that stalled past its lease that it lost the lock, instead of
+  // letting it write after its critical section ended.
+  //
+  // ABORTED means "somebody else owns this row, back off and retry later". It
+  // is deliberately distinct from the FAILED_PRECONDITION / version_conflict
+  // that WriteMetadataBlob uses for an optimistic concurrency conflict, which
+  // instead means "re-read, rebase and retry now".
+  string lock_token = 2;
 }
 
 message WriteDataBlobRequest {
@@ -84,6 +100,26 @@ message ReadMetadataBlobResponse {
 message WriteMetadataBlobRequest {
   MetadataBlob metadata_blob = 1;
   google.protobuf.Timestamp coarsened_expiration_timestamp = 2;
+
+  // The lock token returned by AcquireUnencryptedDataBlobLock, or empty if the
+  // caller does not hold a lock. The metadata blob lives in the same row as
+  // the unencrypted data blob, so it is covered by the same lock. See
+  // WriteUnencryptedDataBlobRequest.lock_token.
+  string lock_token = 3;
+
+  // Optional. If set, the unencrypted data blob is written in the same Spanner
+  // transaction as the metadata blob, so the two columns of the row are updated
+  // atomically. The id must match metadata_blob.data_blob.id.
+  //
+  // This exists for migrations that have to change the encryption key and the
+  // data it protects together. The wrapped DEK lives in this column while the
+  // ciphertext it decrypts is reachable through MetadataBlobRef, so writing
+  // them in two transactions leaves a window where a crash makes the user
+  // permanently undecryptable: whichever column landed first describes data
+  // encrypted under the other column's key.
+  //
+  // Callers that only update the metadata blob should leave this unset.
+  DataBlob unencrypted_data_blob = 4;
 }
 
 message WriteMetadataBlobResponse {
@@ -126,6 +162,16 @@ message WriteMetadataBlobStreamRequest {
     bytes chunk = 2;
   }
   google.protobuf.Timestamp coarsened_expiration_timestamp = 3;
+
+  // The lock token returned by AcquireUnencryptedDataBlobLock, or empty if the
+  // caller does not hold a lock. Only read from the first message. See
+  // WriteUnencryptedDataBlobRequest.lock_token.
+  string lock_token = 4;
+
+  // Optional. Only read from the first message. If set, the unencrypted data
+  // blob is written in the same Spanner transaction as the metadata blob. See
+  // WriteMetadataBlobRequest.unencrypted_data_blob.
+  DataBlob unencrypted_data_blob = 5;
 }
 
 message WriteMetadataBlobStreamResponse {
@@ -166,6 +212,75 @@ message WriteDataBlobsResponse {
   // IDs that failed to write, with their status.
   map<string, google.rpc.Status> failed_ids = 1;
 }
+
+// Acquires an exclusive, lease-based lock on the row of an unencrypted data
+// blob.
+//
+// While the lock is held, any attempt to modify the row without the matching
+// lock token is rejected. The lock is released either explicitly (via
+// ReleaseUnencryptedDataBlobLock) or automatically once it expires, so a
+// crashed client can never lock a row indefinitely.
+message AcquireUnencryptedDataBlobLockRequest {
+  // The ID of the unencrypted data blob row to lock. The row must already
+  // exist, otherwise NOT_FOUND is returned.
+  string id = 1;
+
+  // How long the lock should be held before it is automatically released.
+  // Defaults to 60 seconds when unset, and is capped at 10 minutes.
+  //
+  // The cap applies to this request, not to the lifetime of the lock: a caller
+  // that needs the row for longer renews with ExtendUnencryptedDataBlobLock.
+  google.protobuf.Duration lock_duration = 2;
+}
+
+message AcquireUnencryptedDataBlobLockResponse {
+  // Opaque token identifying the acquired lock. It must be passed verbatim to
+  // subsequent mutating requests for this row, and to Extend/Release. The
+  // string should not be parsed or interpreted by the client.
+  string lock_token = 1;
+
+  // The time at which the lock is automatically released. Any mutation
+  // attempted after this time no longer needs (nor honors) the lock token.
+  google.protobuf.Timestamp lock_expire_time = 2;
+}
+
+// Extends the lifetime of a lock that is still held, e.g. for a caller that
+// needs more time than originally requested.
+message ExtendUnencryptedDataBlobLockRequest {
+  string id = 1;
+
+  // The token returned by AcquireUnencryptedDataBlobLock. Extending a lock that
+  // has already expired or that is held by a different token fails with
+  // ABORTED; the caller must acquire a new lock in that case.
+  string lock_token = 2;
+
+  // The new lifetime, relative to the time the request is processed. Defaults
+  // to 60 seconds when unset, and is capped at 10 minutes.
+  //
+  // The cap applies to each request separately, so a caller that keeps renewing
+  // keeps the row for as long as it likes. What the cap bounds is how long a
+  // lock outlives a caller that stops renewing, not how long a live caller may
+  // hold the row.
+  google.protobuf.Duration lock_duration = 3;
+}
+
+message ExtendUnencryptedDataBlobLockResponse {
+  // The new time at which the lock is automatically released.
+  google.protobuf.Timestamp lock_expire_time = 1;
+}
+
+// Releases a lock before it expires, so that other writers do not have to wait
+// out the remaining lifetime.
+message ReleaseUnencryptedDataBlobLockRequest {
+  string id = 1;
+
+  // The token returned by AcquireUnencryptedDataBlobLock. Releasing a lock held
+  // by a different token fails with ABORTED. Releasing a lock that is already
+  // released or expired succeeds.
+  string lock_token = 2;
+}
+
+message ReleaseUnencryptedDataBlobLockResponse {}
 
 // The untrusted database service that the trusted application can connect to.
 service SealedMemoryDatabaseService {
@@ -232,4 +347,29 @@ service SealedMemoryDatabaseService {
 
   // Writes multiple data blobs to the database.
   rpc WriteDataBlobs(WriteDataBlobsRequest) returns (WriteDataBlobsResponse) {}
+
+  // Acquires a lock on the row of an unencrypted data blob, preventing it from
+  // being modified by anyone who does not hold the returned lock token.
+  //
+  // The lock has a bounded lifetime and is released automatically when it
+  // expires, so a caller that crashes cannot lock the row forever.
+  //
+  // Returns ABORTED if the row is already locked, and NOT_FOUND if the row does
+  // not exist. ABORTED means "somebody else owns this row, back off and retry
+  // later"; it is the same code that gated writes use for a lock conflict.
+  rpc AcquireUnencryptedDataBlobLock(AcquireUnencryptedDataBlobLockRequest)
+      returns (AcquireUnencryptedDataBlobLockResponse) {}
+
+  // Extends the lifetime of a lock that is currently held by the caller.
+  //
+  // Returns ABORTED if the lock is no longer held by the given token (e.g.
+  // because it already expired).
+  rpc ExtendUnencryptedDataBlobLock(ExtendUnencryptedDataBlobLockRequest)
+      returns (ExtendUnencryptedDataBlobLockResponse) {}
+
+  // Releases a lock held by the caller before it expires.
+  //
+  // Returns ABORTED if the row is locked by a different token.
+  rpc ReleaseUnencryptedDataBlobLock(ReleaseUnencryptedDataBlobLockRequest)
+      returns (ReleaseUnencryptedDataBlobLockResponse) {}
 }

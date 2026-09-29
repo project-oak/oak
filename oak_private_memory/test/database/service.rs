@@ -21,15 +21,18 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_servic
     SealedMemoryDatabaseService, SealedMemoryDatabaseServiceServer,
 };
 use sealed_memory_rust_proto::oak::private_memory::{
-    DataBlob, DeleteBlobsRequest, DeleteBlobsResponse, MetadataBlob, ReadDataBlobRequest,
-    ReadDataBlobResponse, ReadDataBlobsRequest, ReadDataBlobsResponse, ReadMetadataBlobRequest,
-    ReadMetadataBlobResponse, ReadMetadataBlobStreamRequest, ReadMetadataBlobStreamResponse,
-    ReadUnencryptedDataBlobRequest, ReadUnencryptedDataBlobResponse, ResetDatabaseRequest,
-    ResetDatabaseResponse, WriteDataBlobRequest, WriteDataBlobResponse, WriteDataBlobsRequest,
-    WriteDataBlobsResponse, WriteMetadataBlobRequest, WriteMetadataBlobResponse,
-    WriteMetadataBlobStreamRequest, WriteMetadataBlobStreamResponse,
-    WriteUnencryptedDataBlobRequest, WriteUnencryptedDataBlobResponse,
-    read_metadata_blob_stream_response, write_metadata_blob_stream_request,
+    AcquireUnencryptedDataBlobLockRequest, AcquireUnencryptedDataBlobLockResponse, DataBlob,
+    DeleteBlobsRequest, DeleteBlobsResponse, ExtendUnencryptedDataBlobLockRequest,
+    ExtendUnencryptedDataBlobLockResponse, MetadataBlob, ReadDataBlobRequest, ReadDataBlobResponse,
+    ReadDataBlobsRequest, ReadDataBlobsResponse, ReadMetadataBlobRequest, ReadMetadataBlobResponse,
+    ReadMetadataBlobStreamRequest, ReadMetadataBlobStreamResponse, ReadUnencryptedDataBlobRequest,
+    ReadUnencryptedDataBlobResponse, ReleaseUnencryptedDataBlobLockRequest,
+    ReleaseUnencryptedDataBlobLockResponse, ResetDatabaseRequest, ResetDatabaseResponse,
+    WriteDataBlobRequest, WriteDataBlobResponse, WriteDataBlobsRequest, WriteDataBlobsResponse,
+    WriteMetadataBlobRequest, WriteMetadataBlobResponse, WriteMetadataBlobStreamRequest,
+    WriteMetadataBlobStreamResponse, WriteUnencryptedDataBlobRequest,
+    WriteUnencryptedDataBlobResponse, read_metadata_blob_stream_response,
+    write_metadata_blob_stream_request,
 };
 use tokio::{
     net::TcpListener,
@@ -336,6 +339,27 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
             db.insert(data_blob.id.clone(), data_blob);
         }
         Ok(tonic::Response::new(WriteDataBlobsResponse { failed_ids: Default::default() }))
+    }
+
+    async fn acquire_unencrypted_data_blob_lock(
+        &self,
+        _request: tonic::Request<AcquireUnencryptedDataBlobLockRequest>,
+    ) -> Result<tonic::Response<AcquireUnencryptedDataBlobLockResponse>, tonic::Status> {
+        Err(tonic::Status::unimplemented("row locks are not simulated"))
+    }
+
+    async fn extend_unencrypted_data_blob_lock(
+        &self,
+        _request: tonic::Request<ExtendUnencryptedDataBlobLockRequest>,
+    ) -> Result<tonic::Response<ExtendUnencryptedDataBlobLockResponse>, tonic::Status> {
+        Err(tonic::Status::unimplemented("row locks are not simulated"))
+    }
+
+    async fn release_unencrypted_data_blob_lock(
+        &self,
+        _request: tonic::Request<ReleaseUnencryptedDataBlobLockRequest>,
+    ) -> Result<tonic::Response<ReleaseUnencryptedDataBlobLockResponse>, tonic::Status> {
+        Err(tonic::Status::unimplemented("row locks are not simulated"))
     }
 }
 
