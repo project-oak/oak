@@ -26,6 +26,7 @@ use endorscope::{
     storage::{CaStorage, EndorsementLoader},
 };
 use intoto::statement::Validity;
+use oak_digest::{Digest, Sha256};
 use oak_proto_rust::oak::attestation::v1::MpmAttachment;
 use oak_time::Instant;
 use prost::Message;
@@ -158,7 +159,28 @@ pub(crate) struct ListMode {
     claim: Vec<String>,
 }
 
+/// Parses a typed SHA2-256 hash string into a [`Sha256`] digest.
+///
+/// Params:
+/// - h: The typed hash string (e.g. `sha2-256:<hex>`).
+///
+/// Returns:
+/// - The parsed [`Sha256`] digest.
+fn parse_sha256(h: &str) -> Sha256 {
+    match Digest::from_typed_hash(h) {
+        Ok(Digest::Sha256(d)) => d,
+        _ => panic!("invalid sha2-256 hash {h}"),
+    }
+}
+
 /// Lists endorsements depending on arguments.
+///
+/// Params:
+/// - current_time: The timestamp to use for endorsement verification.
+/// - claim_types: Global claim types required to be present on all
+///   endorsements.
+/// - p: Command-line arguments for the `list` subcommand.
+/// - access_token: Optional OAuth access token for storage authentication.
 pub(crate) fn list(
     current_time: Instant,
     claim_types: Vec<String>,
@@ -174,6 +196,7 @@ pub(crate) fn list(
     let loader = EndorsementLoader::new(Box::new(storage));
 
     let mut final_hashes: Option<Vec<String>> = None;
+    let mut keyset_keys: Option<Vec<Sha256>> = None;
 
     let mut intersect = |hashes: Vec<String>| match final_hashes.as_mut() {
         Some(current) => {
@@ -206,7 +229,8 @@ pub(crate) fn list(
     }
 
     if let Some(hash) = &p.mode.endorser_keyset_hash {
-        let hashes = list_endorsements_by_keyset(&loader, hash);
+        let (hashes, keys) = list_endorsements_by_keyset(&loader, hash);
+        keyset_keys = Some(keys);
         intersect(hashes);
     }
 
@@ -225,9 +249,14 @@ pub(crate) fn list(
             string_to_option_string(p.pes_ref_value),
         )
     };
+    let subject_hash = p.mode.subject_hash.as_deref().map(parse_sha256);
+    let endorser_key_hash = p.mode.endorser_key_hash.as_deref().map(parse_sha256);
     list_endorsement_hashes(
         current_time,
-        claim_types,
+        [claim_types, p.mode.claim].concat(),
+        subject_hash,
+        endorser_key_hash,
+        keyset_keys.as_deref(),
         &loader,
         final_hashes.unwrap_or_default(),
         rekor_public_key,
@@ -237,12 +266,23 @@ pub(crate) fn list(
     );
 }
 
-fn list_endorsements_by_keyset(loader: &EndorsementLoader, keyset_hash: &str) -> Vec<String> {
+/// Lists all endorsement hashes and parsed key digests for an endorser keyset.
+///
+/// Params:
+/// - loader: The endorsement loader to query.
+/// - keyset_hash: The typed hash of the endorser keyset.
+///
+/// Returns:
+/// - A tuple of `(endorsement_hashes, keyset_keys)`.
+fn list_endorsements_by_keyset(
+    loader: &EndorsementLoader,
+    keyset_hash: &str,
+) -> (Vec<String>, Vec<Sha256>) {
     let keys = list_keys_by_keyset(loader, keyset_hash);
     let mut keyset_hashes = HashSet::new();
     let mut keyset_vec = Vec::new();
-    for key_hash in keys {
-        if let Ok(hashes) = loader.list_endorsements_by_key(&key_hash) {
+    for key_hash in &keys {
+        if let Ok(hashes) = loader.list_endorsements_by_key(key_hash) {
             println!("🧲  Found {} endorsements for endorser key {}", hashes.len(), key_hash);
             for h in hashes {
                 if keyset_hashes.insert(h.clone()) {
@@ -251,13 +291,32 @@ fn list_endorsements_by_keyset(loader: &EndorsementLoader, keyset_hash: &str) ->
             }
         }
     }
-    keyset_vec
+    (keyset_vec, keys.iter().map(|k| parse_sha256(k)).collect())
 }
 
+/// Loads, verifies, and prints endorsement packages for the given hashes.
+///
+/// Params:
+/// - current_time: The timestamp to use for endorsement verification.
+/// - claim_types: Claim types required to be present on all endorsements.
+/// - subject_hash: Expected subject digest if filtered by `--subject-hash`.
+/// - endorser_key_hash: Expected endorser key digest if filtered by
+///   `--endorser-key-hash`.
+/// - keyset_keys: Allowed endorser key digests if filtered by
+///   `--endorser-keyset-hash`.
+/// - loader: The endorsement loader used to fetch each package.
+/// - endorsement_hashes: Candidate endorsement hashes to load and verify.
+/// - rekor_public_key: Optional Rekor public key PEM for log verification.
+/// - c2sp_policy: Optional C2SP policy for t-log proof verification.
+/// - pes_ref_value: Optional PES reference value for PES verification.
+/// - limit: Maximum number of endorsements to list (unlimited if 0).
 #[allow(clippy::too_many_arguments)]
 fn list_endorsement_hashes(
     current_time: Instant,
     claim_types: Vec<String>,
+    subject_hash: Option<Sha256>,
+    endorser_key_hash: Option<Sha256>,
+    keyset_keys: Option<&[Sha256]>,
     loader: &EndorsementLoader,
     endorsement_hashes: Vec<String>,
     rekor_public_key: Option<String>,
@@ -277,9 +336,15 @@ fn list_endorsement_hashes(
             )
             .with_context(|| format!("loading endorsement {endorsement_hash}"));
         match result {
-            Ok(package) => {
-                verify_print_package(current_time, claim_types.clone(), &package, endorsement_hash)
-            }
+            Ok(package) => verify_print_package(
+                current_time,
+                claim_types.clone(),
+                subject_hash,
+                endorser_key_hash,
+                keyset_keys,
+                &package,
+                endorsement_hash,
+            ),
             Err(err) => println!("❌  Loading endorsement {} failed: {:?}", endorsement_hash, err),
         }
         if limit > 0 && index >= limit - 1 {
@@ -288,6 +353,14 @@ fn list_endorsement_hashes(
     }
 }
 
+/// Lists and prints all endorser key hashes belonging to an endorser keyset.
+///
+/// Params:
+/// - loader: The endorsement loader to query.
+/// - endorser_keyset_hash: The typed hash of the endorser keyset.
+///
+/// Returns:
+/// - The list of typed endorser key hashes in the keyset.
 fn list_keys_by_keyset(loader: &EndorsementLoader, endorser_keyset_hash: &str) -> Vec<String> {
     let endorser_keys = loader.list_keys_by_keyset(endorser_keyset_hash);
     if endorser_keys.is_err() {
@@ -306,9 +379,23 @@ fn list_keys_by_keyset(loader: &EndorsementLoader, endorser_keyset_hash: &str) -
 }
 
 /// Verifies an endorsement package and pretty-prints it to stdout.
+///
+/// Params:
+/// - current_time: The timestamp to use for endorsement verification.
+/// - claim_types: Claim types required to be present on the endorsement.
+/// - subject_hash: Expected subject digest if filtered by `--subject-hash`.
+/// - endorser_key_hash: Expected endorser key digest if filtered by
+///   `--endorser-key-hash`.
+/// - keyset_keys: Allowed endorser key digests if filtered by
+///   `--endorser-keyset-hash`.
+/// - package: The loaded endorsement package to verify.
+/// - endorsement_hash: The typed hash of the endorsement being verified.
 fn verify_print_package(
     current_time: Instant,
     claim_types: Vec<String>,
+    subject_hash: Option<Sha256>,
+    endorser_key_hash: Option<Sha256>,
+    keyset_keys: Option<&[Sha256]>,
     package: &Package,
     endorsement_hash: &str,
 ) {
@@ -319,7 +406,32 @@ fn verify_print_package(
         &signed_endorsement,
         &package.get_reference_value(claim_types),
     )
-    .context("verifying endorsement");
+    .context("verifying endorsement")
+    .and_then(|res| {
+        if let Some(expected) = subject_hash {
+            res.0
+                .validate_subject_digest(&Digest::from(expected).into())
+                .context("validating subject digest")?;
+        }
+        if let Some(expected) = endorser_key_hash {
+            let actual = package.get_endorser_key_hash();
+            anyhow::ensure!(
+                actual == expected,
+                "endorser key hash mismatch: expected {}, got {}",
+                expected.to_typed_hash(),
+                actual.to_typed_hash()
+            );
+        }
+        if let Some(expected_set) = keyset_keys {
+            let actual = package.get_endorser_key_hash();
+            anyhow::ensure!(
+                expected_set.contains(&actual),
+                "endorser key {} not in keyset",
+                actual.to_typed_hash()
+            );
+        }
+        Ok(res)
+    });
     match result {
         Ok((statement, _tlog_verification)) => {
             println!("    ✅  {endorsement_hash}");

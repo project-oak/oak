@@ -36,6 +36,7 @@ rust_binary(
         "//tr/intoto",
         "//tr/rekor",
         "//tr/verify_endorsement",
+        "//util/digest:oak_digest",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:hex",

@@ -23,6 +23,7 @@ use alloc::{string::String, vec, vec::Vec};
 
 use anyhow::{Context, Result};
 use intoto::statement::DefaultStatement;
+use oak_digest::Sha256;
 use oak_proto_rust::oak::attestation::v1::{EndorsementReferenceValue, SignedEndorsement};
 use verify_endorsement::{
     create_endorsement_reference_value, create_signed_endorsement,
@@ -75,6 +76,11 @@ pub struct Package {
 }
 
 impl Package {
+    /// Returns the SHA2-256 hash of the endorser public key.
+    pub fn get_endorser_key_hash(&self) -> Sha256 {
+        Sha256::from_contents(self.endorser_public_key.as_bytes())
+    }
+
     /// Returns the `SignedEndorsement` proto associated with the package.
     pub fn get_signed_endorsement(&self) -> Result<SignedEndorsement> {
         let subject = match &self.subject {
