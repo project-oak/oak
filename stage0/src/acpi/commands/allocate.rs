@@ -60,7 +60,10 @@ impl Allocate {
     }
 
     pub fn file(&self) -> &CStr {
-        CStr::from_bytes_until_nul(&self.file).unwrap()
+        // The command comes from the untrusted VMM; a missing NUL terminator in
+        // the fixed-size name field must not panic. An empty name is rejected by
+        // the file lookup in `invoke`.
+        CStr::from_bytes_until_nul(&self.file).unwrap_or(c"")
     }
 
     pub fn zone(&self) -> Option<Zone> {
@@ -76,7 +79,7 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for Allocate {
         _pci_windows: Option<&PciWindows>,
         acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
-        let file = fwcfg.find(self.file()).unwrap();
+        let file = fwcfg.find(self.file()).ok_or("COMMAND_ALLOCATE references an unknown file")?;
 
         let layout = core::alloc::Layout::from_size_align(file.size(), self.align as usize)
             .map_err(|_| "invalid file layout requested")?;

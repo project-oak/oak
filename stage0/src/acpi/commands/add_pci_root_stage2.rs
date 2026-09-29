@@ -47,7 +47,10 @@ static_assertions::assert_eq_size!(AddPciRootStage2, Pad);
 
 impl AddPciRootStage2 {
     pub fn file(&self) -> &CStr {
-        CStr::from_bytes_until_nul(&self.file).unwrap()
+        // The command comes from the untrusted VMM; a missing NUL terminator in
+        // the fixed-size name field must not panic. An empty name is rejected by
+        // the file lookup in `invoke`.
+        CStr::from_bytes_until_nul(&self.file).unwrap_or(c"")
     }
 
     /// Builds a command targeting `file` whose first allowlist entry writes its

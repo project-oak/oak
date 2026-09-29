@@ -62,11 +62,14 @@ impl AddPointer {
     }
 
     pub fn dest_file(&self) -> &CStr {
-        CStr::from_bytes_until_nul(&self.dest_file).unwrap()
+        // The command comes from the untrusted VMM; a missing NUL terminator in
+        // the fixed-size name field must not panic. An empty name is rejected by
+        // the file lookup in `invoke`.
+        CStr::from_bytes_until_nul(&self.dest_file).unwrap_or(c"")
     }
 
     pub fn src_file(&self) -> &CStr {
-        CStr::from_bytes_until_nul(&self.src_file).unwrap()
+        CStr::from_bytes_until_nul(&self.src_file).unwrap_or(c"")
     }
 }
 

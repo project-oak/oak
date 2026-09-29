@@ -122,7 +122,11 @@ impl DirEntry {
     }
 
     pub fn name(&self) -> &CStr {
-        CStr::from_bytes_until_nul(&self.name).unwrap()
+        // The directory is supplied by the untrusted VMM, so the fixed-size name
+        // field may lack a NUL terminator. Treat that as an empty name rather
+        // than panicking; callers match against a known name or look the file
+        // up, both of which reject an empty name.
+        CStr::from_bytes_until_nul(&self.name).unwrap_or(c"")
     }
 
     pub fn size(&self) -> usize {
