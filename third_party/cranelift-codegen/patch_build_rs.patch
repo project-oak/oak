@@ -1,26 +1,31 @@
 --- build.rs
 +++ build.rs
-@@ -60,4 +60,4 @@
+@@ -59,8 +59,8 @@
+         }
      }
-
+ 
 -    let cur_dir = env::current_dir().expect("Can't access current working directory");
 -    let crate_dir = cur_dir.as_path();
 +    let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
 +    let crate_dir = std::path::Path::new(&manifest_dir);
-@@ -154,3 +154,4 @@
-  ) -> Result<(), Box<dyn std::error::Error + 'static>> {
+ 
+     println!("cargo:rerun-if-changed=build.rs");
+     println!("cargo:rerun-if-env-changed=ISLE_SOURCE_DIR");
+@@ -153,7 +153,8 @@
+     crate_dir: &std::path::Path,
+     isle_dir: &std::path::Path,
+ ) -> Result<(), Box<dyn std::error::Error + 'static>> {
 -    let cur_dir = std::env::current_dir()?;
 +    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")?;
 +    let cur_dir = std::path::PathBuf::from(manifest_dir);
-      let isle_compilations = meta::isle::get_isle_compilations(
-@@ -197,9 +198,24 @@
+     let isle_compilations = meta::isle::get_isle_compilations(
+         &make_isle_source_path_relative(&cur_dir, &crate_dir),
+         &make_isle_source_path_relative(&cur_dir, &isle_dir),
+@@ -198,9 +199,28 @@
      eprintln!("Rebuilding {}", compilation.output.display());
-
+ 
      let code = {
 -        let file_paths = compilation
--            .inputs
--            .iter()
--            .chain(compilation.untracked_inputs.iter());
 +        let mut fixed_inputs = Vec::new();
 +        let cur_dir = std::env::current_dir().unwrap();
 +        let cur_dir_str = cur_dir.to_str().unwrap();
@@ -30,15 +35,20 @@
 +            cur_dir_str
 +        };
 +
-+        for path in compilation.inputs.iter().chain(compilation.untracked_inputs.iter()) {
++        for path in compilation
+             .paths()
+-            .map_err(|e| Errors::from_io(e, "list isle compilation file paths"))?;
++            .map_err(|e| Errors::from_io(e, "list isle compilation file paths"))?
++        {
 +            let path_str = path.to_str().unwrap();
 +            if let Some(idx) = path_str.find("execroot/_main/") {
 +                let rel_part = &path_str[idx + "execroot/_main/".len()..];
 +                fixed_inputs.push(std::path::PathBuf::from(sandbox_root).join(rel_part));
 +            } else {
-+                fixed_inputs.push(path.clone());
++                fixed_inputs.push(path);
 +            }
 +        }
 +        let file_paths = fixed_inputs.iter();
-
+ 
          let mut options = isle::codegen::CodegenOptions::default();
+         // Because we include!() the generated ISLE source, we cannot
