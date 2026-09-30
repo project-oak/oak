@@ -50,6 +50,7 @@ rust_test(
     deps = [
         "@oak_crates_index//:jwt",
         "@oak_crates_index//:openssl",
+        "@oak_crates_index//:prost-types",
         "@oak_crates_index//:serde",
     ],
 )

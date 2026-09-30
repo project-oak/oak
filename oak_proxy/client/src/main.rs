@@ -18,8 +18,9 @@ mod noise;
 mod tls;
 
 use std::{
+    io::Write,
     net::SocketAddr,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -98,7 +99,7 @@ impl AttestationPublisher for FileAttestationPublisher {
 
         let encoded = collected_attestation.encode_to_vec();
         log::info!("[Client] Writing {} bytes to '{}'", encoded.len(), self.output_path.display());
-        match std::fs::write(&self.output_path, encoded) {
+        match write_atomically(&self.output_path, &encoded) {
             Ok(()) => {
                 log::info!(
                     "[Client] CollectedAttestation written to '{}'",
@@ -114,6 +115,23 @@ impl AttestationPublisher for FileAttestationPublisher {
             }
         }
     }
+}
+
+/// Replaces the file at `path` with `contents` via a temporary file in the same
+/// directory and a rename. Each connection publishes the attestation it
+/// received, so concurrent handshakes may write the same file; this way readers
+/// (e.g. `oak_attestation_verification_cli`) only ever see a complete
+/// attestation.
+fn write_atomically(path: &Path, contents: &[u8]) -> anyhow::Result<()> {
+    let directory = match path.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => parent,
+        _ => Path::new("."),
+    };
+    let mut file = tempfile::NamedTempFile::new_in(directory)
+        .context("failed to create a temporary attestation file")?;
+    file.write_all(contents).context("failed to write the temporary attestation file")?;
+    file.persist(path).context("failed to replace the attestation file")?;
+    Ok(())
 }
 
 impl Args {

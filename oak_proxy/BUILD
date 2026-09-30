@@ -27,6 +27,7 @@ rust_test_suite(
     name = "oak_proxy_integration_test",
     srcs = ["tests/integration_test.rs"],
     data = [
+        "//oak_attestation_gcp:data/confidential_space_root.pem",
         "//oak_proxy/client",
         "//oak_proxy/server",
         "//oak_proxy/testdata",
@@ -34,10 +35,12 @@ rust_test_suite(
     ],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
+        "//oak_proto_rust",
         "//oak_proxy/lib:oak_proxy_lib",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:log",
+        "@oak_crates_index//:prost",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
         "@oak_crates_index//:tokio",

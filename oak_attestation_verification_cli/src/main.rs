@@ -18,6 +18,7 @@ mod print;
 mod report;
 
 use std::{
+    collections::BTreeMap,
     fmt::Write,
     fs,
     path::Path,
@@ -68,12 +69,28 @@ fn main() -> anyhow::Result<()> {
         Flags::parse();
 
     let mut buffer = String::new();
+    let result = verify_attestation(&mut buffer, attestation, &reference_values);
+    println!("{}", buffer);
+    result
+}
+
+/// Writes a human-readable verification report for `attestation` to `buffer`
+/// and returns an error if any check failed.
+///
+/// An attestation without a session handshake hash or without any evidence
+/// (e.g. one collected from an unattested server) is a failure, not a vacuous
+/// success.
+fn verify_attestation(
+    buffer: &mut String,
+    attestation: CollectedAttestation,
+    reference_values: &BTreeMap<String, ReferenceValues>,
+) -> anyhow::Result<()> {
     let indent = 0;
 
     let attestation_timestamp = get_timestamp(&attestation);
     let mut all_ok = attestation_timestamp.as_ref().map(|_| ()).map_err(|e| anyhow!(e.to_string()));
     print_report_header(
-        &mut buffer,
+        buffer,
         indent,
         &attestation.request_metadata.unwrap_or_default().uri,
         &attestation_timestamp,
@@ -81,7 +98,15 @@ fn main() -> anyhow::Result<()> {
     let attestation_timestamp = attestation_timestamp.unwrap_or(Instant::UNIX_EPOCH);
 
     let handshake_hash = attestation.handshake_hash.clone();
-    print_handshake_hash_report(&mut buffer, indent, &handshake_hash)?;
+    print_handshake_hash_report(buffer, indent, &handshake_hash)?;
+    if handshake_hash.is_empty() {
+        all_ok = all_ok.and(Err(anyhow!("session handshake hash is missing")));
+    }
+
+    if attestation.endorsed_evidence.is_empty() {
+        print_indented!(buffer, indent, "❌ Provided attestation contains no evidence")?;
+        all_ok = all_ok.and(Err(anyhow!("attestation contains no evidence")));
+    }
 
     for (attestation_type_id, endorsed_evidence) in attestation.endorsed_evidence.iter() {
         match process_attestation(
@@ -92,7 +117,7 @@ fn main() -> anyhow::Result<()> {
         ) {
             Ok(report) => {
                 report.print(
-                    &mut buffer,
+                    buffer,
                     indent,
                     &handshake_hash,
                     attestation.session_bindings.get(attestation_type_id),
@@ -100,17 +125,11 @@ fn main() -> anyhow::Result<()> {
                 all_ok = all_ok.and(report.check());
             }
             Err(err) => {
-                print_indented!(
-                    &mut buffer,
-                    indent,
-                    "❌ Provided attestation is invalid: {}",
-                    err
-                )?;
+                print_indented!(buffer, indent, "❌ Provided attestation is invalid: {}", err)?;
                 all_ok = all_ok.and(Err(err));
             }
         }
     }
-    println!("{}", buffer);
     all_ok
 }
 
@@ -231,4 +250,48 @@ fn find_single_endorsement(endorsed_evidence: &EndorsedEvidence) -> anyhow::Resu
         Err(anyhow!("too many ({}) endorsements (expected: 1)", events.len()))?;
     }
     Ok(events.iter().next().ok_or(anyhow!("missing endorsement"))?.clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use oak_proto_rust::oak::attestation::v1::collected_attestation::RequestMetadata;
+
+    use super::*;
+
+    /// An attestation as saved by a client of an unattested server: the
+    /// session was established, but the server sent no evidence.
+    fn attestation_without_evidence() -> CollectedAttestation {
+        CollectedAttestation {
+            request_metadata: Some(RequestMetadata {
+                uri: "ws://127.0.0.1:8080".to_string(),
+                request_time: Some(prost_types::Timestamp { seconds: 1_790_000_000, nanos: 0 }),
+            }),
+            handshake_hash: b"handshake hash".to_vec(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn test_verify_attestation_without_evidence_fails() {
+        let mut report = String::new();
+
+        let result =
+            verify_attestation(&mut report, attestation_without_evidence(), &BTreeMap::new());
+
+        assert!(result.is_err(), "verification without evidence must fail, report:\n{report}");
+        assert!(report.contains("❌ Provided attestation contains no evidence"), "{report}");
+    }
+
+    #[test]
+    fn test_verify_attestation_without_handshake_hash_fails() {
+        let mut report = String::new();
+        let attestation =
+            CollectedAttestation { handshake_hash: Vec::new(), ..attestation_without_evidence() };
+
+        let result = verify_attestation(&mut report, attestation, &BTreeMap::new());
+
+        let error = result.expect_err("verification without a handshake hash must fail");
+        assert!(format!("{error:#}").contains("session handshake hash is missing"), "{error:#}");
+        assert!(report.contains("❌ is missing"), "{report}");
+    }
 }

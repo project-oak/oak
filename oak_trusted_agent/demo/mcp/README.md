@@ -251,10 +251,11 @@ Each client will:
 5. If attestation fails, the client **refuses to connect** and logs the failure
    reason
 
-> [!NOTE] Upon successful attestation, the client saves the attestation evidence
-> to a file under `/tmp/` as configured by `attestation_output_file` in each
-> `.toml` config (e.g., `/tmp/activities_attestation.pb`). These files can be
-> inspected using the attestation verification CLI tool (see Step 6).
+> [!NOTE] Whether or not attestation passes, the client saves the attestation
+> evidence it received to a file under `/tmp/` as configured by
+> `attestation_output_file` in each `.toml` config (e.g.,
+> `/tmp/activities_attestation.pb`). These files can be inspected using the
+> attestation verification CLI tool (see Step 6).
 
 ---
 

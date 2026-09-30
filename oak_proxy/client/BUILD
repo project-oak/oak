@@ -43,6 +43,7 @@ rust_binary(
         "@oak_crates_index//:rustls",
         "@oak_crates_index//:rustls-pemfile",
         "@oak_crates_index//:rustls-pki-types",
+        "@oak_crates_index//:tempfile",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-tungstenite",
         "@oak_crates_index//:toml",
