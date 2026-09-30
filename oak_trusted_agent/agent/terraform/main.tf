@@ -13,9 +13,11 @@ module "confidential_space_instance" {
 
   metadata = merge(
     {
-      tee-restart-policy      = "Always"
-      tee-env-MODEL_PROXY_URL = "ws://${var.model_server_ip}:${var.model_server_port}"
-      tee-env-MCP_PROXY_URLS  = join(",", [for ip in var.mcp_server_ips : "ws://${ip}:${var.mcp_server_port}"])
+      tee-restart-policy       = "Always"
+      tee-env-WASM_URL         = var.wasm_url
+      tee-env-MODEL_CONFIG_URL = var.model_config_url
+      tee-env-MODEL_PROXY_URL  = "ws://${var.model_server_ip}:${var.model_server_port}"
+      tee-env-MCP_PROXY_URLS   = join(",", [for ip in var.mcp_server_ips : "ws://${ip}:${var.mcp_server_port}"])
     },
     var.system_prompt_url != "" ? {
       tee-env-SYSTEM_PROMPT_URL = var.system_prompt_url

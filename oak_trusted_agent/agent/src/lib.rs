@@ -54,6 +54,51 @@ pub enum AgentError {
     /// Spawning an `oak_proxy` child process did not succeed.
     #[error("spawning process '{program}': {reason}")]
     ProcessSpawn { program: String, reason: String },
+
+    /// The model configuration fetched from `MODEL_CONFIG_URL` is not valid.
+    #[error("invalid model config: {reason}")]
+    InvalidModelConfig { reason: String },
+}
+
+/// Configuration of the model exposed to the sandboxed agent.
+///
+/// Fetched as JSON from `MODEL_CONFIG_URL` at startup, for example:
+///
+/// ```json
+/// {"name": "gemma4:e2b-it-qat", "provider": "ollama"}
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ModelConfig {
+    /// Name of the model, as understood by `provider`.
+    pub name: String,
+    /// Provider serving the model.
+    pub provider: ModelConfigProvider,
+}
+
+/// Provider serving the model described by a [`ModelConfig`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ModelConfigProvider {
+    Ollama,
+    Gemini,
+}
+
+impl ModelConfig {
+    /// Parses and validates a JSON model configuration.
+    ///
+    /// Unknown fields are rejected so that a misspelled key fails at startup
+    /// instead of being silently ignored.
+    pub fn from_json(json: &[u8]) -> Result<Self, AgentError> {
+        let config: Self = serde_json::from_slice(json)
+            .map_err(|err| AgentError::InvalidModelConfig { reason: err.to_string() })?;
+        if config.name.trim().is_empty() {
+            return Err(AgentError::InvalidModelConfig {
+                reason: "model name must not be empty".to_string(),
+            });
+        }
+        Ok(config)
+    }
 }
 
 /// Command-line specification for spawning an `oak_proxy` child process.
@@ -467,5 +512,39 @@ mod tests {
         expect_that!(mcp_config.listen_address.map(|a| a.to_string()), some(eq("127.0.0.1:8090")));
         expect_that!(mcp_config.attestation_generators.len(), eq(0));
         expect_that!(mcp_config.attestation_verifiers.len(), eq(1));
+    }
+
+    #[gtest]
+    fn test_model_config_parses_valid_json() {
+        let config =
+            ModelConfig::from_json(br#"{"name": "gemma4:e2b-it-qat", "provider": "ollama"}"#)
+                .unwrap();
+        expect_that!(
+            config,
+            eq(&ModelConfig {
+                name: "gemma4:e2b-it-qat".to_string(),
+                provider: ModelConfigProvider::Ollama,
+            })
+        );
+    }
+
+    #[gtest]
+    fn test_model_config_rejects_invalid_json() {
+        let cases: [&[u8]; 6] = [
+            b"not json",
+            br#"{"name": "gemma"}"#,
+            br#"{"provider": "ollama"}"#,
+            br#"{"name": "gemma", "provider": "unknown"}"#,
+            br#"{"name": "gemma", "provider": "ollama", "extra": 1}"#,
+            br#"{"name": "  ", "provider": "ollama"}"#,
+        ];
+        for json in cases {
+            expect_that!(
+                ModelConfig::from_json(json),
+                err(matches_pattern!(AgentError::InvalidModelConfig { .. })),
+                "{}",
+                String::from_utf8_lossy(json)
+            );
+        }
     }
 }

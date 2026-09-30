@@ -52,6 +52,16 @@ variable "exposed_port" {
   default     = 8080
 }
 
+variable "wasm_url" {
+  type        = string
+  description = "URL (e.g. a GCS object URL) from which the agent fetches its Wasm component at startup."
+}
+
+variable "model_config_url" {
+  type        = string
+  description = "URL from which the agent fetches its JSON model configuration at startup."
+}
+
 variable "model_server_ip" {
   type        = string
   description = "The internal IP address of the attested Model server VM."

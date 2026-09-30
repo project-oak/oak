@@ -29,6 +29,8 @@ rust_library(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:log",
+        "@oak_crates_index//:serde",
+        "@oak_crates_index//:serde_json",
         "@oak_crates_index//:thiserror",
         "@oak_crates_index//:url",
     ],
@@ -40,11 +42,17 @@ rust_binary(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_trusted_agent_lib",
+        "//oak_proto_rust/grpc",
+        "//oak_trusted_agent/sandbox",
+        "//oak_trusted_agent/server",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:log",
         "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tokio-stream",
+        "@oak_crates_index//:tonic",
+        "@oak_crates_index//:ureq",
     ],
 )
 
@@ -100,12 +108,14 @@ oci_image(
     # endpoints:
     # - `CONTAINER_IMAGE`: self-reference used by the TEE workload to fetch
     #   endorsements.
+    # - `WASM_URL`, `MODEL_CONFIG_URL`: agent Wasm component and model
+    #   configuration fetched at startup.
     # - `MODEL_PROXY_URL`, `MCP_PROXY_URLS`, `SYSTEM_PROMPT_URL`: dynamically
     #   assigned service endpoints and system prompt configuration.
     #
     # https://cloud.google.com/confidential-computing/confidential-space/docs/create-customize-workloads#launch_policies
     labels = {
-        "tee.launch_policy.allow_env_override": "CONTAINER_IMAGE,MODEL_PROXY_URL,MCP_PROXY_URLS,SYSTEM_PROMPT_URL",
+        "tee.launch_policy.allow_env_override": "CONTAINER_IMAGE,WASM_URL,MODEL_CONFIG_URL,MODEL_PROXY_URL,MCP_PROXY_URLS,SYSTEM_PROMPT_URL",
         "tee.launch_policy.log_redirect": "always",
     },
     target_compatible_with = ["@platforms//os:linux"],

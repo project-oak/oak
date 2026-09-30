@@ -30,11 +30,47 @@ At startup, `/bin/oak_trusted_agent` orchestrates the container's proxy mesh:
    Streamable HTTP MCP endpoints (`http://127.0.0.1:8090/mcp`,
    `http://127.0.0.1:8091/mcp`, ...) to the sandboxed agent.
 
+Before starting the proxy mesh, it fetches the agent Wasm component and the
+model configuration over HTTP(S) (e.g. from a GCS bucket), loads the component
+into the [Oak Trusted Agent] sandbox and then serves the `TrustedAgentService`
+streaming gRPC interface ([trusted_agent.proto]) on `AGENT_LISTEN_ADDRESS`. Each
+client stream gets its own isolated Wasm instance.
+
+The gRPC interface is plaintext and unattested, so the agent refuses to listen
+on anything other than a loopback address. The only ingress path is the Oak
+Session terminated by the inbound `oak_proxy_server`:
+
+```text
+gRPC client -> oak_proxy_client -> (Oak Session over WebSocket)
+            -> oak_proxy_server -> agent (127.0.0.1:8081) -> Wasm sandbox
+```
+
+The sandbox is configured with the following flags (or environment variables),
+which have no defaults. The container image allows the operator to override them
+via the Confidential Space launch policy.
+
+- `--wasm-url` (`WASM_URL`): URL of the agent Wasm component, e.g. a GCS object
+  built from `//oak_trusted_agent/sandbox:adk_agent_ts`.
+- `--model-config-url` (`MODEL_CONFIG_URL`): URL of the JSON model configuration
+  exposed to the agent. Unknown fields are rejected and `provider` is `ollama`
+  or `gemini`:
+
+  ```json
+  { "name": "gemma4:e2b-it-qat", "provider": "ollama" }
+  ```
+
+## Testing
+
+Unit tests cover the proxy mesh planning and the model config parsing.
+
+```shell
+nix develop --command bazel test //oak_trusted_agent/agent:all
+```
+
 ## Building and pushing the container image
 
 ```shell
-# Build the OCI image and run unit tests
-nix develop --command bazel test //oak_trusted_agent/agent:all
+# Build the OCI image
 nix develop --command bazel build //oak_trusted_agent/agent:image
 
 # Push the image to Artifact Registry
@@ -54,6 +90,8 @@ module "trusted_agent" {
   zone              = var.zone
   instance_name     = "medical-trusted-agent"
   image_digest      = var.agent_image_digest
+  wasm_url          = "https://storage.googleapis.com/oak-trusted-agent/demo/agent/adk_agent_ts.wasm"
+  model_config_url  = "https://storage.googleapis.com/oak-trusted-agent/demo/agent/model_config.json"
   model_server_ip   = module.trusted_model.internal_ip
   mcp_server_ips    = [
     module.walk_in_clinic_mcp.internal_ip,
@@ -68,3 +106,4 @@ module "trusted_agent" {
 [Model server]: ../model/README.md
 [Oak Proxy]: ../../oak_proxy/README.md
 [Oak Trusted Agent]: ../sandbox/README.md
+[trusted_agent.proto]: ../../proto/oak_trusted_agent/service/trusted_agent.proto

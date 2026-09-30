@@ -14,28 +14,58 @@
 // limitations under the License.
 //
 
-use core::net::SocketAddr;
-use std::path::PathBuf;
+//! Oak Trusted Agent container entrypoint and host.
+//!
+//! Fetches the agent Wasm component and model configuration from
+//! operator-provided URLs, loads the component into an [`AgentSandbox`],
+//! starts the Oak Proxy mesh and serves the `TrustedAgentService` streaming
+//! gRPC interface behind the inbound `oak_proxy_server`.
+//!
+//! The gRPC interface is plaintext and unattested, so it only binds to a
+//! loopback address. Clients reach it through the inbound `oak_proxy_server`,
+//! which terminates the attested, end-to-end encrypted Oak Session and forwards
+//! the decrypted byte stream to `--listen-address`.
 
-use anyhow::Context;
+use core::{net::SocketAddr, time::Duration};
+use std::{io::Read, path::PathBuf};
+
+use anyhow::{Context, ensure};
 use clap::Parser;
+use oak_grpc::oak::trusted_agent::v1::trusted_agent_service_server::TrustedAgentServiceServer;
 use oak_trusted_agent_lib::{
-    AgentError, ModelProxyPlan, ProcessSpawner, ProxyBinaryPaths, ProxyProcessSpec,
-    plan_mcp_proxies, start_proxy_mesh,
+    AgentError, ModelConfig, ModelConfigProvider, ModelProxyPlan, ProcessSpawner, ProxyBinaryPaths,
+    ProxyProcessSpec, plan_mcp_proxies, start_proxy_mesh,
 };
+use oak_trusted_agent_sandbox::{AgentSandbox, HostConfig, ModelInfo, ModelProvider};
+use oak_trusted_agent_server::TrustedAgentServiceImpl;
 use tokio::{
     net::TcpListener,
     process::{Child, Command},
     task::JoinSet,
 };
+use tokio_stream::wrappers::TcpListenerStream;
+use tonic::transport::Server;
+
+/// Upper bound on the time spent fetching each startup resource.
+const FETCH_TIMEOUT: Duration = Duration::from_secs(60);
 
 #[derive(Parser, Debug)]
 #[command(author, version, about = "Oak Trusted Agent container entrypoint and host")]
 struct Args {
     /// Local socket address where the agent backend listens behind the inbound
-    /// `oak_proxy_server`.
+    /// `oak_proxy_server`. Must be a loopback address.
     #[arg(long, env = "AGENT_LISTEN_ADDRESS", default_value = "127.0.0.1:8081")]
     listen_address: SocketAddr,
+
+    /// URL (e.g. a GCS object URL) from which the agent Wasm component run in
+    /// the sandbox is fetched at startup.
+    #[arg(long, env = "WASM_URL")]
+    wasm_url: String,
+
+    /// URL from which the JSON model configuration is fetched at startup, e.g.
+    /// `{"name": "gemma4:e2b-it-qat", "provider": "ollama"}`.
+    #[arg(long, env = "MODEL_CONFIG_URL")]
+    model_config_url: String,
 
     /// Remote WebSocket URL (`ws://<ip>:<port>`) of the attested Model server's
     /// `oak_proxy_server`.
@@ -88,6 +118,30 @@ struct Args {
     attestation_dir: PathBuf,
 }
 
+/// Maps the provider of a fetched [`ModelConfig`] to the WIT `model-provider`
+/// enum exposed to the sandbox.
+fn to_sandbox_provider(provider: ModelConfigProvider) -> ModelProvider {
+    match provider {
+        ModelConfigProvider::Ollama => ModelProvider::Ollama,
+        ModelConfigProvider::Gemini => ModelProvider::Gemini,
+    }
+}
+
+/// Fetches the body of `url` over HTTP(S), e.g. an object in a GCS bucket.
+///
+/// This blocks the calling thread. It is only called at startup, before the
+/// server and the proxy mesh run, so there are no other tasks to starve.
+fn fetch_url(url: &str) -> anyhow::Result<Vec<u8>> {
+    let fetch = || -> anyhow::Result<Vec<u8>> {
+        let agent = ureq::AgentBuilder::new().timeout(FETCH_TIMEOUT).build();
+        let response = agent.get(url).call()?;
+        let mut bytes = Vec::new();
+        response.into_reader().read_to_end(&mut bytes)?;
+        Ok(bytes)
+    };
+    fetch().with_context(|| format!("fetching {url}"))
+}
+
 struct TokioProcessSpawner;
 
 impl ProcessSpawner for TokioProcessSpawner {
@@ -109,6 +163,40 @@ impl ProcessSpawner for TokioProcessSpawner {
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let args = Args::parse();
+
+    // Refuse to expose the plaintext interface beyond the host, so that the
+    // only ingress path is the attested Oak Session terminated by the inbound
+    // `oak_proxy_server`.
+    ensure!(
+        args.listen_address.ip().is_loopback(),
+        "--listen-address must be a loopback address so that the agent is only reachable through \
+         the inbound oak_proxy_server, got {}",
+        args.listen_address
+    );
+
+    // Fetch the agent and its configuration, load the sandbox and bind the
+    // backend port before starting the proxy mesh, so that configuration errors
+    // fail fast without spawning children.
+    let wasm_bytes = fetch_url(&args.wasm_url).context("loading agent Wasm component")?;
+    log::info!("fetched agent Wasm component from {} ({} bytes)", args.wasm_url, wasm_bytes.len());
+    let model_config_bytes = fetch_url(&args.model_config_url).context("loading model config")?;
+    let model_config = ModelConfig::from_json(&model_config_bytes)
+        .with_context(|| format!("parsing model config from {}", args.model_config_url))?;
+    log::info!("fetched model config from {}: {:?}", args.model_config_url, model_config);
+
+    let sandbox = AgentSandbox::new(&wasm_bytes).context("creating agent sandbox")?;
+    let host_config = HostConfig {
+        model_info: ModelInfo {
+            name: model_config.name.clone(),
+            provider: to_sandbox_provider(model_config.provider),
+        },
+        // TODO: b/567481031 - Tool configuration is not exposed yet; the agent
+        // runs without tools.
+        tools: Vec::new(),
+    };
+    let service = TrustedAgentServiceImpl::new(sandbox, host_config);
+    let listener =
+        TcpListener::bind(args.listen_address).await.context("binding agent backend listener")?;
 
     let model_plan = ModelProxyPlan::new(&args.model_proxy_url, args.model_local_port)
         .context("planning model oak_proxy_client")?;
@@ -145,29 +233,25 @@ async fn main() -> anyhow::Result<()> {
         });
     }
 
-    // Bind the local agent backend port behind `oak_proxy_server`.
-    // TODO: b/429197818 - Replace placeholder listener with the Wasmtime host
-    // executing `//oak_trusted_agent/sandbox:adk_agent_ts` against
+    // TODO: b/429197818 - Route sandbox model and tool calls to
     // `model_plan.local_model_url()` and `local_mcp_urls`.
-    let listener =
-        TcpListener::bind(args.listen_address).await.context("binding agent backend listener")?;
-    log::info!("listening for inbound agent requests on {}", args.listen_address);
+    log::info!(
+        "serving TrustedAgentService on {} (model: {}, provider: {:?})",
+        listener.local_addr()?,
+        model_config.name,
+        model_config.provider
+    );
+    let server = Server::builder()
+        .add_service(TrustedAgentServiceServer::new(service))
+        .serve_with_incoming(TcpListenerStream::new(listener));
 
     tokio::select! {
         Some(join_result) = proxy_tasks.join_next() => {
             let (label, status) = join_result.context("joining proxy child task")?;
             anyhow::bail!("proxy process '{label}' exited unexpectedly with status {status:?}");
         }
-        accept_result = run_placeholder_backend(listener) => {
-            accept_result.context("running placeholder agent backend")
+        serve_result = server => {
+            serve_result.context("serving TrustedAgentService")
         }
-    }
-}
-
-async fn run_placeholder_backend(listener: TcpListener) -> anyhow::Result<()> {
-    loop {
-        let (_stream, peer_addr) =
-            listener.accept().await.context("accepting connection from oak_proxy_server")?;
-        log::info!("accepted connection from oak_proxy_server at {peer_addr}");
     }
 }
