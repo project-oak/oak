@@ -513,4 +513,24 @@ mod tests {
             .expect("failed to add pointer");
         expect_that!(files.get_file(c"test"), ok(eq(&expected[..])));
     }
+
+    #[gtest]
+    pub fn test_command_rejects_file_name_without_nul_terminator() {
+        let mut files = TestFiles::default();
+        let mut digest = Sha256::default();
+
+        // A malicious VMM can fill the entire fixed-size name field of a
+        // table-loader command with no NUL terminator. Interpreting the name
+        // must return an error instead of panicking. Build the command from raw
+        // bytes because the safe constructors always append a terminator.
+        let mut raw = vec![0u8; core::mem::size_of::<RomfileCommand>()];
+        raw[0] = CommandTag::AddChecksum as u8;
+        raw[4..4 + ROMFILE_LOADER_FILESZ].fill(0xFF);
+        let commands = <[RomfileCommand]>::try_ref_from_bytes(&raw[..]).unwrap();
+
+        expect_that!(
+            commands[0].invoke(&mut files, &mut TestFirmware, None, &mut digest),
+            err(anything())
+        );
+    }
 }

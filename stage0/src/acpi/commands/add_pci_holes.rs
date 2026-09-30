@@ -41,8 +41,9 @@ pub struct AddPciHoles {
 static_assertions::assert_eq_size!(AddPciHoles, Pad);
 
 impl AddPciHoles {
-    pub fn file(&self) -> &CStr {
-        CStr::from_bytes_until_nul(&self.file).unwrap()
+    pub fn file(&self) -> Result<&CStr, &'static str> {
+        CStr::from_bytes_until_nul(&self.file)
+            .map_err(|_| "COMMAND_ADD_PCI_HOLES file name is not NUL-terminated")
     }
 }
 
@@ -54,7 +55,7 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciHoles {
         pci_windows: Option<&PciWindows>,
         _acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
-        let file = files.get_file_mut(self.file())?;
+        let file = files.get_file_mut(self.file()?)?;
 
         if file.len() < self.pci_start_offset_32 as usize
             || file.len() - 4 < self.pci_start_offset_32 as usize

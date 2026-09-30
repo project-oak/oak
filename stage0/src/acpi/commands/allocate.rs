@@ -59,8 +59,9 @@ impl Allocate {
         cmd
     }
 
-    pub fn file(&self) -> &CStr {
-        CStr::from_bytes_until_nul(&self.file).unwrap()
+    pub fn file(&self) -> Result<&CStr, &'static str> {
+        CStr::from_bytes_until_nul(&self.file)
+            .map_err(|_| "COMMAND_ALLOCATE file name is not NUL-terminated")
     }
 
     pub fn zone(&self) -> Option<Zone> {
@@ -76,13 +77,13 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for Allocate {
         _pci_windows: Option<&PciWindows>,
         acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
-        let file = fwcfg.find(self.file()).unwrap();
+        let file = fwcfg.find(self.file()?).ok_or("COMMAND_ALLOCATE references an unknown file")?;
 
         let layout = core::alloc::Layout::from_size_align(file.size(), self.align as usize)
             .map_err(|_| "invalid file layout requested")?;
 
         let buf = files.allocate(
-            self.file(),
+            self.file()?,
             layout,
             self.zone().ok_or("Invalid file allocation zone")?,
         )?;
