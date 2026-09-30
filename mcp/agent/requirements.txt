@@ -267,7 +267,7 @@ typing-inspection==0.4.2
     #   pydantic
 tzlocal==5.4.3
     # via google-adk
-urllib3==2.7.0
+urllib3==2.8.0
     # via requests
 uvicorn==0.49.0
     # via
