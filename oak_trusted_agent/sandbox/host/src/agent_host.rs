@@ -23,7 +23,7 @@ pub use wasmtime_wasi::p2::pipe::MemoryOutputPipe;
 use wasmtime_wasi::{ResourceTable, WasiCtx, WasiCtxBuilder, WasiCtxView, WasiView};
 
 wasmtime::component::bindgen!({
-    path: "wit/agent.wit",
+    path: "../wit/agent.wit",
     world: "oak-agent",
 });
 

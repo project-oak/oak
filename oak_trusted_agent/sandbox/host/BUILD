@@ -22,39 +22,43 @@ package(
 )
 
 rust_library(
-    name = "server",
+    name = "host",
     srcs = [
+        "src/agent_host.rs",
         "src/lib.rs",
-        "src/service.rs",
     ],
-    crate_name = "oak_trusted_agent_server",
+    compile_data = ["//oak_trusted_agent/sandbox:wit_files"],
+    crate_name = "oak_trusted_agent_sandbox",
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
-        "//oak_proto_rust",
-        "//oak_proto_rust/grpc",
-        "//oak_trusted_agent/sandbox/host",
-        "@oak_crates_index//:tokio",
-        "@oak_crates_index//:tokio-stream",
-        "@oak_crates_index//:tonic",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:wasmtime",
+        "@oak_crates_index//:wasmtime-wasi",
     ],
 )
 
 rust_test(
-    name = "server_test",
+    name = "host_test",
     size = "small",
-    srcs = ["tests/server_test.rs"],
-    data = ["//oak_trusted_agent/sandbox/guest/agent_ts:adk_agent_ts"],
+    crate = ":host",
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+rust_test(
+    name = "sandbox_integration_test",
+    size = "small",
+    srcs = ["tests/sandbox_integration_test.rs"],
+    data = [
+        "//oak_trusted_agent/sandbox/guest/agent_ts:adk_agent_ts",
+        "//oak_trusted_agent/sandbox/guest/agent_ts:adk_agent_ts_insecure",
+    ],
     rustc_env = {
+        "ADK_AGENT_TS_INSECURE_WASM": "$(rootpath //oak_trusted_agent/sandbox/guest/agent_ts:adk_agent_ts_insecure)",
         "ADK_AGENT_TS_WASM": "$(rootpath //oak_trusted_agent/sandbox/guest/agent_ts:adk_agent_ts)",
     },
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
-        ":server",
-        "//oak_proto_rust",
-        "//oak_proto_rust/grpc",
-        "//oak_trusted_agent/sandbox/host",
-        "@oak_crates_index//:tokio",
-        "@oak_crates_index//:tokio-stream",
-        "@oak_crates_index//:tonic",
+        ":host",
     ],
 )

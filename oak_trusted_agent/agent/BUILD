@@ -43,7 +43,7 @@ rust_binary(
     deps = [
         ":oak_trusted_agent_lib",
         "//oak_proto_rust/grpc",
-        "//oak_trusted_agent/sandbox",
+        "//oak_trusted_agent/sandbox/host",
         "//oak_trusted_agent/server",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",

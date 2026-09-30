@@ -50,7 +50,7 @@ which have no defaults. The container image allows the operator to override them
 via the Confidential Space launch policy.
 
 - `--wasm-url` (`WASM_URL`): URL of the agent Wasm component, e.g. a GCS object
-  built from `//oak_trusted_agent/sandbox:adk_agent_ts`.
+  built from `//oak_trusted_agent/sandbox/guest/agent_ts:adk_agent_ts`.
 - `--model-config-url` (`MODEL_CONFIG_URL`): URL of the JSON model configuration
   exposed to the agent. Unknown fields are rejected and `provider` is `ollama`
   or `gemini`:

@@ -239,8 +239,8 @@ fn main() {
     let generated = generate_ts_declarations(&wit_src);
 
     if let Ok(workspace_dir) = env::var("BUILD_WORKSPACE_DIRECTORY") {
-        let out_path =
-            PathBuf::from(workspace_dir).join("oak_trusted_agent/sandbox/agent_ts/src/types.d.ts");
+        let out_path = PathBuf::from(workspace_dir)
+            .join("oak_trusted_agent/sandbox/guest/agent_ts/src/types.d.ts");
         fs::write(&out_path, &generated)
             .unwrap_or_else(|e| panic!("Failed to write {}: {e}", out_path.display()));
         println!("Updated {}", out_path.display());
@@ -268,9 +268,9 @@ mod tests {
         assert_eq!(
             checked_in.trim(),
             expected.trim(),
-            "\n\nERROR: oak_trusted_agent/sandbox/agent_ts/src/types.d.ts is out of sync with oak_trusted_agent/sandbox/wit/agent.wit!\n\
+            "\n\nERROR: oak_trusted_agent/sandbox/guest/agent_ts/src/types.d.ts is out of sync with oak_trusted_agent/sandbox/wit/agent.wit!\n\
             To regenerate types.d.ts from agent.wit, run:\n\
-            \n  bazel run //oak_trusted_agent/sandbox:generate_wit_types\n"
+            \n  bazel run //oak_trusted_agent/sandbox/guest/agent_ts:generate_wit_types\n"
         );
     }
 }
