@@ -121,12 +121,8 @@ impl DirEntry {
         Self { size: size.to_be(), select: (selector as u16).to_be(), ..Default::default() }
     }
 
-    pub fn name(&self) -> &CStr {
-        // The directory is supplied by the untrusted VMM, so the fixed-size name
-        // field may lack a NUL terminator. Treat that as an empty name rather
-        // than panicking; callers match against a known name or look the file
-        // up, both of which reject an empty name.
-        CStr::from_bytes_until_nul(&self.name).unwrap_or(c"")
+    pub fn name(&self) -> Result<&CStr, &'static str> {
+        CStr::from_bytes_until_nul(&self.name).map_err(|_| "fw_cfg file name is not NUL-terminated")
     }
 
     pub fn size(&self) -> usize {
@@ -236,7 +232,13 @@ impl<P: crate::Platform> FwCfg<P> {
 
     pub fn find(&mut self, name: &CStr) -> Option<DirEntry> {
         // Safety: this is safe as we don't leak the iterator.
-        unsafe { self.dir() }.find(|file| file.name() == name)
+        unsafe { self.dir() }.find(|file| match file.name() {
+            Ok(file_name) => file_name == name,
+            Err(err) => {
+                log::warn!("skipping fw_cfg directory entry {:#06x}: {}", file.selector(), err);
+                false
+            }
+        })
     }
 
     /// Reads the contents of a file to a predetermined struct.
@@ -574,7 +576,7 @@ impl Firmware for TestFirmware {
         file: &crate::fw_cfg::DirEntry,
         buf: &mut [u8],
     ) -> std::result::Result<usize, &'static str> {
-        let file = self.files.get(file.name()).ok_or("file not found")?;
+        let file = self.files.get(file.name()?).ok_or("file not found")?;
         buf.copy_from_slice(file);
         Ok(file.len())
     }

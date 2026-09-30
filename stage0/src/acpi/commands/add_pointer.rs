@@ -61,15 +61,14 @@ impl AddPointer {
         cmd
     }
 
-    pub fn dest_file(&self) -> &CStr {
-        // The command comes from the untrusted VMM; a missing NUL terminator in
-        // the fixed-size name field must not panic. An empty name is rejected by
-        // the file lookup in `invoke`.
-        CStr::from_bytes_until_nul(&self.dest_file).unwrap_or(c"")
+    pub fn dest_file(&self) -> Result<&CStr, &'static str> {
+        CStr::from_bytes_until_nul(&self.dest_file)
+            .map_err(|_| "COMMAND_ADD_POINTER dest_file name is not NUL-terminated")
     }
 
-    pub fn src_file(&self) -> &CStr {
-        CStr::from_bytes_until_nul(&self.src_file).unwrap_or(c"")
+    pub fn src_file(&self) -> Result<&CStr, &'static str> {
+        CStr::from_bytes_until_nul(&self.src_file)
+            .map_err(|_| "COMMAND_ADD_POINTER src_file name is not NUL-terminated")
     }
 }
 
@@ -81,8 +80,8 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPointer {
         _pci_windows: Option<&PciWindows>,
         _acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
-        let src_file_ptr = files.get_file(self.src_file())?.as_ptr();
-        let dest_file = files.get_file_mut(self.dest_file())?;
+        let src_file_ptr = files.get_file(self.src_file()?)?.as_ptr();
+        let dest_file = files.get_file_mut(self.dest_file()?)?;
 
         if self.offset as usize + self.size as usize > dest_file.len() {
             return Err("Write for COMMAND_ADD_POINTER would overflow destination file");

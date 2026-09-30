@@ -43,14 +43,14 @@ pub struct WritePointer {
 static_assertions::assert_eq_size!(WritePointer, Pad);
 
 impl WritePointer {
-    pub fn dest_file(&self) -> &CStr {
-        // The command comes from the untrusted VMM; a missing NUL terminator in
-        // the fixed-size name field must not panic.
-        CStr::from_bytes_until_nul(&self.dest_file).unwrap_or(c"")
+    pub fn dest_file(&self) -> Result<&CStr, &'static str> {
+        CStr::from_bytes_until_nul(&self.dest_file)
+            .map_err(|_| "COMMAND_WRITE_POINTER dest_file name is not NUL-terminated")
     }
 
-    pub fn src_file(&self) -> &CStr {
-        CStr::from_bytes_until_nul(&self.src_file).unwrap_or(c"")
+    pub fn src_file(&self) -> Result<&CStr, &'static str> {
+        CStr::from_bytes_until_nul(&self.src_file)
+            .map_err(|_| "COMMAND_WRITE_POINTER src_file name is not NUL-terminated")
     }
 }
 

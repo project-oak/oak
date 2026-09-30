@@ -70,11 +70,9 @@ impl AddChecksum {
 
         cmd
     }
-    pub fn file(&self) -> &CStr {
-        // The command comes from the untrusted VMM; a missing NUL terminator in
-        // the fixed-size name field must not panic. An empty name is rejected by
-        // the file lookup in `invoke`.
-        CStr::from_bytes_until_nul(&self.file).unwrap_or(c"")
+    pub fn file(&self) -> Result<&CStr, &'static str> {
+        CStr::from_bytes_until_nul(&self.file)
+            .map_err(|_| "COMMAND_ADD_CHECKSUM file name is not NUL-terminated")
     }
 
     fn checksum(buf: &[u8]) -> u8 {
@@ -90,7 +88,7 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddChecksum {
         _pci_windows: Option<&PciWindows>,
         _acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
-        let file = files.get_file_mut(self.file())?;
+        let file = files.get_file_mut(self.file()?)?;
 
         let start = self.start as usize;
         let end = start + self.length as usize;

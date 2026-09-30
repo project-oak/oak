@@ -59,11 +59,9 @@ pub struct AddPciRootStage1 {
 static_assertions::assert_eq_size!(AddPciRootStage1, Pad);
 
 impl AddPciRootStage1 {
-    pub fn file(&self) -> &CStr {
-        // The command comes from the untrusted VMM; a missing NUL terminator in
-        // the fixed-size name field must not panic. An empty name is rejected by
-        // the file lookup in `invoke`.
-        CStr::from_bytes_until_nul(&self.file).unwrap_or(c"")
+    pub fn file(&self) -> Result<&CStr, &'static str> {
+        CStr::from_bytes_until_nul(&self.file)
+            .map_err(|_| "COMMAND_ADD_PCI_ROOT_STAGE1 file name is not NUL-terminated")
     }
 
     /// Builds a command targeting `file` whose 32-bit window start is written
@@ -86,7 +84,7 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciRootStage1 {
         _acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
         log::warn!("AddPciRootStage1 untested; command: {:?}", self);
-        let file = files.get_file_mut(self.file())?;
+        let file = files.get_file_mut(self.file()?)?;
 
         if self.bus_index != 0 {
             return Err("AddPciRootStage1: only bus 0 supported for now");
