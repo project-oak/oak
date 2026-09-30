@@ -131,7 +131,7 @@ jsonschema==4.26.0
     #   litellm
 jsonschema-specifications==2025.9.1
     # via jsonschema
-litellm==1.89.3
+litellm==1.89.7
     # via -r requirements.in
 markdown-it-py==4.2.0
     # via rich
