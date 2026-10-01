@@ -250,4 +250,45 @@ describe('TrustedAgent', () => {
     assert.ok(Array.isArray(parsedBody.tools) && parsedBody.tools.length > 0);
     assert.equal(response, 'Attested response from host model');
   });
+  it('keeps the conversation across runs', async () => {
+    const requests: string[][] = [];
+    class RecordingModel extends BaseLlm {
+      constructor() {
+        super({ model: 'recording-model' });
+      }
+      override async *generateContentAsync(
+        llmRequest: LlmRequest,
+      ): AsyncGenerator<LlmResponse, void> {
+        const texts = (llmRequest.contents || []).flatMap((content) =>
+          (content.parts || []).flatMap((part) =>
+            part.text ? [`${content.role}: ${part.text}`] : [],
+          ),
+        );
+        requests.push(texts);
+        yield {
+          content: {
+            role: 'model',
+            parts: [{ text: `answer ${requests.length}` }],
+          },
+        };
+      }
+      override async connect(): Promise<BaseLlmConnection> {
+        throw new Error('unsupported');
+      }
+    }
+
+    const agent = new TrustedAgent({
+      name: 'history_test_agent',
+      model: new RecordingModel(),
+      toolset: createMockToolset(),
+    });
+
+    assert.equal(await agent.run('first question'), 'answer 1');
+    assert.equal(await agent.run('second question'), 'answer 2');
+    assert.deepEqual(requests[1], [
+      'user: first question',
+      'model: answer 1',
+      'user: second question',
+    ]);
+  });
 });

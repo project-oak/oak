@@ -16,6 +16,8 @@ import { BaseLlm, InMemoryRunner, LlmAgent } from '@google/adk';
 import { logger } from './logger';
 import { OakToolset } from './tools';
 
+const USER_ID = 'sandbox_user';
+
 export interface AgentConfig {
   name?: string;
   instruction?: string;
@@ -28,6 +30,10 @@ export interface AgentConfig {
 /**
  * Google ADK Agent (`LlmAgent` + `InMemoryRunner`) running inside an attested
  * WebAssembly sandbox.
+ *
+ * Successive `run` calls are turns of a single conversation: the agent keeps
+ * an in-memory ADK session for as long as it lives, which is the lifetime of
+ * the sandbox instance.
  */
 export class TrustedAgent {
   public readonly name: string;
@@ -36,6 +42,8 @@ export class TrustedAgent {
   public readonly model: BaseLlm;
   public readonly maxSteps: number;
   public readonly llmAgent: LlmAgent;
+  private readonly runner: InMemoryRunner;
+  private sessionId?: string;
 
   constructor(config: AgentConfig) {
     this.name = config.name || 'oak_trusted_agent_ts';
@@ -63,6 +71,10 @@ export class TrustedAgent {
       model: this.model,
       tools: [this.toolset],
     });
+    this.runner = new InMemoryRunner({
+      agent: this.llmAgent,
+      appName: this.name,
+    });
   }
 
   public get toolRegistry(): OakToolset {
@@ -70,7 +82,8 @@ export class TrustedAgent {
   }
 
   /**
-   * Executes the Google ADK `InMemoryRunner` session loop for a user message.
+   * Executes the Google ADK `InMemoryRunner` session loop for a user message,
+   * as the next turn of the agent's conversation.
    *
    * Intermediate execution events (thoughts, tool calls, observations) are logged
    * via `loglevel` (which prints to stdout in debug/insecure mode and is safely suppressed
@@ -89,16 +102,20 @@ export class TrustedAgent {
     );
     logger.info(`[User Prompt] "${userMessage}"`);
 
-    const runner = new InMemoryRunner({
-      agent: this.llmAgent,
-      appName: this.name,
-    });
+    if (this.sessionId === undefined) {
+      const session = await this.runner.sessionService.createSession({
+        appName: this.name,
+        userId: USER_ID,
+      });
+      this.sessionId = session.id;
+    }
 
     let currentStep = 0;
     const finalAnswerParts: string[] = [];
 
-    for await (const event of runner.runEphemeral({
-      userId: 'sandbox_user',
+    for await (const event of this.runner.runAsync({
+      userId: USER_ID,
+      sessionId: this.sessionId,
       newMessage: {
         role: 'user',
         parts: [{ text: userMessage }],
