@@ -118,8 +118,8 @@ async fn test_open_send_close() {
     assert!(output.status.success(), "open failed: {}", stderr(&output));
     let stdout = stdout(&output);
     assert!(stdout.contains("✅ Opened a stream"), "{stdout}");
-    assert!(stdout.contains("agent> echo: Hello agent\n"), "{stdout}");
-    assert!(stdout.contains("agent> echo: Hello again\n"), "{stdout}");
+    assert!(stdout.contains("trusted-agent$ echo: Hello agent\n"), "{stdout}");
+    assert!(stdout.contains("trusted-agent$ echo: Hello again\n"), "{stdout}");
     assert!(!stdout.contains("Ignored"), "{stdout}");
     assert!(stdout.contains("✅ Closed the stream."), "{stdout}");
 }
@@ -132,7 +132,7 @@ async fn test_end_of_input_closes_stream() {
 
     assert!(output.status.success(), "open failed: {}", stderr(&output));
     let stdout = stdout(&output);
-    assert!(stdout.contains("agent> echo: Hello\n"), "{stdout}");
+    assert!(stdout.contains("trusted-agent$ echo: Hello\n"), "{stdout}");
     assert!(stdout.contains("✅ Closed the stream."), "{stdout}");
 }
 
@@ -145,7 +145,11 @@ async fn test_concurrent_opens_are_independent() {
 
     for (output, text) in [(&first, "first"), (&second, "second")] {
         assert!(output.status.success(), "open failed: {}", stderr(output));
-        assert!(stdout(output).contains(&format!("agent> echo: {text}\n")), "{}", stdout(output));
+        assert!(
+            stdout(output).contains(&format!("trusted-agent$ echo: {text}\n")),
+            "{}",
+            stdout(output)
+        );
     }
 }
 
@@ -161,5 +165,5 @@ async fn test_open_fails_without_agent() {
     assert!(stderr(&output).contains("failed to connect to the agent"), "{}", stderr(&output));
     // Only failures after connecting may be caused by attestation.
     assert!(!stderr(&output).contains("attestation"), "{}", stderr(&output));
-    assert!(!stdout(&output).contains("agent>"), "{}", stdout(&output));
+    assert!(!stdout(&output).contains("trusted-agent$"), "{}", stdout(&output));
 }

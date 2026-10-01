@@ -57,10 +57,10 @@ const CLOSE_TIMEOUT: Duration = Duration::from_secs(10);
 const CLOSE_COMMAND: &str = "close";
 
 /// Prompt shown before each user message.
-const USER_PROMPT: &str = "user> ";
+const USER_PROMPT: &str = "user$ ";
 
 /// Label printed before each agent reply.
-const AGENT_LABEL: &str = "agent> ";
+const AGENT_LABEL: &str = "trusted-agent$ ";
 
 #[derive(Parser, Debug)]
 #[command(author, version, about = "Command-line client for an Oak Trusted Agent")]

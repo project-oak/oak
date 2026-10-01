@@ -15,8 +15,8 @@ terminal of its own:
 
 - Each line you type (followed by Enter) is sent to the agent as a new turn on
   the same stream, and the agent's reply is printed before the next prompt. Your
-  messages are prompted with `user>` and the agent's replies are labeled
-  `agent>`.
+  messages are prompted with `user$` and the agent's replies are labeled
+  `trusted-agent$`.
 - Typing `close`, or ending the input with Ctrl-D, closes the stream, which ends
   the agent session.
 
@@ -71,7 +71,7 @@ In another terminal:
 ```text
 ✅ Opened a stream to http://127.0.0.1:8080.
 Type a message and press Enter to send it. Type `close` to end the session.
-user>
+user$
 ```
 
 Opening the stream makes the proxy client perform the attested handshake with
@@ -101,20 +101,20 @@ when the attestation was received.
 
 ### 4. Talk to the agent
 
-Back in the CLI, type a message at the `user>` prompt and press Enter. Each
+Back in the CLI, type a message at the `user$` prompt and press Enter. Each
 message is a new turn on the same stream and sandbox:
 
 ```text
-user> What is the value for key 42?
-agent> The value for key 42 is 84.
-user> What is the value for key 7?
-agent> The value for key 7 is 14.
+user$ What is the value for key 42?
+trusted-agent$ The value for key 42 is 84.
+user$ What is the value for key 7?
+trusted-agent$ The value for key 7 is 14.
 ```
 
 ### 5. Close the stream
 
 ```text
-user> close
+user$ close
 ✅ Closed the stream.
 ```
 
