@@ -63,7 +63,7 @@ via the Confidential Space launch policy.
   the agent refuses to start with it:
 
   ```json
-  { "name": "gemma4:e2b-it-qat", "provider": "ollama" }
+  { "name": "gemma4:31b-it-qat", "provider": "ollama" }
   ```
 
 ## Testing

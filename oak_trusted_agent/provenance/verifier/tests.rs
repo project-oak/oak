@@ -40,8 +40,8 @@ fn the_command_line_is_well_formed() {
 
 #[test]
 fn accounted_covers_both_re_hashed_and_waived_subjects() {
-    let args = args(&["report.jsonl"], &["gpt-oss:20b"]);
-    assert_eq!(args.accounted().collect::<Vec<_>>(), vec!["report.jsonl", "gpt-oss:20b"]);
+    let args = args(&["report.jsonl"], &["gemma4:31b-it-qat"]);
+    assert_eq!(args.accounted().collect::<Vec<_>>(), vec!["report.jsonl", "gemma4:31b-it-qat"]);
 }
 
 #[test]
@@ -64,4 +64,36 @@ fn a_verdict_without_a_workload_is_never_success() {
     .unwrap();
 
     assert_eq!(Report::new(&signed).verdict(), ExitCode::FAILURE);
+}
+
+#[test]
+fn report_renders_predicate_and_split_check_sections() {
+    let mut predicate = Predicate::new();
+    predicate.insert("benchmark".to_string(), serde_json::json!({"name": "agentdojo"}));
+    predicate.insert("score".to_string(), serde_json::json!(0.75));
+    let signed = statement::new(
+        vec![statement::subject("report.jsonl", b"passed")],
+        "https://example.com/v1".to_string(),
+        predicate,
+    )
+    .unwrap();
+
+    let digest = "sha256:e0812a55773bfeac846b2d605b4d93638b8dfa7119d9587f3d91475afc78185e";
+    let mut report = Report::new(&signed);
+    report.check_correctness("the payload is an in-toto v1 Statement", Ok::<(), &str>(()));
+    report.check_attestation("report.jsonl matches the digest in the statement", Ok::<(), &str>(()));
+    report.attested(Workload {
+        issued_at: oak_time::Instant::from_unix_millis(1_700_000_000_000),
+        image_reference: format!("example.com/eval/gemma4@{digest}").parse().unwrap(),
+        image_digest: digest.to_string(),
+    });
+
+    let mut out = Vec::new();
+    report.write(&mut out).unwrap();
+    let rendered = String::from_utf8(out).unwrap();
+    assert!(rendered.contains("📜 Statement\n"));
+    assert!(rendered.contains("📊 Predicate\n  benchmark       {\"name\":\"agentdojo\"}\n  score           0.75\n"));
+    assert!(rendered.contains("🔍 Correctness\n  ✅ the payload is an in-toto v1 Statement\n"));
+    assert!(rendered.contains(&format!("🔐 Attestation\n  ✅ report.jsonl matches the digest in the statement\n     ├── image      example.com/eval/gemma4@{digest}\n     ├── digest     {digest}\n")));
+    assert!(rendered.ends_with("\n✅ VERIFIED\n"));
 }

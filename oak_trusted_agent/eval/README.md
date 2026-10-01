@@ -10,7 +10,7 @@ refuse to talk to a model whose published evaluation it cannot verify.
 ## Layout
 
 ```text
-BUILD                    container image targets (:image_gemma4_e2b_it_qat, :push_gemma4_e2b_it_qat)
+BUILD                    container image targets (:image_gemma4_31b_it_qat, :image_gemma4_e2b_it_qat)
 benchmarks/<name>/       one directory per benchmark
 entrypoint.sh            container entrypoint starting Ollama and the harness
 harness/                 runs a benchmark, builds the predicate, calls the signer
@@ -70,12 +70,13 @@ This writes `report.jsonl`, `predicate.json` and `signed.json` to
 ## Building the container image
 
 `BUILD` assembles a reproducible OCI image from the pinned `ollama/ollama` base
-image, the `gemma4:e2b-it-qat` weights layers (shared with the `model` image),
-the hermetic Python harness (`:run`), and the `signer` binary.
+image, the `gemma4:31b-it-qat` weights layers (shared with the `model` image),
+the hermetic Python harness (`:run`), and the `signer` binary. A smaller
+`:image_gemma4_e2b_it_qat` target is also available for CPU smoke tests.
 
 ```shell
-bazel build --config=release //oak_trusted_agent/eval:image_gemma4_e2b_it_qat
-jq -r '.manifests[0].digest' bazel-bin/oak_trusted_agent/eval/image_gemma4_e2b_it_qat/index.json
+bazel build --config=release //oak_trusted_agent/eval:image_gemma4_31b_it_qat
+jq -r '.manifests[0].digest' bazel-bin/oak_trusted_agent/eval/image_gemma4_31b_it_qat/index.json
 ```
 
 ## Deploying to Confidential Space
@@ -86,13 +87,17 @@ the `oak-trusted-agent` GCS bucket (`gs://oak-trusted-agent/eval/`), where the
 container uploads `report.jsonl`, `predicate.json`, and `signed.json`.
 
 ```shell
-bazel run --config=release //oak_trusted_agent/eval:push_gemma4_e2b_it_qat
-DIGEST="$(jq -r '.manifests[0].digest' bazel-bin/oak_trusted_agent/eval/image_gemma4_e2b_it_qat/index.json)"
+bazel run --config=release //oak_trusted_agent/eval:push_gemma4_31b_it_qat
+DIGEST="$(jq -r '.manifests[0].digest' bazel-bin/oak_trusted_agent/eval/image_gemma4_31b_it_qat/index.json)"
 
 cd oak_trusted_agent/eval/terraform
 terraform init
 terraform apply \
-  -var="image_digest=us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/eval/gemma4-e2b-it-qat@${DIGEST}"
+  -var="zone=us-east5-a" \
+  -var="machine_type=a3-highgpu-1g" \
+  -var="accelerator_type=nvidia-h100-80gb" \
+  -var="benchmark=agentdojo" \
+  -var="image_digest=us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/eval/gemma4-31b-it-qat@${DIGEST}"
 ```
 
 ## Verifying the results
@@ -101,12 +106,13 @@ Signed evaluation bundles are published to
 `gs://oak-trusted-agent/eval/<model>/<benchmark>/`:
 
 ```shell
-gcloud storage cp -r gs://oak-trusted-agent/eval/gemma4-e2b-it-qat/hello-world /tmp/eval_out
-bazel run //oak_trusted_agent/provenance/verifier:oak_trusted_agent_provenance_verifier -- \
-  --statement=/tmp/eval_out/hello-world/signed.json \
-  --subject=/tmp/eval_out/hello-world/report.jsonl \
-  --unchecked-subject=gemma4:e2b-it-qat \
-  --expected-image-prefix=us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/eval/gemma4-e2b-it-qat \
+gcloud storage cp -r gs://oak-trusted-agent/eval/gemma4-31b-it-qat/agentdojo /tmp/eval_out
+bazel run --config=release //oak_trusted_agent/provenance/verifier:oak_trusted_agent_provenance_verifier -- \
+  --statement=/tmp/eval_out/agentdojo/signed.json \
+  --subject=/tmp/eval_out/agentdojo/report.jsonl \
+  --unchecked-subject=gemma4:31b-it-qat \
+  --expected-image-prefix=us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/eval/gemma4-31b-it-qat \
+  --expected-image-digest="${DIGEST}" \
   --expected-predicate-type=https://project-oak.github.io/oak/trusted_agent/eval/v1
 ```
 

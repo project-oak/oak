@@ -107,6 +107,26 @@ oci_image(
 )
 
 oci_image(
+    name = "image_gemma4_31b_it_qat",
+    base = ":eval_base",
+    env = {
+        "OLLAMA_MODEL": "gemma4:31b-it-qat",
+    },
+    tags = ["manual"],
+    target_compatible_with = ["@platforms//os:linux"],
+    tars = ["@ollama_gemma4_31b_it_qat//:layers"],
+)
+
+oci_push(
+    name = "push_gemma4_31b_it_qat",
+    image = ":image_gemma4_31b_it_qat",
+    remote_tags = ["latest"],
+    repository = "us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/eval/gemma4-31b-it-qat",
+    tags = ["manual"],
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+oci_image(
     name = "image_gemma4_e2b_it_qat",
     base = ":eval_base",
     env = {

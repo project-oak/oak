@@ -32,7 +32,7 @@ changing any Rust.
 ```shell
 signer \
   --subject        /out/report.jsonl \
-  --subject-digest gpt-oss:20b=sha256:2f1e… \
+  --subject-digest gemma4:31b-it-qat=sha256:e081… \
   --predicate-type https://project-oak.github.io/oak/trusted_agent/eval/v1 \
   --predicate      /out/predicate.json \
   --out            /out/signed_statement.json
@@ -45,27 +45,42 @@ Outside a TEE, pass `--no-attestation` to emit the statement with an empty
 
 ```shell
 verifier \
-  --statement              /out/signed_statement.json \
-  --subject                /out/report.jsonl \
-  --unchecked-subject      gpt-oss:20b \
-  --expected-image-prefix  europe-docker.pkg.dev/oak/trusted-eval/ \
-  --expected-image-digest  sha256:dead… \
+  --statement               /out/signed_statement.json \
+  --subject                 /out/report.jsonl \
+  --unchecked-subject       gemma4:31b-it-qat \
+  --expected-image-prefix   us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/eval/gemma4-31b-it-qat \
+  --expected-image-digest   sha256:dead… \
   --expected-predicate-type https://project-oak.github.io/oak/trusted_agent/eval/v1
 ```
 
 ```text
-Checks
+📜 Statement
+  predicate type  https://project-oak.github.io/oak/trusted_agent/eval/v1
+  subject         report.jsonl (sha256:9f86…)
+  subject         gemma4:31b-it-qat (sha256:e081…)
+
+📊 Predicate
+  benchmark       {"name":"agentdojo","version":"v1.2.2"}
+  model           {"name":"gemma4:31b-it-qat",…}
+  score           0.75
+  detail          {"suite":"travel","attack":"direct",…}
+  run             {"started_at":"…","finished_at":"…"}
+
+🔍 Correctness
   ✅ the envelope declares the in-toto media type
   ✅ the payload is an in-toto v1 Statement
   ✅ the predicate type is the expected one
-  ✅ report.jsonl matches the digest in the statement
   ✅ every subject was re-hashed or waived
+
+🔐 Attestation
+  ✅ report.jsonl matches the digest in the statement
   ✅ a Confidential Space token binds this exact statement
   ✅ the workload image is the expected one
-VERIFIED
-  produced by  europe-docker.pkg.dev/oak/trusted-eval/garak:v1
-  image        sha256:dead…
-  attested at  2026-09-11T16:00:00Z
+     ├── image      us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/eval/gemma4-31b-it-qat@sha256:dead…
+     ├── digest     sha256:dead…
+     └── issued at  2026-10-01T21:45:12Z
+
+✅ VERIFIED
 ```
 
 Checks accumulate rather than short-circuit, so one failure does not hide the

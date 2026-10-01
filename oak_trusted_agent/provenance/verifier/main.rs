@@ -90,32 +90,32 @@ fn verify(args: Args) -> Result<ExitCode> {
     let (payload, statement) = envelope.decode_payload()?;
 
     let mut report = Report::new(&statement);
-    report.check(
+    report.check_correctness(
         "the envelope declares the in-toto media type",
         require(envelope.payload_type == PAYLOAD_TYPE, &envelope.payload_type),
     );
-    report.check(
+    report.check_correctness(
         "the payload is an in-toto v1 Statement",
         require(statement._type == statement::IN_TOTO_TYPE, &statement._type),
     );
     if let Some(expected) = &args.expected_predicate_type {
-        report.check(
+        report.check_correctness(
             "the predicate type is the expected one",
             require(statement.predicate_type == *expected, &statement.predicate_type),
         );
     }
+    let unaccounted = statement::unaccounted(&statement, args.accounted());
+    report.check_correctness(
+        "every subject was re-hashed or waived",
+        require(unaccounted.is_empty(), format!("not checked: {}", unaccounted.join(", "))),
+    );
 
     for (name, path) in &args.subjects {
         let outcome = fs::read(path)
             .with_context(|| format!("reading {}", path.display()))
             .and_then(|contents| statement::check_digest(&statement, name, &contents));
-        report.check(&format!("{name} matches the digest in the statement"), outcome);
+        report.check_attestation(&format!("{name} matches the digest in the statement"), outcome);
     }
-    let unaccounted = statement::unaccounted(&statement, args.accounted());
-    report.check(
-        "every subject was re-hashed or waived",
-        require(unaccounted.is_empty(), format!("not checked: {}", unaccounted.join(", "))),
-    );
 
     let workload = Workload::from_verified_token(
         &envelope,
@@ -123,14 +123,14 @@ fn verify(args: Args) -> Result<ExitCode> {
         args.audience,
         args.expected_image_prefix,
     );
-    report.check(
+    report.check_attestation(
         "a Confidential Space token binds this exact statement",
         workload.as_ref().map(|_| ()),
     );
     if let Ok(workload) = &workload
         && let Some(expected) = &args.expected_image_digest
     {
-        report.check(
+        report.check_attestation(
             "the workload image is the expected one",
             require(workload.image_digest == *expected, &workload.image_digest),
         );

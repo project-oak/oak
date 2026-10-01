@@ -40,6 +40,7 @@ rust_binary(
         "@oak_crates_index//:jwt",
         "@oak_crates_index//:oci-spec",
         "@oak_crates_index//:prost",
+        "@oak_crates_index//:serde_json",
     ],
 )
 

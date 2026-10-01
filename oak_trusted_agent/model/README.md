@@ -8,8 +8,7 @@ are the ones answering.
 ## Layout
 
 ```text
-BUILD                    container image targets (:image_gemma4_e2b_it_qat, :push_gemma4_e2b_it_qat)
-defs.bzl                 registry of model configurations shared with ../eval
+BUILD                    container image targets (:image_gemma4_31b_it_qat, :image_gemma4_e2b_it_qat)
 extensions.bzl           Bazel module extension fetching Ollama model weights
 oak_proxy_server.toml    oak_proxy_server configuration baked into the image
 terraform/               Confidential Space deployment (VM, IAM, firewall)
@@ -18,8 +17,9 @@ terraform/               Confidential Space deployment (VM, IAM, firewall)
 ## Building the container image
 
 `BUILD` assembles a reproducible OCI image from the pinned `ollama/ollama` base
-image, the `gemma4:e2b-it-qat` weights layers (shared with the `eval` image),
-and the `//oak_proxy/server` binary.
+image, the `gemma4:31b-it-qat` weights layers (shared with the `eval` image),
+and the `//oak_proxy/server` binary. A smaller `:image_gemma4_e2b_it_qat` target
+is also available for smoke testing without a GPU.
 
 Inside the container, Ollama binds exclusively to `127.0.0.1:11434` and is
 started as a managed child process of `oak_proxy_server`, which listens on
@@ -27,8 +27,8 @@ started as a managed child process of `oak_proxy_server`, which listens on
 Oak Session handshake.
 
 ```shell
-bazel build --config=release //oak_trusted_agent/model:image_gemma4_e2b_it_qat
-jq -r '.manifests[0].digest' bazel-bin/oak_trusted_agent/model/image_gemma4_e2b_it_qat/index.json
+bazel build --config=release //oak_trusted_agent/model:image_gemma4_31b_it_qat
+jq -r '.manifests[0].digest' bazel-bin/oak_trusted_agent/model/image_gemma4_31b_it_qat/index.json
 ```
 
 ## Deploying to Confidential Space
@@ -38,13 +38,13 @@ service account, and a firewall rule opening TCP port `8080` for the Oak Session
 WebSocket tunnel.
 
 ```shell
-bazel run --config=release //oak_trusted_agent/model:push_gemma4_e2b_it_qat
-DIGEST="$(jq -r '.manifests[0].digest' bazel-bin/oak_trusted_agent/model/image_gemma4_e2b_it_qat/index.json)"
+bazel run --config=release //oak_trusted_agent/model:push_gemma4_31b_it_qat
+DIGEST="$(jq -r '.manifests[0].digest' bazel-bin/oak_trusted_agent/model/image_gemma4_31b_it_qat/index.json)"
 
 cd oak_trusted_agent/model/terraform
 terraform init
 terraform apply \
-  -var="image_digest=us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/model/gemma4-e2b-it-qat@${DIGEST}"
+  -var="image_digest=us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/model/gemma4-31b-it-qat@${DIGEST}"
 ```
 
 To deploy on an NVIDIA H100 Confidential GPU (`a3-highgpu-1g`):

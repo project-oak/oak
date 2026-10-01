@@ -18,7 +18,8 @@
 
 use std::{fmt::Display, io::Write, process::ExitCode};
 
-use oak_trusted_agent_provenance_common::statement::InTotoStatement;
+use oak_trusted_agent_provenance_common::statement::{InTotoStatement, Predicate};
+use serde_json::Value;
 
 use crate::workload::Workload;
 
@@ -28,6 +29,22 @@ struct Check {
     failure: Option<String>,
 }
 
+impl Check {
+    fn new(description: &str, outcome: Result<(), impl Display>) -> Self {
+        Self {
+            description: description.to_string(),
+            failure: outcome.err().map(|error| format!("{error:#}")),
+        }
+    }
+
+    fn write(&self, w: &mut impl Write) -> std::io::Result<()> {
+        match &self.failure {
+            None => writeln!(w, "  ✅ {}", self.description),
+            Some(found) => writeln!(w, "  ❌ {}: {found}", self.description),
+        }
+    }
+}
+
 /// What the verifier found.
 ///
 /// Outcomes are collected as data and rendered once at the end, so a check
@@ -35,7 +52,9 @@ struct Check {
 pub struct Report {
     predicate_type: String,
     subjects: Vec<String>,
-    checks: Vec<Check>,
+    predicate: Predicate,
+    correctness: Vec<Check>,
+    attestation: Vec<Check>,
     workload: Option<Workload>,
 }
 
@@ -54,18 +73,23 @@ impl Report {
         Self {
             predicate_type: statement.predicate_type.clone(),
             subjects,
-            checks: Vec::new(),
+            predicate: statement.predicate.clone(),
+            correctness: Vec::new(),
+            attestation: Vec::new(),
             workload: None,
         }
     }
 
-    /// Records a check rather than short-circuiting, so one failure does not
-    /// hide the others.
-    pub fn check(&mut self, description: &str, outcome: Result<(), impl Display>) {
-        self.checks.push(Check {
-            description: description.to_string(),
-            failure: outcome.err().map(|error| format!("{error:#}")),
-        });
+    /// Records a structural/completeness check (envelope format, statement
+    /// schema, subject coverage).
+    pub fn check_correctness(&mut self, description: &str, outcome: Result<(), impl Display>) {
+        self.correctness.push(Check::new(description, outcome));
+    }
+
+    /// Records a cryptographic/attestation check (artifact digest match,
+    /// Confidential Space token, workload image identity).
+    pub fn check_attestation(&mut self, description: &str, outcome: Result<(), impl Display>) {
+        self.attestation.push(Check::new(description, outcome));
     }
 
     /// Records who produced the artifacts, once a token has vouched for them.
@@ -74,29 +98,44 @@ impl Report {
     }
 
     pub fn write(&self, w: &mut impl Write) -> std::io::Result<()> {
-        writeln!(w, "Statement")?;
+        writeln!(w, "📜 Statement")?;
         writeln!(w, "  predicate type  {}", self.predicate_type)?;
         for subject in &self.subjects {
             writeln!(w, "  subject         {subject}")?;
         }
-        writeln!(w, "Checks")?;
-        for Check { description, failure } in &self.checks {
-            match failure {
-                None => writeln!(w, "  ✅ {description}")?,
-                Some(found) => writeln!(w, "  ❌ {description}: {found}")?,
+
+        if !self.predicate.is_empty() {
+            writeln!(w, "\n📊 Predicate")?;
+            for (key, value) in &self.predicate {
+                match value {
+                    Value::String(s) => writeln!(w, "  {key:<14}  {s}")?,
+                    other => writeln!(w, "  {key:<14}  {other}")?,
+                }
             }
         }
+
+        writeln!(w, "\n🔍 Correctness")?;
+        for check in &self.correctness {
+            check.write(w)?;
+        }
+
+        writeln!(w, "\n🔐 Attestation")?;
+        for check in &self.attestation {
+            check.write(w)?;
+        }
+        if let Some(workload) = &self.workload {
+            writeln!(w, "     ├── image      {}", workload.image_reference.whole())?;
+            writeln!(w, "     ├── digest     {}", workload.image_digest)?;
+            writeln!(w, "     └── issued at  {}", workload.issued_at)?;
+        }
+
+        writeln!(w)?;
         match (self.failed(), &self.workload) {
-            (0, Some(workload)) => {
-                writeln!(w, "VERIFIED")?;
-                writeln!(w, "  produced by  {}", workload.image_reference.whole())?;
-                writeln!(w, "  image        {}", workload.image_digest)?;
-                writeln!(w, "  attested at  {}", workload.issued_at)?;
-            }
+            (0, Some(_)) => writeln!(w, "✅ VERIFIED")?,
             // Unreachable while the assertion is itself a check, but a missing
             // workload must never read as success.
-            (0, None) => writeln!(w, "NOT VERIFIED (no attestation)")?,
-            (failed, _) => writeln!(w, "NOT VERIFIED ({failed} check(s) failed)")?,
+            (0, None) => writeln!(w, "❌ NOT VERIFIED (no attestation)")?,
+            (failed, _) => writeln!(w, "❌ NOT VERIFIED ({failed} check(s) failed)")?,
         }
         Ok(())
     }
@@ -110,15 +149,19 @@ impl Report {
     }
 
     fn failed(&self) -> usize {
-        self.checks.iter().filter(|check| check.failure.is_some()).count()
+        self.correctness
+            .iter()
+            .chain(&self.attestation)
+            .filter(|check| check.failure.is_some())
+            .count()
     }
 }
 
 /// Reports a failure that stopped any check running, in the shape of a failed
 /// check, so tampering never looks like a crash.
 pub fn fatal(error: anyhow::Error) -> ExitCode {
-    println!("Checks");
+    println!("🔍 Correctness");
     println!("  ❌ {error:#}");
-    println!("NOT VERIFIED");
+    println!("\n❌ NOT VERIFIED");
     ExitCode::FAILURE
 }

@@ -1,0 +1,10 @@
+gcp_project_id      = "oak-examples-477357"
+zone                = "us-east5-a"
+instance_name       = "trusted-eval"
+machine_type        = "a3-highgpu-1g"
+accelerator_type    = "nvidia-h100-80gb"
+accelerator_count   = 1
+boot_disk_size      = 100
+use_spot_vm         = true
+benchmark           = "agentdojo"
+results_bucket_name = "oak-trusted-agent"

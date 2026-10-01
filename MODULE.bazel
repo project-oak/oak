@@ -252,16 +252,22 @@ oci.pull(
 )
 use_repo(oci, "ollama", "ollama_linux_amd64")
 
-# Model weights for the oak_trusted_agent model and eval images: gemma4:e2b-it-qat.
-# To update: `curl -s https://registry.ollama.ai/v2/<model>/manifests/<tag> | sha256sum`.
+# Model weights for the oak_trusted_agent model and eval images.
+# To update: `curl -sL https://registry.ollama.ai/v2/<model>/manifests/<tag> | sha256sum`.
 ollama = use_extension("//oak_trusted_agent/model:extensions.bzl", "ollama", dev_dependency = True)
+ollama.model(
+    name = "ollama_gemma4_31b_it_qat",
+    model = "library/gemma4",
+    sha256 = "e0812a55773bfeac846b2d605b4d93638b8dfa7119d9587f3d91475afc78185e",
+    tag = "31b-it-qat",
+)
 ollama.model(
     name = "ollama_gemma4_e2b_it_qat",
     model = "library/gemma4",
     sha256 = "07ea59a474013479c8b6b802bef095c40e964a1d776ba02f264c0e30e1aede0c",
     tag = "e2b-it-qat",
 )
-use_repo(ollama, "ollama_gemma4_e2b_it_qat")
+use_repo(ollama, "ollama_gemma4_31b_it_qat", "ollama_gemma4_e2b_it_qat")
 
 oak_toolchains = use_extension("//bazel:extensions.bzl", "oak_toolchains")
 use_repo(oak_toolchains, "oak_cc_toolchain_sysroot", "umoci")
