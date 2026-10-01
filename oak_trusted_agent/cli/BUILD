@@ -37,6 +37,13 @@ rust_binary(
 )
 
 rust_test(
+    name = "oak_trusted_agent_cli_unit_test",
+    size = "small",
+    crate = ":oak_trusted_agent_cli",
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+rust_test(
     name = "cli_test",
     size = "small",
     srcs = ["tests/cli_test.rs"],

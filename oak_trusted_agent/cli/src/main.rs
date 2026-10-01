@@ -31,7 +31,12 @@
 //! attestation can't be verified, the proxy client closes the connection and
 //! `open` fails.
 
-use std::{io::Write, process::ExitCode, time::Duration};
+use std::{
+    ffi::OsStr,
+    io::{IsTerminal, Write},
+    process::ExitCode,
+    time::Duration,
+};
 
 use anyhow::{Context, anyhow};
 use clap::{Parser, Subcommand};
@@ -57,10 +62,59 @@ const CLOSE_TIMEOUT: Duration = Duration::from_secs(10);
 const CLOSE_COMMAND: &str = "close";
 
 /// Prompt shown before each user message.
-const USER_PROMPT: &str = "user$ ";
+const USER_PROMPT: &str = "user$";
 
 /// Label printed before each agent reply.
-const AGENT_LABEL: &str = "trusted-agent$ ";
+const AGENT_LABEL: &str = "trusted-agent$";
+
+/// ANSI escape sequences, which terminals interpret as text styles instead of
+/// printing them: `ESC [ <n> m` turns on style `n`, and `ESC [ 0 m` turns all
+/// styles off again (`ESC` is the byte `0x1b`).
+const BLUE: &str = "\x1b[34m";
+const GREEN: &str = "\x1b[32m";
+const ITALIC: &str = "\x1b[3m";
+const RESET: &str = "\x1b[0m";
+
+/// Styles terminal output: the user prompt in blue, and the agent label in
+/// green followed by the reply in italics.
+///
+/// Nothing is styled unless stdout is a terminal, so piped or redirected output
+/// stays plain text. As https://no-color.org asks, setting `NO_COLOR` to a
+/// non-empty value turns the colors off, but not the italics.
+struct Style {
+    color: bool,
+    italic: bool,
+}
+
+impl Style {
+    fn from_env() -> Self {
+        Self::new(std::io::stdout().is_terminal(), std::env::var_os("NO_COLOR").as_deref())
+    }
+
+    /// `no_color` is the value of the `NO_COLOR` environment variable, if set.
+    fn new(terminal: bool, no_color: Option<&OsStr>) -> Self {
+        let no_color = no_color.is_some_and(|value| !value.is_empty());
+        Self { color: terminal && !no_color, italic: terminal }
+    }
+
+    fn user_prompt(&self) -> String {
+        paint(self.color, BLUE, USER_PROMPT)
+    }
+
+    fn agent_label(&self) -> String {
+        paint(self.color, GREEN, AGENT_LABEL)
+    }
+
+    fn reply(&self, reply: &str) -> String {
+        paint(self.italic, ITALIC, reply)
+    }
+}
+
+/// Wraps `text` in the escape sequence `style` if `enabled`, and returns it
+/// unchanged otherwise.
+fn paint(enabled: bool, style: &str, text: &str) -> String {
+    if enabled { format!("{style}{text}{RESET}") } else { text.to_string() }
+}
 
 #[derive(Parser, Debug)]
 #[command(author, version, about = "Command-line client for an Oak Trusted Agent")]
@@ -107,9 +161,10 @@ async fn open(agent_url: &str) -> anyhow::Result<()> {
         "Type a message and press Enter to send it. Type `{CLOSE_COMMAND}` to end the session."
     );
 
+    let style = Style::from_env();
     let mut lines = BufReader::new(tokio::io::stdin()).lines();
     loop {
-        print!("{USER_PROMPT}");
+        print!("{} ", style.user_prompt());
         std::io::stdout().flush()?;
         let Some(line) = lines.next_line().await.context("failed to read stdin")? else {
             // The input ended (e.g. Ctrl-D): close the stream like `close` does.
@@ -124,7 +179,7 @@ async fn open(agent_url: &str) -> anyhow::Result<()> {
             break;
         }
         let reply = stream.send(text.to_string()).await?;
-        println!("{AGENT_LABEL}{reply}");
+        println!("{} {}", style.agent_label(), style.reply(&reply));
     }
 
     stream.close().await;
@@ -196,5 +251,41 @@ impl AgentStream {
             while let Ok(Some(_)) = responses.message().await {}
         })
         .await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn styles_in_a_terminal() {
+        let style = Style::new(true, None);
+        assert_eq!(style.user_prompt(), "\x1b[34muser$\x1b[0m");
+        assert_eq!(style.agent_label(), "\x1b[32mtrusted-agent$\x1b[0m");
+        assert_eq!(style.reply("Hi!"), "\x1b[3mHi!\x1b[0m");
+    }
+
+    #[test]
+    fn no_styles_outside_a_terminal() {
+        let style = Style::new(false, None);
+        assert_eq!(style.user_prompt(), "user$");
+        assert_eq!(style.agent_label(), "trusted-agent$");
+        assert_eq!(style.reply("Hi!"), "Hi!");
+    }
+
+    #[test]
+    fn no_color_turns_off_colors_but_not_italics() {
+        let style = Style::new(true, Some(OsStr::new("1")));
+        assert_eq!(style.user_prompt(), "user$");
+        assert_eq!(style.agent_label(), "trusted-agent$");
+        assert_eq!(style.reply("Hi!"), "\x1b[3mHi!\x1b[0m");
+    }
+
+    #[test]
+    fn empty_no_color_is_ignored() {
+        let style = Style::new(true, Some(OsStr::new("")));
+        assert_eq!(style.user_prompt(), "\x1b[34muser$\x1b[0m");
+        assert_eq!(style.agent_label(), "\x1b[32mtrusted-agent$\x1b[0m");
     }
 }

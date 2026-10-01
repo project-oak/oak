@@ -122,6 +122,8 @@ async fn test_open_send_close() {
     assert!(stdout.contains("trusted-agent$ echo: Hello again\n"), "{stdout}");
     assert!(!stdout.contains("Ignored"), "{stdout}");
     assert!(stdout.contains("✅ Closed the stream."), "{stdout}");
+    // Stdout is a pipe here, not a terminal, so there are no color escapes.
+    assert!(!stdout.contains('\x1b'), "{stdout:?}");
 }
 
 #[tokio::test(flavor = "multi_thread")]
