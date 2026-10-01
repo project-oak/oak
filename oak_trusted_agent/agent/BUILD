@@ -28,6 +28,7 @@ rust_library(
     srcs = ["src/lib.rs"],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
+        "@oak_crates_index//:anyhow",
         "@oak_crates_index//:log",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",

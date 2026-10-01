@@ -344,6 +344,36 @@ fn parse_websocket_url(raw_url: &str) -> Result<Url, AgentError> {
     }
 }
 
+/// Adds the operator's system prompt to a `GenerateContent`-style model
+/// request from the sandboxed agent.
+///
+/// The system prompt goes before any `systemInstruction` the agent set itself,
+/// so that the deployment's prompt (e.g. the user context of a demo) and the
+/// agent's own instruction both reach the model. `systemInstruction` may be a
+/// plain string or a `Content` object with text `parts`, as in the Gemini API.
+pub fn add_system_prompt(request: &str, system_prompt: &str) -> anyhow::Result<String> {
+    use anyhow::Context;
+    use serde_json::{Value, json};
+
+    let mut request: Value = serde_json::from_str(request).context("invalid model request JSON")?;
+    let object = request.as_object_mut().context("model request is not a JSON object")?;
+    let instruction = match object.remove("systemInstruction") {
+        None | Some(Value::Null) => json!(system_prompt),
+        Some(Value::String(text)) => json!(format!("{system_prompt}\n\n{text}")),
+        Some(Value::Object(mut content)) => {
+            let mut parts = vec![json!({"text": system_prompt})];
+            if let Some(Value::Array(existing)) = content.remove("parts") {
+                parts.extend(existing);
+            }
+            content.insert("parts".to_string(), Value::Array(parts));
+            Value::Object(content)
+        }
+        Some(other) => anyhow::bail!("unsupported systemInstruction: {other}"),
+    };
+    object.insert("systemInstruction".to_string(), instruction);
+    Ok(request.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use googletest::prelude::*;
@@ -546,5 +576,47 @@ mod tests {
                 String::from_utf8_lossy(json)
             );
         }
+    }
+
+    #[googletest::test]
+    fn test_add_system_prompt_without_instruction() {
+        let request = add_system_prompt(r#"{"model": "m", "contents": []}"#, "Be kind.").unwrap();
+        let request: serde_json::Value = serde_json::from_str(&request).unwrap();
+        expect_that!(request["systemInstruction"], eq(&serde_json::json!("Be kind.")));
+        expect_that!(request["model"], eq(&serde_json::json!("m")));
+    }
+
+    #[googletest::test]
+    fn test_add_system_prompt_before_string_instruction() {
+        let request =
+            add_system_prompt(r#"{"systemInstruction": "Use tools."}"#, "Be kind.").unwrap();
+        let request: serde_json::Value = serde_json::from_str(&request).unwrap();
+        expect_that!(
+            request["systemInstruction"],
+            eq(&serde_json::json!("Be kind.\n\nUse tools."))
+        );
+    }
+
+    #[googletest::test]
+    fn test_add_system_prompt_before_content_instruction() {
+        let request = add_system_prompt(
+            r#"{"systemInstruction": {"role": "system", "parts": [{"text": "Use tools."}]}}"#,
+            "Be kind.",
+        )
+        .unwrap();
+        let request: serde_json::Value = serde_json::from_str(&request).unwrap();
+        expect_that!(
+            request["systemInstruction"],
+            eq(&serde_json::json!({
+                "role": "system",
+                "parts": [{"text": "Be kind."}, {"text": "Use tools."}],
+            }))
+        );
+    }
+
+    #[googletest::test]
+    fn test_add_system_prompt_rejects_invalid_request() {
+        expect_that!(add_system_prompt("not json", "Be kind."), err(anything()));
+        expect_that!(add_system_prompt(r#"{"systemInstruction": 1}"#, "Be kind."), err(anything()));
     }
 }

@@ -39,11 +39,11 @@ use clap::Parser;
 use oak_grpc::oak::trusted_agent::v1::trusted_agent_service_server::TrustedAgentServiceServer;
 use oak_trusted_agent_lib::{
     AgentError, ModelConfig, ModelConfigProvider, ModelProxyPlan, ProcessSpawner, ProxyBinaryPaths,
-    ProxyProcessSpec, plan_mcp_proxies, start_proxy_mesh,
+    ProxyProcessSpec, add_system_prompt, plan_mcp_proxies, start_proxy_mesh,
 };
 use oak_trusted_agent_sandbox::{
-    AgentSandbox, HostConfig, McpToolBackend, ModelInfo, ModelProvider, MultiToolBackend,
-    OllamaModelBackend, ToolBackend,
+    AgentSandbox, HostConfig, McpToolBackend, ModelBackend, ModelInfo, ModelProvider,
+    MultiToolBackend, OllamaModelBackend, ToolBackend,
 };
 use oak_trusted_agent_server::TrustedAgentServiceImpl;
 use tokio::{
@@ -106,8 +106,9 @@ struct Args {
     #[arg(long, default_value_t = 8090)]
     mcp_base_port: u16,
 
-    /// Optional URL from which the agent host fetches the system prompt at
-    /// startup.
+    /// Optional URL from which the agent host fetches a system prompt at
+    /// startup. The host adds it to every model request from the sandbox,
+    /// before the agent's own system instruction.
     #[arg(long, env = "SYSTEM_PROMPT_URL")]
     system_prompt_url: Option<String>,
 
@@ -159,6 +160,19 @@ fn fetch_url(url: &str) -> anyhow::Result<Vec<u8>> {
         Ok(bytes)
     };
     fetch().with_context(|| format!("fetching {url}"))
+}
+
+/// Model backend that adds the operator's system prompt to every request
+/// before passing it on.
+struct SystemPromptModelBackend<B> {
+    system_prompt: String,
+    inner: B,
+}
+
+impl<B: ModelBackend> ModelBackend for SystemPromptModelBackend<B> {
+    fn generate_content(&self, request: &str) -> anyhow::Result<String> {
+        self.inner.generate_content(&add_system_prompt(request, &self.system_prompt)?)
+    }
 }
 
 /// Connects to the MCP server at `url`, retrying until
@@ -229,6 +243,16 @@ async fn main() -> anyhow::Result<()> {
     let model_config = ModelConfig::from_json(&model_config_bytes)
         .with_context(|| format!("parsing model config from {}", args.model_config_url))?;
     log::info!("fetched model config from {}: {:?}", args.model_config_url, model_config);
+    let system_prompt = match &args.system_prompt_url {
+        Some(url) => {
+            let bytes = fetch_url(url).context("loading system prompt")?;
+            let prompt = String::from_utf8(bytes)
+                .with_context(|| format!("system prompt from {url} is not valid UTF-8"))?;
+            log::info!("fetched system prompt from {url} ({} bytes)", prompt.len());
+            Some(prompt)
+        }
+        None => None,
+    };
     ensure!(
         model_config.provider == ModelConfigProvider::Ollama,
         "model provider {:?} is not supported yet; only the Ollama backend is available",
@@ -260,10 +284,9 @@ async fn main() -> anyhow::Result<()> {
     let local_mcp_urls: Vec<String> =
         mcp_plans.iter().map(|plan| plan.local_mcp_url().to_string()).collect();
     log::info!(
-        "started oak_proxy mesh: model_url={}, local_mcp_urls=[{}], system_prompt_url={:?}",
+        "started oak_proxy mesh: model_url={}, local_mcp_urls=[{}]",
         model_plan.local_model_url(),
-        local_mcp_urls.join(", "),
-        args.system_prompt_url
+        local_mcp_urls.join(", ")
     );
 
     let mut proxy_tasks = JoinSet::new();
@@ -278,15 +301,19 @@ async fn main() -> anyhow::Result<()> {
     for url in &local_mcp_urls {
         tool_backends.push(Box::new(connect_mcp_server(url).await?));
     }
+    let ollama_backend =
+        OllamaModelBackend::new(model_plan.local_model_url().as_str(), BACKEND_TIMEOUT);
     let host_config = HostConfig {
         model_info: ModelInfo {
             name: model_config.name.clone(),
             provider: to_sandbox_provider(model_config.provider),
         },
-        model_backend: Arc::new(OllamaModelBackend::new(
-            model_plan.local_model_url().as_str(),
-            BACKEND_TIMEOUT,
-        )),
+        model_backend: match system_prompt {
+            Some(system_prompt) => {
+                Arc::new(SystemPromptModelBackend { system_prompt, inner: ollama_backend })
+            }
+            None => Arc::new(ollama_backend),
+        },
         tool_backend: Arc::new(MultiToolBackend::new(tool_backends)?),
     };
     let service = TrustedAgentServiceImpl::new(sandbox, host_config);
