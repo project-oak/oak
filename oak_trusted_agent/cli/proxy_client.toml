@@ -1,0 +1,38 @@
+#
+# Copyright 2026 The Project Oak Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# Oak Proxy client configuration template for reaching an Oak Trusted Agent
+# with oak_trusted_agent_cli.
+#
+# Copy this file and replace the placeholders:
+#   - server_proxy_url: the `server_proxy_url` output of
+#     oak_trusted_agent/agent/terraform.
+#   - root_certificate_pem_path: the absolute path of
+#     oak_attestation_gcp/data/confidential_space_root.pem.
+#   - container_reference_prefix: the digest of the agent image that the client
+#     trusts, as printed by `bazel run //oak_trusted_agent/agent:push`.
+
+listen_address = "127.0.0.1:8080"
+server_proxy_url = "ws://[AGENT_EXTERNAL_IP]:8080"
+attestation_generators = []
+# The attestation received from the agent is saved here, whether or not it
+# passes verification.
+attestation_output_file = "/tmp/agent_attestation.binpb"
+
+[[attestation_verifiers]]
+type = "confidential_space"
+root_certificate_pem_path = "[PATH_TO_OAK_REPO]/oak_attestation_gcp/data/confidential_space_root.pem"
+container_reference_prefix = "us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/agent@sha256:[AGENT_IMAGE_DIGEST]"
