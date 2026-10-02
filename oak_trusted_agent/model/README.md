@@ -33,9 +33,10 @@ jq -r '.manifests[0].digest' bazel-bin/oak_trusted_agent/model/image_gemma4_31b_
 
 ## Deploying to Confidential Space
 
-`terraform/` provisions a Confidential Space VM, a least-privilege workload
-service account, and a firewall rule opening TCP port `8080` for the Oak Session
-WebSocket tunnel.
+`terraform/` provisions a Confidential Space VM with an NVIDIA H100 Confidential
+GPU (`a3-highgpu-1g` in `us-east5-a`) by default, along with a least-privilege
+workload service account and a firewall rule opening TCP port `8080` for the Oak
+Session WebSocket tunnel.
 
 ```shell
 bazel run --config=release //oak_trusted_agent/model:push_gemma4_31b_it_qat
@@ -47,13 +48,14 @@ terraform apply \
   -var="image_digest=us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/model/gemma4-31b-it-qat@${DIGEST}"
 ```
 
-To deploy on an NVIDIA H100 Confidential GPU (`a3-highgpu-1g`):
+To deploy on a CPU-only instance (`c3-standard-4`) for smoke testing without a
+GPU:
 
 ```shell
 terraform apply \
-  -var="zone=us-east5-a" \
-  -var="machine_type=a3-highgpu-1g" \
-  -var="accelerator_type=nvidia-h100-80gb"
+  -var="zone=us-central1-a" \
+  -var="machine_type=c3-standard-4" \
+  -var="accelerator_type=null"
 ```
 
 [Confidential Space]:

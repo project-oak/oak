@@ -6,8 +6,8 @@ variable "gcp_project_id" {
 
 variable "zone" {
   type        = string
-  description = "The GCP zone to deploy the resources in (use 'us-east5-a' for H100)."
-  default     = "us-central1-a"
+  description = "The GCP zone to deploy the resources in."
+  default     = "us-east5-a"
 }
 
 variable "instance_name" {
@@ -18,14 +18,14 @@ variable "instance_name" {
 
 variable "machine_type" {
   type        = string
-  description = "The machine type for the GCE instance (use 'a3-highgpu-1g' for H100)."
-  default     = "c3-standard-4"
+  description = "The machine type for the GCE instance."
+  default     = "a3-highgpu-1g"
 }
 
 variable "accelerator_type" {
   type        = string
   description = "Optional guest accelerator type, e.g. 'nvidia-h100-80gb'."
-  default     = null
+  default     = "nvidia-h100-80gb"
 }
 
 variable "accelerator_count" {
