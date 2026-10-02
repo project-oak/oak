@@ -115,7 +115,9 @@ echo '{"tampered": true}' >> /tmp/trusted_eval/report.jsonl
 ./oak_trusted_agent/demo/model/verify.sh /tmp/trusted_eval
 ```
 
-This fails with `❌ report.jsonl matches the digest in the statement: the file does not match its digest` and exits with `❌ NOT VERIFIED (1 check(s) failed)`.
+This fails with
+`❌ report.jsonl matches the digest in the statement: the file does not match its digest`
+and exits with `❌ NOT VERIFIED (1 check(s) failed)`.
 
 [AgentDojo]: https://github.com/ethz-spylab/agentdojo
 [Confidential Space]:

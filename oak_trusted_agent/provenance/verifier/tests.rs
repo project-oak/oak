@@ -81,7 +81,8 @@ fn report_renders_predicate_and_split_check_sections() {
     let digest = "sha256:e0812a55773bfeac846b2d605b4d93638b8dfa7119d9587f3d91475afc78185e";
     let mut report = Report::new(&signed);
     report.check_correctness("the payload is an in-toto v1 Statement", Ok::<(), &str>(()));
-    report.check_attestation("report.jsonl matches the digest in the statement", Ok::<(), &str>(()));
+    report
+        .check_attestation("report.jsonl matches the digest in the statement", Ok::<(), &str>(()));
     report.attested(Workload {
         issued_at: oak_time::Instant::from_unix_millis(1_700_000_000_000),
         image_reference: format!("example.com/eval/gemma4@{digest}").parse().unwrap(),
@@ -92,7 +93,9 @@ fn report_renders_predicate_and_split_check_sections() {
     report.write(&mut out).unwrap();
     let rendered = String::from_utf8(out).unwrap();
     assert!(rendered.contains("📜 Statement\n"));
-    assert!(rendered.contains("📊 Predicate\n  benchmark       {\"name\":\"agentdojo\"}\n  score           0.75\n"));
+    assert!(rendered.contains(
+        "📊 Predicate\n  benchmark       {\"name\":\"agentdojo\"}\n  score           0.75\n"
+    ));
     assert!(rendered.contains("🔍 Correctness\n  ✅ the payload is an in-toto v1 Statement\n"));
     assert!(rendered.contains(&format!("🔐 Attestation\n  ✅ report.jsonl matches the digest in the statement\n     ├── image      example.com/eval/gemma4@{digest}\n     ├── digest     {digest}\n")));
     assert!(rendered.ends_with("\n✅ VERIFIED\n"));
