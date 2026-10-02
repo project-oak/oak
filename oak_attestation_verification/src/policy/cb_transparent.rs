@@ -206,7 +206,9 @@ impl Policy<[u8]> for TransparentLayer1Policy {
 /// useful in the event that the reference values include a 'Skip' entry.
 ///
 /// NOTE: The ordering of the `binary_mpms` must match the ordering of the
-/// packages in the [`CbLayer2TransparentEvent`].
+/// packages in the [`CbLayer2TransparentEvent`], both in the reference values
+/// and in the endorsements: the entry at index `i` appraises the package at
+/// index `i`, so the two lists must have the same length.
 pub struct TransparentLayer2Policy {
     reference_values: CbLayer2TransparentReferenceValues,
 }
@@ -235,19 +237,28 @@ impl Policy<[u8]> for TransparentLayer2Policy {
 
         // If binary_mpms is not specified in the reference values, fall back to the
         // singular binary_mpm field in both the reference values and the endorsement.
+        // The deprecated singular reference value carries no position, so it is
+        // expanded to one entry per package.
         #[allow(deprecated)]
         let (ref_values, binary_mpms) = if self.reference_values.binary_mpms.is_empty() {
             let ref_values = self
                 .reference_values
                 .binary_mpm
                 .as_ref()
-                .map(|rv| alloc::vec![rv.clone()])
+                .map(|rv| alloc::vec![rv.clone(); event.packages.len()])
                 .unwrap_or_default();
             let binary_mpms = endorsement.binary_mpm.map(|e| alloc::vec![e]).unwrap_or_default();
             (ref_values, binary_mpms)
         } else {
             (self.reference_values.binary_mpms.clone(), endorsement.binary_mpms)
         };
+
+        anyhow::ensure!(
+            ref_values.len() == event.packages.len(),
+            "number of reference values ({}) does not match number of packages ({})",
+            ref_values.len(),
+            event.packages.len()
+        );
 
         anyhow::ensure!(
             binary_mpms.len() <= event.packages.len(),
@@ -286,24 +297,23 @@ impl Policy<[u8]> for TransparentLayer2Policy {
                 );
             }
 
-            // Iterate over reference values to validate the evidence.
-            let mut verified = false;
-            let mut matched_validity: Option<Validity> = None;
-            for ref_val in &ref_values {
-                if let Ok((expected, validity, tlog_record)) = acquire_mpm_expected_values(
-                    verification_time.into_unix_millis(),
-                    Some(matching_endorsement),
-                    ref_val,
-                ) && compare_text_value(&package.mpm_version_id, &expected).is_ok()
-                {
-                    verified = true;
-                    matched_validity = validity;
-                    package_verifications.extend(tlog_record);
-                    break;
-                }
-            }
-            anyhow::ensure!(verified, "package {} could not be verified", package.mpm_version_id);
-            package_validities.push(matched_validity);
+            // The reference value at the same index appraises this package.
+            // Searching the whole list instead lets a `Skip` entry meant for one
+            // position satisfy every other package, and retries a package against
+            // the remaining entries once its own endorsement has failed to verify.
+            let (expected, validity, tlog_record) = acquire_mpm_expected_values(
+                verification_time.into_unix_millis(),
+                Some(matching_endorsement),
+                &ref_values[i],
+            )
+            .with_context(|| {
+                alloc::format!("acquiring expected values for package {}", package.mpm_version_id)
+            })?;
+            compare_text_value(&package.mpm_version_id, &expected)
+                .with_context(|| alloc::format!("verifying package {}", package.mpm_version_id))?;
+
+            package_verifications.extend(tlog_record);
+            package_validities.push(validity);
         }
 
         let validity = intersect_all_validity(package_validities);
@@ -1103,5 +1113,86 @@ mod tests {
 
         let result = result.expect("verification should succeed");
         assert!(get_validity(&result).is_none(), "skip-only policy should not set validity");
+    }
+
+    /// A `Skip` reference value only covers the package at its own index: the
+    /// package at another index must still satisfy the reference value
+    /// configured for that position.
+    #[test]
+    #[allow(deprecated)]
+    fn transparent_layer2_skip_ref_value_does_not_cover_other_packages_fails() {
+        use oak_proto_rust::oak::attestation::v1::{
+            MpmReferenceValue, MpmVersionIds, SkipVerification,
+            mpm_reference_value::Type as MrvType,
+        };
+
+        let event = CbLayer2TransparentEvent {
+            packages: vec![
+                MpmPackage { mpm_version_id: "unpinned/9.9".into(), ..Default::default() },
+                MpmPackage { mpm_version_id: "pkg_b/2.0".into(), ..Default::default() },
+            ],
+        };
+        let evidence = encode_event_proto(
+            "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
+            &event,
+        );
+
+        // The first package is pinned to a specific version, the second is
+        // skipped.
+        let reference_values = CbLayer2TransparentReferenceValues {
+            binary_mpm: None,
+            binary_mpms: vec![
+                MpmReferenceValue {
+                    r#type: Some(MrvType::Versions(MpmVersionIds {
+                        versions: vec!["pkg_a/1.0".into()],
+                    })),
+                },
+                MpmReferenceValue { r#type: Some(MrvType::Skip(SkipVerification {})) },
+            ],
+        };
+        let policy = TransparentLayer2Policy::new(&reference_values);
+
+        let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
+
+        assert!(result.is_err(), "the pinned package must not be satisfied by the Skip entry");
+    }
+
+    /// Every reference value must be appraised: a prover cannot drop a package
+    /// and have the remaining one stand in for the missing reference value.
+    #[test]
+    #[allow(deprecated)]
+    fn transparent_layer2_fewer_packages_than_ref_values_fails() {
+        use oak_proto_rust::oak::attestation::v1::{
+            MpmReferenceValue, MpmVersionIds, mpm_reference_value::Type as MrvType,
+        };
+
+        let event = CbLayer2TransparentEvent {
+            packages: vec![MpmPackage { mpm_version_id: "pkg_a/1.0".into(), ..Default::default() }],
+        };
+        let evidence = encode_event_proto(
+            "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
+            &event,
+        );
+
+        let reference_values = CbLayer2TransparentReferenceValues {
+            binary_mpm: None,
+            binary_mpms: vec![
+                MpmReferenceValue {
+                    r#type: Some(MrvType::Versions(MpmVersionIds {
+                        versions: vec!["pkg_a/1.0".into()],
+                    })),
+                },
+                MpmReferenceValue {
+                    r#type: Some(MrvType::Versions(MpmVersionIds {
+                        versions: vec!["pkg_b/2.0".into()],
+                    })),
+                },
+            ],
+        };
+        let policy = TransparentLayer2Policy::new(&reference_values);
+
+        let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
+
+        assert!(result.is_err(), "a missing package must not pass verification");
     }
 }
