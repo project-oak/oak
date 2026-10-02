@@ -72,11 +72,13 @@ const AGENT_LABEL: &str = "trusted-agent$";
 /// styles off again (`ESC` is the byte `0x1b`).
 const BLUE: &str = "\x1b[34m";
 const GREEN: &str = "\x1b[32m";
+// Bright green, which terminals show as a lighter shade of `GREEN`.
+const LIGHT_GREEN: &str = "\x1b[92m";
 const ITALIC: &str = "\x1b[3m";
 const RESET: &str = "\x1b[0m";
 
 /// Styles terminal output: the user prompt in blue, and the agent label in
-/// green followed by the reply in italics.
+/// green followed by the reply in light green italics.
 ///
 /// Nothing is styled unless stdout is a terminal, so piped or redirected output
 /// stays plain text. As https://no-color.org asks, setting `NO_COLOR` to a
@@ -106,7 +108,8 @@ impl Style {
     }
 
     fn reply(&self, reply: &str) -> String {
-        paint(self.italic, ITALIC, reply)
+        let style = if self.color { format!("{ITALIC}{LIGHT_GREEN}") } else { ITALIC.to_string() };
+        paint(self.italic, &style, reply)
     }
 }
 
@@ -263,7 +266,7 @@ mod tests {
         let style = Style::new(true, None);
         assert_eq!(style.user_prompt(), "\x1b[34muser$\x1b[0m");
         assert_eq!(style.agent_label(), "\x1b[32mtrusted-agent$\x1b[0m");
-        assert_eq!(style.reply("Hi!"), "\x1b[3mHi!\x1b[0m");
+        assert_eq!(style.reply("Hi!"), "\x1b[3m\x1b[92mHi!\x1b[0m");
     }
 
     #[test]
@@ -287,5 +290,6 @@ mod tests {
         let style = Style::new(true, Some(OsStr::new("")));
         assert_eq!(style.user_prompt(), "\x1b[34muser$\x1b[0m");
         assert_eq!(style.agent_label(), "\x1b[32mtrusted-agent$\x1b[0m");
+        assert_eq!(style.reply("Hi!"), "\x1b[3m\x1b[92mHi!\x1b[0m");
     }
 }
