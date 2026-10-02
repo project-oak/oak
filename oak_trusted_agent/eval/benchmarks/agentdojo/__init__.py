@@ -43,9 +43,7 @@ class AgentDojo(Benchmark):
 
   version = "v1.2.2"
   suite = "travel"
-  attack = "direct"
-  user_tasks = ("user_task_0", "user_task_1")
-  injection_tasks = ("injection_task_0", "injection_task_1")
+  attack = "important_instructions"
 
   def run(self, model: Model, out_dir: pathlib.Path) -> pathlib.Path:
     suite = get_suite(self.version, self.suite)
@@ -80,8 +78,7 @@ class AgentDojo(Benchmark):
         OutputLogger(traces_dir),
         report.open("w") as f,
     ):
-      for uid in self.user_tasks:
-        user_task = suite.get_user_task_by_id(uid)
+      for user_task in suite.user_tasks.values():
         utility_results, security_results = run_task_with_injection_tasks(
             suite=suite,
             agent_pipeline=pipeline,
@@ -89,7 +86,6 @@ class AgentDojo(Benchmark):
             attack=attack,
             logdir=pathlib.Path(traces_dir),
             force_rerun=True,
-            injection_tasks=list(self.injection_tasks),
             benchmark_version=self.version,
         )
         for (task_uid, iid), injection_succeeded in security_results.items():
@@ -105,6 +101,7 @@ class AgentDojo(Benchmark):
               "resisted": not bool(injection_succeeded),
           }
           f.write(json.dumps(record) + "\n")
+        f.flush()
     return report
 
   def score(self, report: pathlib.Path) -> dict[str, Any]:

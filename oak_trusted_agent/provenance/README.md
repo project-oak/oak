@@ -41,7 +41,26 @@ signer \
 Outside a TEE, pass `--no-attestation` to emit the statement with an empty
 `assertions` map. The verifier rejects it.
 
-## Verifying
+## Reading and verifying
+
+```shell
+reader --statement /out/signed_statement.json
+```
+
+```text
+── 📜 Statement ────────────────────────────────────────────────────────────────
+  predicate type   https://project-oak.github.io/oak/trusted_agent/eval/v1
+  subject          report.jsonl       sha256:9f86…
+  subject          gemma4:31b-it-qat  sha256:e081…
+
+── 📊 Predicate ────────────────────────────────────────────────────────────────
+  benchmark        agentdojo v1.2.2
+  model            gemma4:31b-it-qat (30.7B, Q4_0, temperature=0, seed=0)
+  run              2026-10-02T09:17:54Z → 2026-10-02T10:38:51Z
+  detail
+     ├── attack_success_rate   0.0071
+     └── utility_rate          0.85
+```
 
 ```shell
 verifier \
@@ -54,32 +73,15 @@ verifier \
 ```
 
 ```text
-📜 Statement
-  predicate type  https://project-oak.github.io/oak/trusted_agent/eval/v1
-  subject         report.jsonl (sha256:9f86…)
-  subject         gemma4:31b-it-qat (sha256:e081…)
-
-📊 Predicate
-  benchmark       {"name":"agentdojo","version":"v1.2.2"}
-  model           {"name":"gemma4:31b-it-qat",…}
-  score           0.75
-  detail          {"suite":"travel","attack":"direct",…}
-  run             {"started_at":"…","finished_at":"…"}
-
-🔍 Correctness
-  ✅ the envelope declares the in-toto media type
-  ✅ the payload is an in-toto v1 Statement
-  ✅ the predicate type is the expected one
-  ✅ every subject was re-hashed or waived
-
-🔐 Attestation
-  ✅ report.jsonl matches the digest in the statement
-  ✅ a Confidential Space token binds this exact statement
-  ✅ the workload image is the expected one
-     ├── image      us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/eval/gemma4-31b-it-qat@sha256:dead…
+── 🔐 Attestation ──────────────────────────────────────────────────────────────
+  ✅ Subject report.jsonl matches the digest in the statement
+  ✅ A Confidential Space token binds this exact statement
+  ✅ The workload image is the expected one
+     ├── image      us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/eval/gemma4-31b-it-qat
      ├── digest     sha256:dead…
      └── issued at  2026-10-01T21:45:12Z
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ VERIFIED
 ```
 

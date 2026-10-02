@@ -18,6 +18,27 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
 
 package(licenses = ["notice"])
 
+# Decodes and displays the in-toto Statement and Predicate from a signed envelope.
+rust_binary(
+    name = "oak_trusted_agent_provenance_reader",
+    srcs = ["reader.rs"],
+    crate_root = "reader.rs",
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//oak_trusted_agent/provenance/common",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:serde_json",
+    ],
+)
+
+rust_test(
+    name = "oak_trusted_agent_provenance_reader_test",
+    crate = ":oak_trusted_agent_provenance_reader",
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Runs anywhere, including on a laptop with no TEE.
 rust_binary(
     name = "oak_trusted_agent_provenance_verifier",
@@ -40,7 +61,6 @@ rust_binary(
         "@oak_crates_index//:jwt",
         "@oak_crates_index//:oci-spec",
         "@oak_crates_index//:prost",
-        "@oak_crates_index//:serde_json",
     ],
 )
 

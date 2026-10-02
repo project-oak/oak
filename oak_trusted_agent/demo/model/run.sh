@@ -60,7 +60,7 @@ terraform -chdir="${TF_DIR}" apply -auto-approve \
   -var="image_digest=${IMAGE_REPO}@${DIGEST}"
 
 echo "==> Waiting for signed evaluation bundle at ${GCS_PREFIX}/signed.json..."
-for ((i = 1; i <= 240; i++)); do
+for ((i = 1; i <= 900; i++)); do
   if gcloud storage ls "${GCS_PREFIX}/signed.json" >/dev/null 2>&1; then
     echo "==> Evaluation complete! Bundle uploaded to ${GCS_PREFIX}/"
     gcloud storage ls -l "${GCS_PREFIX}/"

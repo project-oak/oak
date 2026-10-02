@@ -13,6 +13,7 @@ verify the result offline before trusting the model.
 | `terraform.tfvars` | Terraform configuration targeting an `a3-highgpu-1g` (NVIDIA H100 80 GB) Confidential Space VM in `us-east5-a` for the `agentdojo` benchmark |
 | `run.sh`           | Builds & pushes the reproducible `gemma4:31b-it-qat` eval image, runs the benchmark in Confidential Space, and tears down the H100 VM        |
 | `get.sh`           | Downloads a published evaluation bundle from `gs://oak-trusted-agent/eval/gemma4-31b-it-qat/` into a local directory                         |
+| `read.sh`          | Decodes and displays the in-toto `Statement` and `Predicate` from `signed.json`                                                              |
 | `verify.sh`        | Runs the provenance verifier against the downloaded evaluation bundle                                                                        |
 
 ## Step 1: Run the attested evaluation in Confidential Space (Pre-demo)
@@ -49,45 +50,52 @@ To run the fast pipeline smoke test (`hello_world`) as well:
 ./oak_trusted_agent/demo/model/run.sh hello_world
 ```
 
-## Step 2: Download & verify the published evaluation (Live / Recorded Demo)
+## Step 2: Download, read, & verify the published evaluation (Live / Recorded Demo)
 
-Anyone can download the published evaluation bundle to `/tmp/trusted_eval/` and
-verify it locally in a few seconds without needing a GPU or TEE:
+Anyone can download the published evaluation bundle to `/tmp/trusted_eval/`,
+read its claim, and verify it locally in a few seconds without needing a GPU or
+TEE:
 
 ```shell
 ./oak_trusted_agent/demo/model/get.sh /tmp/trusted_eval
+./oak_trusted_agent/demo/model/read.sh /tmp/trusted_eval
+```
+
+Expected output of `read.sh`:
+
+```text
+── 📜 Statement ────────────────────────────────────────────────────────────────
+  predicate type   https://project-oak.github.io/oak/trusted_agent/eval/v1
+  subject          report.jsonl       sha256:debef058151c1e65638dfdcea51e73cf107eeb9d5589c62781aee1ae892c1235
+  subject          gemma4:31b-it-qat  sha256:e0812a55773bfeac846b2d605b4d93638b8dfa7119d9587f3d91475afc78185e
+
+── 📊 Predicate ────────────────────────────────────────────────────────────────
+  benchmark        agentdojo v1.2.2
+  model            gemma4:31b-it-qat (30.7B, Q4_0, temperature=0, seed=0)
+  run              2026-10-02T09:17:54Z → 2026-10-02T10:38:51Z
+  detail
+     ├── attack_success_rate   0.0071
+     └── utility_rate          0.85
+```
+
+Then cryptographically verify the bundle:
+
+```shell
 ./oak_trusted_agent/demo/model/verify.sh /tmp/trusted_eval
 ```
 
-Expected output:
+Expected output of `verify.sh`:
 
 ```text
-📜 Statement
-  predicate type  https://project-oak.github.io/oak/trusted_agent/eval/v1
-  subject         report.jsonl (sha256:e3238df964872e37eb974e8057c4cb2ab83bb7db18707d4aefc8844b277bbbc7)
-  subject         gemma4:31b-it-qat (sha256:e0812a55773bfeac846b2d605b4d93638b8dfa7119d9587f3d91475afc78185e)
+── 🔐 Attestation ──────────────────────────────────────────────────────────────
+  ✅ Subject report.jsonl matches the digest in the statement
+  ✅ A Confidential Space token binds this exact statement
+  ✅ The workload image is the expected one
+     ├── image      us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/eval/gemma4-31b-it-qat
+     ├── digest     sha256:0b0d5ef834a6c06bd59697ebdb1c16421fb8ff8fc3541cb714f93d7cfd747528
+     └── issued at  2026-10-02T10:39:01.000Z
 
-📊 Predicate
-  benchmark       {"name":"agentdojo","version":"v1.2.2"}
-  model           {"name":"gemma4:31b-it-qat","digest":"sha256:e0812a55773bfeac846b2d605b4d93638b8dfa7119d9587f3d91475afc78185e","parameters":"30.7B","quantization":"Q4_0","sampling":{"temperature":0.0,"seed":0}}
-  score           1.0
-  detail          {"suite":"travel","attack":"direct","trials":4,"resisted":4,"attack_success_rate":0.0,"utility_rate":1.0}
-  run             {"started_at":"2026-10-01T22:45:46Z","finished_at":"2026-10-01T22:48:08Z"}
-
-🔍 Correctness
-  ✅ the envelope declares the in-toto media type
-  ✅ the payload is an in-toto v1 Statement
-  ✅ the predicate type is the expected one
-  ✅ every subject was re-hashed or waived
-
-🔐 Attestation
-  ✅ report.jsonl matches the digest in the statement
-  ✅ a Confidential Space token binds this exact statement
-  ✅ the workload image is the expected one
-     ├── image      us-east5-docker.pkg.dev/oak-examples-477357/oak-trusted-agent/eval/gemma4-31b-it-qat@sha256:8298158ab52767d7b9ce3b190b38319a8a39fe5a43d57cf420f4d51801a83fed
-     ├── digest     sha256:8298158ab52767d7b9ce3b190b38319a8a39fe5a43d57cf420f4d51801a83fed
-     └── issued at  2026-10-01T22:48:17.000Z
-
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ VERIFIED
 ```
 
@@ -95,10 +103,8 @@ Expected output:
 
 - **`📜 Statement` & `📊 Predicate`:** Shows the two artifacts covered by the
   in-toto statement (`report.jsonl` and the `gemma4:31b-it-qat` Ollama manifest
-  digest) and the benchmark score and details recorded by the harness.
-- **`🔍 Correctness`:** Confirms the envelope and in-toto v1 statement structure
-  are valid and that no subject in the statement went unaccounted for. The 19 GB
-  model weights are waived from local re-hashing
+  digest) and the benchmark details recorded by the harness. The 19 GB model
+  weights are waived from local re-hashing
   (`--unchecked-subject=gemma4:31b-it-qat`) because their layers are baked into
   the reproducible workload image verified under `🔐 Attestation`.
 - **`🔐 Attestation`:** Re-hashes the downloaded `report.jsonl` against the
@@ -108,15 +114,20 @@ Expected output:
 
 ### Step 3: Tamper-detection check
 
-To show that modifying a single byte of the report invalidates the proof:
+To show that modifying the failed trial in the report invalidates the proof:
 
 ```shell
-echo '{"tampered": true}' >> /tmp/trusted_eval/report.jsonl
+sed -i 's/"resisted": false/"resisted": true/' /tmp/trusted_eval/report.jsonl
 ./oak_trusted_agent/demo/model/verify.sh /tmp/trusted_eval
 ```
 
-This fails with
-`❌ report.jsonl matches the digest in the statement: the file does not match its digest`
+This fails with:
+
+```text
+  ❌ Subject report.jsonl matches the digest in the statement
+     └── the file does not match its digest
+```
+
 and exits with `❌ NOT VERIFIED (1 check(s) failed)`.
 
 [AgentDojo]: https://github.com/ethz-spylab/agentdojo
