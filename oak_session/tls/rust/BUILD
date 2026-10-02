@@ -42,12 +42,12 @@ rust_test(
     data = ["//oak_session/tls/testing:test_keys"],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
-        ":oak_session_tls",
         "@oak_crates_index//:futures",
         "@oak_crates_index//:rcgen",
         "@oak_crates_index//:rustls",
         "@oak_crates_index//:rustls-pemfile",
         "@oak_crates_index//:rustls-pki-types",
+        "@oak_crates_index//:thiserror",
         "@oak_crates_index//:tokio",
     ],
 )
