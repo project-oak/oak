@@ -14,10 +14,13 @@
 // limitations under the License.
 //
 
-use std::sync::Arc;
+// Included directly (rather than the reverse) so this file can stay a
+// plain `rust_test(srcs = [...])` target: the library's own source is
+// spliced in here, giving these tests white-box access to its private
+// items without requiring a `crate = ":oak_session_tls"` attribute
+// (which rules_rust does not allow combined with `srcs`).
+include!("oak_session_tls.rs");
 
-use super::*;
-use rustls_pki_types::{CertificateDer, PrivateKeyDer};
 use tokio::sync::Mutex;
 
 fn load_test_cert(path: &str) -> CertificateDer<'static> {

@@ -26,7 +26,6 @@ rust_library(
     srcs = [
         "oak_session_tls.rs",
     ],
-    compile_data = ["oak_session_tls_test.rs"],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:rcgen",
@@ -39,7 +38,7 @@ rust_library(
 
 rust_test(
     name = "oak_session_tls_test",
-    crate = ":oak_session_tls",
+    srcs = ["oak_session_tls_test.rs"],
     data = ["//oak_session/tls/testing:test_keys"],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
@@ -48,6 +47,7 @@ rust_test(
         "@oak_crates_index//:rustls",
         "@oak_crates_index//:rustls-pemfile",
         "@oak_crates_index//:rustls-pki-types",
+        "@oak_crates_index//:thiserror",
         "@oak_crates_index//:tokio",
     ],
 )
