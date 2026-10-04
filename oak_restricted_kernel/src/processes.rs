@@ -53,13 +53,17 @@ pub struct ElfExecuteable {
     binary: Binary,
 }
 
-/// Checks the ELF invariant that a loadable segment's on-disk size does not
-/// exceed its in-memory size.
+/// Checks that a loadable segment's fields from an untrusted ELF file are safe
+/// to act on in `load_segment`.
 ///
 /// `load_segment` maps `p_memsz` bytes for the segment but copies `p_filesz`
-/// bytes into it. goblin accepts a segment with `p_filesz > p_memsz`, so
-/// without this check such a segment would copy past the mapped region.
-fn validate_load_segment(phdr: &ProgramHeader) -> Result<()> {
+/// bytes into it, so `p_filesz` must not exceed `p_memsz` (goblin does not
+/// enforce this). It also reads the contents from
+/// `binary[p_offset..p_offset + p_filesz]` and maps them at
+/// `VirtAddr::new(p_vaddr)`, so the source range must lie within the file and
+/// `p_vaddr` must be canonical; otherwise those operations panic on an
+/// out-of-range slice, an arithmetic overflow, or a non-canonical address.
+fn validate_load_segment(phdr: &ProgramHeader, blob_len: usize) -> Result<()> {
     if phdr.p_filesz > phdr.p_memsz {
         return Err(anyhow!(
             "invalid ELF segment: p_filesz {} exceeds p_memsz {}",
@@ -67,6 +71,22 @@ fn validate_load_segment(phdr: &ProgramHeader) -> Result<()> {
             phdr.p_memsz
         ));
     }
+    let source_end = phdr.p_offset.checked_add(phdr.p_filesz).ok_or_else(|| {
+        anyhow!(
+            "invalid ELF segment: p_offset {} + p_filesz {} overflows",
+            phdr.p_offset,
+            phdr.p_filesz
+        )
+    })?;
+    if source_end > blob_len as u64 {
+        return Err(anyhow!(
+            "invalid ELF segment: source range ends at {} but the ELF file is {} bytes",
+            source_end,
+            blob_len
+        ));
+    }
+    VirtAddr::try_new(phdr.p_vaddr)
+        .map_err(|_| anyhow!("invalid ELF segment: non-canonical p_vaddr {:#x}", phdr.p_vaddr))?;
     Ok(())
 }
 
@@ -81,12 +101,14 @@ impl ElfExecuteable {
             })?,
         };
         // The binary is untrusted: it arrives via the host-supplied ramdisk or the
-        // `create_process` syscall. Reject segments that violate the on-disk vs
-        // in-memory size invariant here, before any of them are mapped, so
-        // `load_segment` never writes past the memory it allocates for a segment.
+        // `create_process` syscall. Validate every loadable segment here, before any
+        // of them are mapped, so `load_segment` never writes past the memory it
+        // allocates, reads past the end of the file, or maps at a non-canonical
+        // address.
+        let blob_len = elf_executeable.binary.borrow_owner().len();
         for phdr in elf_executeable.program_headers().iter().filter(|&phdr| phdr.p_type == PT_LOAD)
         {
-            validate_load_segment(phdr)?;
+            validate_load_segment(phdr, blob_len)?;
         }
         Ok(elf_executeable)
     }
@@ -134,8 +156,10 @@ impl ElfExecuteable {
         .expect("failed to allocate user memory");
 
         // Safety: we've just allocated the target memory with mmap(), and
-        // `ElfExecuteable::new` rejected any segment whose `p_filesz` exceeds its
-        // `p_memsz`, so copying `p_filesz` bytes stays within the mapped region.
+        // `ElfExecuteable::new` validated every loadable segment: `p_filesz` does not
+        // exceed `p_memsz`, so copying `p_filesz` bytes stays within the mapped
+        // region, and the source range lies within the file, so `slice` stays in
+        // bounds.
         unsafe {
             core::ptr::copy_nonoverlapping(
                 self.slice(phdr.p_offset, phdr.p_filesz).as_ptr(),
@@ -261,14 +285,69 @@ mod tests {
         ProgramHeader { p_type: PT_LOAD, p_filesz, p_memsz, ..Default::default() }
     }
 
+    // A file large enough to hold the segments built by `load_segment`, which
+    // use the default `p_offset` of 0.
+    const BLOB_LEN: usize = 0x1_0000;
+
     #[test]
     fn rejects_filesz_greater_than_memsz() {
-        assert!(validate_load_segment(&load_segment(0x2000, 0x1000)).is_err());
+        assert!(validate_load_segment(&load_segment(0x2000, 0x1000), BLOB_LEN).is_err());
     }
 
     #[test]
     fn accepts_filesz_within_memsz() {
-        assert!(validate_load_segment(&load_segment(0x1000, 0x1000)).is_ok());
-        assert!(validate_load_segment(&load_segment(0, 0x1000)).is_ok());
+        assert!(validate_load_segment(&load_segment(0x1000, 0x1000), BLOB_LEN).is_ok());
+        assert!(validate_load_segment(&load_segment(0, 0x1000), BLOB_LEN).is_ok());
+    }
+
+    #[test]
+    fn rejects_source_range_past_end_of_file() {
+        // `p_filesz <= p_memsz`, so the size check passes, but the segment's
+        // contents run past the end of the file.
+        let phdr = ProgramHeader {
+            p_type: PT_LOAD,
+            p_offset: 0x800,
+            p_filesz: 0x1000,
+            p_memsz: 0x1000,
+            ..Default::default()
+        };
+        assert!(validate_load_segment(&phdr, 0x1000).is_err());
+    }
+
+    #[test]
+    fn rejects_source_range_offset_overflow() {
+        let phdr = ProgramHeader {
+            p_type: PT_LOAD,
+            p_offset: u64::MAX,
+            p_filesz: 1,
+            p_memsz: 1,
+            ..Default::default()
+        };
+        assert!(validate_load_segment(&phdr, BLOB_LEN).is_err());
+    }
+
+    #[test]
+    fn rejects_non_canonical_vaddr() {
+        let phdr = ProgramHeader {
+            p_type: PT_LOAD,
+            p_vaddr: 0x1234_5678_9abc_def0,
+            p_filesz: 0x10,
+            p_memsz: 0x10,
+            ..Default::default()
+        };
+        assert!(validate_load_segment(&phdr, BLOB_LEN).is_err());
+    }
+
+    #[test]
+    fn accepts_segment_within_file_and_canonical_vaddr() {
+        let phdr = ProgramHeader {
+            p_type: PT_LOAD,
+            p_offset: 0x100,
+            p_filesz: 0x200,
+            p_memsz: 0x400,
+            p_vaddr: 0x40_0000,
+            ..Default::default()
+        };
+        assert!(validate_load_segment(&phdr, BLOB_LEN).is_ok());
     }
 }
