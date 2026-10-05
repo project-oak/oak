@@ -1,12 +1,13 @@
 # Trusted MCP
 
-Reusable [Model Context Protocol (MCP)] building blocks for the Trusted Agent
-Ecosystem:
+[Model Context Protocol (MCP)] server, endorsement proxy, and helpers:
 
 - [`server/`](server/README.md): Attested MCP server wrapping [Oak Functions]
-  for stateless, privacy-preserving key-value lookups inside [Confidential
-  Space], fronted by [Oak Proxy].
-- `create_lookup_data.py`: Converts structured JSON datasets into the
+  for stateless key-value lookups inside [Confidential Space], fronted by [Oak
+  Proxy].
+- [`proxy/`](proxy/README.md): HTTP proxy that checks `cosign` endorsements on
+  MCP server responses.
+- `create_lookup_data.py`: Converts JSON datasets into the
   `oak.functions.LookupDataChunk` textproto format consumed by Oak Functions.
 - `generate_reference_values.rs`: Generates a `ReferenceValuesCollection`
   protobuf pinning the Confidential Space root certificate and expected

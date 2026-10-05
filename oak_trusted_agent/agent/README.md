@@ -1,38 +1,36 @@
 # Attested agent host
 
 Runs the [Oak Trusted Agent] host inside [Confidential Space], fronted by an
-inbound [Oak Proxy] server and connected to an attested [Model server] and an
-arbitrary number of attested MCP tool servers via outbound [Oak Proxy] client
-tunnels.
+inbound [Oak Proxy] server and connected to an attested [Model server] and one
+or more attested MCP tool servers via outbound [Oak Proxy] client tunnels.
 
 ## Layout
 
 ```text
 config/                  inbound and outbound Oak Proxy TOML configurations
-src/                     agent entrypoint and proxy mesh orchestration
+src/                     agent entrypoint and proxy mesh setup
 terraform/               reusable Confidential Space deployment module
 ```
 
 ## Architecture
 
-At startup, `/bin/oak_trusted_agent` orchestrates the container's proxy mesh:
+At startup, `/bin/oak_trusted_agent` starts three sets of proxies:
 
-1. **Inbound (`oak_proxy_server`)**: Listens on `0.0.0.0:8080`, presents the
-   agent VM's Confidential Space attestation evidence during the Oak Session
-   handshake, and forwards decrypted requests to `127.0.0.1:8081`.
-2. **Outbound Model (`oak_proxy_client`)**: Listens on `127.0.0.1:11434` and
-   tunnels model inference requests over an attested Oak Session to
-   `MODEL_PROXY_URL`, verifying the peer's Confidential Space attestation
-   against `/etc/confidential_space_root.pem`.
-3. **Outbound MCP tools (`oak_proxy_client` $\times N$)**: For each
-   comma-separated WebSocket URL in `MCP_PROXY_URLS`, launches a dedicated
-   `oak_proxy_client` listening on `127.0.0.1:$((8090 + i))`, exposing local
+1. Inbound `oak_proxy_server` on `0.0.0.0:8080`, which presents the agent VM's
+   Confidential Space attestation evidence during the Oak Session handshake and
+   forwards decrypted requests to `127.0.0.1:8081`.
+2. Outbound Model `oak_proxy_client` on `127.0.0.1:11434`, which tunnels model
+   requests over an attested Oak Session to `MODEL_PROXY_URL` and checks the
+   peer's Confidential Space attestation against
+   `/etc/confidential_space_root.pem`.
+3. Outbound MCP `oak_proxy_client` processes: one per comma-separated WebSocket
+   URL in `MCP_PROXY_URLS`, listening on `127.0.0.1:$((8090 + i))` and exposing
    Streamable HTTP MCP endpoints (`http://127.0.0.1:8090/mcp`,
    `http://127.0.0.1:8091/mcp`, ...) to the sandboxed agent.
 
-Before starting the proxy mesh, it fetches the agent Wasm component and the
-model configuration over HTTP(S) (e.g. from a GCS bucket), loads the component
-into the [Oak Trusted Agent] sandbox and then serves the `TrustedAgentService`
+Before starting the proxies, it fetches the agent Wasm component and the model
+configuration over HTTP(S) (e.g. from a GCS bucket), loads the component into
+the [Oak Trusted Agent] sandbox and then serves the `TrustedAgentService`
 streaming gRPC interface ([trusted_agent.proto]) on `AGENT_LISTEN_ADDRESS`. Each
 client stream gets its own isolated Wasm instance.
 
@@ -77,17 +75,14 @@ nix develop --command bazel test //oak_trusted_agent/agent:all
 ## Building and pushing the container image
 
 ```shell
-# Build the OCI image
 nix develop --command bazel build //oak_trusted_agent/agent:image
-
-# Push the image to Artifact Registry
 nix develop --command bazel run //oak_trusted_agent/agent:push
 ```
 
 ## Deploying to Confidential Space
 
-`terraform/` can be used standalone or instantiated as a reusable Terraform
-module by composite deployments (such as `oak_trusted_agent/demo/agent/`):
+`terraform/` can be applied directly or called as a Terraform module from a
+composite deployment:
 
 ```hcl
 module "trusted_agent" {

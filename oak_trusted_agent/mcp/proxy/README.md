@@ -1,68 +1,52 @@
-# mcp_proxy
+# MCP Endorsement Proxy
 
 > [!CAUTION] Experimental code, not ready for production use.
 
-This is an HTTP proxy that intercepts responses from a target server and
-verifies if they have been cryptographically endorsed using `cosign` and stored
-in a content-addressable endorsement repository.
+HTTP proxy that intercepts MCP responses from a target server and verifies that
+their SHA-256 digests carry a valid [Cosign] endorsement in a
+content-addressable endorsement repository.
 
-## Features
+## How it works
 
-- Intercepts HTTP responses and calculates their SHA256 digest (acting as the
-  "subject").
-- Looks up endorsements from a configurable `endorsement_repository_url`
-  pointing to a content-addressable endorsement repository. The repository
-  consists of content-addressable blobs (`blobs/sha256/<hex_digest>`) and
-  digest-keyed indices that map subjects to endorsement statements and
-  statements to cosign signature bundles.
-- Locates associated endorsement entries based on the subject digest by
-  traversing the indices.
-- Caches both subject data and endorsement bundles locally in `/tmp/mcp_proxy`
-  to avoid redundant network requests.
-- Performs cryptographic signature verification of the endorsement bundle
-  against the subject using
-  [`cosign verify-blob`](https://docs.sigstore.dev/cosign/verifying/verify/#keyless-verification-using-openid-connect).
-- Enforces identity verification by checking the `cosign_identity` and
-  `cosign_oidc_issuer` specified in the configuration.
-- If no valid endorsement is found, or if verification fails, the proxy returns
-  an `HTTP 403 Forbidden` error to the client, along with instructions on how to
-  endorse the content.
+1. Hashes each matching HTTP response body with SHA-256 to obtain the subject
+   digest.
+2. Queries `endorsement_repository_url` (`blobs/sha256/<hex_digest>` and
+   digest-keyed indices mapping subjects to endorsement statements and
+   statements to Cosign signature bundles).
+3. Caches subject blobs and endorsement bundles in `/tmp/mcp_proxy`.
+4. Verifies the bundle signature against the subject with
+   [`cosign verify-blob`](https://docs.sigstore.dev/cosign/verifying/verify/#keyless-verification-using-openid-connect)
+   for the configured `cosign_identity` and `cosign_oidc_issuer`.
+5. Returns `HTTP 403 Forbidden` if no valid endorsement is found, printing the
+   `doremint blob endorse` command needed to endorse the cached response.
 
 ## Configuration
 
-The proxy requires a `config.toml` file for its settings.
-
-**Example `config.toml`:**
+Example `config.toml`:
 
 ```toml
 target_mcp_server_url = "http://localhost:8080/target_server"
 
 [[filter]]
-method = "your_rpc_method" # The MCP method to filter and verify
-cosign_identity = "your_email@example.com" # Expected email identity of the endorser
-cosign_oidc_issuer = "https://accounts.google.com" # OIDC issuer (e.g., for GitHub actions or Google accounts)
-endorsement_repository_url = "https://raw.githubusercontent.com/your_org/your_repo/refs/heads/main" # URL to your endorsement repository root
+method = "your_rpc_method"
+cosign_identity = "your_email@example.com"
+cosign_oidc_issuer = "https://accounts.google.com"
+endorsement_repository_url = "https://raw.githubusercontent.com/your_org/your_repo/refs/heads/main"
 ```
 
 ## Usage
 
-```bash
-# Ensure cosign is installed and in your PATH
-# go install github.com/sigstore/cosign/cmd/cosign@latest
+Requires `cosign` in `PATH`
+(`go install github.com/sigstore/cosign/cmd/cosign@latest`):
 
+```bash
 export RUST_LOG=trex_client=debug,mcp_proxy=debug
-bazel run //oak_trusted_agent/mcp/proxy:mcp_proxy -- --config=$PWD/oak_trusted_agent/mcp/proxy/config.toml
+bazel run //oak_trusted_agent/mcp/proxy:mcp_proxy -- --config="$PWD/oak_trusted_agent/mcp/proxy/config.toml"
 ```
 
-The proxy will start on `http://localhost:8080` (or as configured). All requests
-to this proxy that match a filter's `method` will trigger endorsement
-verification.
-
-From Gemini CLI, run `/mcp refresh` and `/mcp desc`.
-
-If the tool configuration of the MCP server was not endorsed according to the
-policy set in the config, the client will print a message similar to the
-following:
+The proxy listens on `http://localhost:8080` (or the configured address). From
+Gemini CLI, run `/mcp refresh` and `/mcp desc`. If the MCP server's tool
+configuration has not been endorsed by the expected identity, the client prints:
 
 ```text
 ✕ Error discovering tools from demo-proxy: Error POSTing to endpoint (HTTP 403): Endorsement verification failed for subject digest:
@@ -77,7 +61,4 @@ following:
   --claims="https://github.com/project-oak/oak/blob/main/docs/tr/claim/94503.md"
 ```
 
-## Dependencies
-
-- [Cosign](https://docs.sigstore.dev/cosign/overview/) (must be installed and
-  available in your system's PATH).
+[Cosign]: https://github.com/sigstore/cosign

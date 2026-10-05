@@ -1,8 +1,8 @@
 # Oak Trusted Agent Sandbox
 
-This directory contains the WebAssembly sandbox for Oak Trusted Agents. It is
-split into the agent that runs inside the sandbox and the host that runs it,
-which communicate only through the `oak:agent` WIT interface.
+WebAssembly sandbox for Oak Trusted Agents, split into the agent that runs
+inside the sandbox and the host that runs it. The two communicate only through
+the `oak:agent` WIT interface.
 
 ## Layout
 
@@ -13,9 +13,8 @@ guest/                   agent guests compiled to Wasm components
 host/                    Wasmtime host that loads and runs agent components
 ```
 
-- **Guest** (`guest/`): compiles TypeScript source code into a WebAssembly
-  Component Model module adhering to the `oak:agent/agent` interface defined in
-  `wit/agent.wit`. See [guest/README.md](guest/README.md).
-- **Host** (`host/`): the `oak_trusted_agent_sandbox` Rust crate
+- [`guest/`](guest/README.md): compiles agent source code into a WebAssembly
+  Component Model module implementing `oak:agent/agent` (`wit/agent.wit`).
+- `host/`: the `oak_trusted_agent_sandbox` Rust crate
   (`//oak_trusted_agent/sandbox/host`), which instantiates agent components with
-  Wasmtime and provides their `oak:agent/model` and `oak:agent/tools` imports.
+  Wasmtime and supplies their `oak:agent/model` and `oak:agent/tools` imports.

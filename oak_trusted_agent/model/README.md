@@ -2,8 +2,8 @@
 
 Runs [Gemma] on [Ollama] inside [Confidential Space], fronted by [Oak Proxy] so
 that an agent can establish an end-to-end encrypted, hardware-attested channel
-to the model and verify that the exact weights evaluated in [`../eval`](../eval)
-are the ones answering.
+to the model and verify that the weights evaluated in [`../eval`](../eval) are
+the ones answering.
 
 ## Layout
 
@@ -21,10 +21,10 @@ image, the `gemma4:31b-it-qat` weights layers (shared with the `eval` image),
 and the `//oak_proxy/server` binary. A smaller `:image_gemma4_e2b_it_qat` target
 is also available for smoke testing without a GPU.
 
-Inside the container, Ollama binds exclusively to `127.0.0.1:11434` and is
-started as a managed child process of `oak_proxy_server`, which listens on
-`0.0.0.0:8080` and presents a Confidential Space attestation token during the
-Oak Session handshake.
+Inside the container, Ollama binds to `127.0.0.1:11434` and is started as a
+managed child process of `oak_proxy_server`, which listens on `0.0.0.0:8080` and
+presents a Confidential Space attestation token during the Oak Session
+handshake.
 
 ```shell
 bazel build --config=release //oak_trusted_agent/model:image_gemma4_31b_it_qat
@@ -34,9 +34,8 @@ jq -r '.manifests[0].digest' bazel-bin/oak_trusted_agent/model/image_gemma4_31b_
 ## Deploying to Confidential Space
 
 `terraform/` provisions a Confidential Space VM with an NVIDIA H100 Confidential
-GPU (`a3-highgpu-1g` in `us-east5-a`) by default, along with a least-privilege
-workload service account and a firewall rule opening TCP port `8080` for the Oak
-Session WebSocket tunnel.
+GPU (`a3-highgpu-1g` in `us-east5-a`) by default, a workload service account,
+and a firewall rule for TCP port `8080` (the Oak Session WebSocket tunnel).
 
 ```shell
 bazel run --config=release //oak_trusted_agent/model:push_gemma4_31b_it_qat

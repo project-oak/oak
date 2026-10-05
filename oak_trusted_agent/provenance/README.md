@@ -24,8 +24,8 @@ this token vouches for artifacts with these digests, and here is the predicate
 describing them_.
 
 The predicate is opaque to both binaries. Whoever adds a benchmark picks a
-`predicateType` URI and emits whatever JSON object matches it, rather than
-changing any Rust.
+`predicateType` URI and emits whatever JSON object matches it, with no Rust
+changes.
 
 ## Signing
 
@@ -85,11 +85,11 @@ verifier \
 ✅ VERIFIED
 ```
 
-Checks accumulate rather than short-circuit, so one failure does not hide the
+All checks run even when an earlier one fails, so one failure does not hide the
 others. Exit status is non-zero unless every check passes.
 
 `--expected-image-prefix` matches the start of the image reference, so it pins
-the _repository path_ rather than an image: anyone who can push there passes it.
+the _repository path_, not a single image: anyone who can push there passes it.
 `--expected-image-digest` pins the image itself, by comparing the
 `submods.container.image_digest` claim. Use both for anything that matters.
 
@@ -116,27 +116,27 @@ token already makes.
 }
 ```
 
-The payload is base64 rather than inline JSON because assertions bind the digest
-of those exact bytes, which re-serialization would not preserve.
+The payload is base64 because assertions bind the digest of the serialized
+bytes, which inline JSON would not preserve across re-serialization.
 
 This is not a [DSSE] envelope. DSSE expects a detached signature over the
 payload; Confidential Space instead returns a token whose nonce commits to the
 payload digest, so the binding is checked differently and the field names would
 mislead. Two costs follow. `payloadType` sits outside the signed bytes, so the
-verifier asserts the expected constant rather than trusting what it reads. And
-standard in-toto or cosign tooling cannot consume this envelope.
+verifier checks it against the expected constant. And standard in-toto or cosign
+tooling cannot consume this envelope.
 
 The assertion key is a random UUID, as Oak names attestation types in
 `oak_proto_rust::attestation`. It denotes a Confidential Space token whose
 `eat_nonce` commits to the payload digest, and it is defined as `ASSERTION_ID`
-in `common/envelope.rs`. The verifier looks the assertion up by that ID rather
-than iterating the map, because requiring every entry to pass would accept an
-unsigned envelope vacuously.
+in `common/envelope.rs`. The verifier looks the assertion up by that ID;
+iterating the map and requiring every entry to pass would accept an unsigned
+envelope vacuously.
 
 ## What the claim does and does not prove
 
 The token proves that the named image asked for a nonce over this statement. It
-does not by itself prove the image _computed_ the artifacts rather than hashing
+does not by itself prove the image _computed_ the artifacts instead of hashing
 bytes handed to it from outside.
 
 The gap closes because Confidential Space does not let the VM operator change

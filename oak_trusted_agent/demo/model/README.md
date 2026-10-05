@@ -1,67 +1,54 @@
 # Trusted Model Evaluation Demo
 
-Demonstrates how a model provider or independent auditor evaluates
-`gemma4:31b-it-qat` against the [AgentDojo] prompt-injection benchmark inside a
-Google Cloud [Confidential Space] TEE on an NVIDIA H100 GPU, publishes the
-signed evaluation bundle to GCS, and allows any third party to cryptographically
-verify the result offline before trusting the model.
+Evaluates `gemma4:31b-it-qat` against the [AgentDojo] prompt-injection benchmark
+inside a [Confidential Space] VM with an NVIDIA H100 GPU, publishes the signed
+evaluation bundle to GCS, and verifies the bundle offline.
 
 ## Files
 
-| File               | Purpose                                                                                                                                      |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `terraform.tfvars` | Terraform configuration targeting an `a3-highgpu-1g` (NVIDIA H100 80 GB) Confidential Space VM in `us-east5-a` for the `agentdojo` benchmark |
-| `run.sh`           | Builds & pushes the reproducible `gemma4:31b-it-qat` eval image, runs the benchmark in Confidential Space, and tears down the H100 VM        |
-| `get.sh`           | Downloads a published evaluation bundle from `gs://oak-trusted-agent/eval/gemma4-31b-it-qat/` into a local directory                         |
-| `read.sh`          | Decodes and displays the in-toto `Statement` and `Predicate` from `signed.json`                                                              |
-| `verify.sh`        | Runs the provenance verifier against the downloaded evaluation bundle                                                                        |
+| File               | Purpose                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `terraform.tfvars` | Terraform variables targeting an `a3-highgpu-1g` (NVIDIA H100 80 GB) VM in `us-east5-a` for `agentdojo`             |
+| `run.sh`           | Builds and pushes the `gemma4:31b-it-qat` eval image, runs the benchmark in Confidential Space, and destroys the VM |
+| `get.sh`           | Downloads a published evaluation bundle from `gs://oak-trusted-agent/eval/gemma4-31b-it-qat/`                       |
+| `read.sh`          | Prints the in-toto `Statement` and `Predicate` from `signed.json`                                                   |
+| `verify.sh`        | Runs the provenance verifier against the downloaded bundle                                                          |
 
-## Step 1: Run the attested evaluation in Confidential Space (Pre-demo)
+## 1. Run the evaluation in Confidential Space
 
-Run from the repository root inside `nix develop`:
+From the repository root inside `nix develop`:
 
 ```shell
 ./oak_trusted_agent/demo/model/run.sh agentdojo
 ```
 
-What this does:
+`run.sh` builds and pushes `//oak_trusted_agent/eval:image_gemma4_31b_it_qat`,
+which bundles `ollama/ollama`, the `gemma4:31b-it-qat` weights layers (shared
+with `//oak_trusted_agent/model:image_gemma4_31b_it_qat`), the AgentDojo
+harness, and the provenance signer. It then boots a batch Confidential Space
+H100 VM (`tee-restart-policy=Never`) pinned to that image digest. Inside the VM,
+Ollama serves `gemma4:31b-it-qat` on `127.0.0.1:11434`, the harness runs the
+AgentDojo `travel` suite, and the signer binds `report.jsonl`, the model
+manifest digest, and the predicate into a Confidential Space attestation token
+(`eat_nonce`). When the container uploads `report.jsonl`, `predicate.json`, and
+`signed.json` to `gs://oak-trusted-agent/eval/gemma4-31b-it-qat/agentdojo/`, the
+script tears the VM down.
 
-1. Builds the hermetic OCI container image
-   `//oak_trusted_agent/eval:image_gemma4_31b_it_qat`, which bundles the pinned
-   `ollama/ollama` base image, the `gemma4:31b-it-qat` weights layers (shared
-   with `//oak_trusted_agent/model:image_gemma4_31b_it_qat`), the AgentDojo
-   harness, and the provenance signer binary.
-2. Pushes the image to Artifact Registry and reads its reproducible manifest
-   digest (`sha256:…`).
-3. Provisions a batch Confidential Space H100 VM (`tee-restart-policy=Never`)
-   pinned to that exact image digest.
-4. Inside the TEE, Ollama serves `gemma4:31b-it-qat` on `127.0.0.1:11434`, the
-   harness runs the AgentDojo `travel` prompt-injection suite, and the signer
-   hashes `report.jsonl`, embeds the model manifest digest and score in an
-   in-toto v1 `Statement`, and binds the statement digest to a Confidential
-   Space hardware attestation token (`eat_nonce`).
-5. Uploads `report.jsonl`, `predicate.json`, and `signed.json` to
-   `gs://oak-trusted-agent/eval/gemma4-31b-it-qat/agentdojo/`, then destroys the
-   H100 VM.
-
-To run the fast pipeline smoke test (`hello_world`) as well:
+To run the fast pipeline smoke test (`hello_world`):
 
 ```shell
 ./oak_trusted_agent/demo/model/run.sh hello_world
 ```
 
-## Step 2: Download, read, & verify the published evaluation (Live / Recorded Demo)
+## 2. Download, read, and verify the published bundle
 
-Anyone can download the published evaluation bundle to `/tmp/trusted_eval/`,
-read its claim, and verify it locally in a few seconds without needing a GPU or
-TEE:
+Download the bundle to `/tmp/trusted_eval/` and inspect its statement and
+predicate:
 
 ```shell
 ./oak_trusted_agent/demo/model/get.sh /tmp/trusted_eval
 ./oak_trusted_agent/demo/model/read.sh /tmp/trusted_eval
 ```
-
-Expected output of `read.sh`:
 
 ```text
 ── 📜 Statement ────────────────────────────────────────────────────────────────
@@ -78,13 +65,11 @@ Expected output of `read.sh`:
      └── utility_rate          0.85
 ```
 
-Then cryptographically verify the bundle:
+Verify the bundle:
 
 ```shell
 ./oak_trusted_agent/demo/model/verify.sh /tmp/trusted_eval
 ```
-
-Expected output of `verify.sh`:
 
 ```text
 ── 🔐 Attestation ──────────────────────────────────────────────────────────────
@@ -99,36 +84,26 @@ Expected output of `verify.sh`:
 ✅ VERIFIED
 ```
 
-### What each section shows on screen
+The verifier re-hashes `/tmp/trusted_eval/report.jsonl` against the statement,
+checks the Confidential Space token against Google's Confidential Space root
+certificate (`eat_nonce == SHA256(payload)`), and checks the container image
+reference and digest. The 19 GB model weights are waived from local re-hashing
+(`--unchecked-subject=gemma4:31b-it-qat`) because their layers are baked into
+the verified workload image.
 
-- **`📜 Statement` & `📊 Predicate`:** Shows the two artifacts covered by the
-  in-toto statement (`report.jsonl` and the `gemma4:31b-it-qat` Ollama manifest
-  digest) and the benchmark details recorded by the harness. The 19 GB model
-  weights are waived from local re-hashing
-  (`--unchecked-subject=gemma4:31b-it-qat`) because their layers are baked into
-  the reproducible workload image verified under `🔐 Attestation`.
-- **`🔐 Attestation`:** Re-hashes the downloaded `report.jsonl` against the
-  statement, verifies the Confidential Space hardware attestation token against
-  Google's Confidential Space root certificate (`eat_nonce == SHA256(payload)`),
-  and confirms the workload container image reference and exact digest.
+## 3. Tamper check
 
-### Step 3: Tamper-detection check
-
-To show that modifying the failed trial in the report invalidates the proof:
+Flipping the failed trial in `report.jsonl` breaks the subject digest check:
 
 ```shell
 sed -i 's/"resisted": false/"resisted": true/' /tmp/trusted_eval/report.jsonl
 ./oak_trusted_agent/demo/model/verify.sh /tmp/trusted_eval
 ```
 
-This fails with:
-
 ```text
   ❌ Subject report.jsonl matches the digest in the statement
      └── the file does not match its digest
 ```
-
-and exits with `❌ NOT VERIFIED (1 check(s) failed)`.
 
 [AgentDojo]: https://github.com/ethz-spylab/agentdojo
 [Confidential Space]:
