@@ -31,13 +31,22 @@ use sealed_memory_rust_proto::oak::private_memory::{
     WriteUnencryptedDataBlobRequest, WriteUnencryptedDataBlobResponse,
     read_metadata_blob_stream_response, write_metadata_blob_stream_request,
 };
-use tokio::{net::TcpListener, sync::Mutex};
+use tokio::{
+    net::TcpListener,
+    sync::{Mutex, oneshot},
+};
 use tokio_stream::{StreamExt, wrappers::TcpListenerStream};
 
 pub struct SealedMemoryDatabaseServiceTestImpl {
     pub database: Mutex<HashMap<String, DataBlob>>,
     pub metadata_database: Mutex<HashMap<String, MetadataBlob>>,
     pub unencrypted_database: Mutex<HashMap<String, DataBlob>>,
+    pub held_unencrypted_write: Mutex<Option<HeldWrite>>,
+}
+
+pub struct HeldWrite {
+    arrived: oneshot::Sender<()>,
+    release: oneshot::Receiver<()>,
 }
 
 impl Default for SealedMemoryDatabaseServiceTestImpl {
@@ -46,11 +55,22 @@ impl Default for SealedMemoryDatabaseServiceTestImpl {
             database: Mutex::new(HashMap::new()),
             metadata_database: Mutex::new(HashMap::new()),
             unencrypted_database: Mutex::new(HashMap::new()),
+            held_unencrypted_write: Mutex::new(None),
         }
     }
 }
 
 impl SealedMemoryDatabaseServiceTestImpl {
+    pub async fn hold_next_unencrypted_write(
+        &self,
+    ) -> (oneshot::Receiver<()>, oneshot::Sender<()>) {
+        let (arrived_tx, arrived_rx) = oneshot::channel();
+        let (release_tx, release_rx) = oneshot::channel();
+        *self.held_unencrypted_write.lock().await =
+            Some(HeldWrite { arrived: arrived_tx, release: release_rx });
+        (arrived_rx, release_tx)
+    }
+
     pub async fn add_blob_inner(&self, id: String, blob: DataBlob) {
         self.database.lock().await.insert(id, blob);
     }
@@ -213,11 +233,23 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
         request: tonic::Request<WriteUnencryptedDataBlobRequest>,
     ) -> Result<tonic::Response<WriteUnencryptedDataBlobResponse>, tonic::Status> {
         let request = request.into_inner();
+        let data_blob = request.data_blob.expect("data_blob should be present");
+        let held = self.held_unencrypted_write.lock().await.take();
+        if let Some(HeldWrite { arrived, release }) = held {
+            let _ = arrived.send(());
+            let _ = release.await;
+        }
+        let mut unencrypted_db = self.unencrypted_database.lock().await;
+        if unencrypted_db.contains_key(&data_blob.id)
+            || self.metadata_database.lock().await.contains_key(&data_blob.id)
+        {
+            return Err(tonic::Status::already_exists(format!(
+                "UnencryptedDataBlob row {} already exists",
+                data_blob.id
+            )));
+        }
         // The `encrypted_blob` field in DataBlob is used for unencrypted data here.
-        self.unencrypted_database.lock().await.insert(
-            request.data_blob.as_ref().expect("data_blob should be present").id.clone(),
-            request.data_blob.unwrap(),
-        );
+        unencrypted_db.insert(data_blob.id.clone(), data_blob);
         Ok(tonic::Response::new(WriteUnencryptedDataBlobResponse {}))
     }
 
@@ -289,10 +321,15 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
 }
 
 pub async fn create(listener: TcpListener) -> Result<(), anyhow::Error> {
+    serve(listener, std::sync::Arc::new(SealedMemoryDatabaseServiceTestImpl::default())).await
+}
+
+pub async fn serve(
+    listener: TcpListener,
+    service: std::sync::Arc<SealedMemoryDatabaseServiceTestImpl>,
+) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
-        .add_service(SealedMemoryDatabaseServiceServer::new(
-            SealedMemoryDatabaseServiceTestImpl::default(),
-        ))
+        .add_service(SealedMemoryDatabaseServiceServer::from_arc(service))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))

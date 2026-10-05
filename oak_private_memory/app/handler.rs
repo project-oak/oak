@@ -578,19 +578,7 @@ impl SealedMemorySessionHandler {
             .await
             .into_internal_error("Failed to get unencrypted blob")?
         {
-            let plain_text_info = PlainTextUserInfo::decode(&*data_blob.blob)
-                .inspect_err(|_| self.metrics.inc_user_info_deserialization_failures())
-                .into_internal_error("Failed to decode PlainTextUserInfo")?;
-            let key_derivation_info = plain_text_info
-                .key_derivation_info
-                .clone()
-                .into_internal_error("Empty key derivation info")?;
-
-            info!("User have been registered!, {}", uid);
-            return Ok(UserRegistrationResponse {
-                status: user_registration_response::Status::UserAlreadyExists.into(),
-                key_derivation_info: Some(key_derivation_info),
-            });
+            return self.decode_existing_user_registration(&uid, &data_blob);
         }
 
         // User does not exist.
@@ -611,13 +599,34 @@ impl SealedMemorySessionHandler {
             wrapped_dek: Some(WrappedDataEncryptionKey { wrapped_key: Some(wrapped_key) }),
         };
 
-        db_client
+        if let Err(err) = db_client
             .add_unencrypted_blob(
                 DataBlob { id: uid.clone(), blob: new_plain_text_info.encode_to_vec() },
                 None,
             )
             .await
-            .into_internal_error("Failed to write blobs")?;
+        {
+            // Another concurrent UserRegistration may have inserted the row
+            // between our initial read and this insert-only write (returning
+            // ALREADY_EXISTS, or ABORTED if the row was subsequently locked).
+            // Re-read the winning row instead of failing or overwriting its DEK.
+            let raced_with_another_writer = err.downcast_ref::<tonic::Status>().is_some_and(|s| {
+                matches!(s.code(), tonic::Code::AlreadyExists | tonic::Code::Aborted)
+            });
+            if raced_with_another_writer {
+                let data_blob = db_client
+                    .get_unencrypted_blob(&uid, true)
+                    .await
+                    .into_internal_error(
+                        "Failed to get unencrypted blob after concurrent registration",
+                    )?
+                    .into_internal_error(
+                        "Unencrypted blob missing after concurrent registration",
+                    )?;
+                return self.decode_existing_user_registration(&uid, &data_blob);
+            }
+            return Err(err).into_internal_error("Failed to write blobs");
+        }
 
         info!("Successfully registered new user {}", uid);
         // Registration deliberately does NOT establish a session context. The
@@ -627,6 +636,26 @@ impl SealedMemorySessionHandler {
         Ok(UserRegistrationResponse {
             status: user_registration_response::Status::Success.into(),
             key_derivation_info: Some(boot_strap_info),
+        })
+    }
+
+    fn decode_existing_user_registration(
+        &self,
+        uid: &str,
+        data_blob: &DataBlob,
+    ) -> tonic::Result<UserRegistrationResponse> {
+        let plain_text_info = PlainTextUserInfo::decode(&*data_blob.blob)
+            .inspect_err(|_| self.metrics.inc_user_info_deserialization_failures())
+            .into_internal_error("Failed to decode PlainTextUserInfo")?;
+        let key_derivation_info = plain_text_info
+            .key_derivation_info
+            .clone()
+            .into_internal_error("Empty key derivation info")?;
+
+        info!("User have been registered!, {}", uid);
+        Ok(UserRegistrationResponse {
+            status: user_registration_response::Status::UserAlreadyExists.into(),
+            key_derivation_info: Some(key_derivation_info),
         })
     }
 
@@ -962,7 +991,11 @@ mod tests {
         database::{MAX_DATABASE_SIZE, MAX_GRPC_DECODE_SIZE},
     };
     use sealed_memory_rust_proto::oak::private_memory::SessionConfig;
-    use tokio::{net::TcpListener, sync::mpsc};
+    use tokio::{
+        net::TcpListener,
+        sync::{mpsc, oneshot},
+        task::JoinHandle,
+    };
 
     use super::*;
     use crate::{MAX_MEMORY_TTL_SECONDS, METADATA_BLANKET_TTL_SECONDS};
@@ -982,6 +1015,21 @@ mod tests {
         let db_addr = listener.local_addr().unwrap();
         tokio::spawn(async move {
             let _ = private_memory_test_database_server_lib::service::create(listener).await;
+        });
+        db_addr
+    }
+
+    async fn start_test_db_with_service(
+        service: Arc<
+            private_memory_test_database_server_lib::service::SealedMemoryDatabaseServiceTestImpl,
+        >,
+    ) -> SocketAddr {
+        let listener =
+            TcpListener::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0)).await.unwrap();
+        let db_addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            let _ =
+                private_memory_test_database_server_lib::service::serve(listener, service).await;
         });
         db_addr
     }
@@ -1061,6 +1109,97 @@ mod tests {
 
         // Still no session after the second (early-returning) call.
         assert!(handler.session_context().await.is_none());
+    }
+
+    fn memory_expiring_in_an_hour() -> Memory {
+        Memory {
+            expiration_timestamp: Some(system_time_to_timestamp(
+                SystemTime::now() + Duration::from_secs(3600),
+            )),
+            ..Default::default()
+        }
+    }
+
+    async fn add_memory(handler: &SealedMemorySessionHandler) -> String {
+        let request = AddMemoryRequest { memory: Some(memory_expiring_in_an_hour()) };
+        handler.add_memory_handler(request).await.unwrap().id
+    }
+
+    async fn memory_is_readable(handler: &SealedMemorySessionHandler, id: &str) -> bool {
+        let request = GetMemoryByIdRequest { id: id.to_string(), result_mask: None };
+        handler.get_memory_by_id_handler(request).await.unwrap().success
+    }
+
+    async fn start_held_registration(
+        service: &private_memory_test_database_server_lib::service::SealedMemoryDatabaseServiceTestImpl,
+        db_addr: SocketAddr,
+        pm_uid: &str,
+    ) -> (JoinHandle<tonic::Result<UserRegistrationResponse>>, oneshot::Sender<()>) {
+        let (arrived, release) = service.hold_next_unencrypted_write().await;
+        let (handler, persistence_rx) = connect_handler(db_addr);
+        let request = UserRegistrationRequest {
+            pm_uid: pm_uid.to_string(),
+            key_encryption_key: TEST_KEK.to_vec(),
+            boot_strap_info: Some(KeyDerivationInfo {
+                kek_salt: b"other_salt".to_vec(),
+                kek_version: 2,
+            }),
+        };
+        let task = tokio::spawn(async move {
+            let _persistence_rx = persistence_rx;
+            handler.user_registration_handler(request).await
+        });
+        arrived.await.expect("held registration never reached its write");
+        (task, release)
+    }
+
+    /// Regression test for b/568024827. Two `UserRegistration`s for the same
+    /// new user race: registration B reads "no such user", then registration
+    /// A completes and its client key-syncs, adds a memory and persists it,
+    /// all under A's DEK. Only then does B's write land.
+    ///
+    /// Before the fix, B's write overwrote A's wrapped DEK with its own, so
+    /// every later KeySync unwrapped B's DEK and could not decrypt the
+    /// metadata blob A had persisted: the user's memories were lost. Now B's
+    /// write is refused, and B reports `UserAlreadyExists` with A's key
+    /// derivation info.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn concurrent_registration_does_not_overwrite_dek() {
+        let service = Arc::new(
+            private_memory_test_database_server_lib::service::SealedMemoryDatabaseServiceTestImpl::default(),
+        );
+        let db_addr = start_test_db_with_service(service.clone()).await;
+        let pm_uid = "concurrent_registration_user";
+
+        let (racing, release) = start_held_registration(&service, db_addr, pm_uid).await;
+
+        let (winner, _winner_rx) = connect_handler(db_addr);
+        let first = winner.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        assert_eq!(first.status(), user_registration_response::Status::Success);
+        winner.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        let winner_dek = winner.session_context().await.as_ref().unwrap().dek.clone();
+        let memory_id = add_memory(&winner).await;
+        winner.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+
+        release.send(()).unwrap();
+        let racing = racing.await.unwrap();
+
+        // The user's data must still be reachable from a new connection.
+        let (fresh, _fresh_rx) = connect_handler(db_addr);
+        let key_sync = fresh.key_sync_handler(key_sync_request(pm_uid, None)).await;
+        assert!(
+            key_sync.as_ref().is_ok_and(|r| r.status() == key_sync_response::Status::Success),
+            "KeySync after the concurrent registration failed: {key_sync:?}"
+        );
+        assert!(
+            fresh.session_context().await.as_ref().unwrap().dek == winner_dek,
+            "the stored DEK was replaced by the concurrent registration"
+        );
+        assert!(memory_is_readable(&fresh, &memory_id).await);
+
+        let racing = racing.expect("concurrent registration failed");
+        assert_eq!(racing.status(), user_registration_response::Status::UserAlreadyExists);
+        assert_eq!(racing.key_derivation_info, Some(boot_strap_info()));
     }
 
     /// Two consecutive key syncs for a registered user (same `pm_uid` + KEK)

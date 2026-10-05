@@ -91,6 +91,8 @@ pub trait DataBlobHandler {
         data_blobs: Vec<DataBlob>,
         coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<()>;
+    /// Insert a new unencrypted data blob row for `id` (or `data_blob.id` if
+    /// `id` is `None`). Fails with `ALREADY_EXISTS` if the row already exists.
     async fn add_unencrypted_blob(
         &mut self,
         data_blob: DataBlob,
