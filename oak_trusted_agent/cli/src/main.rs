@@ -70,22 +70,28 @@ const AGENT_LABEL: &str = "trusted-agent$";
 /// ANSI escape sequences, which terminals interpret as text styles instead of
 /// printing them: `ESC [ <n> m` turns on style `n`, and `ESC [ 0 m` turns all
 /// styles off again (`ESC` is the byte `0x1b`).
-const BLUE: &str = "\x1b[34m";
-const GREEN: &str = "\x1b[32m";
-// Bright green, which terminals show as a lighter shade of `GREEN`.
-const LIGHT_GREEN: &str = "\x1b[92m";
+const BOLD: &str = "\x1b[1m";
 const ITALIC: &str = "\x1b[3m";
 const RESET: &str = "\x1b[0m";
 
-/// Styles terminal output: the user prompt in blue, and the agent label in
-/// green followed by the reply in light green italics.
+/// Text colors from the 256-color palette: `ESC [ 38 ; 5 ; <n> m` sets the text
+/// color to palette entry `n`. Each terminal theme picks its own shades for the
+/// 16 basic colors (in some, basic blue is hard to read on black), but entries
+/// 16 to 255 are standard shades that themes rarely change. These light ones
+/// stand out on a dark background, e.g. on a projector.
+const LIGHT_BLUE: &str = "\x1b[38;5;75m"; // #5fafff
+const LIGHT_MAGENTA: &str = "\x1b[38;5;213m"; // #ff87ff
+const LIGHT_GREEN: &str = "\x1b[38;5;120m"; // #87ff87
+
+/// Styles terminal output: the user prompt in bold light blue, and the agent
+/// label in bold light magenta followed by the reply in light green italics.
 ///
 /// Nothing is styled unless stdout is a terminal, so piped or redirected output
 /// stays plain text. As https://no-color.org asks, setting `NO_COLOR` to a
-/// non-empty value turns the colors off, but not the italics.
+/// non-empty value turns the colors off, but not the bold or italics.
 struct Style {
     color: bool,
-    italic: bool,
+    terminal: bool,
 }
 
 impl Style {
@@ -96,27 +102,31 @@ impl Style {
     /// `no_color` is the value of the `NO_COLOR` environment variable, if set.
     fn new(terminal: bool, no_color: Option<&OsStr>) -> Self {
         let no_color = no_color.is_some_and(|value| !value.is_empty());
-        Self { color: terminal && !no_color, italic: terminal }
+        Self { color: terminal && !no_color, terminal }
     }
 
     fn user_prompt(&self) -> String {
-        paint(self.color, BLUE, USER_PROMPT)
+        self.paint(BOLD, LIGHT_BLUE, USER_PROMPT)
     }
 
     fn agent_label(&self) -> String {
-        paint(self.color, GREEN, AGENT_LABEL)
+        self.paint(BOLD, LIGHT_MAGENTA, AGENT_LABEL)
     }
 
     fn reply(&self, reply: &str) -> String {
-        let style = if self.color { format!("{ITALIC}{LIGHT_GREEN}") } else { ITALIC.to_string() };
-        paint(self.italic, &style, reply)
+        self.paint(ITALIC, LIGHT_GREEN, reply)
     }
-}
 
-/// Wraps `text` in the escape sequence `style` if `enabled`, and returns it
-/// unchanged otherwise.
-fn paint(enabled: bool, style: &str, text: &str) -> String {
-    if enabled { format!("{style}{text}{RESET}") } else { text.to_string() }
+    /// Wraps `text` in the escape sequence `emphasis` (bold or italics),
+    /// followed by `color` unless colors are off. Outside a terminal, `text` is
+    /// returned unchanged.
+    fn paint(&self, emphasis: &str, color: &str, text: &str) -> String {
+        if !self.terminal {
+            return text.to_string();
+        }
+        let color = if self.color { color } else { "" };
+        format!("{emphasis}{color}{text}{RESET}")
+    }
 }
 
 #[derive(Parser, Debug)]
@@ -264,9 +274,9 @@ mod tests {
     #[test]
     fn styles_in_a_terminal() {
         let style = Style::new(true, None);
-        assert_eq!(style.user_prompt(), "\x1b[34muser$\x1b[0m");
-        assert_eq!(style.agent_label(), "\x1b[32mtrusted-agent$\x1b[0m");
-        assert_eq!(style.reply("Hi!"), "\x1b[3m\x1b[92mHi!\x1b[0m");
+        assert_eq!(style.user_prompt(), "\x1b[1m\x1b[38;5;75muser$\x1b[0m");
+        assert_eq!(style.agent_label(), "\x1b[1m\x1b[38;5;213mtrusted-agent$\x1b[0m");
+        assert_eq!(style.reply("Hi!"), "\x1b[3m\x1b[38;5;120mHi!\x1b[0m");
     }
 
     #[test]
@@ -278,18 +288,18 @@ mod tests {
     }
 
     #[test]
-    fn no_color_turns_off_colors_but_not_italics() {
+    fn no_color_turns_off_colors_but_not_bold_or_italics() {
         let style = Style::new(true, Some(OsStr::new("1")));
-        assert_eq!(style.user_prompt(), "user$");
-        assert_eq!(style.agent_label(), "trusted-agent$");
+        assert_eq!(style.user_prompt(), "\x1b[1muser$\x1b[0m");
+        assert_eq!(style.agent_label(), "\x1b[1mtrusted-agent$\x1b[0m");
         assert_eq!(style.reply("Hi!"), "\x1b[3mHi!\x1b[0m");
     }
 
     #[test]
     fn empty_no_color_is_ignored() {
         let style = Style::new(true, Some(OsStr::new("")));
-        assert_eq!(style.user_prompt(), "\x1b[34muser$\x1b[0m");
-        assert_eq!(style.agent_label(), "\x1b[32mtrusted-agent$\x1b[0m");
-        assert_eq!(style.reply("Hi!"), "\x1b[3m\x1b[92mHi!\x1b[0m");
+        assert_eq!(style.user_prompt(), "\x1b[1m\x1b[38;5;75muser$\x1b[0m");
+        assert_eq!(style.agent_label(), "\x1b[1m\x1b[38;5;213mtrusted-agent$\x1b[0m");
+        assert_eq!(style.reply("Hi!"), "\x1b[3m\x1b[38;5;120mHi!\x1b[0m");
     }
 }

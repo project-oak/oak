@@ -16,9 +16,9 @@ terminal of its own:
 - Each line you type (followed by Enter) is sent to the agent as a new turn on
   the same stream, and the agent's reply is printed before the next prompt. Your
   messages are prompted with `user$` and the agent's replies are labeled
-  `trusted-agent$`. In a terminal, `user$` is blue, `trusted-agent$` is green
-  and the reply is in light green italics; set `NO_COLOR=1` to turn the colors
-  off.
+  `trusted-agent$`. In a terminal, `user$` is bold light blue, `trusted-agent$`
+  is bold light magenta and the reply is in light green italics; set
+  `NO_COLOR=1` to turn the colors off.
 - Typing `close`, or ending the input with Ctrl-D, closes the stream, which ends
   the agent session.
 
