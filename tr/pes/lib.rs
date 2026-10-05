@@ -23,14 +23,15 @@ mod pae;
 #[cfg(test)]
 mod tests;
 
-use alloc::{string::ToString, vec::Vec};
+use alloc::{format, string::ToString, vec::Vec};
 
 use anyhow::Context;
 use intoto::statement::{DefaultStatement, parse_statement};
 use oak_digest::{Sha256, raw_digest_from_contents, raw_to_hex_digest};
 use oak_proto_rust::{
     google::pes::v1::{
-        PublicEndorsement, VerificationMaterial as ProtoVerificationMaterial,
+        PublicEndorsement, Signature as PesSignature,
+        VerificationMaterial as ProtoVerificationMaterial,
         verification_material::VerificationMaterial,
     },
     oak::attestation::v1::{
@@ -48,6 +49,10 @@ const PUBLISHER_CLAIM_TYPE: &str = "https://github.com/private-compute-infra-too
 
 /// Verifies a PES confirmation (serialized PublicEndorsement) against a PES
 /// public key set.
+///
+/// Verification succeeds if at least one signature in
+/// `PublicEndorsement.endorsement_signatures` matches a trusted key in
+/// `pes_key_set` and verifies cryptographically.
 ///
 /// # Arguments
 ///
@@ -117,15 +122,55 @@ pub fn verify_pes_confirmation(
         &tlog_receipt.entry_id,
     );
 
-    // Verify PES signature(s) using the trusted PES public key set.
-    // The confirmation contains signatures from PES, so we must use PES's own keys
-    // for verification.
-    let pes_signature = public_endorsement
-        .endorsement_signatures
-        .first()
-        .ok_or_else(|| anyhow::anyhow!("no endorsement signatures found"))?;
+    // During PES key rotation, PES dual-signs confirmations with both the old and
+    // new keys. Once an older key is retired from `pes_key_set`, verification must
+    // still succeed as long as at least one signature matches a trusted key in
+    // `pes_key_set` (see b/556647889).
+    anyhow::ensure!(
+        !public_endorsement.endorsement_signatures.is_empty(),
+        "no endorsement signatures found"
+    );
 
-    // Extract PES public key from the PES signature's verification material
+    let mut errors = Vec::new();
+    let mut verified = false;
+    for (idx, pes_signature) in public_endorsement.endorsement_signatures.iter().enumerate() {
+        match verify_single_pes_signature(pes_signature, pes_key_set, &pae_bytes) {
+            Ok(()) => {
+                verified = true;
+                break;
+            }
+            Err(err) => {
+                errors.push(format!("signature[{idx}]: {err:#}"));
+            }
+        }
+    }
+
+    if !verified {
+        anyhow::bail!(
+            "failed to verify any PES endorsement signature ({} tried): {}",
+            errors.len(),
+            errors.join("; ")
+        );
+    }
+
+    let actual_digest = Sha256::from_contents(&endorsement.serialized);
+    let expected_digest = Sha256::from_contents(expected_endorsement_bytes);
+
+    anyhow::ensure!(
+        actual_digest == expected_digest,
+        "endorsement digest mismatch: expected {}, actual {}",
+        expected_digest.to_hex(),
+        actual_digest.to_hex()
+    );
+
+    Ok(())
+}
+
+fn verify_single_pes_signature(
+    pes_signature: &PesSignature,
+    pes_key_set: &VerifyingKeySet,
+    pae_bytes: &[u8],
+) -> anyhow::Result<()> {
     let pes_vm = pes_signature
         .verification_material
         .as_ref()
@@ -133,7 +178,6 @@ pub fn verify_pes_confirmation(
 
     let pes_public_key_der = extract_public_key_der(pes_vm)?;
 
-    // Find the PES key in the trusted set (Reference Value)
     let trusted_key =
         pes_key_set.keys.iter().find(|k| k.raw == pes_public_key_der).ok_or_else(|| {
             let trusted_lengths: Vec<usize> =
@@ -153,7 +197,7 @@ pub fn verify_pes_confirmation(
         KeyType::EcdsaP256Sha256 => {
             key_util::verify_signature_ecdsa(
                 &pes_signature.signature,
-                &pae_bytes,
+                pae_bytes,
                 &pes_public_key_der,
             )
             .context("failed to verify ECDSA signature")?;
@@ -161,22 +205,12 @@ pub fn verify_pes_confirmation(
         KeyType::RsaSha2256 => {
             key_util::verify_signature_rsa(
                 &pes_signature.signature,
-                &pae_bytes,
+                pae_bytes,
                 &pes_public_key_der,
             )
             .context("failed to verify RSA signature")?;
         }
     }
-
-    let actual_digest = Sha256::from_contents(&endorsement.serialized);
-    let expected_digest = Sha256::from_contents(expected_endorsement_bytes);
-
-    anyhow::ensure!(
-        actual_digest == expected_digest,
-        "endorsement digest mismatch: expected {}, actual {}",
-        expected_digest.to_hex(),
-        actual_digest.to_hex()
-    );
 
     Ok(())
 }

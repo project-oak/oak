@@ -207,6 +207,175 @@ fn test_verify_pes_confirmation_success() {
     assert!(result.is_ok(), "Verification failed: {:?}", result.err());
 }
 
+fn untrusted_pes_signature_json() -> serde_json::Value {
+    let fixture: serde_json::Value =
+        serde_json::from_slice(include_bytes!("testdata/pes_confirmation.json")).unwrap();
+    fixture["endorsementSignatures"][0].clone()
+}
+
+fn corrupted_pes_signature_json(valid_sig_json: &serde_json::Value) -> serde_json::Value {
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    let mut corrupted = valid_sig_json.clone();
+    corrupted["signature"] = serde_json::Value::String(STANDARD.encode(vec![0u8; 256]));
+    corrupted
+}
+
+fn rewrite_endorsement_signatures(
+    pes_confirmation_bytes: &[u8],
+    signatures: Vec<serde_json::Value>,
+) -> Vec<u8> {
+    let mut json_val: serde_json::Value = serde_json::from_slice(pes_confirmation_bytes).unwrap();
+    json_val["endorsementSignatures"] = serde_json::Value::Array(signatures);
+    serde_json::to_vec(&json_val).unwrap()
+}
+
+#[test]
+fn test_verify_pes_confirmation_multiple_signatures_first_valid_second_untrusted() {
+    let endorsement_bytes = b"{\"artifact\":\"test\"}";
+    let (pes_confirmation_bytes, pes_key_set, trusted_endorser_key) =
+        create_test_pes_confirmation_bytes(endorsement_bytes);
+    let base_json: serde_json::Value = serde_json::from_slice(&pes_confirmation_bytes).unwrap();
+    let valid_sig = base_json["endorsementSignatures"][0].clone();
+    let untrusted_sig = untrusted_pes_signature_json();
+
+    let dual_signed_bytes =
+        rewrite_endorsement_signatures(&pes_confirmation_bytes, vec![valid_sig, untrusted_sig]);
+
+    let result = verify_pes_confirmation(
+        &dual_signed_bytes,
+        &pes_key_set,
+        endorsement_bytes,
+        Some(&trusted_endorser_key),
+    );
+    assert!(result.is_ok(), "Verification failed: {:?}", result.err());
+}
+
+#[test]
+fn test_verify_pes_confirmation_multiple_signatures_first_untrusted_second_valid() {
+    // Simulates PES key rotation after the older key is retired from
+    // `pes_key_set`: the first signature in `endorsementSignatures` was
+    // produced by the retired key, while the second signature was produced by
+    // the active trusted key (b/556647889).
+    let endorsement_bytes = b"{\"artifact\":\"test\"}";
+    let (pes_confirmation_bytes, pes_key_set, trusted_endorser_key) =
+        create_test_pes_confirmation_bytes(endorsement_bytes);
+    let base_json: serde_json::Value = serde_json::from_slice(&pes_confirmation_bytes).unwrap();
+    let valid_sig = base_json["endorsementSignatures"][0].clone();
+    let untrusted_sig = untrusted_pes_signature_json();
+
+    let dual_signed_bytes =
+        rewrite_endorsement_signatures(&pes_confirmation_bytes, vec![untrusted_sig, valid_sig]);
+
+    let result = verify_pes_confirmation(
+        &dual_signed_bytes,
+        &pes_key_set,
+        endorsement_bytes,
+        Some(&trusted_endorser_key),
+    );
+    assert!(result.is_ok(), "Verification failed: {:?}", result.err());
+}
+
+#[test]
+fn test_verify_pes_confirmation_multiple_signatures_first_corrupted_second_valid() {
+    let endorsement_bytes = b"{\"artifact\":\"test\"}";
+    let (pes_confirmation_bytes, pes_key_set, trusted_endorser_key) =
+        create_test_pes_confirmation_bytes(endorsement_bytes);
+    let base_json: serde_json::Value = serde_json::from_slice(&pes_confirmation_bytes).unwrap();
+    let valid_sig = base_json["endorsementSignatures"][0].clone();
+    let corrupted_sig = corrupted_pes_signature_json(&valid_sig);
+
+    let dual_signed_bytes =
+        rewrite_endorsement_signatures(&pes_confirmation_bytes, vec![corrupted_sig, valid_sig]);
+
+    let result = verify_pes_confirmation(
+        &dual_signed_bytes,
+        &pes_key_set,
+        endorsement_bytes,
+        Some(&trusted_endorser_key),
+    );
+    assert!(result.is_ok(), "Verification failed: {:?}", result.err());
+}
+
+#[test]
+fn test_verify_pes_confirmation_multiple_signatures_and_multiple_keys_in_key_set() {
+    let endorsement_bytes = b"{\"artifact\":\"test\"}";
+    let (pes_confirmation_bytes, mut pes_key_set, trusted_endorser_key) =
+        create_test_pes_confirmation_bytes(endorsement_bytes);
+    let base_json: serde_json::Value = serde_json::from_slice(&pes_confirmation_bytes).unwrap();
+    let valid_sig = base_json["endorsementSignatures"][0].clone();
+    let untrusted_sig = untrusted_pes_signature_json();
+
+    // Place a non-matching key at index 0 so the matching key is at index 1 of
+    // `pes_key_set.keys`.
+    pes_key_set.keys.insert(
+        0,
+        VerifyingKey {
+            r#type: KeyType::EcdsaP256Sha256.into(),
+            key_id: 99,
+            raw: trusted_endorser_key.raw.clone(),
+        },
+    );
+
+    let dual_signed_bytes =
+        rewrite_endorsement_signatures(&pes_confirmation_bytes, vec![untrusted_sig, valid_sig]);
+
+    let result = verify_pes_confirmation(
+        &dual_signed_bytes,
+        &pes_key_set,
+        endorsement_bytes,
+        Some(&trusted_endorser_key),
+    );
+    assert!(result.is_ok(), "Verification failed: {:?}", result.err());
+}
+
+#[test]
+fn test_verify_pes_confirmation_multiple_signatures_all_invalid_fails() {
+    let endorsement_bytes = b"{\"artifact\":\"test\"}";
+    let (pes_confirmation_bytes, pes_key_set, trusted_endorser_key) =
+        create_test_pes_confirmation_bytes(endorsement_bytes);
+    let base_json: serde_json::Value = serde_json::from_slice(&pes_confirmation_bytes).unwrap();
+    let valid_sig = base_json["endorsementSignatures"][0].clone();
+    let untrusted_sig = untrusted_pes_signature_json();
+    let corrupted_sig = corrupted_pes_signature_json(&valid_sig);
+
+    let invalid_bytes =
+        rewrite_endorsement_signatures(&pes_confirmation_bytes, vec![untrusted_sig, corrupted_sig]);
+
+    let result = verify_pes_confirmation(
+        &invalid_bytes,
+        &pes_key_set,
+        endorsement_bytes,
+        Some(&trusted_endorser_key),
+    );
+    assert!(result.is_err());
+    let err_msg = result.unwrap_err().to_string();
+    assert!(
+        err_msg.contains("signature[0]") && err_msg.contains("signature[1]"),
+        "expected error details for all attempted signatures, got: {err_msg}"
+    );
+}
+
+#[test]
+fn test_verify_pes_confirmation_empty_signatures_fails() {
+    let endorsement_bytes = b"{\"artifact\":\"test\"}";
+    let (pes_confirmation_bytes, pes_key_set, trusted_endorser_key) =
+        create_test_pes_confirmation_bytes(endorsement_bytes);
+    let empty_sig_bytes = rewrite_endorsement_signatures(&pes_confirmation_bytes, vec![]);
+
+    let result = verify_pes_confirmation(
+        &empty_sig_bytes,
+        &pes_key_set,
+        endorsement_bytes,
+        Some(&trusted_endorser_key),
+    );
+    assert!(result.is_err());
+    let err_msg = result.unwrap_err().to_string();
+    assert!(
+        err_msg.contains("no endorsement signatures found"),
+        "expected 'no endorsement signatures found', got: {err_msg}"
+    );
+}
+
 fn make_test_endorsement_statement() -> Vec<u8> {
     let mut statement = intoto::statement::make_statement(
         "test-subject",
