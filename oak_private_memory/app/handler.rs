@@ -41,8 +41,8 @@ use tonic::transport::Channel;
 use zeroize::Zeroizing;
 
 use crate::{
-    IntoTonicResult, context::UserSessionContext, db_client::SharedDbClient,
-    packing::ResponsePacking, persistence_worker,
+    IntoTonicResult, admission::ActiveSessionGuard, context::UserSessionContext,
+    db_client::SharedDbClient, packing::ResponsePacking, persistence_worker,
 };
 
 // The implementation for one active Oak Private Memory session.
@@ -58,15 +58,19 @@ pub struct SealedMemorySessionHandler {
     max_memory_ttl_seconds: i64,
     enable_int8_embedding: bool,
     allowed_memory_sources: Vec<String>,
+    session_guard: Option<ActiveSessionGuard>,
 }
 
 impl Drop for SealedMemorySessionHandler {
     fn drop(&mut self) {
-        if let Some(context) = self.session_context.get_mut().take() {
+        if let Some(mut context) = self.session_context.get_mut().take() {
             if context.disable_persistence_on_close {
                 info!("persistence disabled for this session, skipping");
                 return;
             }
+            // The context (and its Icing instance) outlives this handler while
+            // it waits in the persistence queue; keep it counted until then.
+            context.session_guard = self.session_guard.take();
             info!("sending session context to persistence service");
             if let Err(e) = self.persistence_tx.send(context) {
                 self.metrics.inc_persistence_enqueue_failures();
@@ -100,7 +104,16 @@ impl SealedMemorySessionHandler {
             max_memory_ttl_seconds,
             enable_int8_embedding,
             allowed_memory_sources,
+            session_guard: None,
         }
+    }
+
+    /// Attaches the admission-control guard for this session. It is released
+    /// when the handler is dropped, or, if the session is persisted on close,
+    /// when the persistence worker drops the session context.
+    pub fn with_session_guard(mut self, session_guard: ActiveSessionGuard) -> Self {
+        self.session_guard = Some(session_guard);
+        self
     }
 
     pub async fn session_context(&self) -> RwLockWriteGuard<'_, Option<UserSessionContext>> {
@@ -537,6 +550,9 @@ impl SealedMemorySessionHandler {
             database_version,
             database,
             disable_persistence_on_close,
+            // Set by `Drop` when handed to the persistence worker; while the
+            // handler is alive, the handler's guard covers this context.
+            session_guard: None,
         });
         Ok(())
     }
@@ -1980,6 +1996,58 @@ mod tests {
         // TODO: b/571198870 - pull_and_rebase does not count failing to
         // decrypt the stored database in db_decryption_failures.
         assert_eq!(unlabeled_counter(&harness, "db_decryption_failures"), 0);
+    }
+
+    /// A session that is persisted on close stays counted in `active_sessions`
+    /// while its context waits in the persistence queue, and stops being
+    /// counted only once the persistence worker drops the context.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn session_guard_follows_context_into_persistence_queue() {
+        let counter = crate::admission::SessionCounter::new(metrics::get_global_metrics());
+        let (handler, mut persistence_rx) = setup_handler().await;
+        let handler = handler.with_session_guard(counter.try_acquire(1).unwrap());
+        assert_eq!(counter.active(), 1);
+
+        let pm_uid = "session_guard_persist_user";
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+
+        drop(handler);
+        // Handler gone, but the context (and its Icing instance) is queued.
+        assert_eq!(counter.active(), 1);
+        let context = persistence_rx.recv().await.expect("context should be queued");
+        assert!(context.session_guard.is_some());
+        assert_eq!(counter.active(), 1);
+        drop(context);
+        assert_eq!(counter.active(), 0);
+    }
+
+    /// Without a session context (no key sync) or with persistence disabled,
+    /// it stops being counted as soon as the handler is dropped.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn session_guard_released_on_handler_drop_without_persistence() {
+        let counter = crate::admission::SessionCounter::new(metrics::get_global_metrics());
+
+        let (handler, _persistence_rx) = setup_handler().await;
+        let handler = handler.with_session_guard(counter.try_acquire(1).unwrap());
+        assert_eq!(counter.active(), 1);
+        drop(handler);
+        assert_eq!(counter.active(), 0);
+
+        let (handler, mut persistence_rx) = setup_handler().await;
+        let handler = handler.with_session_guard(counter.try_acquire(1).unwrap());
+        let pm_uid = "session_guard_no_persist_user";
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler
+            .key_sync_handler(key_sync_request(
+                pm_uid,
+                Some(SessionConfig { disable_persistence_on_close: true }),
+            ))
+            .await
+            .unwrap();
+        drop(handler);
+        assert_eq!(counter.active(), 0);
+        assert!(persistence_rx.try_recv().is_err());
     }
 
     /// A duplicated name is a state the caller has to repair, not a server

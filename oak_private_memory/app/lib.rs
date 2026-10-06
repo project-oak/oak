@@ -17,6 +17,7 @@ use std::net::SocketAddr;
 
 use serde::{Deserialize, Serialize};
 
+pub mod admission;
 mod context;
 mod db_client;
 mod handler;
@@ -77,6 +78,29 @@ pub struct ApplicationConfig {
     /// ratio threshold. Default: 0.05 (5%).
     #[serde(default = "default_min_available_memory_ratio")]
     pub min_available_memory_ratio: f64,
+
+    /// Maximum process map count (lines in `/proc/self/maps`) as a fraction of
+    /// `vm.max_map_count`. Each session owns an Icing instance (~55-70 memory
+    /// mappings), and the process crashes once `vm.max_map_count` is reached.
+    /// New session handshakes are rejected with `RESOURCE_EXHAUSTED` once the
+    /// map count reaches this fraction. Must be in (0.0, 1.0]. Default: 0.8.
+    #[serde(default = "default_max_map_count_ratio")]
+    pub max_map_count_ratio: f64,
+
+    /// Maximum number of live sessions per enclave. New session handshakes
+    /// are rejected with `RESOURCE_EXHAUSTED` once this many sessions are
+    /// live (including closed sessions still waiting to be persisted). Must
+    /// be greater than 0. Default: 1000.
+    #[serde(default = "default_max_active_sessions")]
+    pub max_active_sessions: usize,
+}
+
+fn default_max_active_sessions() -> usize {
+    crate::admission::DEFAULT_MAX_ACTIVE_SESSIONS
+}
+
+fn default_max_map_count_ratio() -> f64 {
+    crate::admission::DEFAULT_MAX_MAP_COUNT_RATIO
 }
 
 fn default_min_available_memory_ratio() -> f64 {
@@ -181,5 +205,38 @@ mod tests {
         }"#;
         let config = serde_json::from_str::<ApplicationConfig>(custom_json).unwrap();
         assert_eq!(config.min_available_memory_ratio, 0.10);
+    }
+
+    #[test]
+    fn application_config_default_and_custom_max_map_count_ratio() {
+        let default_json = r#"{
+            "database_service_host": "127.0.0.1:8080"
+        }"#;
+        let config = serde_json::from_str::<ApplicationConfig>(default_json).unwrap();
+        assert_eq!(config.max_map_count_ratio, crate::admission::DEFAULT_MAX_MAP_COUNT_RATIO);
+
+        let custom_json = r#"{
+            "database_service_host": "127.0.0.1:8080",
+            "max_map_count_ratio": 0.5
+        }"#;
+        let config = serde_json::from_str::<ApplicationConfig>(custom_json).unwrap();
+        assert_eq!(config.max_map_count_ratio, 0.5);
+    }
+
+    #[test]
+    fn application_config_default_and_custom_max_active_sessions() {
+        let default_json = r#"{
+            "database_service_host": "127.0.0.1:8080"
+        }"#;
+        let config = serde_json::from_str::<ApplicationConfig>(default_json).unwrap();
+        assert_eq!(config.max_active_sessions, crate::admission::DEFAULT_MAX_ACTIVE_SESSIONS);
+        assert_eq!(config.max_active_sessions, 1000);
+
+        let custom_json = r#"{
+            "database_service_host": "127.0.0.1:8080",
+            "max_active_sessions": 500
+        }"#;
+        let config = serde_json::from_str::<ApplicationConfig>(custom_json).unwrap();
+        assert_eq!(config.max_active_sessions, 500);
     }
 }

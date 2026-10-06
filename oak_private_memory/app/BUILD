@@ -23,6 +23,7 @@ package(
 rust_library(
     name = "app",
     srcs = [
+        "admission.rs",
         "config.rs",
         "context.rs",
         "db_client.rs",

@@ -19,6 +19,8 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_servic
 use tonic::transport::Channel;
 use zeroize::Zeroizing;
 
+use crate::admission::ActiveSessionGuard;
+
 /// The state for each client connection.
 pub struct UserSessionContext {
     pub dek: Zeroizing<Vec<u8>>,
@@ -32,4 +34,9 @@ pub struct UserSessionContext {
     pub database_service_client: SealedMemoryDatabaseServiceClient<Channel>,
     /// When true, the database is not persisted when the session closes.
     pub disable_persistence_on_close: bool,
+    /// Live-session guard for this session. The handler moves its guard here
+    /// when handing the context to the persistence worker, so the session
+    /// (and its Icing instance) keeps counting in `active_sessions` until the
+    /// context is actually dropped.
+    pub session_guard: Option<ActiveSessionGuard>,
 }

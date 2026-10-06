@@ -55,7 +55,7 @@ impl MemoryInfo {
     }
 }
 
-/// Helper function to maintain compatibility with `app/service.rs`.
+/// Reads the current system memory info. Used by `app/admission.rs`.
 pub fn read_system_meminfo() -> Result<MemoryInfo, anyhow::Error> {
     MemoryInfo::current()
 }

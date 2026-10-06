@@ -190,6 +190,8 @@ pub fn default_test_application_config(db_addr: SocketAddr) -> ApplicationConfig
         enable_int8_embedding: false,
         allowed_memory_sources: vec![],
         min_available_memory_ratio: app::meminfo::DEFAULT_MIN_AVAILABLE_MEMORY_RATIO,
+        max_map_count_ratio: app::admission::DEFAULT_MAX_MAP_COUNT_RATIO,
+        max_active_sessions: app::admission::DEFAULT_MAX_ACTIVE_SESSIONS,
     }
 }
 
@@ -285,6 +287,8 @@ pub async fn start_container_server() -> Result<(
         enable_int8_embedding: false,
         allowed_memory_sources: vec![],
         min_available_memory_ratio: app::meminfo::DEFAULT_MIN_AVAILABLE_MEMORY_RATIO,
+        max_map_count_ratio: app::admission::DEFAULT_MAX_MAP_COUNT_RATIO,
+        max_active_sessions: app::admission::DEFAULT_MAX_ACTIVE_SESSIONS,
     };
     let application_config_bytes = serde_json::to_vec(&application_config)?;
 

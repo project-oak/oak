@@ -35,9 +35,18 @@ use tokio::{net::TcpListener, sync::mpsc};
 use tokio_stream::{Stream, StreamExt, wrappers::TcpListenerStream};
 
 use crate::{
-    ApplicationConfig, IntoTonicResult, context::UserSessionContext, db_client::SharedDbClient,
+    ApplicationConfig, IntoTonicResult,
+    admission::{ActiveSessionGuard, AdmissionController, MapCountMonitor},
+    context::UserSessionContext,
+    db_client::SharedDbClient,
     handler::SealedMemorySessionHandler,
 };
+
+/// How often the `active_sessions` and `process_map_count` gauges are
+/// refreshed in the background, so they stay current without new sessions.
+/// Matches `MAP_COUNT_SAMPLE_INTERVAL`, so the refresh reads
+/// `/proc/self/maps` about once per second at most.
+const ADMISSION_GAUGE_REFRESH_INTERVAL: std::time::Duration = std::time::Duration::from_secs(1);
 
 /// The gRPC service implementation.
 ///
@@ -52,6 +61,7 @@ struct SealedMemoryServiceImplementation {
     tls_server_context: Option<Arc<OakSessionTlsServerContext>>,
     clock: Arc<dyn Clock>,
     application_config: ApplicationConfig,
+    admission: Arc<AdmissionController>,
 }
 
 impl SealedMemoryServiceImplementation {
@@ -63,13 +73,15 @@ impl SealedMemoryServiceImplementation {
         tls_server_context: Option<Arc<OakSessionTlsServerContext>>,
         clock: Arc<dyn Clock>,
     ) -> Self {
-        // Panic on misconfiguration to surface the error early rather than silently
-        // disabling
-        let threshold = application_config.min_available_memory_ratio;
-        assert!(
-            (0.0..1.0).contains(&threshold),
-            "Misconfigured min_available_memory_ratio! Must be between 0.0 and 1.0 (exclusive at upper bound). 0.0 disables the check."
-        );
+        // Panics on misconfigured thresholds to surface the error early rather
+        // than silently disabling.
+        let admission = Arc::new(AdmissionController::new(
+            application_config.max_active_sessions,
+            application_config.max_map_count_ratio,
+            application_config.min_available_memory_ratio,
+            MapCountMonitor::new_for_current_process(),
+            metrics.clone(),
+        ));
 
         Self {
             db_client: Arc::new(SharedDbClient::new(
@@ -83,6 +95,7 @@ impl SealedMemoryServiceImplementation {
             tls_server_context,
             clock,
             application_config,
+            admission,
         }
     }
 
@@ -94,10 +107,12 @@ impl SealedMemoryServiceImplementation {
         handler
     }
 
-    /// Rejects the session if memory is low, otherwise creates its handler.
+    /// Runs admission control, then creates the session's handler.
     fn create_oak_session_handler(&self) -> tonic::Result<OakSessionHandler> {
-        self.check_memory_availability()?;
+        // Admission control runs before the handshake and any Icing init.
+        let session_guard = self.admission.admit()?;
         OakSessionHandler::new(
+            session_guard,
             &self.metrics,
             &self.persistence_tx,
             self.db_client.clone(),
@@ -111,15 +126,19 @@ impl SealedMemoryServiceImplementation {
         )
     }
 
-    /// Rejects the TLS session if memory is low or TLS is not configured,
-    /// otherwise returns the TLS server context to run it with.
-    fn tls_server_context_for_new_session(
+    /// Runs admission control and rejects the TLS session if TLS is not
+    /// configured, otherwise returns the session's admission guard and the TLS
+    /// server context to run it with.
+    fn admit_tls_session(
         &self,
-    ) -> tonic::Result<&Arc<OakSessionTlsServerContext>> {
-        self.check_memory_availability()?;
-        self.tls_server_context
+    ) -> tonic::Result<(ActiveSessionGuard, &Arc<OakSessionTlsServerContext>)> {
+        // Admission control runs before the TLS handshake and any Icing init.
+        let session_guard = self.admission.admit()?;
+        let tls_ctx = self
+            .tls_server_context
             .as_ref()
-            .ok_or_else(|| tonic::Status::unimplemented("TLS sessions are not configured"))
+            .ok_or_else(|| tonic::Status::unimplemented("TLS sessions are not configured"))?;
+        Ok((session_guard, tls_ctx))
     }
 
     /// Counts an attempt to open a session stream under `SessionStart`, and
@@ -130,41 +149,6 @@ impl SealedMemoryServiceImplementation {
         if let Err(status) = session {
             self.metrics.record_failure(RequestMetricName::session_start(), status.code());
         }
-    }
-
-    /// Checks system available memory against `min_available_memory_ratio`.
-    /// Rejects new sessions with `RESOURCE_EXHAUSTED` if available memory is
-    /// below threshold.
-    fn check_memory_availability(&self) -> tonic::Result<()> {
-        let threshold = self.application_config.min_available_memory_ratio;
-        if threshold == 0.0 {
-            return Ok(());
-        }
-
-        match crate::meminfo::read_system_meminfo() {
-            Ok(meminfo) => {
-                if meminfo.is_below_threshold(threshold) {
-                    self.metrics.inc_session_rejected_low_memory();
-
-                    log::warn!(
-                        "Rejecting new session: available memory ({:.1}%) is below minimum threshold ({:.1}%)",
-                        meminfo.available_ratio() * 100.0,
-                        threshold * 100.0
-                    );
-                    return Err(tonic::Status::resource_exhausted(format!(
-                        "server memory is critically low: {:.1}% available (threshold: {:.1}%)",
-                        meminfo.available_ratio() * 100.0,
-                        threshold * 100.0
-                    )));
-                }
-            }
-            Err(e) => {
-                // Log warning when meminfo cannot be read (e.g. non-Linux or test env), fail
-                // open.
-                log::warn!("Could not read /proc/meminfo: {e}");
-            }
-        }
-        Ok(())
     }
 }
 
@@ -181,6 +165,7 @@ struct OakSessionHandler {
 impl OakSessionHandler {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
+        session_guard: ActiveSessionGuard,
         metrics: &Arc<metrics::Metrics>,
         persistence_tx: &mpsc::UnboundedSender<UserSessionContext>,
         db_client: Arc<SharedDbClient>,
@@ -207,7 +192,8 @@ impl OakSessionHandler {
                 max_memory_ttl_seconds,
                 enable_int8_embedding,
                 allowed_memory_sources,
-            ),
+            )
+            .with_session_guard(session_guard),
         })
     }
 
@@ -339,6 +325,7 @@ struct TlsSessionHandler {
 impl TlsSessionHandler {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
+        session_guard: ActiveSessionGuard,
         metrics: &Arc<metrics::Metrics>,
         persistence_tx: &mpsc::UnboundedSender<UserSessionContext>,
         db_client: Arc<SharedDbClient>,
@@ -363,7 +350,8 @@ impl TlsSessionHandler {
                 max_memory_ttl_seconds,
                 enable_int8_embedding,
                 allowed_memory_sources,
-            ),
+            )
+            .with_session_guard(session_guard),
         }
     }
 }
@@ -473,9 +461,9 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         &self,
         request: tonic::Request<tonic::Streaming<TlsSessionFrame>>,
     ) -> Result<tonic::Response<Self::StartTlsSessionStream>, tonic::Status> {
-        let tls_ctx = self.tls_server_context_for_new_session();
-        self.record_session_start(&tls_ctx);
-        let tls_ctx = tls_ctx?;
+        let admitted = self.admit_tls_session();
+        self.record_session_start(&admitted);
+        let (session_guard, tls_ctx) = admitted?;
 
         let metrics = self.metrics.clone();
         let persistence_tx = self.persistence_tx.clone();
@@ -537,6 +525,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
             };
 
             let tls_handler = TlsSessionHandler::new(
+                session_guard,
                 &metrics,
                 &persistence_tx,
                 db_client,
@@ -783,17 +772,31 @@ pub async fn create(
     clock: Arc<dyn Clock>,
 ) -> Result<(), anyhow::Error> {
     let max_grpc_decode_size_bytes = application_config.max_grpc_decode_size_bytes;
+    let service = SealedMemoryServiceImplementation::new(
+        application_config,
+        metrics,
+        persistence_tx,
+        session_config_factory,
+        tls_server_context,
+        clock,
+    );
+
+    // Keep the admission gauges fresh even when no new sessions arrive. The
+    // task holds only a weak reference so it ends with the service.
+    let admission = Arc::downgrade(&service.admission);
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(ADMISSION_GAUGE_REFRESH_INTERVAL);
+        loop {
+            interval.tick().await;
+            let Some(admission) = admission.upgrade() else { break };
+            admission.refresh_gauges();
+        }
+    });
+
     tonic::transport::Server::builder()
         .add_service(
-            SealedMemoryServiceServer::new(SealedMemoryServiceImplementation::new(
-                application_config,
-                metrics,
-                persistence_tx,
-                session_config_factory,
-                tls_server_context,
-                clock,
-            ))
-            .max_decoding_message_size(max_grpc_decode_size_bytes),
+            SealedMemoryServiceServer::new(service)
+                .max_decoding_message_size(max_grpc_decode_size_bytes),
         )
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await

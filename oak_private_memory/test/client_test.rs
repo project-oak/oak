@@ -1871,5 +1871,92 @@ async fn test_low_memory_rejections_are_counted() {
             BTreeMap::from([(attrs(&[]), 1)]),
             "{rpc:?}"
         );
+        assert_eq!(
+            harness.collect().counter_increments(&before, "session_rejected"),
+            BTreeMap::from([(attrs(&[("reason", "low_memory")]), 1)]),
+            "{rpc:?}"
+        );
+    }
+}
+
+fn config_with_single_session_cap(db_addr: std::net::SocketAddr) -> ApplicationConfig {
+    ApplicationConfig { max_active_sessions: 1, ..default_test_application_config(db_addr) }
+}
+
+/// Once `max_active_sessions` live sessions are open, new sessions are
+/// rejected on every session RPC and counted under `reason=max_sessions`.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_session_cap_rejections_are_counted() {
+    let harness = test_metrics();
+    let (addr, _server, _db, _persistence) =
+        start_server_with_metrics(config_with_single_session_cap, None, harness.metrics.clone())
+            .await
+            .unwrap();
+    let url = format!("http://{addr}");
+
+    let held = RawNoiseSession::open(&url, SessionRpc::Invoke).await;
+    let snapshot = harness.collect();
+    assert_eq!(snapshot.gauge_points("active_sessions"), &BTreeMap::from([(attrs(&[]), 1)]));
+    assert_eq!(snapshot.gauge_points("max_active_sessions"), &BTreeMap::from([(attrs(&[]), 1)]));
+
+    for rpc in ALL_RPCS {
+        let before = harness.collect();
+        let status = open_rejected_stream(&url, rpc).await;
+        assert_eq!(status.code(), tonic::Code::ResourceExhausted, "{rpc:?}: {status:?}");
+        assert_increments(
+            &harness,
+            &before,
+            &[("SessionStart", 1)],
+            &[("SessionStart", "RESOURCE_EXHAUSTED", 1)],
+            rpc,
+        );
+        assert_eq!(
+            harness.collect().counter_increments(&before, "session_rejected"),
+            BTreeMap::from([(attrs(&[("reason", "max_sessions")]), 1)]),
+            "{rpc:?}"
+        );
+    }
+    held.close().await;
+}
+
+fn config_with_unreachable_map_count_ratio(db_addr: std::net::SocketAddr) -> ApplicationConfig {
+    ApplicationConfig {
+        // Rounds the map-count limit down to 0, which any running process exceeds.
+        max_map_count_ratio: f64::MIN_POSITIVE,
+        ..default_test_application_config(db_addr)
+    }
+}
+
+/// New sessions are rejected while the process map count is at or above the
+/// configured ratio, on every session RPC, and counted under
+/// `reason=map_count`.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_map_count_rejections_are_counted() {
+    let harness = test_metrics();
+    let (addr, _server, _db, _persistence) = start_server_with_metrics(
+        config_with_unreachable_map_count_ratio,
+        None,
+        harness.metrics.clone(),
+    )
+    .await
+    .unwrap();
+    let url = format!("http://{addr}");
+
+    for rpc in ALL_RPCS {
+        let before = harness.collect();
+        let status = open_rejected_stream(&url, rpc).await;
+        assert_eq!(status.code(), tonic::Code::ResourceExhausted, "{rpc:?}: {status:?}");
+        assert_increments(
+            &harness,
+            &before,
+            &[("SessionStart", 1)],
+            &[("SessionStart", "RESOURCE_EXHAUSTED", 1)],
+            rpc,
+        );
+        assert_eq!(
+            harness.collect().counter_increments(&before, "session_rejected"),
+            BTreeMap::from([(attrs(&[("reason", "map_count")]), 1)]),
+            "{rpc:?}"
+        );
     }
 }

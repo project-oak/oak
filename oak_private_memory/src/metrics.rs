@@ -89,6 +89,15 @@ pub struct Metrics {
     orphaned_blob_deletes: Counter<u64>,
     // Number of sessions rejected due to low memory.
     session_rejected_low_memory: Counter<u64>,
+    // Number of sessions rejected by admission control, labelled by `reason`
+    // (see [`SessionRejectReason`]).
+    session_rejected: Counter<u64>,
+    // Number of currently live sessions (each may own an Icing instance).
+    active_sessions: Gauge<u64>,
+    // Configured cap on live sessions (`max_active_sessions`).
+    max_active_sessions: Gauge<u64>,
+    // Number of memory mappings of the process (lines in /proc/self/maps).
+    process_map_count: Gauge<u64>,
 
     // Icing initialization stats
     icing_init_status: Counter<u64>,
@@ -125,6 +134,35 @@ pub struct RequestMetricName(RequestMetricNameInner);
 const KB: usize = 1_024;
 /// Bytes in a binary megabyte (MiB).
 const MB: usize = 1_024 * KB;
+
+/// Why admission control rejected a new session. Used as the `reason` column
+/// of the `session_rejected` counter.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SessionRejectReason {
+    /// Live sessions reached `max_active_sessions`.
+    MaxSessions,
+    /// Available RAM is below `min_available_memory_ratio`.
+    LowMemory,
+    /// The process map count reached `max_map_count_ratio` of
+    /// `vm.max_map_count`.
+    MapCount,
+}
+
+impl SessionRejectReason {
+    pub const ALL: [SessionRejectReason; 3] = [
+        SessionRejectReason::MaxSessions,
+        SessionRejectReason::LowMemory,
+        SessionRejectReason::MapCount,
+    ];
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            SessionRejectReason::MaxSessions => "max_sessions",
+            SessionRejectReason::LowMemory => "low_memory",
+            SessionRejectReason::MapCount => "map_count",
+        }
+    }
+}
 
 // Explicit bucket boundaries for the `db_size` histogram, in bytes.
 //
@@ -330,6 +368,32 @@ impl Metrics {
             .with_description("Number of failures enqueueing sessions for persistence.")
             .build();
 
+        // Admission-control metrics. Keep these ahead of the icing_* instruments:
+        // the host OTel->streamz bridge drops every instrument after the first one
+        // that fails to export, so earlier instruments are more robust.
+        let session_rejected_low_memory = meter
+            .u64_counter("session_rejected_low_memory")
+            .with_description("Number of sessions rejected due to low memory.")
+            .build();
+        let session_rejected = meter
+            .u64_counter("session_rejected")
+            .with_description("Number of new sessions rejected by admission control, by reason.")
+            .build();
+        let active_sessions = meter
+            .u64_gauge("active_sessions")
+            .with_description("Number of currently live sessions (each may own an Icing instance).")
+            .build();
+        let max_active_sessions = meter
+            .u64_gauge("max_active_sessions")
+            .with_description("Configured cap on live sessions per enclave.")
+            .build();
+        let process_map_count = meter
+            .u64_gauge("process_map_count")
+            .with_description(
+                "Number of memory mappings of the process (lines in /proc/self/maps).",
+            )
+            .build();
+
         // Initialize the total count to 0 to trigger the metric registration.
         // Otherwise, the metric will only show up once it has been incremented.
         rpc_count.add(0, &[KeyValue::new("request_type", "total")]);
@@ -362,6 +426,13 @@ impl Metrics {
         tls_handshake_failures.add(0, &[]);
         tls_receive_failures.add(0, &[]);
         persistence_enqueue_failures.add(0, &[]);
+        session_rejected_low_memory.add(0, &[]);
+        for reason in SessionRejectReason::ALL {
+            session_rejected.add(0, &[KeyValue::new("reason", reason.as_str())]);
+        }
+        active_sessions.record(0, &[]);
+        max_active_sessions.record(0, &[]);
+        process_map_count.record(0, &[]);
         let orphaned_blob_deletes = meter
             .u64_counter("orphaned_blob_deletes")
             .with_description("Number of blobs that should have been soft-deleted but were not.")
@@ -391,11 +462,6 @@ impl Metrics {
             .build();
 
         orphaned_blob_deletes.add(0, &[]);
-        let session_rejected_low_memory = meter
-            .u64_counter("session_rejected_low_memory")
-            .with_description("Number of sessions rejected due to low memory.")
-            .build();
-        session_rejected_low_memory.add(0, &[]);
 
         Self {
             rpc_count,
@@ -426,6 +492,10 @@ impl Metrics {
             persistence_enqueue_failures,
             orphaned_blob_deletes,
             session_rejected_low_memory,
+            session_rejected,
+            active_sessions,
+            max_active_sessions,
+            process_map_count,
             icing_init_status,
             icing_init_latency_ms,
             icing_recovery_cause,
@@ -582,6 +652,29 @@ impl Metrics {
 
     pub fn inc_session_rejected_low_memory(&self) {
         self.session_rejected_low_memory.add(1, &[]);
+    }
+
+    /// Records a session rejected by admission control. For
+    /// [`SessionRejectReason::LowMemory`] this also increments the legacy
+    /// `session_rejected_low_memory` counter, so existing dashboards keep
+    /// working.
+    pub fn inc_session_rejected(&self, reason: SessionRejectReason) {
+        if reason == SessionRejectReason::LowMemory {
+            self.inc_session_rejected_low_memory();
+        }
+        self.session_rejected.add(1, &[KeyValue::new("reason", reason.as_str())]);
+    }
+
+    pub fn record_active_sessions(&self, count: u64) {
+        self.active_sessions.record(count, &[]);
+    }
+
+    pub fn record_max_active_sessions(&self, max: u64) {
+        self.max_active_sessions.record(max, &[]);
+    }
+
+    pub fn record_process_map_count(&self, count: u64) {
+        self.process_map_count.record(count, &[]);
     }
 
     pub fn record_icing_initialization_stats(&self, result: &icing::InitializeResultProto) {
@@ -1010,10 +1103,19 @@ mod value_tests {
             );
         }
 
-        // The gauge starts at zero.
+        // The gauges start at zero.
+        for name in
+            ["db_persist_queue_size", "active_sessions", "max_active_sessions", "process_map_count"]
+        {
+            assert_eq!(snapshot.gauge_points(name), &BTreeMap::from([(attrs(empty), 0)]), "{name}");
+        }
+        // Every admission-control rejection reason has a series.
         assert_eq!(
-            snapshot.gauge_points("db_persist_queue_size"),
-            &BTreeMap::from([(attrs(empty), 0)])
+            snapshot.counter_points("session_rejected"),
+            &SessionRejectReason::ALL
+                .iter()
+                .map(|reason| (attrs(&[("reason", reason.as_str())]), 0))
+                .collect::<BTreeMap<_, _>>()
         );
 
         // Attribute `(key, value)` pairs, as written in the table below.
@@ -1044,12 +1146,20 @@ mod value_tests {
         }
 
         // Instruments that are only exported once recorded.
-        let expected: BTreeSet<&str> = ["rpc_count", "rpc_failure_count", "db_persist_queue_size"]
-            .into_iter()
-            .chain(UNIT_COUNTERS.iter().map(|(metric_name, _)| *metric_name))
-            .chain(AMOUNT_COUNTERS.iter().map(|(metric_name, _)| *metric_name))
-            .chain(startup_histograms.iter().map(|(metric_name, _, _)| *metric_name))
-            .collect();
+        let expected: BTreeSet<&str> = [
+            "rpc_count",
+            "rpc_failure_count",
+            "db_persist_queue_size",
+            "session_rejected",
+            "active_sessions",
+            "max_active_sessions",
+            "process_map_count",
+        ]
+        .into_iter()
+        .chain(UNIT_COUNTERS.iter().map(|(metric_name, _)| *metric_name))
+        .chain(AMOUNT_COUNTERS.iter().map(|(metric_name, _)| *metric_name))
+        .chain(startup_histograms.iter().map(|(metric_name, _, _)| *metric_name))
+        .collect();
         assert_eq!(snapshot.names(), expected);
         // TODO: b/571198870 - unlike most other histograms, `db_save_speed`
         // and `db_load_speed` are not zero-initialized at startup, so they are
@@ -1247,6 +1357,25 @@ mod value_tests {
                 "",
                 "Number of sessions rejected due to low memory.",
                 Counter,
+            ),
+            (
+                "session_rejected",
+                "",
+                "Number of new sessions rejected by admission control, by reason.",
+                Counter,
+            ),
+            (
+                "active_sessions",
+                "",
+                "Number of currently live sessions (each may own an Icing instance).",
+                Gauge,
+            ),
+            ("max_active_sessions", "", "Configured cap on live sessions per enclave.", Gauge),
+            (
+                "process_map_count",
+                "",
+                "Number of memory mappings of the process (lines in /proc/self/maps).",
+                Gauge,
             ),
             ("icing_init_status", "", "Icing init status code.", Counter),
             // TODO: b/571198870 - the icing `*_ms` histograms have no unit and
@@ -1708,6 +1837,48 @@ mod value_tests {
             }
             for (other, _) in UNIT_COUNTERS {
                 assert_eq!(snapshot.counter(other, &[]), 0, "{name} moved {other}");
+            }
+        }
+    }
+
+    #[test]
+    fn inc_session_rejected_counts_reason_and_legacy_low_memory_counter() {
+        let harness = test_metrics();
+        let before = harness.collect();
+        harness.metrics.inc_session_rejected(SessionRejectReason::MaxSessions);
+        harness.metrics.inc_session_rejected(SessionRejectReason::MapCount);
+        harness.metrics.inc_session_rejected(SessionRejectReason::LowMemory);
+        harness.metrics.inc_session_rejected(SessionRejectReason::LowMemory);
+
+        let snapshot = harness.collect();
+        assert_eq!(
+            snapshot.counter_increments(&before, "session_rejected"),
+            BTreeMap::from([
+                (attrs(&[("reason", "max_sessions")]), 1),
+                (attrs(&[("reason", "map_count")]), 1),
+                (attrs(&[("reason", "low_memory")]), 2),
+            ])
+        );
+        // Only low-memory rejections also move the legacy counter.
+        assert_eq!(snapshot.counter("session_rejected_low_memory", &[]), 2);
+    }
+
+    #[test]
+    fn admission_gauges_record_last_value() {
+        let gauges: [(&str, RecordFn); 3] = [
+            ("active_sessions", Metrics::record_active_sessions),
+            ("max_active_sessions", Metrics::record_max_active_sessions),
+            ("process_map_count", Metrics::record_process_map_count),
+        ];
+        for (name, record) in gauges {
+            let harness = test_metrics();
+            for value in [5, 3, 0] {
+                record(&harness.metrics, value);
+                assert_eq!(
+                    harness.collect().gauge_points(name),
+                    &BTreeMap::from([(attrs(&[]), value)]),
+                    "{name}"
+                );
             }
         }
     }
