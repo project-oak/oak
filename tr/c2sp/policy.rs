@@ -35,7 +35,11 @@
 //! quorum mygroup
 //! ```
 
-use alloc::{collections::BTreeMap, string::String, vec::Vec};
+use alloc::{
+    collections::{BTreeMap, BTreeSet},
+    string::String,
+    vec::Vec,
+};
 use core::fmt;
 
 use oak_proto_rust::oak::attestation::v1::C2sptLogProofReferenceValue;
@@ -126,6 +130,11 @@ impl Policy {
         let mut quorums = BTreeMap::new();
         let mut quorum_set = false;
         let mut root_quorum: Option<QuorumName> = None;
+        // Every name listed as a member of any group so far. The spec allows
+        // each name to be a group member at most once, across the whole
+        // policy, so that each witness can contribute to the quorum in only
+        // one way.
+        let mut group_members = BTreeSet::new();
 
         for (lineno, line) in data.lines().enumerate() {
             let line = line.trim();
@@ -280,14 +289,17 @@ impl Policy {
                         });
                     }
 
-                    // Validate all members are unique and refer to
-                    // previously defined names.
-                    let mut seen_members = alloc::collections::BTreeSet::new();
+                    // Validate all members refer to previously defined
+                    // names, and are not members of this or any other group
+                    // already.
                     for member in &members {
-                        if !seen_members.insert(member) {
+                        if !group_members.insert(member.clone()) {
                             return Err(PolicyError::Parse {
                                 line: lineno + 1,
-                                reason: alloc::format!("duplicate group member `{member}`"),
+                                reason: alloc::format!(
+                                    "duplicate group member `{member}`: a name can be a group \
+                                     member at most once"
+                                ),
                             });
                         }
                         if !quorums.contains_key(member) {
@@ -901,6 +913,56 @@ mod tests {
         );
         let err = Policy::parse(&policy_text).unwrap_err();
         assert!(err.to_string().contains("duplicate group member `w1`"));
+    }
+
+    #[test]
+    fn parse_member_of_two_groups_fails() {
+        // Were this accepted, w1 alone would satisfy the quorum, which looks
+        // as though it needs two witnesses.
+        let lkey = make_log_vkey("example.com/log", [0x01; 32]);
+        let w1 = make_witness_vkey("witness.example.com/w1", [0xAA; 32]);
+        let w2 = make_witness_vkey("witness.example.com/w2", [0xBB; 32]);
+        let w3 = make_witness_vkey("witness.example.com/w3", [0xCC; 32]);
+        let policy_text = alloc::format!(
+            concat!(
+                "{}witness w1 {}\n",
+                "witness w2 {}\n",
+                "witness w3 {}\n",
+                "group A any w1 w2\n",
+                "group B any w1 w3\n",
+                "group Q all A B\n",
+                "quorum Q\n",
+            ),
+            log_line(&lkey),
+            w1.to_vkey_string(),
+            w2.to_vkey_string(),
+            w3.to_vkey_string()
+        );
+        let err = Policy::parse(&policy_text).unwrap_err();
+        assert!(err.to_string().contains("duplicate group member `w1`"));
+        assert!(err.to_string().contains("line 6"), "{err}");
+    }
+
+    #[test]
+    fn parse_group_member_of_two_groups_fails() {
+        let lkey = make_log_vkey("example.com/log", [0x01; 32]);
+        let w1 = make_witness_vkey("witness.example.com/w1", [0xAA; 32]);
+        let w2 = make_witness_vkey("witness.example.com/w2", [0xBB; 32]);
+        let policy_text = alloc::format!(
+            concat!(
+                "{}witness w1 {}\n",
+                "witness w2 {}\n",
+                "group A any w1\n",
+                "group B any A w2\n",
+                "group C any A\n",
+                "quorum B\n",
+            ),
+            log_line(&lkey),
+            w1.to_vkey_string(),
+            w2.to_vkey_string()
+        );
+        let err = Policy::parse(&policy_text).unwrap_err();
+        assert!(err.to_string().contains("duplicate group member `A`"));
     }
 
     #[test]
