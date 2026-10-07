@@ -109,6 +109,7 @@ A1edf0NSAidb4q69a5aAcE+c+w==";
                     der_bytes: dummy_endorser_key_bytes.clone(),
                 })),
             }),
+            time_stamp_token: vec![],
         }),
         endorsement_signatures: vec![Signature {
             signature: vec![],
@@ -117,6 +118,7 @@ A1edf0NSAidb4q69a5aAcE+c+w==";
                     der_bytes: cert_der,
                 })),
             }),
+            time_stamp_token: vec![],
         }],
         tlog_receipt: Some(TLogReceipt { entry_id: entry_id.to_string() }),
     };

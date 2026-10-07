@@ -18,8 +18,8 @@ use alloc::{string::String, vec::Vec};
 use oak_proto_rust::google::pes::v1::{
     EcdsaP256PublicKey as ProtoEcdsaP256PublicKey, PublicEndorsement as ProtoPublicEndorsement,
     Signature as ProtoSignature, Statement as ProtoStatement, TLogReceipt as ProtoTLogReceipt,
-    VerificationMaterial as ProtoVerificationMaterial, X509Der as ProtoX509Der,
-    statement::Format as StatementFormat,
+    TimeStampToken as ProtoTimeStampToken, VerificationMaterial as ProtoVerificationMaterial,
+    X509Der as ProtoX509Der, statement::Format as StatementFormat,
     verification_material::VerificationMaterial as ProtoVerificationMaterialEnum,
 };
 use serde::{Deserialize, Serialize};
@@ -73,6 +73,15 @@ pub struct Signature {
     #[serde(with = "base64_serde")]
     pub signature: Vec<u8>,
     pub verification_material: Option<VerificationMaterial>,
+    pub time_stamp_token: Option<Vec<TimeStampToken>>,
+}
+
+/// JSON representation of an RFC 3161 TimeStampToken.
+#[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct TimeStampToken {
+    #[serde(with = "base64_serde")]
+    pub der_bytes: Vec<u8>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -147,7 +156,19 @@ impl From<Signature> for ProtoSignature {
     fn from(value: Signature) -> Self {
         let verification_material =
             value.verification_material.map(ProtoVerificationMaterial::from);
-        ProtoSignature { signature: value.signature, verification_material }
+        let time_stamp_token = value
+            .time_stamp_token
+            .unwrap_or_default()
+            .into_iter()
+            .map(ProtoTimeStampToken::from)
+            .collect();
+        ProtoSignature { signature: value.signature, verification_material, time_stamp_token }
+    }
+}
+
+impl From<TimeStampToken> for ProtoTimeStampToken {
+    fn from(value: TimeStampToken) -> Self {
+        ProtoTimeStampToken { der_bytes: value.der_bytes }
     }
 }
 

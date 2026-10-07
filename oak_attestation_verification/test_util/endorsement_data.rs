@@ -229,6 +229,7 @@ impl EndorsementData {
                         )
                     ),
                 }),
+                time_stamp_token: vec![],
             }),
             endorsement_signatures: vec![oak_proto_rust::google::pes::v1::Signature {
                 // The PES Confirmation is signed by PES.
@@ -242,6 +243,7 @@ impl EndorsementData {
                         )
                     ),
                 }),
+                time_stamp_token: vec![],
             }],
             tlog_receipt: Some(tlog_receipt),
         };

@@ -126,7 +126,7 @@ pub mod statement {
     }
 }
 /// A wrapper for a single signature of byte data
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Signature {
     /// An actual raw signature
     #[prost(bytes = "vec", tag = "1")]
@@ -134,6 +134,18 @@ pub struct Signature {
     /// The material required to verify the authenticity of the signature.
     #[prost(message, optional, tag = "2")]
     pub verification_material: ::core::option::Option<VerificationMaterial>,
+    /// RFC 3161 timestamp token from the timestamp authority certifying the
+    /// signature creation time.
+    #[prost(message, repeated, tag = "3")]
+    pub time_stamp_token: ::prost::alloc::vec::Vec<TimeStampToken>,
+}
+/// Represents an RFC 3161 TimeStampToken.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct TimeStampToken {
+    /// Contains DER-encoded TimeStampToken as defined in
+    /// <https://www.rfc-editor.org/info/rfc3161/#section-2.4.2>
+    #[prost(bytes = "vec", tag = "1")]
+    pub der_bytes: ::prost::alloc::vec::Vec<u8>,
 }
 /// Represents a receipt from the TLog.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
