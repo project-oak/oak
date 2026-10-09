@@ -60,7 +60,7 @@ async fn try_persist_database(
         );
     }
     info!("Saving db size: {}", db_size);
-    metrics.record_db_size(db_size as u64);
+    let encoded_size = database.encoded_len();
 
     let now = Instant::now();
     let coarsened_expiration_timestamp = user_context.database.calculate_coarsened_blanket_ttl();
@@ -79,6 +79,8 @@ async fn try_persist_database(
     if result == MetadataPersistResult::Succeeded {
         let elapsed = now.elapsed();
         metrics.record_db_persist_latency(elapsed.as_millis() as u64);
+        metrics.record_db_size(db_size as u64);
+        metrics.record_db_save_speed(metrics::transfer_speed_kb_per_ms(encoded_size, elapsed));
     }
 
     Ok(result)
@@ -95,16 +97,24 @@ async fn pull_and_rebase(
     metrics: &Metrics,
 ) -> anyhow::Result<()> {
     let coarsened_expiration_timestamp = user_context.database.calculate_coarsened_blanket_ttl();
+    let fetch_start = Instant::now();
     let refreshed_blob = user_context
         .database_service_client
         .get_metadata_blob_stream(&user_context.uid, coarsened_expiration_timestamp)
         .await?;
+    let fetch_elapsed = fetch_start.elapsed();
 
     let refreshed_blob = match refreshed_blob {
         Some(blob) => blob,
         None if require_blob => anyhow::bail!("no blob found"),
         None => return Ok(()),
     };
+    if let Some(encrypted_data_blob) = &refreshed_blob.encrypted_data_blob {
+        metrics.record_db_load_speed(metrics::transfer_speed_kb_per_ms(
+            encrypted_data_blob.encoded_len(),
+            fetch_elapsed,
+        ));
+    }
 
     if refreshed_blob.version == user_context.database_version {
         return Ok(());
@@ -112,7 +122,8 @@ async fn pull_and_rebase(
 
     let encrypted_data_blob =
         refreshed_blob.encrypted_data_blob.context("missing encrypted data blob")?;
-    let decrypted = decrypt_database(encrypted_data_blob, &user_context.dek)?;
+    let decrypted = decrypt_database(encrypted_data_blob, &user_context.dek)
+        .inspect_err(|_| metrics.inc_db_decryption_failures())?;
     let new_icing_db = decrypted.icing_db.context("missing icing_db in refreshed blob")?;
     let failed_operations =
         user_context.database.rebase(new_icing_db.encode_to_vec().as_slice())?;
@@ -175,14 +186,19 @@ async fn persist_database(
     user_context: &mut UserSessionContext,
     metrics: &Metrics,
 ) -> anyhow::Result<()> {
+    // `try_persist_database` skips writing a database without changes, so
+    // that isn't a persist for the metrics below.
+    let has_changes = user_context.database.changed();
     let mut attempt: u64 = 1;
     let now = Instant::now();
     while attempt < MAX_RETRY_ATTEMPTS {
         match try_persist_database(user_context, metrics).await {
             Ok(MetadataPersistResult::Succeeded) => {
-                let elapsed = now.elapsed();
-                metrics.record_db_persist_latency_with_retries(elapsed.as_millis() as u64);
-                metrics.record_db_persist_attempts(attempt);
+                if has_changes {
+                    let elapsed = now.elapsed();
+                    metrics.record_db_persist_latency_with_retries(elapsed.as_millis() as u64);
+                    metrics.record_db_persist_attempts(attempt);
+                }
                 // Flush deferred blob soft-deletes now that the index is
                 // durably persisted. Orphaned blobs are tracked in metrics
                 // and can be cleaned by GC.

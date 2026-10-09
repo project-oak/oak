@@ -156,7 +156,6 @@ rust_library(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":log",
-        ":metrics",
         "//proto:sealed_memory_rust_proto",
         "//proto/grpc:sealed_memory_grpc_proto",
         "@oak_crates_index//:anyhow",
@@ -164,7 +163,6 @@ rust_library(
         "@oak_crates_index//:opentelemetry",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
-        "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",
         "@pm_crates//:rand",
     ],

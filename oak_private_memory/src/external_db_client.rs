@@ -107,13 +107,6 @@ pub trait DataBlobHandler {
     async fn delete_blobs(&mut self, ids: &[BlobId]) -> anyhow::Result<()>;
 }
 
-// TODO: b/571198870 - the `db_save_speed` / `db_load_speed` recordings in this
-// impl are not covered by a metric test. They go through the global metrics
-// singleton (which exports to the host and can't be read in tests) because
-// this is a trait impl on the generated `SealedMemoryDatabaseServiceClient`;
-// injecting `Metrics` would change the `DataBlobHandler` signatures and every
-// caller. Covering them needs that refactor, or a host-side (google3) e2e test
-// that reads the exported streamz values.
 #[async_trait]
 impl DataBlobHandler for ExternalDbClient {
     async fn add_blob(
@@ -124,20 +117,12 @@ impl DataBlobHandler for ExternalDbClient {
     ) -> anyhow::Result<BlobId> {
         let id = id.unwrap_or_else(|| rand::random::<u128>().to_string());
         let blob = data_blob.encode_to_vec();
-        let blob_size = blob.len() as u64;
         let data_blob = DataBlob { id: id.clone(), blob };
-        let start_time = tokio::time::Instant::now();
         self.write_data_blob(WriteDataBlobRequest {
             data_blob: Some(data_blob),
             coarsened_expiration_timestamp: Some(coarsened_expiration_timestamp),
         })
         .await?;
-        let mut elapsed_time = start_time.elapsed().as_millis() as u64;
-        if elapsed_time == 0 {
-            elapsed_time = 1;
-        }
-        let speed = blob_size / 1024 / elapsed_time;
-        metrics::get_global_metrics().record_db_save_speed(speed);
         Ok(id)
     }
 
@@ -149,9 +134,7 @@ impl DataBlobHandler for ExternalDbClient {
     ) -> anyhow::Result<MetadataPersistResult> {
         let blob =
             metadata_blob.encrypted_data_blob.as_ref().context("no blob contents")?.encode_to_vec();
-        let blob_size = blob.len() as u64;
         let data_blob = DataBlob { id: id.clone(), blob };
-        let start_time = tokio::time::Instant::now();
         let write_result = self
             .write_metadata_blob(WriteMetadataBlobRequest {
                 metadata_blob: Some(MetadataBlob {
@@ -176,12 +159,6 @@ impl DataBlobHandler for ExternalDbClient {
             Err(status) => return Err(status.into()),
         }
 
-        let mut elapsed_time = start_time.elapsed().as_millis() as u64;
-        if elapsed_time == 0 {
-            elapsed_time = 1;
-        }
-        let speed = blob_size / 1024 / elapsed_time;
-        metrics::get_global_metrics().record_db_save_speed(speed);
         Ok(MetadataPersistResult::Succeeded)
     }
 
@@ -193,7 +170,6 @@ impl DataBlobHandler for ExternalDbClient {
     ) -> anyhow::Result<MetadataPersistResult> {
         let blob =
             metadata_blob.encrypted_data_blob.as_ref().context("no blob contents")?.encode_to_vec();
-        let blob_size = blob.len() as u64;
 
         let mut chunks = blob.chunks(CHUNK_SIZE);
         let first_chunk = chunks.next().unwrap_or_default();
@@ -214,7 +190,6 @@ impl DataBlobHandler for ExternalDbClient {
             });
         }
 
-        let start_time = tokio::time::Instant::now();
         let write_result = self.write_metadata_blob_stream(futures::stream::iter(messages)).await;
 
         match write_result {
@@ -231,31 +206,16 @@ impl DataBlobHandler for ExternalDbClient {
             Err(status) => return Err(status.into()),
         }
 
-        let mut elapsed_time = start_time.elapsed().as_millis() as u64;
-        if elapsed_time == 0 {
-            elapsed_time = 1;
-        }
-        let speed = blob_size / 1024 / elapsed_time;
-        metrics::get_global_metrics().record_db_save_speed(speed);
         Ok(MetadataPersistResult::Succeeded)
     }
 
     async fn get_blob(&mut self, id: &BlobId) -> anyhow::Result<Option<EncryptedDataBlob>> {
-        let start_time = tokio::time::Instant::now();
         match self.read_data_blob(ReadDataBlobRequest { id: id.clone() }).await {
             Ok(response) => {
                 let db_response = response.into_inner();
                 if let Some(data_blob) = db_response.data_blob {
-                    let blob_size = data_blob.blob.len() as u64;
                     let data_blob = EncryptedDataBlob::decode(&*data_blob.blob)
                         .context("decoding EncryptedDataBlob")?;
-
-                    let mut elapsed_time = start_time.elapsed().as_millis() as u64;
-                    if elapsed_time == 0 {
-                        elapsed_time = 1;
-                    }
-                    let speed = blob_size / 1024 / elapsed_time;
-                    metrics::get_global_metrics().record_db_load_speed(speed);
                     return Ok(Some(data_blob));
                 }
                 Ok(None)
@@ -275,7 +235,6 @@ impl DataBlobHandler for ExternalDbClient {
         id: &BlobId,
         coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<Option<EncryptedMetadataBlob>> {
-        let start_time = tokio::time::Instant::now();
         match self
             .read_metadata_blob(ReadMetadataBlobRequest {
                 id: id.clone(),
@@ -289,7 +248,6 @@ impl DataBlobHandler for ExternalDbClient {
                     metadata_blob: Some(MetadataBlob { data_blob: Some(data_blob), version }),
                 } = db_response
                 {
-                    let blob_size = data_blob.blob.len() as u64;
                     let metadata_blob = EncryptedMetadataBlob {
                         encrypted_data_blob: Some(
                             EncryptedDataBlob::decode(&*data_blob.blob)
@@ -297,13 +255,6 @@ impl DataBlobHandler for ExternalDbClient {
                         ),
                         version,
                     };
-
-                    let mut elapsed_time = start_time.elapsed().as_millis() as u64;
-                    if elapsed_time == 0 {
-                        elapsed_time = 1;
-                    }
-                    let speed = blob_size / 1024 / elapsed_time;
-                    metrics::get_global_metrics().record_db_load_speed(speed);
                     return Ok(Some(metadata_blob));
                 }
                 Ok(None)
@@ -323,7 +274,6 @@ impl DataBlobHandler for ExternalDbClient {
         id: &BlobId,
         coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<Option<EncryptedMetadataBlob>> {
-        let start_time = tokio::time::Instant::now();
         match self
             .read_metadata_blob_stream(ReadMetadataBlobStreamRequest {
                 id: id.clone(),
@@ -367,13 +317,6 @@ impl DataBlobHandler for ExternalDbClient {
                     ),
                     version,
                 };
-
-                let mut elapsed_time = start_time.elapsed().as_millis() as u64;
-                if elapsed_time == 0 {
-                    elapsed_time = 1;
-                }
-                let speed = full_blob.len() as u64 / 1024 / elapsed_time;
-                metrics::get_global_metrics().record_db_load_speed(speed);
                 Ok(Some(metadata_blob))
             }
             Err(status) => {

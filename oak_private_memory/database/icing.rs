@@ -867,28 +867,59 @@ impl IcingMetaDatabase {
     /// Create a new icing database. If there is already a icing
     /// db in `config.base_dir`, the old one will be deleted.
     pub fn new(config: IcingDatabaseConfig) -> anyhow::Result<Self> {
+        Self::new_with_metrics(config, &metrics::get_global_metrics())
+    }
+
+    /// Like [`Self::new`], but records `db_init_latency` and the icing
+    /// initialization stats in `metrics`.
+    pub fn new_with_metrics(
+        config: IcingDatabaseConfig,
+        metrics: &metrics::Metrics,
+    ) -> anyhow::Result<Self> {
         debug!("Creating new icing database in {}", config.base_dir.as_str());
-        let icing_search_engine = Self::initialize_icing_database(config.base_dir.as_str())?;
+        let start = std::time::Instant::now();
+        let icing_search_engine =
+            Self::initialize_icing_database_with_metrics(config.base_dir.as_str(), metrics)?;
         let schema = Self::create_schema(&config)?;
         let result_proto = icing_search_engine.set_schema(&schema)?;
         ensure!(
             result_proto.status.context("set_schema returned no status in new")?.code
                 == Some(icing::status_proto::Code::Ok.into())
         );
-        Ok(Self {
+        let db = Self {
             icing_search_engine,
             applied_operations: vec![MutationOperation::Create],
             config,
-        })
+        };
+        let elapsed = start.elapsed();
+        let initial_size = db.export()?.encoded_len();
+        metrics.record_db_init_latency(
+            elapsed.as_millis() as u64,
+            metrics::bucket_db_size(initial_size),
+        );
+        Ok(db)
     }
 
     /// Create a new icing database using the provided import data.
     pub fn import(data: impl bytes::Buf, config: IcingDatabaseConfig) -> anyhow::Result<Self> {
+        Self::import_with_metrics(data, config, &metrics::get_global_metrics())
+    }
+
+    /// Like [`Self::import`], but records `db_init_latency` and the icing
+    /// initialization stats in `metrics`.
+    pub fn import_with_metrics(
+        data: impl bytes::Buf,
+        config: IcingDatabaseConfig,
+        metrics: &metrics::Metrics,
+    ) -> anyhow::Result<Self> {
         debug!("Importing icing database into {}", config.base_dir.as_str());
+        let initial_size = data.remaining();
+        let start = std::time::Instant::now();
         let ground_truth = icing::IcingGroundTruthFiles::decode(data)?;
         ground_truth.migrate(config.base_dir.as_str())?;
 
-        let icing_search_engine = Self::initialize_icing_database(config.base_dir.as_str())?;
+        let icing_search_engine =
+            Self::initialize_icing_database_with_metrics(config.base_dir.as_str(), metrics)?;
         // Ensure schema is up-to-date after import (handles schema migrations).
         let schema = Self::create_schema(&config)?;
         let result_proto = icing_search_engine.set_schema(&schema)?;
@@ -896,17 +927,11 @@ impl IcingMetaDatabase {
             result_proto.status.context("set_schema in import failed")?.code
                 == Some(icing::status_proto::Code::Ok.into())
         );
+        metrics.record_db_init_latency(
+            start.elapsed().as_millis() as u64,
+            metrics::bucket_db_size(initial_size),
+        );
         Ok(Self { icing_search_engine, applied_operations: vec![], config })
-    }
-
-    // TODO: b/571198870 - production Icing initialization still records into
-    // the global metrics, because `IcingMetaDatabase::new` and `import` don't
-    // take a `Metrics` yet. Only the test-facing
-    // `initialize_icing_database_with_metrics` can record elsewhere.
-    fn initialize_icing_database(
-        base_dir_str: &str,
-    ) -> anyhow::Result<cxx::UniquePtr<icing::IcingSearchEngine>> {
-        Self::initialize_icing_database_with_metrics(base_dir_str, &metrics::get_global_metrics())
     }
 
     fn initialize_icing_database_with_metrics(
@@ -2571,6 +2596,53 @@ mod tests {
             )]))
         );
         expect_that!(snapshot.histogram("icing_init_latency_ms", &[]).count, eq(1));
+        Ok(())
+    }
+
+    /// Importing a database records `db_init_latency` under the encoded blob's
+    /// size bucket and records the icing initialization stats in the given
+    /// metrics.
+    #[gtest]
+    fn import_with_metrics_records_init_stats_test() -> anyhow::Result<()> {
+        let base = IcingMetaDatabase::new(test_config())?;
+        let base_exported = base.export()?.encode_to_vec();
+        let harness = metrics_testing::TestMetrics::new(metrics::Metrics::new);
+
+        IcingMetaDatabase::import_with_metrics(
+            base_exported.as_slice(),
+            test_config(),
+            &harness.metrics,
+        )?;
+
+        let snapshot = harness.collect();
+        let bucket = metrics::bucket_db_size(base_exported.len());
+        expect_that!(
+            snapshot.histogram("db_init_latency", &[("db_size_bucket", bucket)]).count,
+            eq(1)
+        );
+        expect_that!(snapshot.histogram_points("db_init_latency").len(), eq(2));
+        expect_that!(snapshot.counter("icing_init_status", &[("status_code", "OK")]), eq(1));
+        Ok(())
+    }
+
+    /// Creating a database records `db_init_latency` under the initial
+    /// database's size bucket and records the icing initialization stats in the
+    /// given metrics.
+    #[gtest]
+    fn new_with_metrics_records_init_stats_test() -> anyhow::Result<()> {
+        let harness = metrics_testing::TestMetrics::new(metrics::Metrics::new);
+
+        let db = IcingMetaDatabase::new_with_metrics(test_config(), &harness.metrics)?;
+
+        let snapshot = harness.collect();
+        let initial_size = db.export()?.encoded_len();
+        let bucket = metrics::bucket_db_size(initial_size);
+        expect_that!(
+            snapshot.histogram("db_init_latency", &[("db_size_bucket", bucket)]).count,
+            eq(1)
+        );
+        expect_that!(snapshot.histogram_points("db_init_latency").len(), eq(2));
+        expect_that!(snapshot.counter("icing_init_status", &[("status_code", "OK")]), eq(1));
         Ok(())
     }
 

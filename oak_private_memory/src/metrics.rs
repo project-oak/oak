@@ -20,7 +20,7 @@
 /// When adding new metrics, try to create clear, easy-to-use API additions, so
 /// that the usage site needs just a line or two of code to correctly record the
 /// metrics.
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, PoisonError};
 
 use lazy_static::lazy_static;
 use oak_containers_agent::metrics::OakObserver;
@@ -36,9 +36,9 @@ pub struct Metrics {
     rpc_count: Counter<u64>,
     // Number of RPCs that failed.
     rpc_failure_count: Counter<u64>,
-    // Latency of each RPC.
+    // Latency of handling each application request.
     rpc_latency: Histogram<u64>,
-    // Size of the database in bytes.
+    // Size of the encrypted database in bytes, on key sync load and persist.
     db_size: Histogram<u64>,
     // Latency of Icing database initialization.
     db_init_latency: Histogram<u64>,
@@ -58,12 +58,16 @@ pub struct Metrics {
     db_persist_failures: Counter<u64>,
     // Number of failures when syncing keys.
     decrypt_dek_failures: Counter<u64>,
-    // Number of failures when deserializing database.
+    // Number of failures when deserializing user info.
     user_info_deserialization_failures: Counter<u64>,
     // Number of failures when decrypting database.
     db_decryption_failures: Counter<u64>,
     // Queue size of the in the database persist queue.
     db_persist_queue_size: Gauge<u64>,
+    // The number of sessions in the database persist queue, as last recorded
+    // in `db_persist_queue_size`. Updated and recorded under the lock, so
+    // that concurrent updates can't record out of order.
+    db_persist_queue_count: Mutex<u64>,
     // Optimize latency.
     db_optimize_latency: Histogram<u64>,
     // Speed of saving the database (KB/ms).
@@ -238,13 +242,19 @@ impl Metrics {
             .build();
         let rpc_latency = meter
             .u64_histogram("rpc_latency")
-            .with_description("Latency in ms of each RPC.")
+            .with_description(
+                "Latency in ms of handling each application request, excluding the handshake, \
+                 decryption and encryption.",
+            )
             .with_unit("ms")
             .with_boundaries(LATENCY_MS_BOUNDARIES.to_vec())
             .build();
         let db_size = meter
             .u64_histogram("db_size")
-            .with_description("Size of the database in bytes.")
+            .with_description(
+                "Size in bytes of the encrypted database, recorded when key sync loads it and \
+                 each time it is persisted.",
+            )
             .with_unit("By")
             .with_boundaries(DB_SIZE_BYTES_BOUNDARIES.to_vec())
             .build();
@@ -404,23 +414,20 @@ impl Metrics {
         for name in RequestMetricName::failable() {
             rpc_failure_count.add(0, &failure_attributes(name, tonic::Code::Internal));
         }
+        // Histograms with attributes keep one startup point, in a dedicated
+        // `test` series, so their first export has a single point: the host's
+        // OTel-to-streamz bridge derives streamz columns per point and is
+        // suspected to mishandle a multi-point first export (cl/993882996).
+        // Histograms without attributes always export one point, so they
+        // aren't pre-seeded.
         rpc_latency.record(1, &[KeyValue::new("request_type", "test")]);
-        db_size.record(1, &[]);
-        db_init_latency.record(1, &[KeyValue::new("db_size_bucket", "0-100KB")]);
-        db_cleanup_latency.record(0, &[]);
-        db_cleanup_count.record(0, &[]);
-        db_persist_latency.record(1, &[]);
-        db_persist_latency_with_retries.record(1, &[]);
-        db_persist_attempts.record(1, &[]);
+        db_init_latency.record(1, &[KeyValue::new("db_size_bucket", "test")]);
         db_connect_retries.add(0, &[]);
         db_persist_failures.add(0, &[]);
         decrypt_dek_failures.add(0, &[]);
         user_info_deserialization_failures.add(0, &[]);
         db_decryption_failures.add(0, &[]);
         db_persist_queue_size.record(0, &[]);
-        db_optimize_latency.record(1, &[]);
-        key_sync_db_fetch_latency.record(0, &[]);
-        key_sync_decrypt_latency.record(0, &[]);
         db_rebase_operation_failures.add(0, &[]);
         db_cleanup_failures.add(0, &[]);
         tls_handshake_failures.add(0, &[]);
@@ -480,6 +487,7 @@ impl Metrics {
             user_info_deserialization_failures,
             db_decryption_failures,
             db_persist_queue_size,
+            db_persist_queue_count: Mutex::new(0),
             db_optimize_latency,
             db_save_speed,
             db_load_speed,
@@ -535,13 +543,16 @@ impl Metrics {
     }
 
     /// Record a latency value for the given request.
-    /// Calling this function will automatically record  latency for the "total"
-    /// requests group as well.
+    /// Calling this function will automatically record latency for the "total"
+    /// requests group as well. Passing [`RequestMetricName::total`] itself
+    /// records the latency once, under the total.
     pub fn record_latency(&self, elapsed_time_ms: u64, name: RequestMetricName) {
         // Round up as 1ms.
         let elapsed_time_ms = std::cmp::max(1, elapsed_time_ms);
 
-        self.rpc_latency.record(elapsed_time_ms, &[KeyValue::new("request_type", name)]);
+        if !matches!(name.0, RequestMetricNameInner::Total) {
+            self.rpc_latency.record(elapsed_time_ms, &[KeyValue::new("request_type", name)]);
+        }
         self.rpc_latency.record(elapsed_time_ms, &[KeyValue::new("request_type", "total")]);
     }
 
@@ -614,8 +625,30 @@ impl Metrics {
         self.db_decryption_failures.add(1, &[]);
     }
 
-    pub fn record_db_persist_queue_size(&self, max: u64) {
-        self.db_persist_queue_size.record(max, &[]);
+    /// Records the number of sessions in the database persist queue, as read
+    /// from the queue by the persistence worker. This also resets the count
+    /// that [`Self::inc_db_persist_queue_size`] and
+    /// [`Self::dec_db_persist_queue_size`] update, so that it can't drift.
+    pub fn record_db_persist_queue_size(&self, size: u64) {
+        self.update_db_persist_queue_size(|_| size);
+    }
+
+    /// Records that a session is about to be added to the database persist
+    /// queue.
+    pub fn inc_db_persist_queue_size(&self) {
+        self.update_db_persist_queue_size(|count| count.saturating_add(1));
+    }
+
+    /// Records that a session counted by [`Self::inc_db_persist_queue_size`]
+    /// could not be added to the database persist queue.
+    pub fn dec_db_persist_queue_size(&self) {
+        self.update_db_persist_queue_size(|count| count.saturating_sub(1));
+    }
+
+    fn update_db_persist_queue_size(&self, update: impl FnOnce(u64) -> u64) {
+        let mut count = self.db_persist_queue_count.lock().unwrap_or_else(PoisonError::into_inner);
+        *count = update(*count);
+        self.db_persist_queue_size.record(*count, &[]);
     }
 
     pub fn record_key_sync_db_fetch_latency(&self, latency_ms: u64) {
@@ -756,6 +789,14 @@ pub fn bucket_db_size(size_bytes: usize) -> &'static str {
         size if size <= 100 * MB => "90MB-100MB",
         _ => "100MB+",
     }
+}
+
+/// The speed in KB/ms of transferring `bytes` in `elapsed`, for
+/// `db_save_speed` and `db_load_speed`. Transfers faster than 1 ms count as
+/// taking 1 ms.
+pub fn transfer_speed_kb_per_ms(bytes: usize, elapsed: std::time::Duration) -> u64 {
+    let elapsed_ms = std::cmp::max(1, elapsed.as_millis() as u64);
+    (bytes / KB) as u64 / elapsed_ms
 }
 
 fn create_metrics() -> (OakObserver, Arc<Metrics>) {
@@ -1017,24 +1058,23 @@ mod value_tests {
         ("orphaned_blob_deletes", Metrics::inc_orphaned_blob_deletes),
     ];
 
-    /// Attribute-less millisecond latency histograms, with the sample that
-    /// `Metrics::new` records into each at startup.
-    const LATENCY_HISTOGRAMS: &[(&str, RecordFn, u64)] = &[
-        ("db_cleanup_latency", Metrics::record_db_cleanup_latency, 0),
-        ("db_persist_latency", Metrics::record_db_persist_latency, 1),
-        ("db_persist_latency_with_retries", Metrics::record_db_persist_latency_with_retries, 1),
-        ("db_optimize_latency", Metrics::record_db_optimize_latency, 1),
-        ("key_sync_db_fetch_latency", Metrics::record_key_sync_db_fetch_latency, 0),
-        ("key_sync_decrypt_latency", Metrics::record_key_sync_decrypt_latency, 0),
+    /// Attribute-less millisecond latency histograms.
+    const LATENCY_HISTOGRAMS: &[(&str, RecordFn)] = &[
+        ("db_cleanup_latency", Metrics::record_db_cleanup_latency),
+        ("db_persist_latency", Metrics::record_db_persist_latency),
+        ("db_persist_latency_with_retries", Metrics::record_db_persist_latency_with_retries),
+        ("db_optimize_latency", Metrics::record_db_optimize_latency),
+        ("key_sync_db_fetch_latency", Metrics::record_key_sync_db_fetch_latency),
+        ("key_sync_decrypt_latency", Metrics::record_key_sync_decrypt_latency),
     ];
 
-    /// Count histograms, with the sample recorded into each at startup.
-    const COUNT_HISTOGRAMS: &[(&str, RecordFn, u64)] = &[
-        ("db_cleanup_count", Metrics::record_db_cleanup_count, 0),
-        ("db_persist_attempts", Metrics::record_db_persist_attempts, 1),
+    /// Count histograms.
+    const COUNT_HISTOGRAMS: &[(&str, RecordFn)] = &[
+        ("db_cleanup_count", Metrics::record_db_cleanup_count),
+        ("db_persist_attempts", Metrics::record_db_persist_attempts),
     ];
 
-    /// Speed histograms. These are not zero-initialized at startup.
+    /// Speed histograms.
     const SPEED_HISTOGRAMS: &[(&str, RecordFn)] = &[
         ("db_save_speed", Metrics::record_db_save_speed),
         ("db_load_speed", Metrics::record_db_load_speed),
@@ -1121,28 +1161,17 @@ mod value_tests {
         // Attribute `(key, value)` pairs, as written in the table below.
         type Pairs<'a> = &'a [(&'a str, &'a str)];
 
-        // Histograms carry a single synthetic sample recorded at startup.
-        // TODO: b/571198870 - these synthetic samples (including the
-        // `request_type=test` series and a 1-byte database) are exported as
-        // real observations and skew the distributions on every restart.
-        let startup_histograms: &[(&str, Pairs, u64)] = &[
-            ("rpc_latency", &[("request_type", "test")], 1),
-            ("db_size", empty, 1),
-            ("db_init_latency", &[("db_size_bucket", "0-100KB")], 1),
-            ("db_cleanup_latency", empty, 0),
-            ("db_cleanup_count", empty, 0),
-            ("db_persist_latency", empty, 1),
-            ("db_persist_latency_with_retries", empty, 1),
-            ("db_persist_attempts", empty, 1),
-            ("db_optimize_latency", empty, 1),
-            ("key_sync_db_fetch_latency", empty, 0),
-            ("key_sync_decrypt_latency", empty, 0),
+        // Histograms with attributes carry a single sample at startup, in a
+        // dedicated `test` series (see `Metrics::new`).
+        let startup_histograms: &[(&str, Pairs)] = &[
+            ("rpc_latency", &[("request_type", "test")]),
+            ("db_init_latency", &[("db_size_bucket", "test")]),
         ];
-        for (name, pairs, sample) in startup_histograms {
+        for (name, pairs) in startup_histograms {
             let points = snapshot.histogram_points(name);
             assert_eq!(points.len(), 1, "{name}: {points:?}");
             let point = snapshot.histogram(name, pairs);
-            assert_eq!((point.count, point.sum), (1, *sample), "{name}");
+            assert_eq!((point.count, point.sum), (1, 1), "{name}");
         }
 
         // Instruments that are only exported once recorded.
@@ -1158,13 +1187,14 @@ mod value_tests {
         .into_iter()
         .chain(UNIT_COUNTERS.iter().map(|(metric_name, _)| *metric_name))
         .chain(AMOUNT_COUNTERS.iter().map(|(metric_name, _)| *metric_name))
-        .chain(startup_histograms.iter().map(|(metric_name, _, _)| *metric_name))
+        .chain(startup_histograms.iter().map(|(metric_name, _)| *metric_name))
         .collect();
         assert_eq!(snapshot.names(), expected);
-        // TODO: b/571198870 - unlike most other histograms, `db_save_speed`
-        // and `db_load_speed` are not zero-initialized at startup, so they are
-        // missing until the first save or load.
-        for name in [
+        // Histograms without attributes have no startup sample, so that none
+        // of their samples is fake: they are exported from their first
+        // recording on, like the icing instruments.
+        let unrecorded = [
+            "db_size",
             "db_save_speed",
             "db_load_speed",
             "icing_init_status",
@@ -1173,7 +1203,11 @@ mod value_tests {
             "icing_recovery_latency_ms",
             "icing_num_previous_init_failures",
             "icing_num_failed_reindexed_documents",
-        ] {
+        ]
+        .into_iter()
+        .chain(LATENCY_HISTOGRAMS.iter().map(|(metric_name, _)| *metric_name))
+        .chain(COUNT_HISTOGRAMS.iter().map(|(metric_name, _)| *metric_name));
+        for name in unrecorded {
             assert!(!snapshot.names().contains(name), "{name} unexpectedly exported at startup");
         }
     }
@@ -1201,8 +1235,11 @@ mod value_tests {
         let harness = test_metrics();
         let metrics = &harness.metrics;
         // Record into every instrument so that all of them are exported.
-        metrics.record_db_save_speed(1);
-        metrics.record_db_load_speed(1);
+        metrics.record_db_size(1);
+        for (_, record) in LATENCY_HISTOGRAMS.iter().chain(COUNT_HISTOGRAMS).chain(SPEED_HISTOGRAMS)
+        {
+            record(metrics, 1);
+        }
         let init = icing::InitializeResultProto {
             initialize_stats: Some(icing::InitializeStatsProto {
                 latency_ms: Some(1),
@@ -1227,11 +1264,18 @@ mod value_tests {
                 Counter,
             ),
             ("rpc_failure_count", "", "Number of RPCs that failed.", Counter),
-            ("rpc_latency", "ms", "Latency in ms of each RPC.", Histogram(LATENCY_MS_BOUNDARIES)),
+            (
+                "rpc_latency",
+                "ms",
+                "Latency in ms of handling each application request, excluding the handshake, \
+                 decryption and encryption.",
+                Histogram(LATENCY_MS_BOUNDARIES),
+            ),
             (
                 "db_size",
                 "By",
-                "Size of the database in bytes.",
+                "Size in bytes of the encrypted database, recorded when key sync loads it and each \
+                 time it is persisted.",
                 Histogram(DB_SIZE_BYTES_BOUNDARIES),
             ),
             (
@@ -1379,7 +1423,8 @@ mod value_tests {
             ),
             ("icing_init_status", "", "Icing init status code.", Counter),
             // TODO: b/571198870 - the icing `*_ms` histograms have no unit and
-            // use the OpenTelemetry default boundaries (max finite 10 s).
+            // use the OpenTelemetry default boundaries (max finite 10 s). Left
+            // to Gerrit change 52200, which sets their units and boundaries.
             ("icing_init_latency_ms", "", "Latency in ms.", Histogram(&default_bounds)),
             ("icing_recovery_cause", "", "Icing recovery causes.", Counter),
             (
@@ -1648,17 +1693,14 @@ mod value_tests {
     }
 
     #[test]
-    fn record_latency_with_total_name_double_counts_total() {
+    fn record_latency_with_total_name_records_total_once() {
         let harness = test_metrics();
-        // TODO: b/571198870 - if `record_latency` is called with
-        // `RequestMetricName::total()`, the sample is recorded twice in the
-        // `total` series. Its only caller (`SealedMemorySessionHandler::handle`)
-        // always passes a specific request type, so this doesn't happen in
-        // production.
         harness.metrics.record_latency(10, RequestMetricName::total());
         let snapshot = harness.collect();
         let total = snapshot.histogram("rpc_latency", &[("request_type", "total")]);
-        assert_eq!((total.count, total.sum), (2, 20));
+        assert_eq!((total.count, total.sum), (1, 10));
+        // Besides the startup `test` series, only `total` is recorded.
+        assert_eq!(snapshot.histogram_points("rpc_latency").len(), 2);
     }
 
     #[test]
@@ -1670,17 +1712,13 @@ mod value_tests {
 
         let snapshot = harness.collect();
         let point = snapshot.histogram("db_size", &[]);
-        // Includes the 1-byte sample recorded at startup.
-        assert_eq!(point.count, 9);
-        assert_eq!(
-            point.sum,
-            (1 + 1 + MB + MB + 1 + 50 * MB + 60 * MB + 500 * MB + 600 * MB) as u64
-        );
+        assert_eq!(point.count, 8);
+        assert_eq!(point.sum, (1 + MB + MB + 1 + 50 * MB + 60 * MB + 500 * MB + 600 * MB) as u64);
         assert_eq!(
             point.nonzero_buckets(),
             vec![
                 (0., 1),
-                (MB as f64, 3),
+                (MB as f64, 2),
                 ((5 * MB) as f64, 1),
                 ((50 * MB) as f64, 1),
                 ((75 * MB) as f64, 1),
@@ -1707,20 +1745,9 @@ mod value_tests {
         assert_eq!((large.count, large.sum), (1, 40_000));
         assert_eq!(large.nonzero_buckets(), vec![(60_000., 1)]);
 
-        let startup = snapshot.histogram("db_init_latency", &[("db_size_bucket", "0-100KB")]);
+        // The startup sample is in its own series, not in a real size bucket.
+        let startup = snapshot.histogram("db_init_latency", &[("db_size_bucket", "test")]);
         assert_eq!((startup.count, startup.sum), (1, 1));
-    }
-
-    /// Adds `count` to the bucket with upper bound `upper` in a sorted
-    /// `(upper_bound, count)` list, inserting it if needed.
-    fn add_to_bucket(buckets: &mut Vec<(f64, u64)>, upper: f64, count: u64) {
-        match buckets.iter_mut().find(|(bound, _)| *bound == upper) {
-            Some((_, existing)) => *existing += count,
-            None => {
-                buckets.push((upper, count));
-                buckets.sort_by(|left, right| left.0.total_cmp(&right.0));
-            }
-        }
     }
 
     #[test]
@@ -1730,7 +1757,7 @@ mod value_tests {
         // one, 7_500 is a mid-range boundary, 15_000 falls in the added slow
         // tail, 120_000 is the last boundary and 120_001 overflows to `INF`.
         let values = [0, 5, 6, 7_500, 15_000, 120_000, 120_001];
-        for (name, record, startup) in LATENCY_HISTOGRAMS {
+        for (name, record) in LATENCY_HISTOGRAMS {
             let harness = test_metrics();
             for value in values {
                 record(&harness.metrics, value);
@@ -1738,51 +1765,53 @@ mod value_tests {
             let snapshot = harness.collect();
             assert_eq!(snapshot.histogram_points(name).len(), 1, "{name}");
             let point = snapshot.histogram(name, &[]);
-            assert_eq!(point.count, values.len() as u64 + 1, "{name}");
-            assert_eq!(point.sum, values.iter().sum::<u64>() + startup, "{name}");
-
+            assert_eq!(point.count, values.len() as u64, "{name}");
+            assert_eq!(point.sum, values.iter().sum::<u64>(), "{name}");
             // `nonzero_buckets` lists only buckets that received a sample, so
             // the jumps below (e.g. 10 -> 7_500) skip empty buckets.
-            let mut expected = vec![
-                (0., 1),
-                (5., 1),
-                (10., 1),
-                (7_500., 1),
-                (20_000., 1),
-                (120_000., 1),
-                (INF, 1),
-            ];
-            add_to_bucket(&mut expected, if *startup == 0 { 0. } else { 5. }, 1);
-            assert_eq!(point.nonzero_buckets(), expected, "{name}");
+            assert_eq!(
+                point.nonzero_buckets(),
+                vec![
+                    (0., 1),
+                    (5., 1),
+                    (10., 1),
+                    (7_500., 1),
+                    (20_000., 1),
+                    (120_000., 1),
+                    (INF, 1),
+                ],
+                "{name}"
+            );
         }
     }
 
     #[test]
     fn count_histograms_record_into_count_buckets() {
         let values = [0, 1, 2, 3, 4, 10, 11, 10_000, 10_001];
-        for (name, record, startup) in COUNT_HISTOGRAMS {
+        for (name, record) in COUNT_HISTOGRAMS {
             let harness = test_metrics();
             for value in values {
                 record(&harness.metrics, value);
             }
             let snapshot = harness.collect();
             let point = snapshot.histogram(name, &[]);
-            assert_eq!(point.count, values.len() as u64 + 1, "{name}");
-            assert_eq!(point.sum, values.iter().sum::<u64>() + startup, "{name}");
-
-            let mut expected = vec![
-                (0., 1),
-                (1., 1),
-                (2., 1),
-                (3., 1),
-                (5., 1),
-                (10., 1),
-                (25., 1),
-                (10_000., 1),
-                (INF, 1),
-            ];
-            add_to_bucket(&mut expected, *startup as f64, 1);
-            assert_eq!(point.nonzero_buckets(), expected, "{name}");
+            assert_eq!(point.count, values.len() as u64, "{name}");
+            assert_eq!(point.sum, values.iter().sum::<u64>(), "{name}");
+            assert_eq!(
+                point.nonzero_buckets(),
+                vec![
+                    (0., 1),
+                    (1., 1),
+                    (2., 1),
+                    (3., 1),
+                    (5., 1),
+                    (10., 1),
+                    (25., 1),
+                    (10_000., 1),
+                    (INF, 1),
+                ],
+                "{name}"
+            );
         }
     }
 
@@ -1903,6 +1932,41 @@ mod value_tests {
         );
     }
 
+    #[test]
+    fn db_persist_queue_size_counts_enqueues_until_the_worker_reads_the_queue() {
+        let harness = test_metrics();
+        let queue_size = || harness.collect().gauge("db_persist_queue_size", &[]);
+        harness.metrics.inc_db_persist_queue_size();
+        assert_eq!(queue_size(), 1);
+        harness.metrics.inc_db_persist_queue_size();
+        harness.metrics.inc_db_persist_queue_size();
+        assert_eq!(queue_size(), 3);
+        harness.metrics.dec_db_persist_queue_size();
+        assert_eq!(queue_size(), 2);
+        // The worker's reading replaces the count...
+        harness.metrics.record_db_persist_queue_size(0);
+        assert_eq!(queue_size(), 0);
+        // ...which keeps counting from there, and never goes below zero.
+        harness.metrics.dec_db_persist_queue_size();
+        assert_eq!(queue_size(), 0);
+        harness.metrics.inc_db_persist_queue_size();
+        assert_eq!(queue_size(), 1);
+    }
+
+    #[test]
+    fn transfer_speed_is_kb_per_ms_with_at_least_1_ms() {
+        use std::time::Duration;
+        assert_eq!(transfer_speed_kb_per_ms(10 * MB, Duration::from_millis(10)), 1024);
+        assert_eq!(transfer_speed_kb_per_ms(10 * MB, Duration::from_secs(10)), 1);
+        // Sub-millisecond transfers count as taking 1 ms.
+        assert_eq!(transfer_speed_kb_per_ms(4 * KB, Duration::ZERO), 4);
+        assert_eq!(transfer_speed_kb_per_ms(4 * KB, Duration::from_micros(999)), 4);
+        // Rounds down, so slow transfers are 0 (which `record_db_*_speed`
+        // records as 1).
+        assert_eq!(transfer_speed_kb_per_ms(KB - 1, Duration::from_millis(1)), 0);
+        assert_eq!(transfer_speed_kb_per_ms(4 * KB, Duration::from_millis(5)), 0);
+    }
+
     fn init_result(code: Option<i32>) -> icing::InitializeResultProto {
         icing::InitializeResultProto {
             status: Some(icing::StatusProto { code, message: None }),
@@ -1984,6 +2048,8 @@ mod value_tests {
         };
         // TODO: b/571198870 - a NONE cause (no recovery) is counted too, so
         // every healthy init increments `icing_recovery_cause` per component.
+        // Left until Gerrit change 52200, which also changes the icing
+        // metrics, lands.
         assert_eq!(
             snapshot.counter_points("icing_recovery_cause"),
             &BTreeMap::from([

@@ -201,8 +201,11 @@ impl OakSessionHandler {
         &mut self,
         request: tonic::Result<SealedMemorySessionRequest>,
     ) -> tonic::Result<Option<SessionResponse>> {
+        // A stream receive error is not a request, so only received messages
+        // are counted, as in `run_concurrent_dispatch`.
+        let request = request?;
         self.metrics.inc_requests(RequestMetricName::total());
-        let session_request = match request?
+        let session_request = match request
             .session_request
             .into_invalid_argument("request is missing session request")
         {
@@ -220,8 +223,11 @@ impl OakSessionHandler {
         &mut self,
         session_request: tonic::Result<SessionRequest>,
     ) -> tonic::Result<Option<SessionResponse>> {
+        // A stream receive error is not a request, so only received messages
+        // are counted, as in `run_concurrent_dispatch`.
+        let session_request = session_request?;
         self.metrics.inc_requests(RequestMetricName::total());
-        self.handle_session_request(session_request?).await
+        self.handle_session_request(session_request).await
     }
 
     async fn handle_session_request(
@@ -985,6 +991,49 @@ mod tests {
                 (failure_series("DeserializationFailure", "INTERNAL"), 1),
                 (failure_series("total", "INTERNAL"), 1),
             ])
+        );
+    }
+
+    /// Returns a Noise session handler before its handshake, whose database
+    /// is unreachable.
+    fn oak_session_handler_without_database(metrics: &Arc<metrics::Metrics>) -> OakSessionHandler {
+        let session_config = SessionConfig::builder(
+            oak_session::attestation::AttestationType::Unattested,
+            oak_session::handshake::HandshakeType::NoiseNN,
+        )
+        .build();
+        OakSessionHandler {
+            metrics: metrics.clone(),
+            server_session: ServerSession::create(session_config).unwrap(),
+            application_handler: handler_without_database(metrics.clone()),
+        }
+    }
+
+    /// A stream receive error ends an `Invoke` or `StartSession` stream, but
+    /// it isn't a request, so it isn't counted. A received message is.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn session_streams_count_received_messages_only() {
+        let harness = test_metrics();
+        let mut handler = oak_session_handler_without_database(&harness.metrics);
+        let before = harness.collect();
+
+        let invoke =
+            handler.handle_invoke_request(Err(tonic::Status::cancelled("receive failed"))).await;
+        assert_eq!(invoke.unwrap_err().code(), tonic::Code::Cancelled);
+        let start_session = handler
+            .handle_start_session_request(Err(tonic::Status::cancelled("receive failed")))
+            .await;
+        assert_eq!(start_session.unwrap_err().code(), tonic::Code::Cancelled);
+        let snapshot = harness.collect();
+        assert_eq!(snapshot.counter_increments(&before, "rpc_count"), BTreeMap::new());
+        assert_eq!(snapshot.counter_increments(&before, "rpc_failure_count"), BTreeMap::new());
+
+        let empty =
+            handler.handle_start_session_request(Ok(SealedMemorySessionRequest::default())).await;
+        assert_eq!(empty.unwrap_err().code(), tonic::Code::InvalidArgument);
+        assert_eq!(
+            harness.collect().counter_increments(&before, "rpc_count"),
+            BTreeMap::from([(request_series("total"), 1), (request_series("EmptyRequest"), 1)])
         );
     }
 }
