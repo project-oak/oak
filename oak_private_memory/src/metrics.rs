@@ -119,6 +119,11 @@ enum RequestMetricNameInner {
 #[derive(Clone, Debug)]
 pub struct RequestMetricName(RequestMetricNameInner);
 
+/// Bytes in a binary kilobyte (KiB).
+const KB: usize = 1_024;
+/// Bytes in a binary megabyte (MiB).
+const MB: usize = 1_024 * KB;
+
 // Explicit bucket boundaries for the `db_size` histogram, in bytes.
 //
 // Without these, OpenTelemetry uses its default boundaries, whose largest
@@ -127,24 +132,24 @@ pub struct RequestMetricName(RequestMetricNameInner);
 // unusable. See the OpenTelemetry spec for the default boundaries:
 // https://opentelemetry.io/docs/specs/otel/metrics/sdk/#explicit-bucket-histogram-aggregation
 //
-// Values are binary megabytes (1 MB = 1_048_576 bytes), matching the `MB`
-// constant used by `bucket_db_size` below.
+// Values are multiples of `MB` (binary megabytes), the same unit
+// `bucket_db_size` uses.
 const DB_SIZE_BYTES_BOUNDARIES: &[f64] = &[
-    0.,           // 0 MB
-    1_048_576.,   // 1 MB
-    5_242_880.,   // 5 MB
-    10_485_760.,  // 10 MB
-    20_971_520.,  // 20 MB
-    31_457_280.,  // 30 MB
-    41_943_040.,  // 40 MB
-    52_428_800.,  // 50 MB
-    78_643_200.,  // 75 MB
-    104_857_600., // 100 MB
-    157_286_400., // 150 MB
-    209_715_200., // 200 MB
-    314_572_800., // 300 MB
-    419_430_400., // 400 MB
-    524_288_000., // 500 MB
+    0.,
+    MB as f64,
+    (5 * MB) as f64,
+    (10 * MB) as f64,
+    (20 * MB) as f64,
+    (30 * MB) as f64,
+    (40 * MB) as f64,
+    (50 * MB) as f64,
+    (75 * MB) as f64,
+    (100 * MB) as f64,
+    (150 * MB) as f64,
+    (200 * MB) as f64,
+    (300 * MB) as f64,
+    (400 * MB) as f64,
+    (500 * MB) as f64,
 ];
 
 // The following histograms previously relied on OpenTelemetry's default bucket
@@ -622,19 +627,18 @@ impl Metrics {
 /// Buckets a database size (in bytes) into a human-readable label for use as
 /// a metric attribute. Uses 10MB increments up to 100MB.
 pub fn bucket_db_size(size_bytes: usize) -> &'static str {
-    const MB: usize = 1_048_576;
     match size_bytes {
-        0..=102_400 => "0-100KB",
-        102_401..=10_485_760 => "100KB-10MB",
-        _n if _n <= 20 * MB => "10MB-20MB",
-        _n if _n <= 30 * MB => "20MB-30MB",
-        _n if _n <= 40 * MB => "30MB-40MB",
-        _n if _n <= 50 * MB => "40MB-50MB",
-        _n if _n <= 60 * MB => "50MB-60MB",
-        _n if _n <= 70 * MB => "60MB-70MB",
-        _n if _n <= 80 * MB => "70MB-80MB",
-        _n if _n <= 90 * MB => "80MB-90MB",
-        _n if _n <= 100 * MB => "90MB-100MB",
+        size if size <= 100 * KB => "0-100KB",
+        size if size <= 10 * MB => "100KB-10MB",
+        size if size <= 20 * MB => "10MB-20MB",
+        size if size <= 30 * MB => "20MB-30MB",
+        size if size <= 40 * MB => "30MB-40MB",
+        size if size <= 50 * MB => "40MB-50MB",
+        size if size <= 60 * MB => "50MB-60MB",
+        size if size <= 70 * MB => "60MB-70MB",
+        size if size <= 80 * MB => "70MB-80MB",
+        size if size <= 90 * MB => "80MB-90MB",
+        size if size <= 100 * MB => "90MB-100MB",
         _ => "100MB+",
     }
 }
@@ -722,11 +726,13 @@ mod tests {
     #[test]
     fn test_record_icing_initialization_stats() {
         let (_observer, metrics) = create_metrics();
-        let mut result_proto = icing::InitializeResultProto::default();
-        result_proto.status = Some(icing::status_proto::StatusProto {
-            code: Some(icing::status_proto::Code::Ok as i32),
-            message: Some("OK".to_string()),
-        });
+        let result_proto = icing::InitializeResultProto {
+            status: Some(icing::StatusProto {
+                code: Some(icing::status_proto::Code::Ok as i32),
+                message: Some("OK".to_string()),
+            }),
+            ..Default::default()
+        };
 
         // This is a mockup; testing that it doesn't panic.
         metrics.record_icing_initialization_stats(&result_proto);
@@ -735,13 +741,1051 @@ mod tests {
     #[test]
     fn test_record_icing_initialization_stats_with_full_stats() {
         let (_observer, metrics) = create_metrics();
-        let mut result_proto = icing::InitializeResultProto::default();
-        result_proto.status = Some(icing::status_proto::StatusProto {
-            code: Some(icing::status_proto::Code::Ok as i32),
-            message: Some("OK".to_string()),
-        });
+        let result_proto = icing::InitializeResultProto {
+            status: Some(icing::StatusProto {
+                code: Some(icing::status_proto::Code::Ok as i32),
+                message: Some("OK".to_string()),
+            }),
+            initialize_stats: Some(icing::InitializeStatsProto {
+                latency_ms: Some(150),
+                document_store_recovery_cause: Some(1),
+                index_restoration_cause: Some(2),
+                schema_store_recovery_cause: Some(3),
+                integer_index_restoration_cause: Some(4),
+                qualified_id_join_index_restoration_cause: Some(0),
+                embedding_index_restoration_cause: Some(999),
+                document_store_recovery_latency_ms: Some(50),
+                index_restoration_latency_ms: Some(25),
+                schema_store_recovery_latency_ms: Some(15),
+                num_previous_init_failures: Some(2),
+                num_failed_reindexed_documents: Some(10),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
 
-        result_proto.initialize_stats = Some(icing::InitializeStatsProto {
+        // This should not panic and should record UNKNOWN for the unsupported code.
+        metrics.record_icing_initialization_stats(&result_proto);
+    }
+}
+
+/// Tests that read back the values exported by [`Metrics`].
+///
+/// Each test builds a fresh [`SdkMeterProvider`] whose periodic reader pushes
+/// into an in-test [`SnapshotExporter`], and constructs [`Metrics`] from its
+/// meter. Values are read by calling `force_flush` on the provider, which
+/// synchronously collects and exports. This mirrors production wiring
+/// (`Metrics::new(&Meter)`) without touching the global metrics singleton, so
+/// tests are deterministic and independent of each other.
+///
+/// `ManualReader` and `InMemoryMetricExporter` would be simpler, but they are
+/// gated behind `opentelemetry_sdk` features that are not enabled in
+/// `@oak_crates_index`. `PeriodicReader` spawns a background worker thread per
+/// test instance (its 1-hour interval never fires during a test; it's cleaned
+/// up on drop). That's fine at this scale, but if the suite grows, enabling
+/// the `testing` / in-memory exporter features would avoid the threads.
+#[cfg(test)]
+mod value_tests {
+    use std::{
+        collections::{BTreeMap, BTreeSet},
+        sync::Mutex,
+        time::Duration,
+    };
+
+    use opentelemetry::metrics::MeterProvider as _;
+    use opentelemetry_sdk::{
+        error::OTelSdkResult,
+        metrics::{
+            PeriodicReader, SdkMeterProvider, Temporality,
+            data::{AggregatedMetrics, MetricData, ResourceMetrics},
+            exporter::PushMetricExporter,
+        },
+    };
+
+    use super::*;
+
+    const INF: f64 = f64::INFINITY;
+
+    /// The `(name, metric)` pairs from a single export.
+    type ExportedMetrics = Vec<(String, ExportedMetric)>;
+
+    /// A [`PushMetricExporter`] that keeps an owned copy of the most recent
+    /// export so the test can inspect it.
+    #[derive(Clone, Default)]
+    struct SnapshotExporter {
+        latest: Arc<Mutex<Option<ExportedMetrics>>>,
+    }
+
+    impl PushMetricExporter for SnapshotExporter {
+        fn export(
+            &self,
+            metrics: &ResourceMetrics,
+        ) -> impl std::future::Future<Output = OTelSdkResult> + Send {
+            let exported = metrics
+                .scope_metrics()
+                .flat_map(|scope| scope.metrics())
+                .map(|metric| {
+                    (
+                        metric.name().to_string(),
+                        ExportedMetric {
+                            description: metric.description().to_string(),
+                            unit: metric.unit().to_string(),
+                            data: convert(metric.data()),
+                        },
+                    )
+                })
+                .collect();
+            *self.latest.lock().unwrap() = Some(exported);
+            std::future::ready(Ok(()))
+        }
+
+        fn force_flush(&self) -> OTelSdkResult {
+            Ok(())
+        }
+
+        fn shutdown_with_timeout(&self, _timeout: Duration) -> OTelSdkResult {
+            Ok(())
+        }
+
+        fn temporality(&self) -> Temporality {
+            Temporality::Cumulative
+        }
+    }
+
+    /// Sorted `(key, value)` attribute pairs identifying a time series.
+    type Attrs = Vec<(String, String)>;
+
+    fn attrs(pairs: &[(&str, &str)]) -> Attrs {
+        let mut attrs: Attrs =
+            pairs.iter().map(|(key, value)| (key.to_string(), value.to_string())).collect();
+        attrs.sort();
+        attrs
+    }
+
+    fn to_attrs<'a>(kvs: impl Iterator<Item = &'a KeyValue>) -> Attrs {
+        let mut attrs: Attrs =
+            kvs.map(|kv| (kv.key.as_str().to_string(), kv.value.as_str().into_owned())).collect();
+        attrs.sort();
+        attrs
+    }
+
+    #[derive(Clone, Debug, PartialEq)]
+    struct HistogramPoint {
+        count: u64,
+        sum: u64,
+        bounds: Vec<f64>,
+        bucket_counts: Vec<u64>,
+    }
+
+    impl HistogramPoint {
+        /// Returns `(upper_bound, count)` for every non-empty bucket. The
+        /// overflow bucket has an upper bound of [`INF`].
+        fn nonzero_buckets(&self) -> Vec<(f64, u64)> {
+            self.bucket_counts
+                .iter()
+                .enumerate()
+                .filter(|(_, count)| **count > 0)
+                .map(|(index, count)| (self.bounds.get(index).copied().unwrap_or(INF), *count))
+                .collect()
+        }
+    }
+
+    #[derive(Clone, Debug, PartialEq)]
+    enum Data {
+        Sum { monotonic: bool, points: BTreeMap<Attrs, u64> },
+        Gauge(BTreeMap<Attrs, u64>),
+        Histogram(BTreeMap<Attrs, HistogramPoint>),
+    }
+
+    #[derive(Clone, Debug)]
+    struct ExportedMetric {
+        description: String,
+        unit: String,
+        data: Data,
+    }
+
+    /// The metrics exported by a single collection, keyed by metric name.
+    struct Snapshot(BTreeMap<String, ExportedMetric>);
+
+    impl Snapshot {
+        fn names(&self) -> BTreeSet<&str> {
+            self.0.keys().map(String::as_str).collect()
+        }
+
+        fn get(&self, name: &str) -> &ExportedMetric {
+            self.0
+                .get(name)
+                .unwrap_or_else(|| panic!("metric {name} not exported; got {:?}", self.names()))
+        }
+
+        fn counter_points(&self, name: &str) -> &BTreeMap<Attrs, u64> {
+            match &self.get(name).data {
+                Data::Sum { monotonic: true, points } => points,
+                other => panic!("{name} is not a monotonic sum: {other:?}"),
+            }
+        }
+
+        fn counter(&self, name: &str, pairs: &[(&str, &str)]) -> u64 {
+            *self
+                .counter_points(name)
+                .get(&attrs(pairs))
+                .unwrap_or_else(|| panic!("{name} has no point for {pairs:?}"))
+        }
+
+        fn gauge_points(&self, name: &str) -> &BTreeMap<Attrs, u64> {
+            match &self.get(name).data {
+                Data::Gauge(points) => points,
+                other => panic!("{name} is not a gauge: {other:?}"),
+            }
+        }
+
+        fn histogram_points(&self, name: &str) -> &BTreeMap<Attrs, HistogramPoint> {
+            match &self.get(name).data {
+                Data::Histogram(points) => points,
+                other => panic!("{name} is not a histogram: {other:?}"),
+            }
+        }
+
+        fn histogram(&self, name: &str, pairs: &[(&str, &str)]) -> &HistogramPoint {
+            self.histogram_points(name)
+                .get(&attrs(pairs))
+                .unwrap_or_else(|| panic!("{name} has no point for {pairs:?}"))
+        }
+    }
+
+    /// Converts exported data into [`Data`]. Only `u64` instruments are
+    /// handled because every instrument [`Metrics`] defines is `u64`; any other
+    /// data type means a new instrument kind was added, so this panics to make
+    /// the test helper get updated alongside it.
+    fn convert(data: &AggregatedMetrics) -> Data {
+        match data {
+            AggregatedMetrics::U64(MetricData::Sum(sum)) => Data::Sum {
+                monotonic: sum.is_monotonic(),
+                points: sum
+                    .data_points()
+                    .map(|point| (to_attrs(point.attributes()), point.value()))
+                    .collect(),
+            },
+            AggregatedMetrics::U64(MetricData::Gauge(gauge)) => Data::Gauge(
+                gauge
+                    .data_points()
+                    .map(|point| (to_attrs(point.attributes()), point.value()))
+                    .collect(),
+            ),
+            AggregatedMetrics::U64(MetricData::Histogram(histogram)) => Data::Histogram(
+                histogram
+                    .data_points()
+                    .map(|point| {
+                        (
+                            to_attrs(point.attributes()),
+                            HistogramPoint {
+                                count: point.count(),
+                                sum: point.sum(),
+                                bounds: point.bounds().collect(),
+                                bucket_counts: point.bucket_counts().collect(),
+                            },
+                        )
+                    })
+                    .collect(),
+            ),
+            other => panic!("unexpected metric data: {other:?}"),
+        }
+    }
+
+    /// [`Metrics`] wired to a private in-memory meter provider.
+    struct TestMetrics {
+        metrics: Metrics,
+        exporter: SnapshotExporter,
+        provider: SdkMeterProvider,
+    }
+
+    impl TestMetrics {
+        fn new() -> Self {
+            let exporter = SnapshotExporter::default();
+            // The interval is irrelevant: tests export via `force_flush`.
+            let reader = PeriodicReader::builder(exporter.clone())
+                .with_interval(Duration::from_secs(3600))
+                .build();
+            let provider = SdkMeterProvider::builder().with_reader(reader).build();
+            let metrics = Metrics::new(&provider.meter("sealed_memory_service_test"));
+            Self { metrics, exporter, provider }
+        }
+
+        /// Collects and returns all currently exported metrics.
+        fn collect(&self) -> Snapshot {
+            *self.exporter.latest.lock().unwrap() = None;
+            self.provider.force_flush().expect("failed to flush metrics");
+            let exported =
+                self.exporter.latest.lock().unwrap().take().expect("nothing was exported");
+            let mut snapshot = BTreeMap::new();
+            for (name, metric) in exported {
+                assert!(snapshot.insert(name.clone(), metric).is_none(), "duplicate metric {name}");
+            }
+            Snapshot(snapshot)
+        }
+    }
+
+    /// A metric method that takes no arguments.
+    type IncFn = fn(&Metrics);
+    /// A metric method that takes a single value.
+    type RecordFn = fn(&Metrics, u64);
+
+    /// Counters that take no arguments and increment by one.
+    const UNIT_COUNTERS: &[(&str, IncFn)] = &[
+        ("db_connect_retries", Metrics::inc_db_connect_retries),
+        ("db_persist_failures", Metrics::inc_db_persist_failures),
+        ("decrypt_dek_failures", Metrics::inc_decrypt_dek_failures),
+        ("user_info_deserialization_failures", Metrics::inc_user_info_deserialization_failures),
+        ("db_decryption_failures", Metrics::inc_db_decryption_failures),
+        ("db_cleanup_failures", Metrics::inc_db_cleanup_failures),
+        ("tls_handshake_failures", Metrics::inc_tls_handshake_failures),
+        ("tls_receive_failures", Metrics::inc_tls_receive_failures),
+        ("persistence_enqueue_failures", Metrics::inc_persistence_enqueue_failures),
+        ("session_rejected_low_memory", Metrics::inc_session_rejected_low_memory),
+    ];
+
+    /// Counters that are incremented by a caller-provided amount.
+    const AMOUNT_COUNTERS: &[(&str, RecordFn)] = &[
+        ("db_rebase_operation_failures", Metrics::inc_db_rebase_operation_failures),
+        ("orphaned_blob_deletes", Metrics::inc_orphaned_blob_deletes),
+    ];
+
+    /// Attribute-less millisecond latency histograms, with the sample that
+    /// `Metrics::new` records into each at startup.
+    const LATENCY_HISTOGRAMS: &[(&str, RecordFn, u64)] = &[
+        ("db_cleanup_latency", Metrics::record_db_cleanup_latency, 0),
+        ("db_persist_latency", Metrics::record_db_persist_latency, 1),
+        ("db_persist_latency_with_retries", Metrics::record_db_persist_latency_with_retries, 1),
+        ("db_optimize_latency", Metrics::record_db_optimize_latency, 1),
+        ("key_sync_db_fetch_latency", Metrics::record_key_sync_db_fetch_latency, 0),
+        ("key_sync_decrypt_latency", Metrics::record_key_sync_decrypt_latency, 0),
+    ];
+
+    /// Count histograms, with the sample recorded into each at startup.
+    const COUNT_HISTOGRAMS: &[(&str, RecordFn, u64)] = &[
+        ("db_cleanup_count", Metrics::record_db_cleanup_count, 0),
+        ("db_persist_attempts", Metrics::record_db_persist_attempts, 1),
+    ];
+
+    /// Speed histograms. These are not zero-initialized at startup.
+    const SPEED_HISTOGRAMS: &[(&str, RecordFn)] = &[
+        ("db_save_speed", Metrics::record_db_save_speed),
+        ("db_load_speed", Metrics::record_db_load_speed),
+    ];
+
+    #[test]
+    fn startup_exports_zero_initialized_instruments() {
+        let harness = TestMetrics::new();
+        let snapshot = harness.collect();
+
+        let empty: &[(&str, &str)] = &[];
+        let total = &[("request_type", "total")];
+
+        // Counters start at zero.
+        assert_eq!(snapshot.counter_points("rpc_count"), &BTreeMap::from([(attrs(total), 0)]));
+        assert_eq!(
+            snapshot.counter_points("rpc_failure_count"),
+            &BTreeMap::from([(attrs(total), 0)])
+        );
+        let zeroed_counters = UNIT_COUNTERS
+            .iter()
+            .map(|(metric_name, _)| *metric_name)
+            .chain(AMOUNT_COUNTERS.iter().map(|(metric_name, _)| *metric_name));
+        for name in zeroed_counters {
+            assert_eq!(
+                snapshot.counter_points(name),
+                &BTreeMap::from([(attrs(empty), 0)]),
+                "{name}"
+            );
+        }
+
+        // The gauge starts at zero.
+        assert_eq!(
+            snapshot.gauge_points("db_persist_queue_size"),
+            &BTreeMap::from([(attrs(empty), 0)])
+        );
+
+        // Attribute `(key, value)` pairs, as written in the table below.
+        type Pairs<'a> = &'a [(&'a str, &'a str)];
+
+        // Histograms carry a single synthetic sample recorded at startup.
+        // TODO: b/571198870 - these synthetic samples (including the
+        // `request_type=test` series and a 1-byte database) are exported as
+        // real observations and skew the distributions on every restart.
+        let startup_histograms: &[(&str, Pairs, u64)] = &[
+            ("rpc_latency", &[("request_type", "test")], 1),
+            ("db_size", empty, 1),
+            ("db_init_latency", &[("db_size_bucket", "0-100KB")], 1),
+            ("db_cleanup_latency", empty, 0),
+            ("db_cleanup_count", empty, 0),
+            ("db_persist_latency", empty, 1),
+            ("db_persist_latency_with_retries", empty, 1),
+            ("db_persist_attempts", empty, 1),
+            ("db_optimize_latency", empty, 1),
+            ("key_sync_db_fetch_latency", empty, 0),
+            ("key_sync_decrypt_latency", empty, 0),
+        ];
+        for (name, pairs, sample) in startup_histograms {
+            let points = snapshot.histogram_points(name);
+            assert_eq!(points.len(), 1, "{name}: {points:?}");
+            let point = snapshot.histogram(name, pairs);
+            assert_eq!((point.count, point.sum), (1, *sample), "{name}");
+        }
+
+        // Instruments that are only exported once recorded.
+        let expected: BTreeSet<&str> = ["rpc_count", "rpc_failure_count", "db_persist_queue_size"]
+            .into_iter()
+            .chain(UNIT_COUNTERS.iter().map(|(metric_name, _)| *metric_name))
+            .chain(AMOUNT_COUNTERS.iter().map(|(metric_name, _)| *metric_name))
+            .chain(startup_histograms.iter().map(|(metric_name, _, _)| *metric_name))
+            .collect();
+        assert_eq!(snapshot.names(), expected);
+        // TODO: b/571198870 - unlike most other histograms, `db_save_speed`
+        // and `db_load_speed` are not zero-initialized at startup, so they are
+        // missing until the first save or load.
+        for name in [
+            "db_save_speed",
+            "db_load_speed",
+            "icing_init_status",
+            "icing_init_latency_ms",
+            "icing_recovery_cause",
+            "icing_recovery_latency_ms",
+            "icing_num_previous_init_failures",
+            "icing_num_failed_reindexed_documents",
+        ] {
+            assert!(!snapshot.names().contains(name), "{name} unexpectedly exported at startup");
+        }
+    }
+
+    /// Returns the bucket boundaries the SDK gives a histogram that does not
+    /// configure its own, read from a probe histogram instead of copying
+    /// the SDK's default values into this test.
+    fn otel_default_histogram_boundaries() -> Vec<f64> {
+        let harness = TestMetrics::new();
+        let probe =
+            harness.provider.meter("probe").u64_histogram("default_boundaries_probe").build();
+        probe.record(0, &[]);
+        harness.collect().histogram("default_boundaries_probe", &[]).bounds.clone()
+    }
+
+    #[derive(Debug)]
+    enum Kind<'a> {
+        Counter,
+        Gauge,
+        Histogram(&'a [f64]),
+    }
+
+    #[test]
+    fn instrument_names_units_descriptions_and_boundaries() {
+        let harness = TestMetrics::new();
+        let metrics = &harness.metrics;
+        // Record into every instrument so that all of them are exported.
+        metrics.record_db_save_speed(1);
+        metrics.record_db_load_speed(1);
+        let init = icing::InitializeResultProto {
+            initialize_stats: Some(icing::InitializeStatsProto {
+                latency_ms: Some(1),
+                document_store_recovery_cause: Some(1),
+                document_store_recovery_latency_ms: Some(1),
+                num_previous_init_failures: Some(1),
+                num_failed_reindexed_documents: Some(1),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        metrics.record_icing_initialization_stats(&init);
+        let snapshot = harness.collect();
+
+        let default_bounds = otel_default_histogram_boundaries();
+        use Kind::*;
+        let expected: &[(&str, &str, &str, Kind)] = &[
+            (
+                "rpc_count",
+                "",
+                "Total number of RPCs received by the private memory server.",
+                Counter,
+            ),
+            ("rpc_failure_count", "", "Number of RPCs that failed.", Counter),
+            ("rpc_latency", "ms", "Latency in ms of each RPC.", Histogram(LATENCY_MS_BOUNDARIES)),
+            (
+                "db_size",
+                "By",
+                "Size of the database in bytes.",
+                Histogram(DB_SIZE_BYTES_BOUNDARIES),
+            ),
+            (
+                "db_init_latency",
+                "ms",
+                "Latency of Icing database initialization.",
+                Histogram(LATENCY_MS_BOUNDARIES),
+            ),
+            (
+                "db_cleanup_latency",
+                "ms",
+                "Latency of expired memories cleanup operation.",
+                Histogram(LATENCY_MS_BOUNDARIES),
+            ),
+            (
+                "db_cleanup_count",
+                "",
+                "Number of expired memories cleaned up during cleanup operation.",
+                Histogram(COUNT_BOUNDARIES),
+            ),
+            (
+                "db_persist_latency",
+                "ms",
+                "Latency of persisting the database.",
+                Histogram(LATENCY_MS_BOUNDARIES),
+            ),
+            (
+                "db_persist_latency_with_retries",
+                "ms",
+                "Latency of persisting the database including all retry attempts.",
+                Histogram(LATENCY_MS_BOUNDARIES),
+            ),
+            (
+                "db_persist_attempts",
+                "",
+                "Number of attempts before metadata persist succeeds.",
+                Histogram(COUNT_BOUNDARIES),
+            ),
+            (
+                "db_connect_retries",
+                "",
+                "Number of retries when connecting to the database.",
+                Counter,
+            ),
+            (
+                "db_persist_failures",
+                "",
+                "Number of failures when persisting the database.",
+                Counter,
+            ),
+            (
+                "db_decryption_failures",
+                "",
+                "Number of failures when decrypting the database.",
+                Counter,
+            ),
+            ("db_persist_queue_size", "", "Number of items in the database persist queue.", Gauge),
+            ("decrypt_dek_failures", "", "Number of failures when decrypting the DEK.", Counter),
+            (
+                "user_info_deserialization_failures",
+                "",
+                "Number of failures when deserializing user info.",
+                Counter,
+            ),
+            (
+                "db_optimize_latency",
+                "ms",
+                "Latency of optimizing the database.",
+                Histogram(LATENCY_MS_BOUNDARIES),
+            ),
+            (
+                "db_save_speed",
+                "KB/ms",
+                "Speed of saving the database.",
+                Histogram(SPEED_KB_PER_MS_BOUNDARIES),
+            ),
+            (
+                "db_load_speed",
+                "KB/ms",
+                "Speed of loading the database.",
+                Histogram(SPEED_KB_PER_MS_BOUNDARIES),
+            ),
+            (
+                "key_sync_db_fetch_latency",
+                "ms",
+                "Latency of fetching metadata blob from external DB.",
+                Histogram(LATENCY_MS_BOUNDARIES),
+            ),
+            (
+                "key_sync_decrypt_latency",
+                "ms",
+                "Latency of decrypting the database.",
+                Histogram(LATENCY_MS_BOUNDARIES),
+            ),
+            (
+                "db_rebase_operation_failures",
+                "",
+                "Number of operations that failed to replay during DB rebase.",
+                Counter,
+            ),
+            (
+                "db_cleanup_failures",
+                "",
+                "Number of failures when cleaning expired memories.",
+                Counter,
+            ),
+            ("tls_handshake_failures", "", "Number of TLS handshake failures.", Counter),
+            ("tls_receive_failures", "", "Number of TLS data receive errors.", Counter),
+            (
+                "persistence_enqueue_failures",
+                "",
+                "Number of failures enqueueing sessions for persistence.",
+                Counter,
+            ),
+            (
+                "orphaned_blob_deletes",
+                "",
+                "Number of blobs that should have been soft-deleted but were not.",
+                Counter,
+            ),
+            (
+                "session_rejected_low_memory",
+                "",
+                "Number of sessions rejected due to low memory.",
+                Counter,
+            ),
+            ("icing_init_status", "", "Icing init status code.", Counter),
+            // TODO: b/571198870 - the icing `*_ms` histograms have no unit and
+            // use the OpenTelemetry default boundaries (max finite 10 s).
+            ("icing_init_latency_ms", "", "Latency in ms.", Histogram(&default_bounds)),
+            ("icing_recovery_cause", "", "Icing recovery causes.", Counter),
+            (
+                "icing_recovery_latency_ms",
+                "",
+                "Latency by recovery phase.",
+                Histogram(&default_bounds),
+            ),
+            (
+                "icing_num_previous_init_failures",
+                "",
+                "Previous failure count.",
+                Histogram(&default_bounds),
+            ),
+            (
+                "icing_num_failed_reindexed_documents",
+                "",
+                "Failed reindex count.",
+                Histogram(&default_bounds),
+            ),
+        ];
+
+        assert_eq!(
+            snapshot.names(),
+            expected.iter().map(|(metric_name, ..)| *metric_name).collect::<BTreeSet<_>>()
+        );
+        for (name, unit, description, kind) in expected {
+            let metric = snapshot.get(name);
+            assert_eq!(metric.unit, *unit, "{name}");
+            assert_eq!(metric.description, *description, "{name}");
+            match kind {
+                Counter => assert!(!snapshot.counter_points(name).is_empty(), "{name}"),
+                Gauge => assert!(!snapshot.gauge_points(name).is_empty(), "{name}"),
+                Histogram(bounds) => {
+                    for point in snapshot.histogram_points(name).values() {
+                        assert_eq!(point.bounds, *bounds, "{name}");
+                        assert_eq!(point.bucket_counts.len(), bounds.len() + 1, "{name}");
+                    }
+                }
+            }
+        }
+    }
+
+    /// Returns the metric name for the sealed memory request `variant`.
+    fn request(variant: sealed_memory_request::Request) -> RequestMetricName {
+        RequestMetricName::new_sealed_memory_request(&variant)
+    }
+
+    /// Returns the metric name for an `AddMemoryRequest`.
+    fn add_memory() -> RequestMetricName {
+        request(sealed_memory_request::Request::AddMemoryRequest(AddMemoryRequest::default()))
+    }
+
+    #[test]
+    fn request_metric_name_attribute_values() {
+        use sealed_memory_request::Request as R;
+        #[allow(deprecated)]
+        let cases: Vec<(RequestMetricName, &str)> = vec![
+            (RequestMetricName::total(), "total"),
+            (RequestMetricName::handshake(), "Handshake"),
+            (RequestMetricName::decryption_failure(), "DecryptionFailure"),
+            (RequestMetricName::deserialization_failure(), "DeserializationFailure"),
+            (RequestMetricName::empty_tls_frame(), "EmptyTlsFrame"),
+            (request(R::UserRegistrationRequest(Default::default())), "UserRegistrationRequest"),
+            (request(R::KeySyncRequest(Default::default())), "KeySyncRequest"),
+            (request(R::AddMemoryRequest(Default::default())), "AddMemoryRequest"),
+            (request(R::AddMemoriesRequest(Default::default())), "AddMemoriesRequest"),
+            (request(R::GetMemoriesRequest(Default::default())), "GetMemoriesRequest"),
+            (request(R::ResetMemoryRequest(Default::default())), "ResetMemoryRequest"),
+            (request(R::GetMemoryByIdRequest(Default::default())), "GetMemoryByIdRequest"),
+            (request(R::GetMemoryByNameRequest(Default::default())), "GetMemoryByNameRequest"),
+            (request(R::DeleteMemoryRequest(Default::default())), "DeleteMemoryRequest"),
+            (request(R::GetMemoriesByIdRequest(Default::default())), "GetMemoriesByIdRequest"),
+            (request(R::SearchMemoriesRequest(Default::default())), "SearchMemoriesRequest"),
+            (
+                request(R::GetDatabaseMetricsRequest(Default::default())),
+                "GetDatabaseMetricsRequest",
+            ),
+            (request(R::SyncDatabaseRequest(Default::default())), "SyncDatabaseRequest"),
+        ];
+
+        let harness = TestMetrics::new();
+        for (name, expected) in &cases {
+            assert_eq!(Value::from(name.clone()).as_str(), *expected);
+            harness.metrics.inc_requests(name.clone());
+        }
+
+        // Every name maps to a distinct `request_type` series.
+        let snapshot = harness.collect();
+        let expected: BTreeMap<Attrs, u64> = cases
+            .iter()
+            .map(|(_, request_type)| (attrs(&[("request_type", request_type)]), 1))
+            .collect();
+        assert_eq!(expected.len(), cases.len());
+        assert_eq!(snapshot.counter_points("rpc_count"), &expected);
+    }
+
+    #[test]
+    fn inc_requests_counts_per_request_type() {
+        let harness = TestMetrics::new();
+        let metrics = &harness.metrics;
+        metrics.inc_requests(RequestMetricName::total());
+        metrics.inc_requests(RequestMetricName::total());
+        metrics.inc_requests(RequestMetricName::handshake());
+        metrics.inc_requests(add_memory());
+        metrics.inc_requests(add_memory());
+        metrics.inc_requests(add_memory());
+
+        let snapshot = harness.collect();
+        assert_eq!(
+            snapshot.counter_points("rpc_count"),
+            &BTreeMap::from([
+                (attrs(&[("request_type", "total")]), 2),
+                (attrs(&[("request_type", "Handshake")]), 1),
+                (attrs(&[("request_type", "AddMemoryRequest")]), 3),
+            ])
+        );
+        // `inc_requests` does not touch failures.
+        assert_eq!(
+            snapshot.counter_points("rpc_failure_count"),
+            &BTreeMap::from([(attrs(&[("request_type", "total")]), 0)])
+        );
+    }
+
+    #[test]
+    fn inc_failures_counts_per_request_type() {
+        let harness = TestMetrics::new();
+        let metrics = &harness.metrics;
+        metrics.inc_failures(RequestMetricName::total());
+        metrics.inc_failures(RequestMetricName::handshake());
+        metrics.inc_failures(RequestMetricName::handshake());
+        metrics.inc_failures(RequestMetricName::decryption_failure());
+
+        let snapshot = harness.collect();
+        assert_eq!(
+            snapshot.counter_points("rpc_failure_count"),
+            &BTreeMap::from([
+                (attrs(&[("request_type", "total")]), 1),
+                (attrs(&[("request_type", "Handshake")]), 2),
+                (attrs(&[("request_type", "DecryptionFailure")]), 1),
+            ])
+        );
+        // `inc_failures` does not touch the request count.
+        assert_eq!(
+            snapshot.counter_points("rpc_count"),
+            &BTreeMap::from([(attrs(&[("request_type", "total")]), 0)])
+        );
+    }
+
+    #[test]
+    fn record_latency_records_request_type_and_total() {
+        let harness = TestMetrics::new();
+        let metrics = &harness.metrics;
+        // Zero is rounded up to 1 ms.
+        metrics.record_latency(0, RequestMetricName::handshake());
+        metrics.record_latency(30, add_memory());
+        metrics.record_latency(15_000, add_memory());
+
+        let snapshot = harness.collect();
+        let points = snapshot.histogram_points("rpc_latency");
+        assert_eq!(points.len(), 4, "{points:?}");
+
+        let handshake = snapshot.histogram("rpc_latency", &[("request_type", "Handshake")]);
+        assert_eq!((handshake.count, handshake.sum), (1, 1));
+        assert_eq!(handshake.nonzero_buckets(), vec![(5., 1)]);
+
+        let add = snapshot.histogram("rpc_latency", &[("request_type", "AddMemoryRequest")]);
+        assert_eq!((add.count, add.sum), (2, 15_030));
+        assert_eq!(add.nonzero_buckets(), vec![(50., 1), (20_000., 1)]);
+
+        let total = snapshot.histogram("rpc_latency", &[("request_type", "total")]);
+        assert_eq!((total.count, total.sum), (3, 15_031));
+        assert_eq!(total.nonzero_buckets(), vec![(5., 1), (50., 1), (20_000., 1)]);
+
+        // The synthetic startup series is untouched.
+        let test = snapshot.histogram("rpc_latency", &[("request_type", "test")]);
+        assert_eq!((test.count, test.sum), (1, 1));
+    }
+
+    #[test]
+    fn record_latency_with_total_name_double_counts_total() {
+        let harness = TestMetrics::new();
+        // TODO: b/571198870 - if `record_latency` is called with
+        // `RequestMetricName::total()`, the sample is recorded twice in the
+        // `total` series. Its only caller (`SealedMemorySessionHandler::handle`)
+        // always passes a specific request type, so this doesn't happen in
+        // production.
+        harness.metrics.record_latency(10, RequestMetricName::total());
+        let snapshot = harness.collect();
+        let total = snapshot.histogram("rpc_latency", &[("request_type", "total")]);
+        assert_eq!((total.count, total.sum), (2, 20));
+    }
+
+    #[test]
+    fn db_size_uses_explicit_byte_buckets() {
+        let harness = TestMetrics::new();
+        for size in [0, 1, MB, MB + 1, 50 * MB, 60 * MB, 500 * MB, 600 * MB] {
+            harness.metrics.record_db_size(size as u64);
+        }
+
+        let snapshot = harness.collect();
+        let point = snapshot.histogram("db_size", &[]);
+        // Includes the 1-byte sample recorded at startup.
+        assert_eq!(point.count, 9);
+        assert_eq!(
+            point.sum,
+            (1 + 1 + MB + MB + 1 + 50 * MB + 60 * MB + 500 * MB + 600 * MB) as u64
+        );
+        assert_eq!(
+            point.nonzero_buckets(),
+            vec![
+                (0., 1),
+                (MB as f64, 3),
+                ((5 * MB) as f64, 1),
+                ((50 * MB) as f64, 1),
+                ((75 * MB) as f64, 1),
+                ((500 * MB) as f64, 1),
+                (INF, 1),
+            ]
+        );
+    }
+
+    #[test]
+    fn db_init_latency_is_labelled_by_db_size_bucket() {
+        let harness = TestMetrics::new();
+        harness.metrics.record_db_init_latency(1_500, bucket_db_size(15 * MB));
+        harness.metrics.record_db_init_latency(40_000, bucket_db_size(200 * MB));
+
+        let snapshot = harness.collect();
+        assert_eq!(snapshot.histogram_points("db_init_latency").len(), 3);
+
+        let mid = snapshot.histogram("db_init_latency", &[("db_size_bucket", "10MB-20MB")]);
+        assert_eq!((mid.count, mid.sum), (1, 1_500));
+        assert_eq!(mid.nonzero_buckets(), vec![(2_500., 1)]);
+
+        let large = snapshot.histogram("db_init_latency", &[("db_size_bucket", "100MB+")]);
+        assert_eq!((large.count, large.sum), (1, 40_000));
+        assert_eq!(large.nonzero_buckets(), vec![(60_000., 1)]);
+
+        let startup = snapshot.histogram("db_init_latency", &[("db_size_bucket", "0-100KB")]);
+        assert_eq!((startup.count, startup.sum), (1, 1));
+    }
+
+    /// Adds `count` to the bucket with upper bound `upper` in a sorted
+    /// `(upper_bound, count)` list, inserting it if needed.
+    fn add_to_bucket(buckets: &mut Vec<(f64, u64)>, upper: f64, count: u64) {
+        match buckets.iter_mut().find(|(bound, _)| *bound == upper) {
+            Some((_, existing)) => *existing += count,
+            None => {
+                buckets.push((upper, count));
+                buckets.sort_by(|left, right| left.0.total_cmp(&right.0));
+            }
+        }
+    }
+
+    #[test]
+    fn latency_histograms_record_into_ms_buckets() {
+        // One sample per interesting edge of `LATENCY_MS_BOUNDARIES` (upper
+        // bounds are inclusive): 0 and 5 land on a boundary, 6 is just past
+        // one, 7_500 is a mid-range boundary, 15_000 falls in the added slow
+        // tail, 120_000 is the last boundary and 120_001 overflows to `INF`.
+        let values = [0, 5, 6, 7_500, 15_000, 120_000, 120_001];
+        for (name, record, startup) in LATENCY_HISTOGRAMS {
+            let harness = TestMetrics::new();
+            for value in values {
+                record(&harness.metrics, value);
+            }
+            let snapshot = harness.collect();
+            assert_eq!(snapshot.histogram_points(name).len(), 1, "{name}");
+            let point = snapshot.histogram(name, &[]);
+            assert_eq!(point.count, values.len() as u64 + 1, "{name}");
+            assert_eq!(point.sum, values.iter().sum::<u64>() + startup, "{name}");
+
+            // `nonzero_buckets` lists only buckets that received a sample, so
+            // the jumps below (e.g. 10 -> 7_500) skip empty buckets.
+            let mut expected = vec![
+                (0., 1),
+                (5., 1),
+                (10., 1),
+                (7_500., 1),
+                (20_000., 1),
+                (120_000., 1),
+                (INF, 1),
+            ];
+            add_to_bucket(&mut expected, if *startup == 0 { 0. } else { 5. }, 1);
+            assert_eq!(point.nonzero_buckets(), expected, "{name}");
+        }
+    }
+
+    #[test]
+    fn count_histograms_record_into_count_buckets() {
+        let values = [0, 1, 2, 3, 4, 10, 11, 10_000, 10_001];
+        for (name, record, startup) in COUNT_HISTOGRAMS {
+            let harness = TestMetrics::new();
+            for value in values {
+                record(&harness.metrics, value);
+            }
+            let snapshot = harness.collect();
+            let point = snapshot.histogram(name, &[]);
+            assert_eq!(point.count, values.len() as u64 + 1, "{name}");
+            assert_eq!(point.sum, values.iter().sum::<u64>() + startup, "{name}");
+
+            let mut expected = vec![
+                (0., 1),
+                (1., 1),
+                (2., 1),
+                (3., 1),
+                (5., 1),
+                (10., 1),
+                (25., 1),
+                (10_000., 1),
+                (INF, 1),
+            ];
+            add_to_bucket(&mut expected, *startup as f64, 1);
+            assert_eq!(point.nonzero_buckets(), expected, "{name}");
+        }
+    }
+
+    #[test]
+    fn speed_histograms_round_up_and_record_into_speed_buckets() {
+        for (name, record) in SPEED_HISTOGRAMS {
+            let harness = TestMetrics::new();
+            // Zero is rounded up to 1.
+            for value in [0, 1, 4, 10_001] {
+                record(&harness.metrics, value);
+            }
+            let snapshot = harness.collect();
+            assert_eq!(snapshot.histogram_points(name).len(), 1, "{name}");
+            let point = snapshot.histogram(name, &[]);
+            assert_eq!((point.count, point.sum), (4, 1 + 1 + 4 + 10_001), "{name}");
+            assert_eq!(point.nonzero_buckets(), vec![(1., 2), (5., 1), (INF, 1)], "{name}");
+        }
+    }
+
+    #[test]
+    fn unit_counters_increment_by_one() {
+        for (name, inc) in UNIT_COUNTERS {
+            let harness = TestMetrics::new();
+            for _ in 0..3 {
+                inc(&harness.metrics);
+            }
+            let snapshot = harness.collect();
+            assert_eq!(snapshot.counter_points(name), &BTreeMap::from([(attrs(&[]), 3)]), "{name}");
+            // No other counter moves.
+            for (other, _) in UNIT_COUNTERS.iter().filter(|(metric_name, _)| metric_name != name) {
+                assert_eq!(snapshot.counter(other, &[]), 0, "{name} moved {other}");
+            }
+            for (other, _) in AMOUNT_COUNTERS {
+                assert_eq!(snapshot.counter(other, &[]), 0, "{name} moved {other}");
+            }
+        }
+    }
+
+    #[test]
+    fn amount_counters_increment_by_amount() {
+        for (name, inc) in AMOUNT_COUNTERS {
+            let harness = TestMetrics::new();
+            inc(&harness.metrics, 0);
+            assert_eq!(harness.collect().counter(name, &[]), 0, "{name}");
+            inc(&harness.metrics, 2);
+            inc(&harness.metrics, 5);
+            let snapshot = harness.collect();
+            assert_eq!(snapshot.counter_points(name), &BTreeMap::from([(attrs(&[]), 7)]), "{name}");
+            for (other, _) in AMOUNT_COUNTERS.iter().filter(|(metric_name, _)| metric_name != name)
+            {
+                assert_eq!(snapshot.counter(other, &[]), 0, "{name} moved {other}");
+            }
+            for (other, _) in UNIT_COUNTERS {
+                assert_eq!(snapshot.counter(other, &[]), 0, "{name} moved {other}");
+            }
+        }
+    }
+
+    #[test]
+    fn db_persist_queue_size_gauge_records_last_value() {
+        let harness = TestMetrics::new();
+        harness.metrics.record_db_persist_queue_size(5);
+        assert_eq!(
+            harness.collect().gauge_points("db_persist_queue_size"),
+            &BTreeMap::from([(attrs(&[]), 5)])
+        );
+        harness.metrics.record_db_persist_queue_size(3);
+        assert_eq!(
+            harness.collect().gauge_points("db_persist_queue_size"),
+            &BTreeMap::from([(attrs(&[]), 3)])
+        );
+        harness.metrics.record_db_persist_queue_size(0);
+        assert_eq!(
+            harness.collect().gauge_points("db_persist_queue_size"),
+            &BTreeMap::from([(attrs(&[]), 0)])
+        );
+    }
+
+    fn init_result(code: Option<i32>) -> icing::InitializeResultProto {
+        icing::InitializeResultProto {
+            status: Some(icing::StatusProto { code, message: None }),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn icing_init_status_maps_status_codes() {
+        let harness = TestMetrics::new();
+        let metrics = &harness.metrics;
+        metrics.record_icing_initialization_stats(&init_result(Some(
+            icing::status_proto::Code::Ok as i32,
+        )));
+        metrics.record_icing_initialization_stats(&init_result(Some(
+            icing::status_proto::Code::WarningDataLoss as i32,
+        )));
+        metrics.record_icing_initialization_stats(&init_result(Some(
+            icing::status_proto::Code::Internal as i32,
+        )));
+        // Missing status, missing code, and an unknown code all map to
+        // UNKNOWN (the first two via the proto default value 0 = UNKNOWN).
+        metrics.record_icing_initialization_stats(&icing::InitializeResultProto::default());
+        metrics.record_icing_initialization_stats(&init_result(None));
+        metrics.record_icing_initialization_stats(&init_result(Some(999)));
+
+        let snapshot = harness.collect();
+        assert_eq!(
+            snapshot.counter_points("icing_init_status"),
+            &BTreeMap::from([
+                (attrs(&[("status_code", "OK")]), 1),
+                (attrs(&[("status_code", "WARNING_DATA_LOSS")]), 1),
+                (attrs(&[("status_code", "INTERNAL")]), 1),
+                (attrs(&[("status_code", "UNKNOWN")]), 3),
+            ])
+        );
+        // Without `initialize_stats`, nothing else is recorded.
+        for name in [
+            "icing_init_latency_ms",
+            "icing_recovery_cause",
+            "icing_recovery_latency_ms",
+            "icing_num_previous_init_failures",
+            "icing_num_failed_reindexed_documents",
+        ] {
+            assert!(!snapshot.names().contains(name), "{name}");
+        }
+    }
+
+    #[test]
+    fn icing_initialization_stats_map_to_metrics() {
+        let harness = TestMetrics::new();
+        let mut result = init_result(Some(icing::status_proto::Code::Ok as i32));
+        result.initialize_stats = Some(icing::InitializeStatsProto {
             latency_ms: Some(150),
             document_store_recovery_cause: Some(1),
             index_restoration_cause: Some(2),
@@ -751,13 +1795,99 @@ mod tests {
             embedding_index_restoration_cause: Some(999),
             document_store_recovery_latency_ms: Some(50),
             index_restoration_latency_ms: Some(25),
-            schema_store_recovery_latency_ms: Some(15),
+            schema_store_recovery_latency_ms: Some(15_000),
             num_previous_init_failures: Some(2),
             num_failed_reindexed_documents: Some(10),
             ..Default::default()
         });
+        harness.metrics.record_icing_initialization_stats(&result);
 
-        // This should not panic and should record UNKNOWN for the unsupported code.
-        metrics.record_icing_initialization_stats(&result_proto);
+        let snapshot = harness.collect();
+        assert_eq!(snapshot.counter("icing_init_status", &[("status_code", "OK")]), 1);
+
+        let init_latency = snapshot.histogram("icing_init_latency_ms", &[]);
+        assert_eq!((init_latency.count, init_latency.sum), (1, 150));
+        assert_eq!(init_latency.nonzero_buckets(), vec![(250., 1)]);
+
+        let cause = |component: &str, cause: &str| {
+            (attrs(&[("component", component), ("cause", cause)]), 1)
+        };
+        // TODO: b/571198870 - a NONE cause (no recovery) is counted too, so
+        // every healthy init increments `icing_recovery_cause` per component.
+        assert_eq!(
+            snapshot.counter_points("icing_recovery_cause"),
+            &BTreeMap::from([
+                cause("document_store", "DATA_LOSS"),
+                cause("index", "INCONSISTENT_WITH_GROUND_TRUTH"),
+                cause("schema_store", "SCHEMA_CHANGES_OUT_OF_SYNC"),
+                cause("integer_index", "IO_ERROR"),
+                cause("qualified_id_join_index", "NONE"),
+                cause("embedding_index", "UNKNOWN"),
+            ])
+        );
+
+        let recovery = snapshot.histogram_points("icing_recovery_latency_ms");
+        assert_eq!(recovery.len(), 3, "{recovery:?}");
+        for (component, latency, upper) in
+            [("document_store", 50, 50.), ("index", 25, 25.), ("schema_store", 15_000, INF)]
+        {
+            let point =
+                snapshot.histogram("icing_recovery_latency_ms", &[("component", component)]);
+            assert_eq!((point.count, point.sum), (1, latency), "{component}");
+            assert_eq!(point.nonzero_buckets(), vec![(upper, 1)], "{component}");
+        }
+
+        let failures = snapshot.histogram("icing_num_previous_init_failures", &[]);
+        assert_eq!((failures.count, failures.sum), (1, 2));
+        assert_eq!(failures.nonzero_buckets(), vec![(5., 1)]);
+
+        let reindexed = snapshot.histogram("icing_num_failed_reindexed_documents", &[]);
+        assert_eq!((reindexed.count, reindexed.sum), (1, 10));
+        assert_eq!(reindexed.nonzero_buckets(), vec![(10., 1)]);
+    }
+
+    #[test]
+    fn icing_initialization_stats_skip_unset_fields() {
+        let harness = TestMetrics::new();
+        let mut result = init_result(Some(icing::status_proto::Code::Ok as i32));
+        result.initialize_stats =
+            Some(icing::InitializeStatsProto { latency_ms: Some(7), ..Default::default() });
+        harness.metrics.record_icing_initialization_stats(&result);
+
+        let snapshot = harness.collect();
+        let init_latency = snapshot.histogram("icing_init_latency_ms", &[]);
+        assert_eq!((init_latency.count, init_latency.sum), (1, 7));
+        for name in [
+            "icing_recovery_cause",
+            "icing_recovery_latency_ms",
+            "icing_num_previous_init_failures",
+            "icing_num_failed_reindexed_documents",
+        ] {
+            assert!(!snapshot.names().contains(name), "{name}");
+        }
+    }
+
+    #[test]
+    fn bucket_db_size_labels() {
+        let cases = [
+            (0, "0-100KB"),
+            (100 * KB, "0-100KB"),
+            (100 * KB + 1, "100KB-10MB"),
+            (10 * MB, "100KB-10MB"),
+            (10 * MB + 1, "10MB-20MB"),
+            (20 * MB, "10MB-20MB"),
+            (20 * MB + 1, "20MB-30MB"),
+            (35 * MB, "30MB-40MB"),
+            (45 * MB, "40MB-50MB"),
+            (55 * MB, "50MB-60MB"),
+            (65 * MB, "60MB-70MB"),
+            (75 * MB, "70MB-80MB"),
+            (85 * MB, "80MB-90MB"),
+            (100 * MB, "90MB-100MB"),
+            (100 * MB + 1, "100MB+"),
+        ];
+        for (size, expected) in cases {
+            assert_eq!(bucket_db_size(size), expected, "{size}");
+        }
     }
 }

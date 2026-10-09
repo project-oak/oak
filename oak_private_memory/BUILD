@@ -126,6 +126,15 @@ rust_library(
     ],
 )
 
+rust_test(
+    name = "metrics_test",
+    crate = ":metrics",
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        "@oak_crates_index//:opentelemetry_sdk",
+    ],
+)
+
 rust_library(
     name = "external_db_client",
     srcs = ["src/external_db_client.rs"],
