@@ -807,10 +807,18 @@ impl SealedMemorySessionHandler {
 }
 
 impl SealedMemorySessionHandler {
+    /// Handles a serialized `SealedMemoryRequest` and returns the serialized
+    /// `SealedMemoryResponse`.
+    ///
+    /// Records each failed request once in `rpc_failure_count`, so callers
+    /// must not record the errors returned from here again.
     pub async fn handle(&self, request_bytes: &[u8]) -> tonic::Result<Vec<u8>> {
         let request = self.deserialize_request(request_bytes).map_err(|e| {
-            self.metrics.inc_requests(RequestMetricName::deserialization_failure());
-            tonic::Status::internal(format!("failed to deserialize request: {e}"))
+            let name = RequestMetricName::deserialization_failure();
+            let status = tonic::Status::internal(format!("failed to deserialize request: {e}"));
+            self.metrics.inc_requests(name.clone());
+            self.metrics.record_failure(name, status.code());
+            status
         })?;
 
         let request_id = request.request_id;
@@ -818,11 +826,12 @@ impl SealedMemorySessionHandler {
         let request_variant = match request.request {
             Some(v) => v,
             None => {
+                let name = RequestMetricName::empty_request();
+                self.metrics.inc_requests(name.clone());
                 let status = tonic::Status::invalid_argument("The request is empty.");
+                let code = status.code();
                 let resp = Self::make_error_response(status, request_id);
-                return self
-                    .serialize_response(&resp)
-                    .into_internal_error("failed to serialize response");
+                return self.serialize_and_record_outcome(name, &resp, Some(code));
             }
         };
 
@@ -833,16 +842,39 @@ impl SealedMemorySessionHandler {
 
         let result = self.handle_request_variant(request_variant).await;
 
-        let mut response = match result {
-            Ok(resp) => resp,
-            Err(status) => Self::make_error_response(status, request_id),
+        let (mut response, error_code) = match result {
+            Ok(resp) => (resp, None),
+            Err(status) => {
+                let code = status.code();
+                (Self::make_error_response(status, request_id), Some(code))
+            }
         };
 
         let elapsed_time = start_time.elapsed().as_millis() as u64;
-        self.metrics.record_latency(elapsed_time, metric_name);
+        self.metrics.record_latency(elapsed_time, metric_name.clone());
         response.request_id = request_id;
 
-        self.serialize_response(&response).into_internal_error("failed to serialize response")
+        self.serialize_and_record_outcome(metric_name, &response, error_code)
+    }
+
+    /// Serializes the `response` to a request counted under `name`, and
+    /// records the request's failure, if any, exactly once: the serialization
+    /// error if serialization fails, or else `error_code`, the code of the
+    /// error that `response` carries.
+    fn serialize_and_record_outcome(
+        &self,
+        name: RequestMetricName,
+        response: &SealedMemoryResponse,
+        error_code: Option<tonic::Code>,
+    ) -> tonic::Result<Vec<u8>> {
+        let result =
+            self.serialize_response(response).into_internal_error("failed to serialize response");
+        // Record the serialization error if serializing failed, otherwise the
+        // error `response` carries, if any.
+        if let Some(code) = result.as_ref().err().map(|status| status.code()).or(error_code) {
+            self.metrics.record_failure(name, code);
+        }
+        result
     }
 
     async fn handle_request_variant(
@@ -986,6 +1018,7 @@ async fn get_or_create_db(
 #[cfg(test)]
 mod tests {
     use std::{
+        collections::{BTreeMap, BTreeSet},
         net::{IpAddr, Ipv4Addr, SocketAddr},
         sync::Arc,
         time::{Duration, SystemTime},
@@ -1569,20 +1602,259 @@ mod tests {
         assert_eq!(unlabeled_counter(&harness, "persistence_enqueue_failures"), 1);
     }
 
-    /// A request that cannot be decoded is counted under its own request type.
+    /// The `rpc_count` series for `request_type`.
+    fn request_series(request_type: &str) -> Attrs {
+        attrs(&[("request_type", request_type)])
+    }
+
+    /// The `rpc_failure_count` series for `request_type` and `status_code`.
+    fn failure_series(request_type: &str, status_code: &str) -> Attrs {
+        attrs(&[("request_type", request_type), ("status_code", status_code)])
+    }
+
+    /// A request that cannot be decoded fails the call, and is counted under
+    /// its own request type and the total.
     #[tokio::test(flavor = "multi_thread")]
     async fn handle_counts_undecodable_request() {
         let harness = test_metrics();
         let (handler, _persistence_rx) =
             connect_handler_with_metrics(start_test_db().await, harness.metrics.clone());
+        let before = harness.collect();
 
         let error = handler.handle(&[0xFF; 4]).await.unwrap_err();
 
         assert_eq!(error.code(), tonic::Code::Internal);
+        let snapshot = harness.collect();
         assert_eq!(
-            harness.collect().counter("rpc_count", &[("request_type", "DeserializationFailure")]),
-            1
+            snapshot.counter_increments(&before, "rpc_count"),
+            BTreeMap::from([(request_series("DeserializationFailure"), 1)])
         );
+        assert_eq!(
+            snapshot.counter_increments(&before, "rpc_failure_count"),
+            BTreeMap::from([
+                (failure_series("DeserializationFailure", "INTERNAL"), 1),
+                (failure_series("total", "INTERNAL"), 1),
+            ])
+        );
+    }
+
+    /// Handles `request`, which must fail in-band, and returns the code of the
+    /// error in the response.
+    async fn handle_expecting_error(
+        handler: &SealedMemorySessionHandler,
+        request: SealedMemoryRequest,
+    ) -> tonic::Code {
+        let request_id = request.request_id;
+        let response = handler.handle(&request.encode_to_vec()).await.unwrap();
+        let response = SealedMemoryResponse::decode(response.as_slice()).unwrap();
+        assert_eq!(response.request_id, request_id);
+        match response.response {
+            Some(sealed_memory_response::Response::Error(status)) => tonic::Code::from(status.code),
+            other => panic!("expected an error response, got {other:?}"),
+        }
+    }
+
+    /// A request without a request variant gets an in-band error, and is
+    /// counted under its own request type and the total.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn handle_counts_empty_request() {
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(start_test_db().await, harness.metrics.clone());
+        let before = harness.collect();
+
+        let request = SealedMemoryRequest { request: None, request_id: 7 };
+        assert_eq!(handle_expecting_error(&handler, request).await, tonic::Code::InvalidArgument);
+
+        let snapshot = harness.collect();
+        assert_eq!(
+            snapshot.counter_increments(&before, "rpc_count"),
+            BTreeMap::from([(request_series("EmptyRequest"), 1)])
+        );
+        assert_eq!(
+            snapshot.counter_increments(&before, "rpc_failure_count"),
+            BTreeMap::from([
+                (failure_series("EmptyRequest", "INVALID_ARGUMENT"), 1),
+                (failure_series("total", "INVALID_ARGUMENT"), 1),
+            ])
+        );
+    }
+
+    /// A failed request of any variant gets an in-band error, and is counted
+    /// once under its variant and once under the total, with the error's code.
+    ///
+    /// A failure to serialize the response would be counted the same way, but
+    /// isn't tested: encoding a response into a `Vec` cannot fail.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn handle_counts_failed_requests_of_every_variant() {
+        use sealed_memory_request::Request as RequestVariant;
+        const INVALID_ARGUMENT: (tonic::Code, &str) =
+            (tonic::Code::InvalidArgument, "INVALID_ARGUMENT");
+        const INTERNAL: (tonic::Code, &str) = (tonic::Code::Internal, "INTERNAL");
+        const FAILED_PRECONDITION: (tonic::Code, &str) =
+            (tonic::Code::FailedPrecondition, "FAILED_PRECONDITION");
+
+        let db_addr = start_test_db().await;
+        // Key sync fails for a user whose stored info can't be decoded.
+        let corrupt_pm_uid = "corrupt_user_info_user";
+        let (handler, _persistence_rx) = connect_handler(db_addr);
+        let mut db_client = handler.db_client.get_or_connect().await.unwrap();
+        db_client
+            .add_unencrypted_blob(
+                DataBlob { id: corrupt_pm_uid.to_string(), blob: vec![0xFF; 4] },
+                None,
+            )
+            .await
+            .unwrap();
+
+        #[allow(deprecated)]
+        let cases: Vec<(&str, RequestVariant, (tonic::Code, &str))> = vec![
+            // Registration requires a key encryption key.
+            (
+                "UserRegistrationRequest",
+                RequestVariant::UserRegistrationRequest(Default::default()),
+                INVALID_ARGUMENT,
+            ),
+            (
+                "KeySyncRequest",
+                RequestVariant::KeySyncRequest(key_sync_request(corrupt_pm_uid, None)),
+                INTERNAL,
+            ),
+            // Everything else requires a key sync first.
+            (
+                "AddMemoryRequest",
+                RequestVariant::AddMemoryRequest(Default::default()),
+                FAILED_PRECONDITION,
+            ),
+            (
+                "AddMemoriesRequest",
+                RequestVariant::AddMemoriesRequest(Default::default()),
+                FAILED_PRECONDITION,
+            ),
+            (
+                "GetMemoriesRequest",
+                RequestVariant::GetMemoriesRequest(Default::default()),
+                FAILED_PRECONDITION,
+            ),
+            (
+                "ResetMemoryRequest",
+                RequestVariant::ResetMemoryRequest(Default::default()),
+                FAILED_PRECONDITION,
+            ),
+            (
+                "GetMemoryByIdRequest",
+                RequestVariant::GetMemoryByIdRequest(Default::default()),
+                FAILED_PRECONDITION,
+            ),
+            (
+                "GetMemoryByNameRequest",
+                RequestVariant::GetMemoryByNameRequest(Default::default()),
+                FAILED_PRECONDITION,
+            ),
+            (
+                "DeleteMemoryRequest",
+                RequestVariant::DeleteMemoryRequest(Default::default()),
+                FAILED_PRECONDITION,
+            ),
+            (
+                "GetMemoriesByIdRequest",
+                RequestVariant::GetMemoriesByIdRequest(Default::default()),
+                FAILED_PRECONDITION,
+            ),
+            (
+                "SearchMemoriesRequest",
+                RequestVariant::SearchMemoriesRequest(Default::default()),
+                FAILED_PRECONDITION,
+            ),
+            (
+                "GetDatabaseMetricsRequest",
+                RequestVariant::GetDatabaseMetricsRequest(Default::default()),
+                FAILED_PRECONDITION,
+            ),
+            (
+                "SyncDatabaseRequest",
+                RequestVariant::SyncDatabaseRequest(Default::default()),
+                FAILED_PRECONDITION,
+            ),
+        ];
+
+        // The cases cover every variant: every request type that failures are
+        // recorded under, other than those that aren't request variants.
+        let not_variants = [
+            "total",
+            "Handshake",
+            "DecryptionFailure",
+            "DeserializationFailure",
+            "EmptyRequest",
+            "SessionStart",
+        ];
+        let variants: BTreeSet<String> = test_metrics()
+            .collect()
+            .counter_points("rpc_failure_count")
+            .keys()
+            .flatten()
+            .filter(|(key, value)| key == "request_type" && !not_variants.contains(&value.as_str()))
+            .map(|(_, value)| value.clone())
+            .collect();
+        let tested: BTreeSet<String> = cases.iter().map(|(name, _, _)| name.to_string()).collect();
+        assert_eq!(tested, variants);
+
+        for (name, request, (code, code_name)) in cases {
+            let harness = test_metrics();
+            let (handler, _persistence_rx) =
+                connect_handler_with_metrics(db_addr, harness.metrics.clone());
+            let before = harness.collect();
+
+            let request = SealedMemoryRequest { request: Some(request), request_id: 7 };
+            assert_eq!(handle_expecting_error(&handler, request).await, code, "{name}");
+
+            let snapshot = harness.collect();
+            assert_eq!(
+                snapshot.counter_increments(&before, "rpc_count"),
+                BTreeMap::from([(request_series(name), 1)]),
+                "{name}"
+            );
+            assert_eq!(
+                snapshot.counter_increments(&before, "rpc_failure_count"),
+                BTreeMap::from([
+                    (failure_series(name, code_name), 1),
+                    (failure_series("total", code_name), 1)
+                ]),
+                "{name}"
+            );
+        }
+    }
+
+    /// A request that succeeds is not counted as failed, even if its response
+    /// reports an unsuccessful status.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn handle_does_not_count_successful_request_as_failed() {
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(start_test_db().await, harness.metrics.clone());
+        let before = harness.collect();
+
+        let request = SealedMemoryRequest {
+            request: Some(sealed_memory_request::Request::KeySyncRequest(key_sync_request(
+                "unregistered_user",
+                None,
+            ))),
+            request_id: 7,
+        };
+        let response = handler.handle(&request.encode_to_vec()).await.unwrap();
+
+        match SealedMemoryResponse::decode(response.as_slice()).unwrap().response {
+            Some(sealed_memory_response::Response::KeySyncResponse(response)) => {
+                assert_eq!(response.status(), key_sync_response::Status::InvalidPmUid)
+            }
+            other => panic!("expected a key sync response, got {other:?}"),
+        }
+        let snapshot = harness.collect();
+        assert_eq!(
+            snapshot.counter_increments(&before, "rpc_count"),
+            BTreeMap::from([(request_series("KeySyncRequest"), 1)])
+        );
+        assert_eq!(snapshot.counter_increments(&before, "rpc_failure_count"), BTreeMap::new());
     }
 
     /// Enough deleted memories make a sync optimize the database first.

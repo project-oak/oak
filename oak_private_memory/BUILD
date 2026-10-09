@@ -123,6 +123,7 @@ rust_library(
         "@oak_crates_index//:lazy_static",
         "@oak_crates_index//:opentelemetry",
         "@oak_crates_index//:prost",
+        "@oak_crates_index//:tonic",
     ],
 )
 
@@ -270,6 +271,7 @@ rust_library(
         "//app",
         "//database",
         "@oak//oak_containers/launcher:lib",
+        "@oak//oak_session",
         "@oak//oak_session/tls/rust:oak_session_tls",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:env_logger",
@@ -436,6 +438,7 @@ rust_test(
         "@oak//oak_session/tls/rust:oak_session_tls",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:futures",
+        "@oak_crates_index//:prost",
         "@oak_crates_index//:rustls-pki-types",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",

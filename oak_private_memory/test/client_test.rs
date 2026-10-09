@@ -15,7 +15,8 @@
 //
 
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashSet},
+    sync::Arc,
     time::{Duration, SystemTime},
 };
 
@@ -24,8 +25,8 @@ use attestation_testing::{
     dummy_client_session_config,
 };
 use client::{PrivateMemoryAppClient, PrivateMemoryClient};
-use futures::{SinkExt, StreamExt};
-use metrics_testing::attrs;
+use futures::{SinkExt, StreamExt, TryStreamExt, stream::BoxStream};
+use metrics_testing::{Attrs, Snapshot, attrs};
 use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
 use oak_session::{
     ClientSession, Session,
@@ -37,12 +38,13 @@ use oak_session::{
 use private_memory_server_lib::{app::ApplicationConfig, metrics::Metrics};
 use private_memory_test_utils::{
     default_test_application_config, start_server, start_server_with_config,
-    start_server_with_metrics, system_time_to_timestamp,
+    start_server_with_metrics, start_server_with_session_config_factory, system_time_to_timestamp,
 };
+use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_client::SealedMemoryServiceClient;
 use sealed_memory_rust_proto::{
     oak::private_memory::{
-        LlmView, LlmViews, MemorySource, TextView, TextViewSort, TextViews,
+        LlmView, LlmViews, MemorySource, TextView, TextViewSort, TextViews, TlsSessionFrame,
         search_memories_sort::Sort as SortValue,
     },
     prelude::v1::*,
@@ -77,6 +79,13 @@ async fn start_server_recording_into(
             .await
             .unwrap();
     (format!("http://{addr}"), server, db, persistence)
+}
+
+/// Asserts that no request failed.
+#[track_caller]
+fn assert_no_failures(snapshot: &Snapshot) {
+    let failures = snapshot.counter_points("rpc_failure_count");
+    assert!(failures.values().all(|&count| count == 0), "unexpected failures: {failures:?}");
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -114,9 +123,11 @@ async fn test_client() {
     assert!(response.success);
     assert_eq!(response.memory.unwrap().id, memory_id);
 
-    // Every message on the stream counts towards `total`: the handshake
-    // messages, then registration, key sync, add and get.
+    // Opening the stream counts as a session start. Every message on the
+    // stream counts towards `total`: the handshake messages, then
+    // registration, key sync, add and get.
     let snapshot = harness.collect();
+    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "SessionStart")]), 1);
     assert_eq!(snapshot.counter("rpc_count", &[("request_type", "Handshake")]), HANDSHAKE_MESSAGES);
     assert_eq!(snapshot.counter("rpc_count", &[("request_type", "total")]), HANDSHAKE_MESSAGES + 4);
     for request_type in
@@ -132,10 +143,7 @@ async fn test_client() {
     }
     // Each request's latency is recorded under `total` too.
     assert_eq!(snapshot.histogram("rpc_latency", &[("request_type", "total")]).count, 4);
-    assert_eq!(
-        snapshot.counter_points("rpc_failure_count"),
-        &BTreeMap::from([(attrs(&[("request_type", "total")]), 0)])
-    );
+    assert_no_failures(&snapshot);
 }
 
 /// Verifies that the dummy attested handshake (SelfUnidirectional server +
@@ -784,12 +792,14 @@ async fn test_invoke_basic() {
     // The handshake messages, registration, key sync, the adds, the gets and
     // the batch get all count towards `total`.
     let snapshot = harness.collect();
+    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "SessionStart")]), 1);
     assert_eq!(snapshot.counter("rpc_count", &[("request_type", "Handshake")]), HANDSHAKE_MESSAGES);
     let requests = 2 + 2 * num_memories as u64 + 1;
     assert_eq!(
         snapshot.counter("rpc_count", &[("request_type", "total")]),
         HANDSHAKE_MESSAGES + requests
     );
+    assert_no_failures(&snapshot);
 }
 
 /// Load test: compares wall-clock time for sequential Invoke dispatch vs
@@ -876,9 +886,11 @@ async fn test_invoke_async_pipelining_speedup() {
     // significant speedup (requests overlap on the server).
     assert!(speedup > 1.5, "Expected pipelining speedup > 1.5x, got {speedup:.2}x");
 
-    // Each client sent its handshake messages, then registration, key sync,
-    // the adds and the gets, all of which count towards `total`.
+    // Each client opened one stream and sent its handshake messages, then
+    // registration, key sync, the adds and the gets, all of which count
+    // towards `total`.
     let snapshot = harness.collect();
+    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "SessionStart")]), 2);
     assert_eq!(
         snapshot.counter("rpc_count", &[("request_type", "Handshake")]),
         2 * HANDSHAKE_MESSAGES
@@ -888,6 +900,7 @@ async fn test_invoke_async_pipelining_speedup() {
         snapshot.counter("rpc_count", &[("request_type", "total")]),
         2 * requests_per_client
     );
+    assert_no_failures(&snapshot);
 }
 
 fn make_test_memory(_id: &str, tag: &str) -> Memory {
@@ -1350,40 +1363,142 @@ async fn test_search_memories_text_view_sort_client() {
     }
 }
 
-/// A raw Noise session over an `Invoke` or `InvokeAsync` stream, for sending
-/// requests that `PrivateMemoryClient` cannot produce.
-struct RawNoiseSession {
-    session: ClientSession,
-    requests: futures::channel::mpsc::Sender<SessionRequest>,
-    responses: tonic::Streaming<SessionResponse>,
+/// A session RPC.
+#[derive(Clone, Copy, Debug)]
+enum SessionRpc {
+    Invoke,
+    InvokeAsync,
+    StartSession,
+    StartTlsSession,
 }
+
+/// The session RPCs that run a Noise session.
+const NOISE_RPCS: [SessionRpc; 3] =
+    [SessionRpc::Invoke, SessionRpc::InvokeAsync, SessionRpc::StartSession];
+
+/// The responses of a Noise session stream.
+type NoiseResponses = BoxStream<'static, tonic::Result<SessionResponse>>;
 
 /// Buffer size of the request channel; tests send one message at a time.
 const RAW_REQUEST_BUFFER: usize = 10;
 
+/// Opens a stream with the Noise session RPC `rpc`, and returns its request
+/// sender and responses, or the status the server rejected it with.
+async fn open_noise_stream(
+    url: &str,
+    rpc: SessionRpc,
+) -> tonic::Result<(futures::channel::mpsc::Sender<SessionRequest>, NoiseResponses)> {
+    let mut client = SealedMemoryServiceClient::connect(url.to_string()).await.unwrap();
+    let (requests, request_stream) = futures::channel::mpsc::channel(RAW_REQUEST_BUFFER);
+    let responses = match rpc {
+        SessionRpc::Invoke => client.invoke(request_stream).await?.into_inner().boxed(),
+        SessionRpc::InvokeAsync => client.invoke_async(request_stream).await?.into_inner().boxed(),
+        SessionRpc::StartSession => client
+            .start_session(
+                request_stream
+                    .map(|request| SealedMemorySessionRequest { session_request: Some(request) }),
+            )
+            .await?
+            .into_inner()
+            .map_ok(|response| response.session_response.expect("missing session response"))
+            .boxed(),
+        SessionRpc::StartTlsSession => panic!("{rpc:?} does not run a Noise session"),
+    };
+    Ok((requests, responses))
+}
+
+/// Returns the error status that a response stream ended with, given its next
+/// item.
+fn expect_error<T: std::fmt::Debug>(next: Option<tonic::Result<T>>) -> tonic::Status {
+    match next {
+        Some(Err(status)) => status,
+        other => panic!("expected the stream to fail, got {other:?}"),
+    }
+}
+
+/// Opens a stream with the Noise session RPC `rpc` and sends a first handshake
+/// message that the server cannot handle, returning the status the server
+/// ends the stream with.
+async fn send_invalid_handshake(url: &str, rpc: SessionRpc) -> tonic::Status {
+    let (mut requests, mut responses) = open_noise_stream(url, rpc).await.unwrap();
+    requests.send(SessionRequest::default()).await.unwrap();
+    expect_error(responses.next().await)
+}
+
+/// The `rpc_count` series for `request_type`.
+fn request_series(request_type: &str) -> Attrs {
+    attrs(&[("request_type", request_type)])
+}
+
+/// The `rpc_failure_count` series for `request_type` and `status_code`.
+fn failure_series(request_type: &str, status_code: &str) -> Attrs {
+    attrs(&[("request_type", request_type), ("status_code", status_code)])
+}
+
+/// Asserts that, since `before`, exactly the `rpc_count` series in `requests`
+/// and the `rpc_failure_count` series in `failures`, given as `(request_type,
+/// status_code, increase)`, increased, by the given amounts.
+#[track_caller]
+fn assert_increments(
+    harness: &TestMetrics,
+    before: &Snapshot,
+    requests: &[(&str, u64)],
+    failures: &[(&str, &str, u64)],
+    context: impl std::fmt::Debug,
+) {
+    let snapshot = harness.collect();
+    let expected_requests: BTreeMap<_, _> =
+        requests.iter().map(|&(name, increase)| (request_series(name), increase)).collect();
+    assert_eq!(
+        snapshot.counter_increments(before, "rpc_count"),
+        expected_requests,
+        "rpc_count for {context:?}"
+    );
+    let expected_failures: BTreeMap<_, _> = failures
+        .iter()
+        .map(|&(name, code, increase)| (failure_series(name, code), increase))
+        .collect();
+    assert_eq!(
+        snapshot.counter_increments(before, "rpc_failure_count"),
+        expected_failures,
+        "rpc_failure_count for {context:?}"
+    );
+}
+
+/// A first handshake message that the server cannot handle fails the
+/// handshake, on every Noise session RPC.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_invalid_handshake_is_counted() {
+    let harness = test_metrics();
+    let (url, _server, _db, _persistence) = start_server_recording_into(&harness).await;
+
+    for rpc in NOISE_RPCS {
+        let before = harness.collect();
+        let status = send_invalid_handshake(&url, rpc).await;
+        assert_eq!(status.code(), tonic::Code::Internal, "{rpc:?}");
+        assert_increments(
+            &harness,
+            &before,
+            &[("SessionStart", 1), ("Handshake", 1), ("total", 1)],
+            &[("Handshake", "INTERNAL", 1), ("total", "INTERNAL", 1)],
+            rpc,
+        );
+    }
+}
+
+/// A raw Noise session over a session RPC stream, for sending requests that
+/// `PrivateMemoryClient` cannot produce.
+struct RawNoiseSession {
+    session: ClientSession,
+    requests: futures::channel::mpsc::Sender<SessionRequest>,
+    responses: NoiseResponses,
+}
+
 impl RawNoiseSession {
-    /// Opens a stream with the sequential `Invoke` RPC and completes the
+    /// Opens a stream with the Noise session RPC `rpc` and completes the
     /// handshake.
-    async fn open_invoke(url: &str) -> Self {
-        let mut client = SealedMemoryServiceClient::connect(url.to_string()).await.unwrap();
-        let (requests, request_stream) = futures::channel::mpsc::channel(RAW_REQUEST_BUFFER);
-        let responses = client.invoke(request_stream).await.unwrap().into_inner();
-        Self::handshake(requests, responses).await
-    }
-
-    /// Opens a stream with the concurrent `InvokeAsync` RPC and completes the
-    /// handshake.
-    async fn open_invoke_async(url: &str) -> Self {
-        let mut client = SealedMemoryServiceClient::connect(url.to_string()).await.unwrap();
-        let (requests, request_stream) = futures::channel::mpsc::channel(RAW_REQUEST_BUFFER);
-        let responses = client.invoke_async(request_stream).await.unwrap().into_inner();
-        Self::handshake(requests, responses).await
-    }
-
-    async fn handshake(
-        mut requests: futures::channel::mpsc::Sender<SessionRequest>,
-        mut responses: tonic::Streaming<SessionResponse>,
-    ) -> Self {
+    async fn open(url: &str, rpc: SessionRpc) -> Self {
+        let (mut requests, mut responses) = open_noise_stream(url, rpc).await.unwrap();
         let mut session =
             ClientSession::create(PrivateMemoryClient::default_session_config()).unwrap();
         while !session.is_open() {
@@ -1400,10 +1515,7 @@ impl RawNoiseSession {
     /// stream with.
     async fn send_expecting_error(mut self, request: SessionRequest) -> tonic::Status {
         self.requests.send(request).await.unwrap();
-        match self.responses.next().await {
-            Some(Err(status)) => status,
-            other => panic!("expected the stream to fail, got {other:?}"),
-        }
+        expect_error(self.responses.next().await)
     }
 
     /// Sends a request that cannot be decrypted.
@@ -1417,39 +1529,293 @@ impl RawNoiseSession {
         let request = self.session.encrypt(vec![0xFF; 4]).unwrap();
         self.send_expecting_error(request).await
     }
+
+    /// Sends `request` and returns the response.
+    async fn invoke(&mut self, request: sealed_memory_request::Request) -> SealedMemoryResponse {
+        let request = SealedMemoryRequest { request: Some(request), request_id: 1 };
+        self.requests.send(self.session.encrypt(request.encode_to_vec()).unwrap()).await.unwrap();
+        let response = self.responses.next().await.unwrap().unwrap();
+        SealedMemoryResponse::decode(self.session.decrypt(response).unwrap().as_slice()).unwrap()
+    }
+
+    /// Ends the request stream, and waits for the server to end the session,
+    /// after which it records nothing more for it.
+    async fn close(self) {
+        let Self { requests, mut responses, .. } = self;
+        drop(requests);
+        while let Some(response) = responses.next().await {
+            response.expect("the session should end without an error");
+        }
+    }
 }
 
-/// On the sequential `Invoke` path, a request that cannot be decrypted is
-/// counted as a decryption failure, and one the application handler rejects
-/// is counted as a failure.
+/// After the handshake, a request that cannot be decrypted fails as a
+/// decryption failure, on every Noise session RPC.
 #[tokio::test(flavor = "multi_thread")]
-async fn test_invoke_counts_failed_requests() {
+async fn test_undecryptable_request_is_counted() {
     let harness = test_metrics();
     let (url, _server, _db, _persistence) = start_server_recording_into(&harness).await;
 
-    let status = RawNoiseSession::open_invoke(&url).await.send_undecryptable().await;
-    assert_eq!(status.code(), tonic::Code::InvalidArgument);
-    assert_eq!(harness.collect().counter("rpc_count", &[("request_type", "DecryptionFailure")]), 1);
-
-    let status = RawNoiseSession::open_invoke(&url).await.send_undecodable().await;
-    assert_eq!(status.code(), tonic::Code::Internal);
-    assert_eq!(harness.collect().counter("rpc_failure_count", &[("request_type", "total")]), 1);
+    for rpc in NOISE_RPCS {
+        let before = harness.collect();
+        let status = RawNoiseSession::open(&url, rpc).await.send_undecryptable().await;
+        assert_eq!(status.code(), tonic::Code::InvalidArgument, "{rpc:?}");
+        assert_increments(
+            &harness,
+            &before,
+            &[
+                ("SessionStart", 1),
+                ("Handshake", HANDSHAKE_MESSAGES),
+                ("total", HANDSHAKE_MESSAGES + 1),
+                ("DecryptionFailure", 1),
+            ],
+            &[("DecryptionFailure", "INVALID_ARGUMENT", 1), ("total", "INVALID_ARGUMENT", 1)],
+            rpc,
+        );
+    }
 }
 
-/// The same as [`test_invoke_counts_failed_requests`], for the concurrent
-/// `InvokeAsync` dispatch path.
+/// A request that decrypts to something other than a `SealedMemoryRequest`
+/// fails as a deserialization failure, on every Noise session RPC.
 #[tokio::test(flavor = "multi_thread")]
-async fn test_invoke_async_counts_failed_requests() {
+async fn test_undecodable_request_is_counted() {
     let harness = test_metrics();
     let (url, _server, _db, _persistence) = start_server_recording_into(&harness).await;
 
-    let status = RawNoiseSession::open_invoke_async(&url).await.send_undecryptable().await;
-    assert_eq!(status.code(), tonic::Code::InvalidArgument);
-    assert_eq!(harness.collect().counter("rpc_count", &[("request_type", "DecryptionFailure")]), 1);
+    for rpc in NOISE_RPCS {
+        let before = harness.collect();
+        let status = RawNoiseSession::open(&url, rpc).await.send_undecodable().await;
+        assert_eq!(status.code(), tonic::Code::Internal, "{rpc:?}");
+        assert_increments(
+            &harness,
+            &before,
+            &[
+                ("SessionStart", 1),
+                ("Handshake", HANDSHAKE_MESSAGES),
+                ("total", HANDSHAKE_MESSAGES + 1),
+                ("DeserializationFailure", 1),
+            ],
+            &[("DeserializationFailure", "INTERNAL", 1), ("total", "INTERNAL", 1)],
+            rpc,
+        );
+    }
+}
 
-    let status = RawNoiseSession::open_invoke_async(&url).await.send_undecodable().await;
-    assert_eq!(status.code(), tonic::Code::Internal);
-    assert_eq!(harness.collect().counter("rpc_failure_count", &[("request_type", "total")]), 1);
+/// A request that the application rejects before key sync.
+fn add_memory_request() -> sealed_memory_request::Request {
+    sealed_memory_request::Request::AddMemoryRequest(AddMemoryRequest::default())
+}
+
+/// Returns the code of the error that `response` carries.
+fn error_code(response: &SealedMemoryResponse) -> tonic::Code {
+    match &response.response {
+        Some(sealed_memory_response::Response::Error(status)) => tonic::Code::from(status.code),
+        other => panic!("expected an error response, got {other:?}"),
+    }
+}
+
+/// A request that the application rejects with an error response fails
+/// under its own request type, exactly once, on every Noise session RPC.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_rejected_request_is_counted_once() {
+    let harness = test_metrics();
+    let (url, _server, _db, _persistence) = start_server_recording_into(&harness).await;
+
+    for rpc in NOISE_RPCS {
+        let before = harness.collect();
+        let mut session = RawNoiseSession::open(&url, rpc).await;
+        let response = session.invoke(add_memory_request()).await;
+        session.close().await;
+        assert_eq!(error_code(&response), tonic::Code::FailedPrecondition, "{rpc:?}");
+        assert_increments(
+            &harness,
+            &before,
+            &[
+                ("SessionStart", 1),
+                ("Handshake", HANDSHAKE_MESSAGES),
+                ("total", HANDSHAKE_MESSAGES + 1),
+                ("AddMemoryRequest", 1),
+            ],
+            &[("AddMemoryRequest", "FAILED_PRECONDITION", 1), ("total", "FAILED_PRECONDITION", 1)],
+            rpc,
+        );
+    }
+}
+
+/// Sends a `StartSession` message without a session request, and returns the
+/// status the server ends the stream with.
+async fn send_without_session_request(url: &str) -> tonic::Status {
+    let mut client = SealedMemoryServiceClient::connect(url.to_string()).await.unwrap();
+    let (mut requests, request_stream) = futures::channel::mpsc::channel(RAW_REQUEST_BUFFER);
+    let mut responses = client.start_session(request_stream).await.unwrap().into_inner();
+    requests.send(SealedMemorySessionRequest { session_request: None }).await.unwrap();
+    expect_error(responses.next().await)
+}
+
+/// A `StartSession` message without a session request fails as an empty
+/// request.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_message_without_session_request_is_counted() {
+    let harness = test_metrics();
+    let (url, _server, _db, _persistence) = start_server_recording_into(&harness).await;
+    let before = harness.collect();
+
+    let status = send_without_session_request(&url).await;
+
+    assert_eq!(status.code(), tonic::Code::InvalidArgument);
+    assert_increments(
+        &harness,
+        &before,
+        &[("SessionStart", 1), ("total", 1), ("EmptyRequest", 1)],
+        &[("EmptyRequest", "INVALID_ARGUMENT", 1), ("total", "INVALID_ARGUMENT", 1)],
+        SessionRpc::StartSession,
+    );
+}
+
+/// Opens a stream with `rpc`, and returns the status the server rejected it
+/// with.
+async fn open_rejected_stream(url: &str, rpc: SessionRpc) -> tonic::Status {
+    let result = match rpc {
+        SessionRpc::StartTlsSession => {
+            let mut client = SealedMemoryServiceClient::connect(url.to_string()).await.unwrap();
+            let (_requests, request_stream) =
+                futures::channel::mpsc::channel::<TlsSessionFrame>(RAW_REQUEST_BUFFER);
+            client.start_tls_session(request_stream).await.map(drop)
+        }
+        _ => open_noise_stream(url, rpc).await.map(drop),
+    };
+    result.expect_err("the server should have rejected the stream")
+}
+
+/// A `StartTlsSession` stream is rejected if TLS is not configured, and counted
+/// as a failed session start.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_tls_session_without_tls_is_counted() {
+    let harness = test_metrics();
+    let (url, _server, _db, _persistence) = start_server_recording_into(&harness).await;
+    let before = harness.collect();
+
+    let status = open_rejected_stream(&url, SessionRpc::StartTlsSession).await;
+
+    assert_eq!(status.code(), tonic::Code::Unimplemented);
+    assert_increments(
+        &harness,
+        &before,
+        &[("SessionStart", 1)],
+        &[("SessionStart", "UNIMPLEMENTED", 1)],
+        SessionRpc::StartTlsSession,
+    );
+}
+
+/// A session config that the server cannot create a session from: it verifies
+/// the peer, but has no verifier for it.
+fn unusable_session_config() -> SessionConfig {
+    SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN).build()
+}
+
+/// A Noise session stream is rejected if the server cannot create its
+/// session, and counted as a failed session start.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_session_creation_failure_is_counted() {
+    let harness = test_metrics();
+    let (addr, _server, _db, _persistence) = start_server_with_session_config_factory(
+        default_test_application_config,
+        None,
+        Arc::new(unusable_session_config),
+        harness.metrics.clone(),
+    )
+    .await
+    .unwrap();
+    let url = format!("http://{addr}");
+
+    for rpc in NOISE_RPCS {
+        let before = harness.collect();
+        let status = open_rejected_stream(&url, rpc).await;
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition, "{rpc:?}");
+        assert_increments(
+            &harness,
+            &before,
+            &[("SessionStart", 1)],
+            &[("SessionStart", "FAILED_PRECONDITION", 1)],
+            rpc,
+        );
+    }
+}
+
+/// Every `status_code` label: the canonical names of the gRPC status codes,
+/// which the host's pstreamz policy allows.
+const STATUS_CODE_LABELS: [&str; 17] = [
+    "OK",
+    "CANCELLED",
+    "UNKNOWN",
+    "INVALID_ARGUMENT",
+    "DEADLINE_EXCEEDED",
+    "NOT_FOUND",
+    "ALREADY_EXISTS",
+    "PERMISSION_DENIED",
+    "RESOURCE_EXHAUSTED",
+    "FAILED_PRECONDITION",
+    "ABORTED",
+    "OUT_OF_RANGE",
+    "UNIMPLEMENTED",
+    "INTERNAL",
+    "UNAVAILABLE",
+    "DATA_LOSS",
+    "UNAUTHENTICATED",
+];
+
+/// The host derives the `rpc_failure_count` columns from a single exported
+/// point, and drops all later metrics if another point doesn't match them. So
+/// after failures on many paths, every point must still carry exactly a
+/// `request_type` registered at startup (the request types that can fail,
+/// which the metrics unit tests pin down) and a `status_code` label.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_failure_points_have_request_type_and_status_code() {
+    let harness = test_metrics();
+    let registered: BTreeSet<String> = harness
+        .collect()
+        .counter_points("rpc_failure_count")
+        .keys()
+        .flatten()
+        .filter(|(key, _)| key == "request_type")
+        .map(|(_, value)| value.clone())
+        .collect();
+    let (url, _server, _db, _persistence) = start_server_recording_into(&harness).await;
+
+    for rpc in NOISE_RPCS {
+        send_invalid_handshake(&url, rpc).await;
+        RawNoiseSession::open(&url, rpc).await.send_undecryptable().await;
+        RawNoiseSession::open(&url, rpc).await.send_undecodable().await;
+        let mut session = RawNoiseSession::open(&url, rpc).await;
+        session.invoke(add_memory_request()).await;
+        session.close().await;
+    }
+    send_without_session_request(&url).await;
+    open_rejected_stream(&url, SessionRpc::StartTlsSession).await;
+
+    let snapshot = harness.collect();
+    let mut recorded_codes = BTreeSet::new();
+    for (series, &count) in snapshot.counter_points("rpc_failure_count") {
+        let [(request_type_key, request_type), (status_code_key, status_code)] = series.as_slice()
+        else {
+            panic!("expected exactly two attributes: {series:?}");
+        };
+        assert_eq!(
+            [request_type_key.as_str(), status_code_key.as_str()],
+            ["request_type", "status_code"],
+            "{series:?}"
+        );
+        assert!(registered.contains(request_type), "unregistered request type: {series:?}");
+        assert!(STATUS_CODE_LABELS.contains(&status_code.as_str()), "unknown status: {series:?}");
+        if count > 0 {
+            recorded_codes.insert(status_code.as_str());
+        }
+    }
+    // The paths above failed with more codes than the zero-initialized one.
+    assert_eq!(
+        recorded_codes,
+        BTreeSet::from(["FAILED_PRECONDITION", "INTERNAL", "INVALID_ARGUMENT", "UNIMPLEMENTED"])
+    );
 }
 
 /// Server config whose minimum available memory ratio no real host meets, so
@@ -1462,8 +1828,16 @@ fn config_with_unreachable_memory_threshold(db_addr: std::net::SocketAddr) -> Ap
     }
 }
 
+/// Every session RPC.
+const ALL_RPCS: [SessionRpc; 4] = [
+    SessionRpc::Invoke,
+    SessionRpc::InvokeAsync,
+    SessionRpc::StartSession,
+    SessionRpc::StartTlsSession,
+];
+
 /// New sessions are rejected while available memory is below the configured
-/// threshold, and each rejection is counted.
+/// threshold, on every session RPC, and each rejection is counted.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_low_memory_rejections_are_counted() {
     let harness = test_metrics();
@@ -1474,18 +1848,28 @@ async fn test_low_memory_rejections_are_counted() {
     )
     .await
     .unwrap();
-    let mut client = SealedMemoryServiceClient::connect(format!("http://{addr}")).await.unwrap();
+    let url = format!("http://{addr}");
 
-    // The server rejects the session before reading any request, so the
-    // request stream can be empty.
-    let result = client.invoke(futures::stream::empty::<SessionRequest>()).await;
-
-    let status = result.expect_err("the session should have been rejected");
-    assert_eq!(
-        status.code(),
-        tonic::Code::ResourceExhausted,
-        "unexpected rejection ({status:?}); the server only rejects sessions for low memory if \
-         /proc/meminfo is readable"
-    );
-    assert_eq!(harness.collect().counter("session_rejected_low_memory", &[]), 1);
+    for rpc in ALL_RPCS {
+        let before = harness.collect();
+        let status = open_rejected_stream(&url, rpc).await;
+        assert_eq!(
+            status.code(),
+            tonic::Code::ResourceExhausted,
+            "{rpc:?} was not rejected for low memory ({status:?}); the server only rejects \
+             sessions for low memory if /proc/meminfo is readable"
+        );
+        assert_increments(
+            &harness,
+            &before,
+            &[("SessionStart", 1)],
+            &[("SessionStart", "RESOURCE_EXHAUSTED", 1)],
+            rpc,
+        );
+        assert_eq!(
+            harness.collect().counter_increments(&before, "session_rejected_low_memory"),
+            BTreeMap::from([(attrs(&[]), 1)]),
+            "{rpc:?}"
+        );
+    }
 }

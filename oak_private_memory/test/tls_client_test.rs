@@ -22,6 +22,7 @@
 //! add_memory, search, etc.).
 
 use std::{
+    collections::BTreeMap,
     io::BufReader,
     net::SocketAddr,
     sync::Arc,
@@ -30,6 +31,7 @@ use std::{
 
 use client::{PrivateMemoryAppClient, PrivateMemoryTlsClient};
 use futures::{SinkExt, StreamExt, channel::mpsc, lock::Mutex};
+use metrics_testing::{Attrs, Snapshot, attrs};
 use oak_session_tls::{
     ClientContextConfig, OakSessionTls, OakSessionTlsClientContext, OakSessionTlsServerContext,
     ServerContextConfig, utils,
@@ -39,6 +41,7 @@ use private_memory_test_utils::{
     default_test_application_config, start_server_with_tls, start_server_with_tls_and_metrics,
     system_time_to_timestamp,
 };
+use prost::Message;
 use runfiles::Runfiles;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_client::SealedMemoryServiceClient;
 use sealed_memory_rust_proto::{
@@ -171,12 +174,16 @@ async fn test_tls_session_basic() {
     assert!(response.success);
     assert_eq!(response.memory.unwrap().id, memory_id);
 
-    // One handshake, then every frame after it counts towards `total`:
-    // registration, key sync, add and get.
+    // Opening the stream counts as a session start. The handshake counts as
+    // one request, and so does every frame after it: registration, key sync,
+    // add and get.
     let snapshot = harness.collect();
+    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "SessionStart")]), 1);
     assert_eq!(snapshot.counter("rpc_count", &[("request_type", "Handshake")]), 1);
-    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "total")]), 4);
+    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "total")]), 5);
     assert_eq!(snapshot.counter("tls_handshake_failures", &[]), 0);
+    let failures = snapshot.counter_points("rpc_failure_count");
+    assert!(failures.values().all(|&count| count == 0), "unexpected failures: {failures:?}");
 }
 
 /// Verifies that delete_memory works through a TLS session.
@@ -325,6 +332,31 @@ async fn open_raw_tls_session(url: &str) -> (OakSessionTls, RawTlsStream) {
     (session, stream)
 }
 
+/// Asserts that, since `before`, exactly the `rpc_count` series in `requests`,
+/// given as `(request_type, increase)`, and the `rpc_failure_count` series in
+/// `failures`, given as `(request_type, status_code, increase)`, increased.
+#[track_caller]
+fn assert_increments(
+    harness: &TestMetrics,
+    before: &Snapshot,
+    requests: &[(&str, u64)],
+    failures: &[(&str, &str, u64)],
+) {
+    let snapshot = harness.collect();
+    let expected_requests: BTreeMap<Attrs, u64> = requests
+        .iter()
+        .map(|&(name, increase)| (attrs(&[("request_type", name)]), increase))
+        .collect();
+    assert_eq!(snapshot.counter_increments(before, "rpc_count"), expected_requests);
+    let expected_failures: BTreeMap<Attrs, u64> = failures
+        .iter()
+        .map(|&(name, code, increase)| {
+            (attrs(&[("request_type", name), ("status_code", code)]), increase)
+        })
+        .collect();
+    assert_eq!(snapshot.counter_increments(before, "rpc_failure_count"), expected_failures);
+}
+
 /// A failed TLS handshake is counted, both as a TLS handshake failure and as
 /// a failed `Handshake` request.
 #[tokio::test(flavor = "multi_thread")]
@@ -332,6 +364,7 @@ async fn test_tls_handshake_failure_is_counted() {
     let harness = test_metrics();
     let (url, _server, _db, _persistence) =
         start_tls_server_recording_into(&harness, default_test_application_config).await;
+    let before = harness.collect();
     let mut stream = open_tls_stream(&url).await;
 
     stream
@@ -345,10 +378,25 @@ async fn test_tls_handshake_failure_is_counted() {
         other => panic!("expected the handshake to fail, got {other:?}"),
     };
     assert_eq!(status.code(), tonic::Code::Internal);
-    let snapshot = harness.collect();
-    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "Handshake")]), 1);
-    assert_eq!(snapshot.counter("rpc_failure_count", &[("request_type", "Handshake")]), 1);
-    assert_eq!(snapshot.counter("tls_handshake_failures", &[]), 1);
+    assert_increments(
+        &harness,
+        &before,
+        &[("SessionStart", 1), ("Handshake", 1), ("total", 1)],
+        &[("Handshake", "INTERNAL", 1), ("total", "INTERNAL", 1)],
+    );
+    assert_eq!(harness.collect().counter("tls_handshake_failures", &[]), 1);
+}
+
+/// Returns the error status that `responses` ends with, skipping the
+/// post-handshake frames that the server may still send before it.
+async fn next_error(responses: &mut tonic::Streaming<TlsSessionFrame>) -> tonic::Status {
+    loop {
+        match responses.next().await {
+            Some(Ok(_)) => continue,
+            Some(Err(status)) => break status,
+            None => panic!("expected the stream to fail"),
+        }
+    }
 }
 
 /// A frame that cannot be decrypted after the handshake is counted as a
@@ -358,6 +406,7 @@ async fn test_tls_undecryptable_frame_is_counted() {
     let harness = test_metrics();
     let (url, _server, _db, _persistence) =
         start_tls_server_recording_into(&harness, default_test_application_config).await;
+    let before = harness.collect();
     let (_session, mut stream) = open_raw_tls_session(&url).await;
 
     stream
@@ -366,18 +415,73 @@ async fn test_tls_undecryptable_frame_is_counted() {
         .await
         .unwrap();
 
-    let status = loop {
-        match stream.responses.next().await {
-            // Skip post-handshake frames the server may still send.
-            Some(Ok(_)) => continue,
-            Some(Err(status)) => break status,
-            None => panic!("expected the stream to fail"),
-        }
+    assert_eq!(next_error(&mut stream.responses).await.code(), tonic::Code::InvalidArgument);
+    assert_increments(
+        &harness,
+        &before,
+        &[("SessionStart", 1), ("Handshake", 1), ("total", 2), ("DecryptionFailure", 1)],
+        &[("DecryptionFailure", "INVALID_ARGUMENT", 1), ("total", "INVALID_ARGUMENT", 1)],
+    );
+}
+
+/// A frame that decrypts to something other than a `SealedMemoryRequest` is
+/// counted as a deserialization failure.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_tls_undecodable_request_is_counted() {
+    let harness = test_metrics();
+    let (url, _server, _db, _persistence) =
+        start_tls_server_recording_into(&harness, default_test_application_config).await;
+    let before = harness.collect();
+    let (mut session, mut stream) = open_raw_tls_session(&url).await;
+
+    let tls_frame = session.encrypt(&[0xFF; 4]).unwrap();
+    stream.requests.send(TlsSessionFrame { tls_frame }).await.unwrap();
+
+    assert_eq!(next_error(&mut stream.responses).await.code(), tonic::Code::Internal);
+    assert_increments(
+        &harness,
+        &before,
+        &[("SessionStart", 1), ("Handshake", 1), ("total", 2), ("DeserializationFailure", 1)],
+        &[("DeserializationFailure", "INTERNAL", 1), ("total", "INTERNAL", 1)],
+    );
+}
+
+/// A request that the application rejects with an error response is counted
+/// as a failure of its own request type, exactly once.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_tls_rejected_request_is_counted_once() {
+    let harness = test_metrics();
+    let (url, _server, _db, _persistence) =
+        start_tls_server_recording_into(&harness, default_test_application_config).await;
+    let before = harness.collect();
+    let (mut session, mut stream) = open_raw_tls_session(&url).await;
+
+    // Adding a memory before key sync fails.
+    let request = SealedMemoryRequest {
+        request: Some(sealed_memory_request::Request::AddMemoryRequest(Default::default())),
+        request_id: 1,
     };
-    assert_eq!(status.code(), tonic::Code::InvalidArgument);
-    let snapshot = harness.collect();
-    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "DecryptionFailure")]), 1);
-    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "total")]), 1);
+    let tls_frame = session.encrypt(&request.encode_to_vec()).unwrap();
+    stream.requests.send(TlsSessionFrame { tls_frame }).await.unwrap();
+    // Post-handshake frames decrypt to no application data.
+    let mut plaintext = vec![];
+    while plaintext.is_empty() {
+        let frame = stream.responses.next().await.unwrap().unwrap();
+        plaintext = session.decrypt(&frame.tls_frame).unwrap();
+    }
+
+    match SealedMemoryResponse::decode(plaintext.as_slice()).unwrap().response {
+        Some(sealed_memory_response::Response::Error(status)) => {
+            assert_eq!(tonic::Code::from(status.code), tonic::Code::FailedPrecondition)
+        }
+        other => panic!("expected an error response, got {other:?}"),
+    }
+    assert_increments(
+        &harness,
+        &before,
+        &[("SessionStart", 1), ("Handshake", 1), ("total", 2), ("AddMemoryRequest", 1)],
+        &[("AddMemoryRequest", "FAILED_PRECONDITION", 1), ("total", "FAILED_PRECONDITION", 1)],
+    );
 }
 
 /// A post-handshake frame that decrypts to no application data is counted as
@@ -387,6 +491,7 @@ async fn test_tls_empty_frame_is_counted() {
     let harness = test_metrics();
     let (url, _server, _db, _persistence) =
         start_tls_server_recording_into(&harness, default_test_application_config).await;
+    let before = harness.collect();
     let (_session, RawTlsStream { mut requests, mut responses }) = open_raw_tls_session(&url).await;
 
     requests.send(TlsSessionFrame { tls_frame: vec![] }).await.unwrap();
@@ -397,9 +502,12 @@ async fn test_tls_empty_frame_is_counted() {
         frame.expect("an empty frame must not fail the stream");
     }
 
-    let snapshot = harness.collect();
-    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "EmptyTlsFrame")]), 1);
-    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "total")]), 1);
+    assert_increments(
+        &harness,
+        &before,
+        &[("SessionStart", 1), ("Handshake", 1), ("total", 2), ("EmptyTlsFrame", 1)],
+        &[],
+    );
 }
 
 /// A gRPC decode limit small enough that one oversized frame exceeds it, while
@@ -421,6 +529,7 @@ async fn test_tls_receive_failure_is_counted() {
     let harness = test_metrics();
     let (url, _server, _db, _persistence) =
         start_tls_server_recording_into(&harness, config_with_small_decode_limit).await;
+    let before = harness.collect();
     let (_session, mut stream) = open_raw_tls_session(&url).await;
 
     stream
@@ -431,8 +540,14 @@ async fn test_tls_receive_failure_is_counted() {
 
     // The server records the failure, then ends the response stream.
     while let Some(Ok(_)) = stream.responses.next().await {}
-    let snapshot = harness.collect();
-    assert_eq!(snapshot.counter("tls_receive_failures", &[]), 1);
-    // The oversized frame never reached the dispatch loop.
-    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "total")]), 0);
+    assert_eq!(harness.collect().counter("tls_receive_failures", &[]), 1);
+    // The oversized frame never reached the dispatch loop, so only the
+    // handshake counts as a request. A frame that can't be received is not a
+    // failed request.
+    assert_increments(
+        &harness,
+        &before,
+        &[("SessionStart", 1), ("Handshake", 1), ("total", 1)],
+        &[],
+    );
 }

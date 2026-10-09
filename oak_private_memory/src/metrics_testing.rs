@@ -241,6 +241,23 @@ impl Snapshot {
             .unwrap_or_else(|| panic!("{name} has no point for {pairs:?}"))
     }
 
+    /// The series of the counter `name` that increased since `before`, mapped
+    /// to their increase. Series (or the whole counter) missing from `before`
+    /// count from zero.
+    pub fn counter_increments(&self, before: &Snapshot, name: &str) -> BTreeMap<Attrs, u64> {
+        let previous = before.0.contains_key(name).then(|| before.counter_points(name));
+        self.counter_points(name)
+            .iter()
+            .filter_map(|(series, &value)| {
+                let previous = previous.and_then(|points| points.get(series)).copied().unwrap_or(0);
+                let increase = value.checked_sub(previous).unwrap_or_else(|| {
+                    panic!("{name}{series:?} decreased from {previous} to {value}")
+                });
+                (increase > 0).then(|| (series.clone(), increase))
+            })
+            .collect()
+    }
+
     /// All series of the gauge `name`.
     pub fn gauge_points(&self, name: &str) -> &BTreeMap<Attrs, u64> {
         match &self.get(name).data {

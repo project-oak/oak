@@ -114,6 +114,8 @@ enum RequestMetricNameInner {
     DecryptionFailure,
     DeserializationFailure,
     EmptyTlsFrame,
+    EmptyRequest,
+    SessionStart,
 }
 
 #[derive(Clone, Debug)]
@@ -331,7 +333,13 @@ impl Metrics {
         // Initialize the total count to 0 to trigger the metric registration.
         // Otherwise, the metric will only show up once it has been incremented.
         rpc_count.add(0, &[KeyValue::new("request_type", "total")]);
-        rpc_failure_count.add(0, &[KeyValue::new("request_type", "total")]);
+        rpc_count.add(0, &[KeyValue::new("request_type", RequestMetricName::session_start())]);
+        // Likewise, register a failure series for every request type that can
+        // fail. The status code is arbitrary: series for other codes show up
+        // once a request fails with them.
+        for name in RequestMetricName::failable() {
+            rpc_failure_count.add(0, &failure_attributes(name, tonic::Code::Internal));
+        }
         rpc_latency.record(1, &[KeyValue::new("request_type", "test")]);
         db_size.record(1, &[]);
         db_init_latency.record(1, &[KeyValue::new("db_size_bucket", "0-100KB")]);
@@ -431,15 +439,29 @@ impl Metrics {
     /// This should be called unconditionally for the given metric name, whether
     /// the request fails or not.
     ///
-    /// The special [`RequestMetricName::Total`] should be incremented in
-    /// addition to the specific request type.
+    /// The special [`RequestMetricName::total`] should be incremented in
+    /// addition to the specific request type, except for
+    /// [`RequestMetricName::session_start`], which counts session streams
+    /// rather than the messages sent on them.
     pub fn inc_requests(&self, name: RequestMetricName) {
         self.rpc_count.add(1, &[KeyValue::new("request_type", name)]);
     }
 
-    /// Record a failure for the given request metric name.
-    pub fn inc_failures(&self, name: RequestMetricName) {
-        self.rpc_failure_count.add(1, &[KeyValue::new("request_type", name)]);
+    /// Record a failed request, labelled with the gRPC status `code` it failed
+    /// with.
+    ///
+    /// Call this exactly once per failed request, with the most specific
+    /// request type known where it failed. The failure is also recorded under
+    /// [`RequestMetricName::total`], except for session start failures, which
+    /// are not mirrored into the total (just like their request count). Pass
+    /// [`RequestMetricName::total`] itself for failures that cannot be
+    /// attributed to a more specific request type; those are recorded once.
+    pub fn record_failure(&self, name: RequestMetricName, code: tonic::Code) {
+        let aggregated_in_total = name.is_aggregated_in_total();
+        self.rpc_failure_count.add(1, &failure_attributes(name, code));
+        if aggregated_in_total {
+            self.rpc_failure_count.add(1, &failure_attributes(RequestMetricName::total(), code));
+        }
     }
 
     /// Record a latency value for the given request.
@@ -663,6 +685,43 @@ fn get_name<T: Name>(_x: &T) -> String {
     T::NAME.to_string()
 }
 
+/// Returns the `status_code` label of the gRPC status `code`: its canonical
+/// name (e.g. `INVALID_ARGUMENT`), as defined in
+/// https://github.com/googleapis/googleapis/blob/master/google/rpc/code.proto.
+///
+/// The host's pstreamz policy allows the `status_code` column because it only
+/// ever holds one of these 17 values, and names this function as their source
+/// of truth. Never label failures with anything else, such as status messages.
+fn status_code_label(code: tonic::Code) -> &'static str {
+    match code {
+        tonic::Code::Ok => "OK",
+        tonic::Code::Cancelled => "CANCELLED",
+        tonic::Code::Unknown => "UNKNOWN",
+        tonic::Code::InvalidArgument => "INVALID_ARGUMENT",
+        tonic::Code::DeadlineExceeded => "DEADLINE_EXCEEDED",
+        tonic::Code::NotFound => "NOT_FOUND",
+        tonic::Code::AlreadyExists => "ALREADY_EXISTS",
+        tonic::Code::PermissionDenied => "PERMISSION_DENIED",
+        tonic::Code::ResourceExhausted => "RESOURCE_EXHAUSTED",
+        tonic::Code::FailedPrecondition => "FAILED_PRECONDITION",
+        tonic::Code::Aborted => "ABORTED",
+        tonic::Code::OutOfRange => "OUT_OF_RANGE",
+        tonic::Code::Unimplemented => "UNIMPLEMENTED",
+        tonic::Code::Internal => "INTERNAL",
+        tonic::Code::Unavailable => "UNAVAILABLE",
+        tonic::Code::DataLoss => "DATA_LOSS",
+        tonic::Code::Unauthenticated => "UNAUTHENTICATED",
+    }
+}
+
+/// The attributes identifying an `rpc_failure_count` series.
+///
+/// Every point must carry exactly these two string attributes: the host
+/// derives the metric's streamz columns from a single exported point.
+fn failure_attributes(name: RequestMetricName, code: tonic::Code) -> [KeyValue; 2] {
+    [KeyValue::new("request_type", name), KeyValue::new("status_code", status_code_label(code))]
+}
+
 impl From<RequestMetricName> for Value {
     fn from(name: RequestMetricName) -> Value {
         match name.0 {
@@ -672,6 +731,8 @@ impl From<RequestMetricName> for Value {
             RequestMetricNameInner::DecryptionFailure => "DecryptionFailure".into(),
             RequestMetricNameInner::DeserializationFailure => "DeserializationFailure".into(),
             RequestMetricNameInner::EmptyTlsFrame => "EmptyTlsFrame".into(),
+            RequestMetricNameInner::EmptyRequest => "EmptyRequest".into(),
+            RequestMetricNameInner::SessionStart => "SessionStart".into(),
         }
     }
 }
@@ -697,6 +758,16 @@ impl RequestMetricName {
         RequestMetricName(RequestMetricNameInner::EmptyTlsFrame)
     }
 
+    /// A request message that does not carry a request.
+    pub fn empty_request() -> RequestMetricName {
+        RequestMetricName(RequestMetricNameInner::EmptyRequest)
+    }
+
+    /// An attempt to open a session stream, on any of the session RPCs.
+    pub fn session_start() -> RequestMetricName {
+        RequestMetricName(RequestMetricNameInner::SessionStart)
+    }
+
     pub fn new_sealed_memory_request(
         variant: &sealed_memory_request::Request,
     ) -> RequestMetricName {
@@ -716,6 +787,44 @@ impl RequestMetricName {
             sealed_memory_request::Request::GetDatabaseMetricsRequest(r) => get_name(r),
             sealed_memory_request::Request::SyncDatabaseRequest(r) => get_name(r),
         }))
+    }
+
+    /// Every request type that a failure can be recorded under.
+    fn failable() -> impl Iterator<Item = RequestMetricName> {
+        use sealed_memory_request::Request;
+        // Every request variant, as listed in `new_sealed_memory_request`.
+        #[allow(deprecated)]
+        let variants = [
+            Request::UserRegistrationRequest(Default::default()),
+            Request::KeySyncRequest(Default::default()),
+            Request::AddMemoryRequest(Default::default()),
+            Request::AddMemoriesRequest(Default::default()),
+            Request::GetMemoriesRequest(Default::default()),
+            Request::ResetMemoryRequest(Default::default()),
+            Request::GetMemoryByIdRequest(Default::default()),
+            Request::GetMemoryByNameRequest(Default::default()),
+            Request::DeleteMemoryRequest(Default::default()),
+            Request::GetMemoriesByIdRequest(Default::default()),
+            Request::SearchMemoriesRequest(Default::default()),
+            Request::GetDatabaseMetricsRequest(Default::default()),
+            Request::SyncDatabaseRequest(Default::default()),
+        ];
+        [
+            Self::total(),
+            Self::handshake(),
+            Self::decryption_failure(),
+            Self::deserialization_failure(),
+            Self::empty_request(),
+            Self::session_start(),
+        ]
+        .into_iter()
+        .chain(variants.into_iter().map(|variant| Self::new_sealed_memory_request(&variant)))
+    }
+
+    /// Whether failures recorded under this name are also recorded under the
+    /// total.
+    fn is_aggregated_in_total(&self) -> bool {
+        !matches!(self.0, RequestMetricNameInner::Total | RequestMetricNameInner::SessionStart)
     }
 }
 
@@ -838,20 +947,57 @@ mod value_tests {
         ("db_load_speed", Metrics::record_db_load_speed),
     ];
 
+    /// The `rpc_failure_count` series for `request_type` and `status_code`.
+    fn failure_series(request_type: &str, status_code: &str) -> Attrs {
+        attrs(&[("request_type", request_type), ("status_code", status_code)])
+    }
+
+    /// Every `request_type` that a failure can be recorded under.
+    const FAILABLE_REQUEST_TYPES: &[&str] = &[
+        "total",
+        "Handshake",
+        "DecryptionFailure",
+        "DeserializationFailure",
+        "EmptyRequest",
+        "SessionStart",
+        "UserRegistrationRequest",
+        "KeySyncRequest",
+        "AddMemoryRequest",
+        "AddMemoriesRequest",
+        "GetMemoriesRequest",
+        "ResetMemoryRequest",
+        "GetMemoryByIdRequest",
+        "GetMemoryByNameRequest",
+        "DeleteMemoryRequest",
+        "GetMemoriesByIdRequest",
+        "SearchMemoriesRequest",
+        "GetDatabaseMetricsRequest",
+        "SyncDatabaseRequest",
+    ];
+
     #[test]
     fn startup_exports_zero_initialized_instruments() {
         let harness = test_metrics();
         let snapshot = harness.collect();
 
         let empty: &[(&str, &str)] = &[];
-        let total = &[("request_type", "total")];
 
         // Counters start at zero.
-        assert_eq!(snapshot.counter_points("rpc_count"), &BTreeMap::from([(attrs(total), 0)]));
         assert_eq!(
-            snapshot.counter_points("rpc_failure_count"),
-            &BTreeMap::from([(attrs(total), 0)])
+            snapshot.counter_points("rpc_count"),
+            &BTreeMap::from([
+                (attrs(&[("request_type", "total")]), 0),
+                (attrs(&[("request_type", "SessionStart")]), 0),
+            ])
         );
+        // Every request type that can fail has a failure series, under an
+        // arbitrary status code.
+        let failures: BTreeMap<Attrs, u64> = FAILABLE_REQUEST_TYPES
+            .iter()
+            .map(|request_type| (failure_series(request_type, "INTERNAL"), 0))
+            .collect();
+        assert_eq!(failures.len(), 19);
+        assert_eq!(snapshot.counter_points("rpc_failure_count"), &failures);
         let zeroed_counters = UNIT_COUNTERS
             .iter()
             .map(|(metric_name, _)| *metric_name)
@@ -1168,6 +1314,8 @@ mod value_tests {
             (RequestMetricName::decryption_failure(), "DecryptionFailure"),
             (RequestMetricName::deserialization_failure(), "DeserializationFailure"),
             (RequestMetricName::empty_tls_frame(), "EmptyTlsFrame"),
+            (RequestMetricName::empty_request(), "EmptyRequest"),
+            (RequestMetricName::session_start(), "SessionStart"),
             (request(R::UserRegistrationRequest(Default::default())), "UserRegistrationRequest"),
             (request(R::KeySyncRequest(Default::default())), "KeySyncRequest"),
             (request(R::AddMemoryRequest(Default::default())), "AddMemoryRequest"),
@@ -1206,6 +1354,7 @@ mod value_tests {
     fn inc_requests_counts_per_request_type() {
         let harness = test_metrics();
         let metrics = &harness.metrics;
+        let before = harness.collect();
         metrics.inc_requests(RequestMetricName::total());
         metrics.inc_requests(RequestMetricName::total());
         metrics.inc_requests(RequestMetricName::handshake());
@@ -1218,40 +1367,125 @@ mod value_tests {
             snapshot.counter_points("rpc_count"),
             &BTreeMap::from([
                 (attrs(&[("request_type", "total")]), 2),
+                (attrs(&[("request_type", "SessionStart")]), 0),
                 (attrs(&[("request_type", "Handshake")]), 1),
                 (attrs(&[("request_type", "AddMemoryRequest")]), 3),
             ])
         );
         // `inc_requests` does not touch failures.
+        assert_eq!(snapshot.counter_increments(&before, "rpc_failure_count"), BTreeMap::new());
+    }
+
+    #[test]
+    fn record_failure_counts_request_type_and_total_once() {
+        let harness = test_metrics();
+        let metrics = &harness.metrics;
+        let before = harness.collect();
+        metrics.record_failure(add_memory(), tonic::Code::FailedPrecondition);
+        metrics.record_failure(add_memory(), tonic::Code::FailedPrecondition);
+        metrics.record_failure(add_memory(), tonic::Code::Internal);
+        metrics.record_failure(RequestMetricName::handshake(), tonic::Code::Internal);
+        metrics
+            .record_failure(RequestMetricName::decryption_failure(), tonic::Code::InvalidArgument);
+
+        let snapshot = harness.collect();
         assert_eq!(
-            snapshot.counter_points("rpc_failure_count"),
-            &BTreeMap::from([(attrs(&[("request_type", "total")]), 0)])
+            snapshot.counter_increments(&before, "rpc_failure_count"),
+            BTreeMap::from([
+                (failure_series("AddMemoryRequest", "FAILED_PRECONDITION"), 2),
+                (failure_series("AddMemoryRequest", "INTERNAL"), 1),
+                (failure_series("Handshake", "INTERNAL"), 1),
+                (failure_series("DecryptionFailure", "INVALID_ARGUMENT"), 1),
+                (failure_series("total", "FAILED_PRECONDITION"), 2),
+                (failure_series("total", "INTERNAL"), 2),
+                (failure_series("total", "INVALID_ARGUMENT"), 1),
+            ])
+        );
+        // `record_failure` does not touch the request count.
+        assert_eq!(snapshot.counter_increments(&before, "rpc_count"), BTreeMap::new());
+    }
+
+    #[test]
+    fn record_failure_records_unattributed_failures_once() {
+        let harness = test_metrics();
+        let before = harness.collect();
+        harness.metrics.record_failure(RequestMetricName::total(), tonic::Code::Internal);
+        assert_eq!(
+            harness.collect().counter_increments(&before, "rpc_failure_count"),
+            BTreeMap::from([(failure_series("total", "INTERNAL"), 1)])
         );
     }
 
     #[test]
-    fn inc_failures_counts_per_request_type() {
+    fn record_failure_does_not_mirror_session_start_into_total() {
         let harness = test_metrics();
-        let metrics = &harness.metrics;
-        metrics.inc_failures(RequestMetricName::total());
-        metrics.inc_failures(RequestMetricName::handshake());
-        metrics.inc_failures(RequestMetricName::handshake());
-        metrics.inc_failures(RequestMetricName::decryption_failure());
+        let before = harness.collect();
+        harness
+            .metrics
+            .record_failure(RequestMetricName::session_start(), tonic::Code::ResourceExhausted);
+        assert_eq!(
+            harness.collect().counter_increments(&before, "rpc_failure_count"),
+            BTreeMap::from([(failure_series("SessionStart", "RESOURCE_EXHAUSTED"), 1)])
+        );
+    }
+
+    /// The `status_code` label of every gRPC status code, indexed by code
+    /// number as in google/rpc/code.proto.
+    const STATUS_CODE_LABELS: [&str; 17] = [
+        "OK",
+        "CANCELLED",
+        "UNKNOWN",
+        "INVALID_ARGUMENT",
+        "DEADLINE_EXCEEDED",
+        "NOT_FOUND",
+        "ALREADY_EXISTS",
+        "PERMISSION_DENIED",
+        "RESOURCE_EXHAUSTED",
+        "FAILED_PRECONDITION",
+        "ABORTED",
+        "OUT_OF_RANGE",
+        "UNIMPLEMENTED",
+        "INTERNAL",
+        "UNAVAILABLE",
+        "DATA_LOSS",
+        "UNAUTHENTICATED",
+    ];
+
+    #[test]
+    fn record_failure_labels_canonical_status_codes() {
+        let harness = test_metrics();
+        let before = harness.collect();
+        for (number, label) in (0..).zip(STATUS_CODE_LABELS) {
+            let code = tonic::Code::from(number);
+            // `Code::from` maps unknown numbers to `Unknown`.
+            assert_eq!(code as i32, number, "{label}");
+            assert_eq!(status_code_label(code), label, "{code:?}");
+            harness.metrics.record_failure(RequestMetricName::total(), code);
+        }
+
+        let expected: BTreeMap<Attrs, u64> =
+            STATUS_CODE_LABELS.iter().map(|label| (failure_series("total", label), 1)).collect();
+        assert_eq!(harness.collect().counter_increments(&before, "rpc_failure_count"), expected);
+    }
+
+    /// The host derives the streamz columns of `rpc_failure_count` from a
+    /// single exported point, so all points must have the same attributes.
+    #[test]
+    fn every_failure_point_has_request_type_and_status_code() {
+        let harness = test_metrics();
+        for name in RequestMetricName::failable() {
+            for (number, _) in (0..).zip(STATUS_CODE_LABELS) {
+                harness.metrics.record_failure(name.clone(), tonic::Code::from(number));
+            }
+        }
 
         let snapshot = harness.collect();
-        assert_eq!(
-            snapshot.counter_points("rpc_failure_count"),
-            &BTreeMap::from([
-                (attrs(&[("request_type", "total")]), 1),
-                (attrs(&[("request_type", "Handshake")]), 2),
-                (attrs(&[("request_type", "DecryptionFailure")]), 1),
-            ])
-        );
-        // `inc_failures` does not touch the request count.
-        assert_eq!(
-            snapshot.counter_points("rpc_count"),
-            &BTreeMap::from([(attrs(&[("request_type", "total")]), 0)])
-        );
+        let points = snapshot.counter_points("rpc_failure_count");
+        assert_eq!(points.len(), FAILABLE_REQUEST_TYPES.len() * STATUS_CODE_LABELS.len());
+        for series in points.keys() {
+            let keys: Vec<&str> = series.iter().map(|(key, _)| key.as_str()).collect();
+            assert_eq!(keys, ["request_type", "status_code"], "{series:?}");
+        }
     }
 
     #[test]

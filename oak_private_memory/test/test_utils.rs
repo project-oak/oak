@@ -29,6 +29,7 @@ use anyhow::Result;
 use oak_containers_launcher::{Args, Launcher, QemuParams, QemuVmType, TrustedApplicationAddress};
 pub use oak_private_memory_database::clock::{Clock, SystemClock, system_time_to_timestamp};
 use oak_private_memory_database::database::{MAX_DATABASE_SIZE, MAX_GRPC_DECODE_SIZE};
+use oak_session::config::SessionConfig;
 use oak_session_tls::OakSessionTlsServerContext;
 pub use private_memory_server_lib::app::{MAX_MEMORY_TTL_SECONDS, METADATA_BLANKET_TTL_SECONDS};
 use private_memory_server_lib::{
@@ -122,6 +123,28 @@ pub async fn start_server_with_metrics(
     tokio::task::JoinHandle<Result<()>>,
     tokio::task::JoinHandle<()>,
 )> {
+    start_server_with_session_config_factory(
+        config_fn,
+        clock,
+        Arc::new(attestation_testing::dummy_server_session_config),
+        metrics,
+    )
+    .await
+}
+
+/// Like [`start_server_with_metrics`], but the server creates the config of
+/// each Noise session with `session_config_factory`.
+pub async fn start_server_with_session_config_factory(
+    config_fn: fn(SocketAddr) -> ApplicationConfig,
+    clock: Option<Arc<dyn Clock>>,
+    session_config_factory: Arc<dyn Fn() -> SessionConfig + Send + Sync>,
+    metrics: Arc<Metrics>,
+) -> Result<(
+    SocketAddr,
+    tokio::task::JoinHandle<Result<()>>,
+    tokio::task::JoinHandle<Result<()>>,
+    tokio::task::JoinHandle<()>,
+)> {
     init_logging();
 
     let (db_addr, db_handle) = start_test_database().await?;
@@ -145,7 +168,7 @@ pub async fn start_server_with_metrics(
             application_config,
             metrics,
             persistence_tx,
-            std::sync::Arc::new(attestation_testing::dummy_server_session_config),
+            session_config_factory,
             None, // TLS not configured in tests
             clock,
         )),

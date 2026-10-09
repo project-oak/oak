@@ -86,7 +86,16 @@ impl SealedMemoryServiceImplementation {
         }
     }
 
+    /// Creates a handler for a Noise session (`Invoke`, `InvokeAsync` or
+    /// `StartSession`), counting the attempt under `SessionStart`.
     fn new_oak_session_handler(&self) -> tonic::Result<OakSessionHandler> {
+        let handler = self.create_oak_session_handler();
+        self.record_session_start(&handler);
+        handler
+    }
+
+    /// Rejects the session if memory is low, otherwise creates its handler.
+    fn create_oak_session_handler(&self) -> tonic::Result<OakSessionHandler> {
         self.check_memory_availability()?;
         OakSessionHandler::new(
             &self.metrics,
@@ -100,6 +109,27 @@ impl SealedMemoryServiceImplementation {
             self.application_config.enable_int8_embedding,
             self.application_config.allowed_memory_sources.clone(),
         )
+    }
+
+    /// Rejects the TLS session if memory is low or TLS is not configured,
+    /// otherwise returns the TLS server context to run it with.
+    fn tls_server_context_for_new_session(
+        &self,
+    ) -> tonic::Result<&Arc<OakSessionTlsServerContext>> {
+        self.check_memory_availability()?;
+        self.tls_server_context
+            .as_ref()
+            .ok_or_else(|| tonic::Status::unimplemented("TLS sessions are not configured"))
+    }
+
+    /// Counts an attempt to open a session stream under `SessionStart`, and
+    /// also as a `SessionStart` failure if the stream was rejected. Neither is
+    /// mirrored into `total`, which counts messages rather than streams.
+    fn record_session_start<Session>(&self, session: &tonic::Result<Session>) {
+        self.metrics.inc_requests(RequestMetricName::session_start());
+        if let Err(status) = session {
+            self.metrics.record_failure(RequestMetricName::session_start(), status.code());
+        }
     }
 
     /// Checks system available memory against `min_available_memory_ratio`.
@@ -186,8 +216,17 @@ impl OakSessionHandler {
         request: tonic::Result<SealedMemorySessionRequest>,
     ) -> tonic::Result<Option<SessionResponse>> {
         self.metrics.inc_requests(RequestMetricName::total());
-        let session_request =
-            request?.session_request.into_invalid_argument("request is missing session request")?;
+        let session_request = match request?
+            .session_request
+            .into_invalid_argument("request is missing session request")
+        {
+            Ok(session_request) => session_request,
+            Err(e) => {
+                self.metrics.inc_requests(RequestMetricName::empty_request());
+                self.metrics.record_failure(RequestMetricName::empty_request(), e.code());
+                return Err(e);
+            }
+        };
         self.handle_session_request(session_request).await
     }
 
@@ -215,9 +254,14 @@ impl OakSessionHandler {
         session_request: SessionRequest,
     ) -> tonic::Result<Option<SessionResponse>> {
         self.metrics.inc_requests(RequestMetricName::handshake());
-        self.server_session
+        if let Err(e) = self
+            .server_session
             .handle_init_message(session_request)
-            .into_internal_error("failed to handle init request")?;
+            .into_internal_error("failed to handle init request")
+        {
+            self.metrics.record_failure(RequestMetricName::handshake(), e.code());
+            return Err(e);
+        }
 
         if !self.server_session.is_open() {
             match self
@@ -231,7 +275,7 @@ impl OakSessionHandler {
                     // `next_init_message` only fails on an internal Noise state
                     // error after `handle_init_message` accepted the client's
                     // message, which a client can't trigger.
-                    self.metrics.inc_failures(RequestMetricName::handshake());
+                    self.metrics.record_failure(RequestMetricName::handshake(), e.code());
                     Err(e)
                 }
             }
@@ -248,22 +292,35 @@ impl OakSessionHandler {
             Ok(req) => req,
             Err(e) => {
                 self.metrics.inc_requests(RequestMetricName::decryption_failure());
+                self.metrics.record_failure(
+                    RequestMetricName::decryption_failure(),
+                    tonic::Code::InvalidArgument,
+                );
                 return Err(tonic::Status::invalid_argument(format!(
                     "failed to decrypt request: {e}"
                 )));
             }
         };
 
-        match self.application_handler.handle(&decrypted_request).await {
+        // On error, the handler has already recorded the failure under its
+        // request type.
+        let plaintext_response = self.application_handler.handle(&decrypted_request).await?;
+        match self
+            .server_session
+            .encrypt(plaintext_response)
+            .into_internal_error("failed to encrypt response")
+        {
+            Ok(response) => Ok(Some(response)),
             Err(e) => {
-                self.metrics.inc_failures(RequestMetricName::total());
+                // TODO: b/571198870 - not covered by a metric test:
+                // encryption only fails on an internal Noise state error,
+                // which a client can't trigger. The request type is unknown
+                // here, so the failure is recorded under `total` only. If the
+                // response is an error response, the handler already counted
+                // it in `total`, so this counts it twice.
+                self.metrics.record_failure(RequestMetricName::total(), e.code());
                 Err(e)
             }
-            Ok(plaintext_response) => Ok(Some(
-                self.server_session
-                    .encrypt(plaintext_response)
-                    .into_internal_error("failed to encrypt response")?,
-            )),
         }
     }
 }
@@ -416,11 +473,9 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         &self,
         request: tonic::Request<tonic::Streaming<TlsSessionFrame>>,
     ) -> Result<tonic::Response<Self::StartTlsSessionStream>, tonic::Status> {
-        self.check_memory_availability()?;
-        let tls_ctx = self
-            .tls_server_context
-            .as_ref()
-            .ok_or_else(|| tonic::Status::unimplemented("TLS sessions are not configured"))?;
+        let tls_ctx = self.tls_server_context_for_new_session();
+        self.record_session_start(&tls_ctx);
+        let tls_ctx = tls_ctx?;
 
         let metrics = self.metrics.clone();
         let persistence_tx = self.persistence_tx.clone();
@@ -437,6 +492,9 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         let tls_ctx = tls_ctx.clone();
 
         tokio::spawn(async move {
+            // The whole handshake counts as one request, in the total too, as
+            // its failure is recorded in the total.
+            metrics.inc_requests(RequestMetricName::total());
             metrics.inc_requests(RequestMetricName::handshake());
 
             let handshake_result = tls_ctx
@@ -470,7 +528,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
                 Err(e) => {
                     log::error!("TLS handshake failed: {}", e);
                     metrics.inc_tls_handshake_failures();
-                    metrics.inc_failures(RequestMetricName::handshake());
+                    metrics.record_failure(RequestMetricName::handshake(), tonic::Code::Internal);
                     let _ = tx
                         .send(Err(tonic::Status::internal(format!("handshake failed: {}", e))))
                         .await;
@@ -557,6 +615,10 @@ impl SessionCrypto for NoiseSessionCrypto {
             Ok(decrypted) => Ok(Some(decrypted)),
             Err(e) => {
                 self.metrics.inc_requests(RequestMetricName::decryption_failure());
+                self.metrics.record_failure(
+                    RequestMetricName::decryption_failure(),
+                    tonic::Code::InvalidArgument,
+                );
                 Err(tonic::Status::invalid_argument(format!("failed to decrypt request: {e}")))
             }
         }
@@ -586,6 +648,10 @@ impl SessionCrypto for TlsSessionCrypto {
     fn decrypt(&mut self, request: TlsSessionFrame) -> tonic::Result<Option<Vec<u8>>> {
         match self.session.decrypt(&request.tls_frame).map_err(|e| {
             self.metrics.inc_requests(RequestMetricName::decryption_failure());
+            self.metrics.record_failure(
+                RequestMetricName::decryption_failure(),
+                tonic::Code::InvalidArgument,
+            );
             tonic::Status::invalid_argument(format!("failed to decrypt TLS request: {e}"))
         }) {
             Ok(decrypted) if decrypted.is_empty() => {
@@ -609,6 +675,19 @@ impl SessionCrypto for TlsSessionCrypto {
         log::error!("error receiving TLS data: {e}");
         self.outer_metrics.inc_tls_receive_failures();
     }
+}
+
+/// Returns a handler task's result. Handler errors are returned unchanged, as
+/// the handler has already recorded them. A panicked task is recorded as a
+/// failure under `total`, because its request type is unknown.
+fn handler_task_result(
+    join_result: Result<tonic::Result<Vec<u8>>, tokio::task::JoinError>,
+    metrics: &metrics::Metrics,
+) -> tonic::Result<Vec<u8>> {
+    join_result.unwrap_or_else(|join_error| {
+        metrics.record_failure(RequestMetricName::total(), tonic::Code::Internal);
+        Err(tonic::Status::internal(format!("handler task panicked: {join_error}")))
+    })
 }
 
 /// Runs the concurrent dispatch loop shared by both Noise and TLS handlers.
@@ -643,17 +722,10 @@ async fn run_concurrent_dispatch<S, C>(
         tokio::select! {
             // A spawned handler task completed — encrypt and forward the response.
             Some(join_result) = in_flight.next(), if !in_flight.is_empty() => {
-                let plaintext = match join_result {
-                    Ok(Ok(bytes)) => bytes,
-                    Ok(Err(e)) => {
-                        metrics.inc_failures(RequestMetricName::total());
-                        send_err_and_break!(e);
-                    }
-                    Err(join_error) => {
-                        send_err_and_break!(tonic::Status::internal(
-                            format!("handler task panicked: {join_error}")
-                        ));
-                    }
+                let plaintext = match handler_task_result(join_result, metrics) {
+                    Ok(bytes) => bytes,
+                    // Error already recorded, so no need to record here.
+                    Err(e) => send_err_and_break!(e),
                 };
                 match crypto.encrypt(plaintext) {
                     Ok(response) => {
@@ -661,7 +733,10 @@ async fn run_concurrent_dispatch<S, C>(
                             break;
                         }
                     }
-                    Err(e) => send_err_and_break!(e),
+                    Err(e) => {
+                        metrics.record_failure(RequestMetricName::total(), e.code());
+                        send_err_and_break!(e);
+                    }
                 }
             }
 
@@ -723,4 +798,190 @@ pub async fn create(
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        collections::BTreeMap,
+        net::{IpAddr, Ipv4Addr, SocketAddr},
+    };
+
+    use metrics_testing::{Attrs, attrs};
+    use oak_private_memory_database::{
+        clock::SystemClock,
+        database::{MAX_DATABASE_SIZE, MAX_GRPC_DECODE_SIZE},
+    };
+    use prost::Message;
+
+    use super::*;
+    use crate::{MAX_MEMORY_TTL_SECONDS, METADATA_BLANKET_TTL_SECONDS};
+
+    type TestMetrics = metrics_testing::TestMetrics<metrics::Metrics>;
+
+    fn test_metrics() -> TestMetrics {
+        TestMetrics::new(metrics::Metrics::new)
+    }
+
+    /// The `rpc_count` series for `request_type`.
+    fn request_series(request_type: &str) -> Attrs {
+        attrs(&[("request_type", request_type)])
+    }
+
+    /// The `rpc_failure_count` series for `request_type` and `status_code`.
+    fn failure_series(request_type: &str, status_code: &str) -> Attrs {
+        attrs(&[("request_type", request_type), ("status_code", status_code)])
+    }
+
+    /// A [`SessionCrypto`] that passes plaintext through unchanged, and can be
+    /// told to fail encryption.
+    struct FakeSessionCrypto {
+        fail_encrypt: bool,
+    }
+
+    impl SessionCrypto for FakeSessionCrypto {
+        type Request = Vec<u8>;
+        type Response = Vec<u8>;
+
+        fn decrypt(&mut self, request: Vec<u8>) -> tonic::Result<Option<Vec<u8>>> {
+            Ok(Some(request))
+        }
+
+        fn encrypt(&mut self, plaintext: Vec<u8>) -> tonic::Result<Vec<u8>> {
+            if self.fail_encrypt {
+                Err(tonic::Status::internal("injected encryption failure"))
+            } else {
+                Ok(plaintext)
+            }
+        }
+
+        fn on_receive_error(&self, _error: tonic::Status) {}
+    }
+
+    /// Returns a handler whose database is unreachable, for requests that are
+    /// handled without it.
+    fn handler_without_database(metrics: Arc<metrics::Metrics>) -> SealedMemorySessionHandler {
+        let unreachable = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 1);
+        let db_client =
+            Arc::new(SharedDbClient::new(unreachable, MAX_GRPC_DECODE_SIZE, metrics.clone()));
+        let (persistence_tx, _) = mpsc::unbounded_channel();
+        SealedMemorySessionHandler::new(
+            metrics,
+            persistence_tx,
+            db_client,
+            Arc::new(SystemClock),
+            MAX_DATABASE_SIZE,
+            METADATA_BLANKET_TTL_SECONDS,
+            MAX_MEMORY_TTL_SECONDS,
+            false,
+            vec![],
+        )
+    }
+
+    /// Runs [`run_concurrent_dispatch`] on `requests`, and returns the status
+    /// code of each response it sends back.
+    async fn dispatch(
+        metrics: &Arc<metrics::Metrics>,
+        handler: SealedMemorySessionHandler,
+        crypto: &mut FakeSessionCrypto,
+        requests: Vec<Vec<u8>>,
+    ) -> Vec<tonic::Code> {
+        let mut stream = tokio_stream::iter(requests.into_iter().map(Ok::<_, tonic::Status>));
+        // Large enough to hold every response a test produces.
+        let (response_sender, mut responses) = mpsc::channel(32);
+        run_concurrent_dispatch(&mut stream, &response_sender, metrics, Arc::new(handler), crypto)
+            .await;
+        drop(response_sender);
+        let mut codes = vec![];
+        while let Some(response) = responses.recv().await {
+            codes.push(response.map_or_else(|status| status.code(), |_| tonic::Code::Ok));
+        }
+        codes
+    }
+
+    /// A panicked handler task fails its request. The request type is unknown
+    /// by then, so the failure is recorded under the total only.
+    #[tokio::test]
+    async fn handler_task_panic_is_counted_in_total_only() {
+        let harness = test_metrics();
+        let before = harness.collect();
+        let join_error =
+            tokio::spawn(async { panic!("injected handler panic") }).await.unwrap_err();
+
+        let result = handler_task_result(Err(join_error), &harness.metrics);
+
+        assert_eq!(result.unwrap_err().code(), tonic::Code::Internal);
+        assert_eq!(
+            harness.collect().counter_increments(&before, "rpc_failure_count"),
+            BTreeMap::from([(failure_series("total", "INTERNAL"), 1)])
+        );
+    }
+
+    /// A response that can't be encrypted fails its request. The request type
+    /// is unknown by then, so the failure is recorded under the total only.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn dispatch_counts_encryption_failure_in_total_only() {
+        let harness = test_metrics();
+        let before = harness.collect();
+        // Key sync without a key succeeds, with an unsuccessful status, before
+        // it would reach the database.
+        let request = SealedMemoryRequest {
+            request: Some(
+                sealed_memory_request::Request::KeySyncRequest(KeySyncRequest::default()),
+            ),
+            request_id: 7,
+        };
+
+        let codes = dispatch(
+            &harness.metrics,
+            handler_without_database(harness.metrics.clone()),
+            &mut FakeSessionCrypto { fail_encrypt: true },
+            vec![request.encode_to_vec()],
+        )
+        .await;
+
+        assert_eq!(codes, [tonic::Code::Internal]);
+        let snapshot = harness.collect();
+        assert_eq!(
+            snapshot.counter_increments(&before, "rpc_count"),
+            BTreeMap::from([(request_series("total"), 1), (request_series("KeySyncRequest"), 1)])
+        );
+        assert_eq!(
+            snapshot.counter_increments(&before, "rpc_failure_count"),
+            BTreeMap::from([(failure_series("total", "INTERNAL"), 1)])
+        );
+    }
+
+    /// A request that the handler fails is recorded by the handler, and not
+    /// recorded again by the dispatch loop.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn dispatch_does_not_count_handler_errors_again() {
+        let harness = test_metrics();
+        let before = harness.collect();
+
+        let codes = dispatch(
+            &harness.metrics,
+            handler_without_database(harness.metrics.clone()),
+            &mut FakeSessionCrypto { fail_encrypt: false },
+            vec![vec![0xFF; 4]],
+        )
+        .await;
+
+        assert_eq!(codes, [tonic::Code::Internal]);
+        let snapshot = harness.collect();
+        assert_eq!(
+            snapshot.counter_increments(&before, "rpc_count"),
+            BTreeMap::from([
+                (request_series("total"), 1),
+                (request_series("DeserializationFailure"), 1),
+            ])
+        );
+        assert_eq!(
+            snapshot.counter_increments(&before, "rpc_failure_count"),
+            BTreeMap::from([
+                (failure_series("DeserializationFailure", "INTERNAL"), 1),
+                (failure_series("total", "INTERNAL"), 1),
+            ])
+        );
+    }
 }
