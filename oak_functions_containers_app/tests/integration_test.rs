@@ -51,10 +51,7 @@ async fn test_lookup() {
     let server_handle = tokio::spawn(serve::<WasmtimeHandler>(
         stream,
         Box::new(encryption_key),
-        OakObserver {
-            meter: Meter::new(Arc::new(NoopInstrumentProvider {})),
-            metric_registry: Vec::new(),
-        },
+        OakObserver { meter: Meter::new(Arc::new(NoopInstrumentProvider {})) },
         Default::default(),
     ));
 

@@ -30,105 +30,63 @@ struct Args {
     launcher_addr: Uri,
 }
 
-fn register_system_metrics(oak_observer: &mut OakObserver) -> Result<(), anyhow::Error> {
-    oak_observer.register_metric(
-        oak_observer
-            .meter
-            .u64_observable_counter("cpu_seconds_total")
-            .with_unit("seconds")
-            .with_callback(cpu_seconds_total)
-            .build(),
-    );
-    oak_observer.register_metric(
-        oak_observer
-            .meter
-            .u64_observable_counter("context_switches_total")
-            .with_callback(context_switches_total)
-            .build(),
-    );
-    oak_observer.register_metric(
-        oak_observer.meter.u64_observable_counter("forks_total").with_callback(forks_total).build(),
-    );
-    oak_observer.register_metric(
-        oak_observer
-            .meter
-            .u64_observable_gauge("procs_blocked")
-            .with_callback(procs_blocked)
-            .build(),
-    );
-    oak_observer.register_metric(
-        oak_observer
-            .meter
-            .u64_observable_gauge("procs_running")
-            .with_callback(procs_running)
-            .build(),
-    );
-    oak_observer.register_metric(
-        oak_observer
-            .meter
-            .u64_observable_counter("network_receive_bytes")
-            .with_unit("bytes")
-            .with_callback(net_recv_bytes)
-            .build(),
-    );
-    oak_observer.register_metric(
-        oak_observer
-            .meter
-            .u64_observable_counter("network_receive_packets")
-            .with_callback(net_recv_packets)
-            .build(),
-    );
-    oak_observer.register_metric(
-        oak_observer
-            .meter
-            .u64_observable_counter("network_receive_errors")
-            .with_callback(net_recv_errs)
-            .build(),
-    );
-    oak_observer.register_metric(
-        oak_observer
-            .meter
-            .u64_observable_counter("network_transmit_bytes")
-            .with_unit("bytes")
-            .with_callback(net_sent_bytes)
-            .build(),
-    );
-    oak_observer.register_metric(
-        oak_observer
-            .meter
-            .u64_observable_counter("network_transmit_packets")
-            .with_callback(net_sent_packets)
-            .build(),
-    );
-    oak_observer.register_metric(
-        oak_observer
-            .meter
-            .u64_observable_counter("network_transmit_errors")
-            .with_callback(net_sent_errs)
-            .build(),
-    );
-    oak_observer.register_metric(
-        oak_observer.meter.u64_observable_gauge("mem_total").with_callback(mem_total).build(),
-    );
-    oak_observer.register_metric(
-        oak_observer.meter.u64_observable_gauge("mem_free").with_callback(mem_free).build(),
-    );
-    oak_observer.register_metric(
-        oak_observer
-            .meter
-            .u64_observable_gauge("mem_available")
-            .with_callback(mem_available)
-            .build(),
-    );
-    oak_observer.register_metric(
-        oak_observer.meter.u64_observable_gauge("mem_buffers").with_callback(mem_buffers).build(),
-    );
-    oak_observer.register_metric(
-        oak_observer.meter.u64_observable_gauge("mem_cached").with_callback(mem_cached).build(),
-    );
-    oak_observer.register_metric(
-        oak_observer.meter.u64_observable_gauge("mem_slab").with_callback(mem_slab).build(),
-    );
+/// Registers callbacks that report system (procfs) metrics on every export.
+///
+/// Each `build()` registers its callback with the meter provider; the returned
+/// handles are intentionally dropped (see [`OakObserver`]).
+fn register_system_metrics(oak_observer: &OakObserver) -> Result<(), anyhow::Error> {
+    oak_observer
+        .meter
+        .u64_observable_counter("cpu_seconds_total")
+        .with_unit("seconds")
+        .with_callback(cpu_seconds_total)
+        .build();
+    oak_observer
+        .meter
+        .u64_observable_counter("context_switches_total")
+        .with_callback(context_switches_total)
+        .build();
+    oak_observer.meter.u64_observable_counter("forks_total").with_callback(forks_total).build();
+    oak_observer.meter.u64_observable_gauge("procs_blocked").with_callback(procs_blocked).build();
+    oak_observer.meter.u64_observable_gauge("procs_running").with_callback(procs_running).build();
+    oak_observer
+        .meter
+        .u64_observable_counter("network_receive_bytes")
+        .with_unit("bytes")
+        .with_callback(net_recv_bytes)
+        .build();
+    oak_observer
+        .meter
+        .u64_observable_counter("network_receive_packets")
+        .with_callback(net_recv_packets)
+        .build();
+    oak_observer
+        .meter
+        .u64_observable_counter("network_receive_errors")
+        .with_callback(net_recv_errs)
+        .build();
+    oak_observer
+        .meter
+        .u64_observable_counter("network_transmit_bytes")
+        .with_unit("bytes")
+        .with_callback(net_sent_bytes)
+        .build();
+    oak_observer
+        .meter
+        .u64_observable_counter("network_transmit_packets")
+        .with_callback(net_sent_packets)
+        .build();
+    oak_observer
+        .meter
+        .u64_observable_counter("network_transmit_errors")
+        .with_callback(net_sent_errs)
+        .build();
+    oak_observer.meter.u64_observable_gauge("mem_total").with_callback(mem_total).build();
+    oak_observer.meter.u64_observable_gauge("mem_free").with_callback(mem_free).build();
+    oak_observer.meter.u64_observable_gauge("mem_available").with_callback(mem_available).build();
+    oak_observer.meter.u64_observable_gauge("mem_buffers").with_callback(mem_buffers).build();
+    oak_observer.meter.u64_observable_gauge("mem_cached").with_callback(mem_cached).build();
+    oak_observer.meter.u64_observable_gauge("mem_slab").with_callback(mem_slab).build();
     Ok(())
 }
 
@@ -287,9 +245,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         excluded_metrics: None,
     };
 
-    let mut oak_observer =
+    let oak_observer =
         oak_containers_agent::metrics::init_metrics(metrics_config, Handle::current());
-    if let Err(e) = register_system_metrics(&mut oak_observer) {
+    if let Err(e) = register_system_metrics(&oak_observer) {
         eprintln!("Error registering system metrics: {:?}", e);
     }
 

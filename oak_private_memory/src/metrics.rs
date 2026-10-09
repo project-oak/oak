@@ -26,7 +26,7 @@ use lazy_static::lazy_static;
 use oak_containers_agent::metrics::OakObserver;
 use opentelemetry::{
     KeyValue, Value,
-    metrics::{Counter, Gauge, Histogram},
+    metrics::{Counter, Gauge, Histogram, Meter},
 };
 use prost::Name;
 use sealed_memory_rust_proto::prelude::v1::*;
@@ -182,169 +182,143 @@ const SPEED_KB_PER_MS_BOUNDARIES: &[f64] = &[
 ];
 
 impl Metrics {
-    pub fn new(observer: &mut OakObserver) -> Self {
-        let rpc_count = observer
-            .meter
+    pub fn new(meter: &Meter) -> Self {
+        let rpc_count = meter
             .u64_counter("rpc_count")
             .with_description("Total number of RPCs received by the private memory server.")
             .build();
-        let rpc_failure_count = observer
-            .meter
+        let rpc_failure_count = meter
             .u64_counter("rpc_failure_count")
             .with_description("Number of RPCs that failed.")
             .build();
-        let rpc_latency = observer
-            .meter
+        let rpc_latency = meter
             .u64_histogram("rpc_latency")
             .with_description("Latency in ms of each RPC.")
             .with_unit("ms")
             .with_boundaries(LATENCY_MS_BOUNDARIES.to_vec())
             .build();
-        let db_size = observer
-            .meter
+        let db_size = meter
             .u64_histogram("db_size")
             .with_description("Size of the database in bytes.")
             .with_unit("By")
             .with_boundaries(DB_SIZE_BYTES_BOUNDARIES.to_vec())
             .build();
-        let db_init_latency = observer
-            .meter
+        let db_init_latency = meter
             .u64_histogram("db_init_latency")
             .with_description("Latency of Icing database initialization.")
             .with_unit("ms")
             .with_boundaries(LATENCY_MS_BOUNDARIES.to_vec())
             .build();
-        let db_cleanup_latency = observer
-            .meter
+        let db_cleanup_latency = meter
             .u64_histogram("db_cleanup_latency")
             .with_description("Latency of expired memories cleanup operation.")
             .with_unit("ms")
             .with_boundaries(LATENCY_MS_BOUNDARIES.to_vec())
             .build();
-        let db_cleanup_count = observer
-            .meter
+        let db_cleanup_count = meter
             .u64_histogram("db_cleanup_count")
             .with_description("Number of expired memories cleaned up during cleanup operation.")
             .with_boundaries(COUNT_BOUNDARIES.to_vec())
             .build();
-        let db_persist_latency = observer
-            .meter
+        let db_persist_latency = meter
             .u64_histogram("db_persist_latency")
             .with_description("Latency of persisting the database.")
             .with_unit("ms")
             .with_boundaries(LATENCY_MS_BOUNDARIES.to_vec())
             .build();
-        let db_persist_latency_with_retries = observer
-            .meter
+        let db_persist_latency_with_retries = meter
             .u64_histogram("db_persist_latency_with_retries")
             .with_description("Latency of persisting the database including all retry attempts.")
             .with_unit("ms")
             .with_boundaries(LATENCY_MS_BOUNDARIES.to_vec())
             .build();
-        let db_persist_attempts = observer
-            .meter
+        let db_persist_attempts = meter
             .u64_histogram("db_persist_attempts")
             .with_description("Number of attempts before metadata persist succeeds.")
             .with_boundaries(COUNT_BOUNDARIES.to_vec())
             .build();
-        let db_connect_retries = observer
-            .meter
+        let db_connect_retries = meter
             .u64_counter("db_connect_retries")
             .with_description("Number of retries when connecting to the database.")
             .build();
 
-        let db_persist_failures = observer
-            .meter
+        let db_persist_failures = meter
             .u64_counter("db_persist_failures")
             .with_description("Number of failures when persisting the database.")
             .build();
 
-        let db_decryption_failures = observer
-            .meter
+        let db_decryption_failures = meter
             .u64_counter("db_decryption_failures")
             .with_description("Number of failures when decrypting the database.")
             .build();
 
-        let db_persist_queue_size = observer
-            .meter
+        let db_persist_queue_size = meter
             .u64_gauge("db_persist_queue_size")
             .with_description("Number of items in the database persist queue.")
             .build();
 
-        let decrypt_dek_failures = observer
-            .meter
+        let decrypt_dek_failures = meter
             .u64_counter("decrypt_dek_failures")
             .with_description("Number of failures when decrypting the DEK.")
             .build();
 
-        let user_info_deserialization_failures = observer
-            .meter
+        let user_info_deserialization_failures = meter
             .u64_counter("user_info_deserialization_failures")
             .with_description("Number of failures when deserializing user info.")
             .build();
 
-        let db_optimize_latency = observer
-            .meter
+        let db_optimize_latency = meter
             .u64_histogram("db_optimize_latency")
             .with_description("Latency of optimizing the database.")
             .with_unit("ms")
             .with_boundaries(LATENCY_MS_BOUNDARIES.to_vec())
             .build();
-        let db_save_speed = observer
-            .meter
+        let db_save_speed = meter
             .u64_histogram("db_save_speed")
             .with_description("Speed of saving the database.")
             .with_unit("KB/ms")
             .with_boundaries(SPEED_KB_PER_MS_BOUNDARIES.to_vec())
             .build();
-        let db_load_speed = observer
-            .meter
+        let db_load_speed = meter
             .u64_histogram("db_load_speed")
             .with_description("Speed of loading the database.")
             .with_unit("KB/ms")
             .with_boundaries(SPEED_KB_PER_MS_BOUNDARIES.to_vec())
             .build();
-        let key_sync_db_fetch_latency = observer
-            .meter
+        let key_sync_db_fetch_latency = meter
             .u64_histogram("key_sync_db_fetch_latency")
             .with_description("Latency of fetching metadata blob from external DB.")
             .with_unit("ms")
             .with_boundaries(LATENCY_MS_BOUNDARIES.to_vec())
             .build();
-        let key_sync_decrypt_latency = observer
-            .meter
+        let key_sync_decrypt_latency = meter
             .u64_histogram("key_sync_decrypt_latency")
             .with_description("Latency of decrypting the database.")
             .with_unit("ms")
             .with_boundaries(LATENCY_MS_BOUNDARIES.to_vec())
             .build();
 
-        let db_rebase_operation_failures = observer
-            .meter
+        let db_rebase_operation_failures = meter
             .u64_counter("db_rebase_operation_failures")
             .with_description("Number of operations that failed to replay during DB rebase.")
             .build();
 
-        let db_cleanup_failures = observer
-            .meter
+        let db_cleanup_failures = meter
             .u64_counter("db_cleanup_failures")
             .with_description("Number of failures when cleaning expired memories.")
             .build();
 
-        let tls_handshake_failures = observer
-            .meter
+        let tls_handshake_failures = meter
             .u64_counter("tls_handshake_failures")
             .with_description("Number of TLS handshake failures.")
             .build();
 
-        let tls_receive_failures = observer
-            .meter
+        let tls_receive_failures = meter
             .u64_counter("tls_receive_failures")
             .with_description("Number of TLS data receive errors.")
             .build();
 
-        let persistence_enqueue_failures = observer
-            .meter
+        let persistence_enqueue_failures = meter
             .u64_counter("persistence_enqueue_failures")
             .with_description("Number of failures enqueueing sessions for persistence.")
             .build();
@@ -375,83 +349,40 @@ impl Metrics {
         tls_handshake_failures.add(0, &[]);
         tls_receive_failures.add(0, &[]);
         persistence_enqueue_failures.add(0, &[]);
-        let orphaned_blob_deletes = observer
-            .meter
+        let orphaned_blob_deletes = meter
             .u64_counter("orphaned_blob_deletes")
             .with_description("Number of blobs that should have been soft-deleted but were not.")
             .build();
 
-        let icing_init_status = observer
-            .meter
+        let icing_init_status = meter
             .u64_counter("icing_init_status")
             .with_description("Icing init status code.")
             .build();
-        let icing_init_latency_ms = observer
-            .meter
-            .u64_histogram("icing_init_latency_ms")
-            .with_description("Latency in ms.")
-            .build();
-        let icing_recovery_cause = observer
-            .meter
+        let icing_init_latency_ms =
+            meter.u64_histogram("icing_init_latency_ms").with_description("Latency in ms.").build();
+        let icing_recovery_cause = meter
             .u64_counter("icing_recovery_cause")
             .with_description("Icing recovery causes.")
             .build();
-        let icing_recovery_latency_ms = observer
-            .meter
+        let icing_recovery_latency_ms = meter
             .u64_histogram("icing_recovery_latency_ms")
             .with_description("Latency by recovery phase.")
             .build();
-        let icing_num_previous_init_failures = observer
-            .meter
+        let icing_num_previous_init_failures = meter
             .u64_histogram("icing_num_previous_init_failures")
             .with_description("Previous failure count.")
             .build();
-        let icing_num_failed_reindexed_documents = observer
-            .meter
+        let icing_num_failed_reindexed_documents = meter
             .u64_histogram("icing_num_failed_reindexed_documents")
             .with_description("Failed reindex count.")
             .build();
 
         orphaned_blob_deletes.add(0, &[]);
-        let session_rejected_low_memory = observer
-            .meter
+        let session_rejected_low_memory = meter
             .u64_counter("session_rejected_low_memory")
             .with_description("Number of sessions rejected due to low memory.")
             .build();
         session_rejected_low_memory.add(0, &[]);
-        observer.register_metric(rpc_count.clone());
-        observer.register_metric(rpc_failure_count.clone());
-        observer.register_metric(rpc_latency.clone());
-        observer.register_metric(db_size.clone());
-        observer.register_metric(db_init_latency.clone());
-        observer.register_metric(db_cleanup_latency.clone());
-        observer.register_metric(db_cleanup_count.clone());
-        observer.register_metric(db_persist_latency.clone());
-        observer.register_metric(db_persist_latency_with_retries.clone());
-        observer.register_metric(db_persist_attempts.clone());
-        observer.register_metric(db_connect_retries.clone());
-        observer.register_metric(db_persist_failures.clone());
-        observer.register_metric(decrypt_dek_failures.clone());
-        observer.register_metric(user_info_deserialization_failures.clone());
-        observer.register_metric(db_decryption_failures.clone());
-        observer.register_metric(db_persist_queue_size.clone());
-        observer.register_metric(db_optimize_latency.clone());
-        observer.register_metric(key_sync_db_fetch_latency.clone());
-        observer.register_metric(key_sync_decrypt_latency.clone());
-        observer.register_metric(db_rebase_operation_failures.clone());
-        observer.register_metric(db_cleanup_failures.clone());
-        observer.register_metric(tls_handshake_failures.clone());
-        observer.register_metric(tls_receive_failures.clone());
-        observer.register_metric(persistence_enqueue_failures.clone());
-        observer.register_metric(orphaned_blob_deletes.clone());
-        observer.register_metric(session_rejected_low_memory.clone());
-
-        observer.register_metric(icing_init_status.clone());
-        observer.register_metric(icing_init_latency_ms.clone());
-        observer.register_metric(icing_recovery_cause.clone());
-        observer.register_metric(icing_recovery_latency_ms.clone());
-        observer.register_metric(icing_num_previous_init_failures.clone());
-        observer.register_metric(icing_num_failed_reindexed_documents.clone());
 
         Self {
             rpc_count,
@@ -709,10 +640,10 @@ pub fn bucket_db_size(size_bytes: usize) -> &'static str {
 }
 
 fn create_metrics() -> (OakObserver, Arc<Metrics>) {
-    let mut observer =
+    let observer =
         OakObserver::create("http://10.0.2.100:8080".to_string(), "sealed_memory_service", vec![])
             .unwrap();
-    let metrics = Arc::new(Metrics::new(&mut observer));
+    let metrics = Arc::new(Metrics::new(&observer.meter));
     (observer, metrics)
 }
 
