@@ -13,10 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+use std::sync::Arc;
+
 use anyhow::Context;
 use external_db_client::{DataBlobHandler, MetadataPersistResult};
 use log::{error, info, warn};
-use metrics::get_global_metrics;
+use metrics::Metrics;
 use oak_private_memory_database::encryption::{decrypt_database, encrypt_database};
 use prost::Message;
 use sealed_memory_rust_proto::{
@@ -29,7 +31,7 @@ static MAX_RETRY_ATTEMPTS: u64 = 25;
 /// Minimum number of optimizable (deleted/expired) documents before calling
 /// Icing.Optimize. GetOptimizeInfo (~0.16ms) is called on every persist to
 /// check, and Optimize (~1s) is only called when this threshold is exceeded.
-static OPTIMIZE_DOC_THRESHOLD: i64 = 100;
+pub(crate) const OPTIMIZE_DOC_THRESHOLD: i64 = 100;
 
 use crate::context::UserSessionContext;
 
@@ -39,6 +41,7 @@ use crate::context::UserSessionContext;
 // re-fetch the latest metadatablob and rebase the icing database and try again.
 async fn try_persist_database(
     user_context: &mut UserSessionContext,
+    metrics: &Metrics,
 ) -> anyhow::Result<MetadataPersistResult> {
     if !user_context.database.changed() {
         info!("Database is not changed, skip saving");
@@ -57,7 +60,7 @@ async fn try_persist_database(
         );
     }
     info!("Saving db size: {}", db_size);
-    get_global_metrics().record_db_size(db_size as u64);
+    metrics.record_db_size(db_size as u64);
 
     let now = Instant::now();
     let coarsened_expiration_timestamp = user_context.database.calculate_coarsened_blanket_ttl();
@@ -75,7 +78,7 @@ async fn try_persist_database(
 
     if result == MetadataPersistResult::Succeeded {
         let elapsed = now.elapsed();
-        get_global_metrics().record_db_persist_latency(elapsed.as_millis() as u64);
+        metrics.record_db_persist_latency(elapsed.as_millis() as u64);
     }
 
     Ok(result)
@@ -89,6 +92,7 @@ async fn try_persist_database(
 async fn pull_and_rebase(
     user_context: &mut UserSessionContext,
     require_blob: bool,
+    metrics: &Metrics,
 ) -> anyhow::Result<()> {
     let coarsened_expiration_timestamp = user_context.database.calculate_coarsened_blanket_ttl();
     let refreshed_blob = user_context
@@ -113,20 +117,28 @@ async fn pull_and_rebase(
     let failed_operations =
         user_context.database.rebase(new_icing_db.encode_to_vec().as_slice())?;
     if failed_operations > 0 {
-        get_global_metrics().inc_db_rebase_operation_failures(failed_operations as u64);
+        // TODO: b/571198870 - not covered by a metric test: replaying a
+        // pending operation onto the refreshed database only fails when icing
+        // itself rejects the put/delete/reset (deletes of memories that are
+        // already gone are skipped), and there is no icing fault-injection
+        // hook to trigger that.
+        metrics.inc_db_rebase_operation_failures(failed_operations as u64);
     }
     user_context.database_version = refreshed_blob.version;
     Ok(())
 }
 
-fn maybe_optimize(database: &mut oak_private_memory_database::Database) -> anyhow::Result<()> {
+fn maybe_optimize(
+    database: &mut oak_private_memory_database::Database,
+    metrics: &Metrics,
+) -> anyhow::Result<()> {
     let info = database.get_optimize_info().context("getting optimize info")?;
     if info.optimizable_docs() > OPTIMIZE_DOC_THRESHOLD {
         info!("optimizing database ({} optimizable docs)", info.optimizable_docs());
         let now = Instant::now();
         database.optimize().context("optimizing database")?;
         let elapsed = now.elapsed();
-        get_global_metrics().record_db_optimize_latency(elapsed.as_millis() as u64);
+        metrics.record_db_optimize_latency(elapsed.as_millis() as u64);
     }
     Ok(())
 }
@@ -138,19 +150,20 @@ fn maybe_optimize(database: &mut oak_private_memory_database::Database) -> anyho
 /// local database, optimizes if needed, then pushes any local changes.
 pub async fn sync_persist_database(
     user_context: &mut UserSessionContext,
+    metrics: &Metrics,
 ) -> anyhow::Result<SyncDatabaseResponse> {
     // Pull: fetch the latest remote blob and rebase so that remote changes
     // become visible in this session's local database.
-    pull_and_rebase(user_context, /* require_blob= */ false).await?;
+    pull_and_rebase(user_context, /* require_blob= */ false, metrics).await?;
 
     // Optimize is expensive (~1s for a 30MB database) and always rebuilds
     // the entire index. Use GetOptimizeInfo (~0.16ms) to check whether
     // there are enough deleted/expired documents to warrant optimization.
-    maybe_optimize(&mut user_context.database)?;
+    maybe_optimize(&mut user_context.database, metrics)?;
 
     // Push: persist any local changes (now rebased on top of the latest remote
     // state).
-    persist_database(user_context).await?;
+    persist_database(user_context, metrics).await?;
 
     Ok(SyncDatabaseResponse {})
 }
@@ -158,22 +171,24 @@ pub async fn sync_persist_database(
 // Attempt to persist the database up to MAX_RETRY_ATTEMPTS times.
 // Retries only occur when the FailedPrecondition error code is returned from
 // the underlying database layer.
-async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Result<()> {
+async fn persist_database(
+    user_context: &mut UserSessionContext,
+    metrics: &Metrics,
+) -> anyhow::Result<()> {
     let mut attempt: u64 = 1;
     let now = Instant::now();
     while attempt < MAX_RETRY_ATTEMPTS {
-        match try_persist_database(user_context).await {
+        match try_persist_database(user_context, metrics).await {
             Ok(MetadataPersistResult::Succeeded) => {
                 let elapsed = now.elapsed();
-                get_global_metrics()
-                    .record_db_persist_latency_with_retries(elapsed.as_millis() as u64);
-                get_global_metrics().record_db_persist_attempts(attempt);
+                metrics.record_db_persist_latency_with_retries(elapsed.as_millis() as u64);
+                metrics.record_db_persist_attempts(attempt);
                 // Flush deferred blob soft-deletes now that the index is
                 // durably persisted. Orphaned blobs are tracked in metrics
                 // and can be cleaned by GC.
                 let pending_count = user_context.database.meta_db().pending_blob_deletes().len();
                 if let Err(e) = user_context.database.flush_pending_blob_deletes().await {
-                    get_global_metrics().inc_orphaned_blob_deletes(pending_count as u64);
+                    metrics.inc_orphaned_blob_deletes(pending_count as u64);
                     error!("{e}");
                 }
                 user_context.database.mark_persisted();
@@ -182,7 +197,7 @@ async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Resu
             Ok(MetadataPersistResult::RetryNeeded) => {
                 attempt += 1;
                 info!("Retrying db save (attempt {attempt})");
-                pull_and_rebase(user_context, /* require_blob= */ true).await?;
+                pull_and_rebase(user_context, /* require_blob= */ true, metrics).await?;
             }
             Err(e) => return Err(e),
         }
@@ -190,21 +205,24 @@ async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Resu
     anyhow::bail!("Failed to persist after {} attempts", MAX_RETRY_ATTEMPTS);
 }
 
-pub async fn run_persistence_service(mut rx: mpsc::UnboundedReceiver<UserSessionContext>) {
+pub async fn run_persistence_service(
+    mut rx: mpsc::UnboundedReceiver<UserSessionContext>,
+    metrics: Arc<Metrics>,
+) {
     info!("Persistence service started");
     while let Some(mut user_context) = rx.recv().await {
         info!("Persistence service received a session to save");
-        get_global_metrics().record_db_persist_queue_size(rx.len() as u64);
+        metrics.record_db_persist_queue_size(rx.len() as u64);
 
         // Optimize is expensive (~1s for a 30MB database) and always rebuilds
         // the entire index. Use GetOptimizeInfo (~0.16ms) to check whether
         // there are enough deleted/expired documents to warrant optimization.
-        if let Err(e) = maybe_optimize(&mut user_context.database) {
+        if let Err(e) = maybe_optimize(&mut user_context.database, &metrics) {
             error!("optimizing database: {e:?}");
         }
 
-        if let Err(e) = persist_database(&mut user_context).await {
-            get_global_metrics().inc_db_persist_failures();
+        if let Err(e) = persist_database(&mut user_context, &metrics).await {
+            metrics.inc_db_persist_failures();
             info!("Failed to persist database: {:?}", e);
         }
     }

@@ -69,6 +69,7 @@ rust_test(
     name = "app_test",
     crate = ":app",
     deps = [
+        "//:metrics_testing",
         "//:private_memory_test_database_server_lib",
     ],
 )

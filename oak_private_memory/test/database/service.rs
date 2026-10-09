@@ -42,6 +42,7 @@ pub struct SealedMemoryDatabaseServiceTestImpl {
     pub metadata_database: Mutex<HashMap<String, MetadataBlob>>,
     pub unencrypted_database: Mutex<HashMap<String, DataBlob>>,
     pub held_unencrypted_write: Mutex<Option<HeldWrite>>,
+    pub held_metadata_write: Mutex<Option<HeldWrite>>,
 }
 
 pub struct HeldWrite {
@@ -56,6 +57,7 @@ impl Default for SealedMemoryDatabaseServiceTestImpl {
             metadata_database: Mutex::new(HashMap::new()),
             unencrypted_database: Mutex::new(HashMap::new()),
             held_unencrypted_write: Mutex::new(None),
+            held_metadata_write: Mutex::new(None),
         }
     }
 }
@@ -67,6 +69,17 @@ impl SealedMemoryDatabaseServiceTestImpl {
         let (arrived_tx, arrived_rx) = oneshot::channel();
         let (release_tx, release_rx) = oneshot::channel();
         *self.held_unencrypted_write.lock().await =
+            Some(HeldWrite { arrived: arrived_tx, release: release_rx });
+        (arrived_rx, release_tx)
+    }
+
+    /// Makes the next streamed metadata blob write block once it has been
+    /// received, until the returned sender is used (or dropped). The returned
+    /// receiver fires when the held write arrives.
+    pub async fn hold_next_metadata_write(&self) -> (oneshot::Receiver<()>, oneshot::Sender<()>) {
+        let (arrived_tx, arrived_rx) = oneshot::channel();
+        let (release_tx, release_rx) = oneshot::channel();
+        *self.held_metadata_write.lock().await =
             Some(HeldWrite { arrived: arrived_tx, release: release_rx });
         (arrived_rx, release_tx)
     }
@@ -195,6 +208,12 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
                 }
                 None => {}
             }
+        }
+
+        let held = self.held_metadata_write.lock().await.take();
+        if let Some(HeldWrite { arrived, release }) = held {
+            let _ = arrived.send(());
+            let _ = release.await;
         }
 
         let added = self

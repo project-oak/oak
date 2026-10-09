@@ -13,11 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-use std::net::SocketAddr;
+use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::bail;
 use log::info;
-use metrics::get_global_metrics;
+use metrics::Metrics;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use tokio::sync::RwLock;
 use tonic::transport::{Channel, Endpoint};
@@ -29,11 +29,16 @@ pub struct SharedDbClient {
     database_service_host: SocketAddr,
     max_grpc_decode_size: usize,
     client: RwLock<Option<SealedMemoryDatabaseServiceClient<Channel>>>,
+    metrics: Arc<Metrics>,
 }
 
 impl SharedDbClient {
-    pub fn new(database_service_host: SocketAddr, max_grpc_decode_size: usize) -> Self {
-        Self { database_service_host, max_grpc_decode_size, client: RwLock::new(None) }
+    pub fn new(
+        database_service_host: SocketAddr,
+        max_grpc_decode_size: usize,
+        metrics: Arc<Metrics>,
+    ) -> Self {
+        Self { database_service_host, max_grpc_decode_size, client: RwLock::new(None), metrics }
     }
 
     pub async fn get_or_connect(
@@ -78,10 +83,36 @@ impl SharedDbClient {
                 }
             }
 
-            get_global_metrics().inc_db_connect_retries();
+            self.metrics.inc_db_connect_retries();
             tokio::time::sleep(tokio::time::Duration::from_millis(backoff)).await;
             backoff *= 2;
         }
         bail!("Failed to connect to database service after {} attempts", MAX_CONNECT_RETRIES);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use oak_private_memory_database::database::MAX_GRPC_DECODE_SIZE;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn connect_failure_counts_retries() {
+        let harness = metrics_testing::TestMetrics::new(Metrics::new);
+        // Reserve a free port and release it, so that nothing listens there.
+        let closed_port_addr =
+            std::net::TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap();
+        // The decode size doesn't matter: no connection is ever made.
+        let client =
+            SharedDbClient::new(closed_port_addr, MAX_GRPC_DECODE_SIZE, harness.metrics.clone());
+
+        assert!(client.get_or_connect().await.is_err());
+
+        // Every failed connection attempt is counted, including the last one.
+        assert_eq!(
+            harness.collect().counter("db_connect_retries", &[]),
+            MAX_CONNECT_RETRIES as u64
+        );
     }
 }

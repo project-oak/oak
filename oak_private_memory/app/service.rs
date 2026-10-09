@@ -72,12 +72,13 @@ impl SealedMemoryServiceImplementation {
         );
 
         Self {
-            metrics,
-            persistence_tx,
             db_client: Arc::new(SharedDbClient::new(
                 application_config.database_service_host,
                 application_config.max_grpc_decode_size_bytes,
+                metrics.clone(),
             )),
+            metrics,
+            persistence_tx,
             session_config_factory,
             tls_server_context,
             clock,
@@ -226,6 +227,10 @@ impl OakSessionHandler {
             {
                 Ok(r) => Ok(Some(r)),
                 Err(e) => {
+                    // TODO: b/571198870 - not covered by a metric test:
+                    // `next_init_message` only fails on an internal Noise state
+                    // error after `handle_init_message` accepted the client's
+                    // message, which a client can't trigger.
                     self.metrics.inc_failures(RequestMetricName::handshake());
                     Err(e)
                 }

@@ -34,6 +34,7 @@ pub use private_memory_server_lib::app::{MAX_MEMORY_TTL_SECONDS, METADATA_BLANKE
 use private_memory_server_lib::{
     app,
     app::{ApplicationConfig, run_persistence_service},
+    metrics::Metrics,
 };
 use runfiles::Runfiles;
 use tokio::{net::TcpListener, sync::watch};
@@ -100,6 +101,27 @@ pub async fn start_server_with_config(
     tokio::task::JoinHandle<Result<()>>,
     tokio::task::JoinHandle<()>,
 )> {
+    start_server_with_metrics(
+        config_fn,
+        clock,
+        private_memory_server_lib::metrics::get_global_metrics(),
+    )
+    .await
+}
+
+/// Like [`start_server_with_config`], but the server and persistence worker
+/// record into `metrics` instead of the global metrics singleton, so tests can
+/// read the recorded values back.
+pub async fn start_server_with_metrics(
+    config_fn: fn(SocketAddr) -> ApplicationConfig,
+    clock: Option<Arc<dyn Clock>>,
+    metrics: Arc<Metrics>,
+) -> Result<(
+    SocketAddr,
+    tokio::task::JoinHandle<Result<()>>,
+    tokio::task::JoinHandle<Result<()>>,
+    tokio::task::JoinHandle<()>,
+)> {
     init_logging();
 
     let (db_addr, db_handle) = start_test_database().await?;
@@ -110,9 +132,9 @@ pub async fn start_server_with_config(
 
     let application_config = config_fn(db_addr);
 
-    let metrics = private_memory_server_lib::metrics::get_global_metrics();
     let (persistence_tx, persistence_rx) = tokio::sync::mpsc::unbounded_channel();
-    let persistence_join_handle = tokio::spawn(run_persistence_service(persistence_rx));
+    let persistence_join_handle =
+        tokio::spawn(run_persistence_service(persistence_rx, metrics.clone()));
 
     let clock = clock.unwrap_or_else(|| Arc::new(SystemClock));
 
@@ -160,6 +182,27 @@ pub async fn start_server_with_tls(
     tokio::task::JoinHandle<Result<()>>,
     tokio::task::JoinHandle<()>,
 )> {
+    start_server_with_tls_and_metrics(
+        tls_server_context,
+        default_test_application_config,
+        private_memory_server_lib::metrics::get_global_metrics(),
+    )
+    .await
+}
+
+/// Like [`start_server_with_tls`], but builds the `ApplicationConfig` with
+/// `config_fn`, and the server and persistence worker record into `metrics`
+/// instead of the global metrics singleton.
+pub async fn start_server_with_tls_and_metrics(
+    tls_server_context: Option<Arc<OakSessionTlsServerContext>>,
+    config_fn: fn(SocketAddr) -> ApplicationConfig,
+    metrics: Arc<Metrics>,
+) -> Result<(
+    SocketAddr,
+    tokio::task::JoinHandle<Result<()>>,
+    tokio::task::JoinHandle<Result<()>>,
+    tokio::task::JoinHandle<()>,
+)> {
     init_logging();
 
     let (db_addr, db_handle) = start_test_database().await?;
@@ -168,21 +211,11 @@ pub async fn start_server_with_tls(
     let listener = TcpListener::bind(addr).await?;
     let addr = listener.local_addr()?;
 
-    let application_config = ApplicationConfig {
-        database_service_host: db_addr,
-        max_database_size_bytes: MAX_DATABASE_SIZE,
-        max_grpc_decode_size_bytes: MAX_GRPC_DECODE_SIZE,
-        default_error_propagation_in_response: false,
-        blanket_ttl_seconds: METADATA_BLANKET_TTL_SECONDS,
-        max_memory_ttl_seconds: MAX_MEMORY_TTL_SECONDS,
-        enable_int8_embedding: false,
-        allowed_memory_sources: vec![],
-        min_available_memory_ratio: app::meminfo::DEFAULT_MIN_AVAILABLE_MEMORY_RATIO,
-    };
+    let application_config = config_fn(db_addr);
 
-    let metrics = private_memory_server_lib::metrics::get_global_metrics();
     let (persistence_tx, persistence_rx) = tokio::sync::mpsc::unbounded_channel();
-    let persistence_join_handle = tokio::spawn(run_persistence_service(persistence_rx));
+    let persistence_join_handle =
+        tokio::spawn(run_persistence_service(persistence_rx, metrics.clone()));
 
     Ok((
         addr,

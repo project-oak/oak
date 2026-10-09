@@ -82,10 +82,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), ENCLAVE_APP_PORT);
     let listener = TcpListener::bind(addr).await?;
 
-    let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
-    let persistence_join_handle = tokio::spawn(run_persistence_service(persistence_rx));
-
     let metrics = private_memory_server_lib::metrics::get_global_metrics();
+    let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
+    let persistence_join_handle =
+        tokio::spawn(run_persistence_service(persistence_rx, metrics.clone()));
+
     let join_handle = tokio::spawn(private_memory_server_lib::app::service::create(
         listener,
         application_config,

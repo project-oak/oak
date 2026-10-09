@@ -107,6 +107,13 @@ pub trait DataBlobHandler {
     async fn delete_blobs(&mut self, ids: &[BlobId]) -> anyhow::Result<()>;
 }
 
+// TODO: b/571198870 - the `db_save_speed` / `db_load_speed` recordings in this
+// impl are not covered by a metric test. They go through the global metrics
+// singleton (which exports to the host and can't be read in tests) because
+// this is a trait impl on the generated `SealedMemoryDatabaseServiceClient`;
+// injecting `Metrics` would change the `DataBlobHandler` signatures and every
+// caller. Covering them needs that refactor, or a host-side (google3) e2e test
+// that reads the exported streamz values.
 #[async_trait]
 impl DataBlobHandler for ExternalDbClient {
     async fn add_blob(

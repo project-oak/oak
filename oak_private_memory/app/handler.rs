@@ -21,7 +21,7 @@ use std::{
 use encryption::{decrypt, encrypt, generate_nonce};
 use external_db_client::{BlobId, DataBlobHandler};
 use log::{debug, info, warn};
-use metrics::{RequestMetricName, get_global_metrics};
+use metrics::RequestMetricName;
 use oak_private_memory_database::{
     IcingTempDir, MemoryId,
     clock::Clock,
@@ -508,6 +508,7 @@ impl SealedMemorySessionHandler {
         disable_persistence_on_close: bool,
     ) -> tonic::Result<()> {
         let (database, database_version, initial_size) = get_or_create_db(
+            &self.metrics,
             &mut db_client,
             &uid,
             &dek,
@@ -726,11 +727,14 @@ impl SealedMemorySessionHandler {
 
         let cleanup_start_time = Instant::now();
         self.clean_expired_memories().await.unwrap_or_else(|e| {
-            get_global_metrics().inc_db_cleanup_failures();
+            // TODO: b/571198870 - not covered by a metric test: cleanup only
+            // fails if icing fails to delete/search, and there is no icing
+            // fault-injection hook to trigger that from a test.
+            self.metrics.inc_db_cleanup_failures();
             warn!("Failed to clean expired memories during key sync: {}", e);
         });
         let elapsed = cleanup_start_time.elapsed();
-        get_global_metrics().record_db_cleanup_latency(elapsed.as_millis() as u64);
+        self.metrics.record_db_cleanup_latency(elapsed.as_millis() as u64);
 
         Ok(KeySyncResponse { status: key_sync_response::Status::Success.into() })
     }
@@ -745,7 +749,7 @@ impl SealedMemorySessionHandler {
             .clean_expired_memories()
             .await
             .into_internal_error("failed to clean memories")?;
-        get_global_metrics().record_db_cleanup_count(num_cleaned_memories);
+        self.metrics.record_db_cleanup_count(num_cleaned_memories);
         Ok(())
     }
 
@@ -796,7 +800,7 @@ impl SealedMemorySessionHandler {
         let mut mutex_guard = self.session_context().await;
         let context = mutex_guard.as_mut().into_failed_precondition("call key sync first")?;
 
-        persistence_worker::sync_persist_database(context)
+        persistence_worker::sync_persist_database(context, &self.metrics)
             .await
             .into_internal_error("failed to sync all memories with the persistent database")
     }
@@ -912,6 +916,7 @@ impl SealedMemorySessionHandler {
 }
 
 async fn get_or_create_db(
+    metrics: &metrics::Metrics,
     db_client: &mut SealedMemoryDatabaseServiceClient<Channel>,
     uid: &BlobId,
     dek: &[u8],
@@ -929,8 +934,8 @@ async fn get_or_create_db(
         .get_metadata_blob_stream(uid, coarsened_expiration_timestamp)
         .await
         .into_internal_error("Failed to get metadata blob")?;
-    get_global_metrics().record_key_sync_db_fetch_latency(
-        fetch_start.elapsed().unwrap_or_default().as_millis() as u64,
+    metrics.record_key_sync_db_fetch_latency(
+        fetch_start.elapsed().unwrap_or_default().as_millis() as u64
     );
 
     if let Some(EncryptedMetadataBlob { encrypted_data_blob: Some(encrypted_data_blob), version }) =
@@ -940,9 +945,9 @@ async fn get_or_create_db(
 
         let decrypt_start = clock.now();
         let encrypted_info = decrypt_database(encrypted_data_blob, dek)
-            .inspect_err(|_| get_global_metrics().inc_db_decryption_failures())
+            .inspect_err(|_| metrics.inc_db_decryption_failures())
             .into_internal_error("failed to decrypt database")?;
-        get_global_metrics().record_key_sync_decrypt_latency(
+        metrics.record_key_sync_decrypt_latency(
             decrypt_start.elapsed().unwrap_or_default().as_millis() as u64,
         );
 
@@ -959,7 +964,7 @@ async fn get_or_create_db(
                 .into_internal_error("failed to import database")?;
             let elapsed = import_start.elapsed().unwrap_or_default();
             let db_size_bucket = metrics::bucket_db_size(initial_size);
-            get_global_metrics().record_db_init_latency(elapsed.as_millis() as u64, db_size_bucket);
+            metrics.record_db_init_latency(elapsed.as_millis() as u64, db_size_bucket);
             return Ok((db, version, initial_size));
         }
     } else {
@@ -986,10 +991,12 @@ mod tests {
         time::{Duration, SystemTime},
     };
 
+    use metrics_testing::{Attrs, attrs};
     use oak_private_memory_database::{
         clock::{SystemClock, system_time_to_timestamp},
         database::{MAX_DATABASE_SIZE, MAX_GRPC_DECODE_SIZE},
     };
+    use private_memory_test_database_server_lib::service::SealedMemoryDatabaseServiceTestImpl;
     use sealed_memory_rust_proto::oak::private_memory::SessionConfig;
     use tokio::{
         net::TcpListener,
@@ -1042,10 +1049,19 @@ mod tests {
     fn connect_handler(
         db_addr: SocketAddr,
     ) -> (SealedMemorySessionHandler, mpsc::UnboundedReceiver<UserSessionContext>) {
-        let db_client = Arc::new(SharedDbClient::new(db_addr, MAX_GRPC_DECODE_SIZE));
+        connect_handler_with_metrics(db_addr, metrics::get_global_metrics())
+    }
+
+    /// Like [`connect_handler`], but records into `metrics`.
+    fn connect_handler_with_metrics(
+        db_addr: SocketAddr,
+        metrics: Arc<metrics::Metrics>,
+    ) -> (SealedMemorySessionHandler, mpsc::UnboundedReceiver<UserSessionContext>) {
+        let db_client =
+            Arc::new(SharedDbClient::new(db_addr, MAX_GRPC_DECODE_SIZE, metrics.clone()));
         let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
         let handler = SealedMemorySessionHandler::new(
-            metrics::get_global_metrics(),
+            metrics,
             persistence_tx,
             db_client,
             Arc::new(SystemClock),
@@ -1202,12 +1218,141 @@ mod tests {
         assert_eq!(racing.key_derivation_info, Some(boot_strap_info()));
     }
 
+    type TestMetrics = metrics_testing::TestMetrics<metrics::Metrics>;
+
+    /// Returns [`metrics::Metrics`] wired to a private in-memory meter
+    /// provider, so a test can read back what the code under test recorded.
+    fn test_metrics() -> TestMetrics {
+        TestMetrics::new(metrics::Metrics::new)
+    }
+
+    /// Returns `(count, sum)` of the histogram series `name{pairs}`.
+    ///
+    /// Note that `Metrics::new` records one synthetic startup sample into most
+    /// histograms, so a fresh instance already has a count of 1 for them.
+    fn histogram_count_and_sum(
+        harness: &TestMetrics,
+        name: &str,
+        pairs: &[(&str, &str)],
+    ) -> (u64, u64) {
+        let snapshot = harness.collect();
+        let point = snapshot.histogram(name, pairs);
+        (point.count, point.sum)
+    }
+
+    /// Returns the sample count of the attribute-less histogram `name`,
+    /// including the startup sample (see [`histogram_count_and_sum`]).
+    fn histogram_count(harness: &TestMetrics, name: &str) -> u64 {
+        histogram_count_and_sum(harness, name, &[]).0
+    }
+
+    /// Registers and key-syncs `pm_uid` on `handler`, then adds one memory so
+    /// that the session's database has changes to persist.
+    async fn start_session_with_changes(handler: &SealedMemorySessionHandler, pm_uid: &str) {
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        add_memory(handler).await;
+    }
+
+    /// A sync with changes persists the database and records its size, the
+    /// persist latency and the number of attempts. A sync without changes
+    /// skips the write.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn sync_database_records_persist_metrics() {
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(start_test_db().await, harness.metrics.clone());
+        start_session_with_changes(&handler, "persist_metrics_user").await;
+
+        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+
+        // The sync persisted the database on the first attempt. Counts include
+        // the startup sample, which for `db_size` and `db_persist_attempts` is 1.
+        // TODO: b/571198870 - the `db_size` histogram is recorded before each
+        // write attempt (including CAS retries and failed writes), not once per
+        // successful persist, and never on load.
+        let persisted_size = {
+            let (count, sum) = histogram_count_and_sum(&harness, "db_size", &[]);
+            assert_eq!(count, 2);
+            sum - 1
+        };
+        assert!(persisted_size > 0);
+        assert_eq!(histogram_count(&harness, "db_persist_latency"), 2);
+        assert_eq!(histogram_count(&harness, "db_persist_latency_with_retries"), 2);
+        assert_eq!(histogram_count_and_sum(&harness, "db_persist_attempts", &[]), (2, 2));
+
+        // A second sync with no changes skips the write.
+        // TODO: b/571198870 - the skipped (no-op) persist is still recorded as
+        // a successful one-attempt persist in `db_persist_latency_with_retries`
+        // and `db_persist_attempts`, inflating both.
+        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        assert_eq!(histogram_count(&harness, "db_size"), 2);
+        assert_eq!(histogram_count(&harness, "db_persist_latency"), 2);
+        assert_eq!(histogram_count(&harness, "db_persist_latency_with_retries"), 3);
+        assert_eq!(histogram_count_and_sum(&harness, "db_persist_attempts", &[]), (3, 3));
+    }
+
+    /// Returns every series of histogram `name` with its sample count, so a
+    /// test can check which series a sample was recorded under and that no
+    /// other series got one.
+    fn histogram_series_counts(harness: &TestMetrics, name: &str) -> Vec<(Attrs, u64)> {
+        harness
+            .collect()
+            .histogram_points(name)
+            .iter()
+            .map(|(series, point)| (series.clone(), point.count))
+            .collect()
+    }
+
+    /// Returns the value of the attribute-less counter `name`.
+    fn unlabeled_counter(harness: &TestMetrics, name: &str) -> u64 {
+        harness.collect().counter(name, &[])
+    }
+
+    /// A key sync that finds a persisted database fetches, decrypts and
+    /// imports it, and records each step.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn key_sync_of_persisted_database_records_import_metrics() {
+        let db_addr = start_test_db().await;
+        let pm_uid = "persisted_database_import_user";
+        let (writer, _writer_rx) = connect_handler(db_addr);
+        start_session_with_changes(&writer, pm_uid).await;
+        writer.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+
+        let harness = test_metrics();
+        let (reader, _reader_rx) = connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        let key_sync = reader.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        assert_eq!(key_sync.status(), key_sync_response::Status::Success);
+
+        // Counts include the startup sample.
+        assert_eq!(histogram_count(&harness, "key_sync_db_fetch_latency"), 2);
+        assert_eq!(histogram_count(&harness, "key_sync_decrypt_latency"), 2);
+        assert_eq!(unlabeled_counter(&harness, "db_decryption_failures"), 0);
+        // `db_init_latency` has one series per `db_size_bucket`, and the
+        // startup sample is in "0-100KB". The import's bucket depends on the
+        // size of the Icing export, which this test doesn't control, so only
+        // check that the import got exactly one sample in another series.
+        let startup_series = attrs(&[("db_size_bucket", "0-100KB")]);
+        let (startup_series_counts, import_series_counts): (Vec<_>, Vec<_>) =
+            histogram_series_counts(&harness, "db_init_latency")
+                .into_iter()
+                .partition(|(series, _)| *series == startup_series);
+        assert_eq!(startup_series_counts, [(startup_series, 1)]);
+        assert_eq!(
+            import_series_counts.iter().map(|(_, count)| *count).collect::<Vec<_>>(),
+            [1],
+            "expected one import sample in a single non-startup series: {import_series_counts:?}"
+        );
+    }
+
     /// Two consecutive key syncs for a registered user (same `pm_uid` + KEK)
     /// both succeed; each one rebuilds the session context and unwraps the same
     /// stable DEK.
     #[tokio::test(flavor = "multi_thread")]
     async fn key_sync_twice_succeeds() {
-        let (handler, _persistence_rx) = setup_handler().await;
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(start_test_db().await, harness.metrics.clone());
         let pm_uid = "key_sync_twice_user";
 
         // A wrapped DEK must exist before key sync can succeed.
@@ -1223,6 +1368,19 @@ mod tests {
 
         // The unwrapped DEK is stable across repeated key syncs.
         assert_eq!(dek_after_first, dek_after_second);
+
+        // Each key sync fetches the (absent) metadata blob and then cleans up
+        // expired memories, of which there are none. Counts include the
+        // startup sample.
+        assert_eq!(histogram_count(&harness, "key_sync_db_fetch_latency"), 3);
+        assert_eq!(histogram_count(&harness, "db_cleanup_latency"), 3);
+        assert_eq!(histogram_count_and_sum(&harness, "db_cleanup_count", &[]), (3, 0));
+        // With no stored database there is nothing to import, so
+        // `db_init_latency` still has only the startup sample.
+        assert_eq!(
+            histogram_series_counts(&harness, "db_init_latency"),
+            [(attrs(&[("db_size_bucket", "0-100KB")]), 1)]
+        );
     }
 
     /// Calling key sync twice with different `SessionConfig`s both succeed, and
@@ -1329,6 +1487,227 @@ mod tests {
         let response =
             handler.add_memory_handler(AddMemoryRequest { memory: Some(memory) }).await.unwrap();
         assert!(!response.id.is_empty());
+    }
+
+    /// A stored `PlainTextUserInfo` that cannot be decoded fails both
+    /// registration and key sync, and each failure is counted.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn corrupt_user_info_counts_deserialization_failures() {
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(start_test_db().await, harness.metrics.clone());
+        let pm_uid = "corrupt_user_info_user";
+        let mut db_client = handler.db_client.get_or_connect().await.unwrap();
+        db_client
+            .add_unencrypted_blob(DataBlob { id: pm_uid.to_string(), blob: vec![0xFF; 4] }, None)
+            .await
+            .unwrap();
+
+        let error =
+            handler.user_registration_handler(registration_request(pm_uid)).await.unwrap_err();
+        assert_eq!(error.code(), tonic::Code::Internal);
+        assert_eq!(unlabeled_counter(&harness, "user_info_deserialization_failures"), 1);
+
+        let error = handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap_err();
+        assert_eq!(error.code(), tonic::Code::Internal);
+        assert_eq!(unlabeled_counter(&harness, "user_info_deserialization_failures"), 2);
+    }
+
+    /// Stores a metadata blob for `pm_uid` that decodes fine but cannot be
+    /// decrypted with any user's DEK, under a version no session has seen.
+    async fn store_undecryptable_metadata_blob(
+        service: &SealedMemoryDatabaseServiceTestImpl,
+        pm_uid: &str,
+    ) {
+        // The ciphertext bytes are arbitrary: they won't authenticate under
+        // any DEK, so decryption always fails.
+        let blob = EncryptedDataBlob { data: vec![0xAB; 64], nonce: generate_nonce() };
+        service.metadata_database.lock().await.insert(
+            pm_uid.to_string(),
+            sealed_memory_rust_proto::oak::private_memory::MetadataBlob {
+                data_blob: Some(DataBlob { id: pm_uid.to_string(), blob: blob.encode_to_vec() }),
+                version: "undecryptable".to_string(),
+            },
+        );
+    }
+
+    /// A stored database that cannot be decrypted with the user's DEK fails
+    /// key sync and is counted.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn undecryptable_database_counts_decryption_failure() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let harness = test_metrics();
+        let (handler, _persistence_rx) = connect_handler_with_metrics(
+            start_test_db_with_service(service.clone()).await,
+            harness.metrics.clone(),
+        );
+        let pm_uid = "undecryptable_database_user";
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        store_undecryptable_metadata_blob(&service, pm_uid).await;
+
+        let error = handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap_err();
+        assert_eq!(error.code(), tonic::Code::Internal);
+        assert_eq!(unlabeled_counter(&harness, "db_decryption_failures"), 1);
+        // Only the startup sample: the failed decryption is not timed.
+        assert_eq!(histogram_count(&harness, "key_sync_decrypt_latency"), 1);
+    }
+
+    /// If the persistence worker is gone when a session ends, the session
+    /// cannot be handed over for persisting, and that is counted.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn closed_persistence_channel_counts_enqueue_failure() {
+        let harness = test_metrics();
+        let (handler, persistence_rx) =
+            connect_handler_with_metrics(start_test_db().await, harness.metrics.clone());
+        let pm_uid = "closed_persistence_channel_user";
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+
+        drop(persistence_rx);
+        drop(handler);
+
+        assert_eq!(unlabeled_counter(&harness, "persistence_enqueue_failures"), 1);
+    }
+
+    /// A request that cannot be decoded is counted under its own request type.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn handle_counts_undecodable_request() {
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(start_test_db().await, harness.metrics.clone());
+
+        let error = handler.handle(&[0xFF; 4]).await.unwrap_err();
+
+        assert_eq!(error.code(), tonic::Code::Internal);
+        assert_eq!(
+            harness.collect().counter("rpc_count", &[("request_type", "DeserializationFailure")]),
+            1
+        );
+    }
+
+    /// Enough deleted memories make a sync optimize the database first.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn sync_database_optimizes_after_many_deletes() {
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(start_test_db().await, harness.metrics.clone());
+        let pm_uid = "optimize_user";
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+
+        // Optimizing needs strictly more than `OPTIMIZE_DOC_THRESHOLD` deleted
+        // documents, so add and delete one more than that.
+        let memories = (0..=persistence_worker::OPTIMIZE_DOC_THRESHOLD)
+            .map(|_| memory_expiring_in_an_hour())
+            .collect();
+        let added = handler.add_memories_handler(AddMemoriesRequest { memories }).await.unwrap();
+        let ids = added
+            .results
+            .into_iter()
+            .map(|add_result| match add_result.result {
+                Some(add_memories_response::add_memory_result::Result::Id(id)) => id,
+                other => panic!("failed to add memory: {other:?}"),
+            })
+            .collect();
+        handler.delete_memory_handler(DeleteMemoryRequest { ids }).await.unwrap();
+        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+
+        // Including the startup sample.
+        assert_eq!(histogram_count(&harness, "db_optimize_latency"), 2);
+    }
+
+    /// If deleting the blobs of deleted memories fails after a successful
+    /// persist, the blobs that are left behind are counted.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn sync_database_counts_orphaned_blob_deletes() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let harness = test_metrics();
+        let (handler, _persistence_rx) = connect_handler_with_metrics(
+            start_test_db_with_service(service.clone()).await,
+            harness.metrics.clone(),
+        );
+        let pm_uid = "orphaned_blob_user";
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        let id = add_memory(&handler).await;
+        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+
+        handler.delete_memory_handler(DeleteMemoryRequest { ids: vec![id] }).await.unwrap();
+        // Lose the memory's blob, so that the deferred blob delete fails.
+        service.database.lock().await.clear();
+        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+
+        assert_eq!(unlabeled_counter(&harness, "orphaned_blob_deletes"), 1);
+    }
+
+    /// The persistence worker records how many sessions are still queued
+    /// whenever it picks one up.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn persistence_service_records_queue_size() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let db_addr = start_test_db_with_service(service.clone()).await;
+        let harness = test_metrics();
+        let mut contexts = Vec::new();
+        for pm_uid in ["queue_size_user_1", "queue_size_user_2"] {
+            let (handler, _persistence_rx) =
+                connect_handler_with_metrics(db_addr, harness.metrics.clone());
+            start_session_with_changes(&handler, pm_uid).await;
+            contexts.push(handler.session_context().await.take().unwrap());
+        }
+        let (arrived, release) = service.hold_next_metadata_write().await;
+        let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
+        for context in contexts {
+            persistence_tx.send(context).unwrap();
+        }
+        drop(persistence_tx);
+
+        let worker = tokio::spawn(persistence_worker::run_persistence_service(
+            persistence_rx,
+            harness.metrics.clone(),
+        ));
+        tokio::time::timeout(Duration::from_secs(30), arrived)
+            .await
+            .expect("the persistence worker never wrote the first session")
+            .unwrap();
+        // The first session is being persisted and the second one is queued.
+        assert_eq!(harness.collect().gauge("db_persist_queue_size", &[]), 1);
+
+        release.send(()).unwrap();
+        worker.await.unwrap();
+        assert_eq!(harness.collect().gauge("db_persist_queue_size", &[]), 0);
+        assert_eq!(unlabeled_counter(&harness, "db_persist_failures"), 0);
+    }
+
+    /// A session that cannot be persisted is counted by the persistence
+    /// worker.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn persistence_service_counts_persist_failures() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let harness = test_metrics();
+        let (handler, _persistence_rx) = connect_handler_with_metrics(
+            start_test_db_with_service(service.clone()).await,
+            harness.metrics.clone(),
+        );
+        let pm_uid = "persist_failure_user";
+        start_session_with_changes(&handler, pm_uid).await;
+        // Another writer stored a database this session cannot rebase onto.
+        store_undecryptable_metadata_blob(&service, pm_uid).await;
+
+        let error = handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap_err();
+        assert_eq!(error.code(), tonic::Code::Internal);
+        // TODO: b/571198870 - SyncDatabase persist failures are not counted in
+        // db_persist_failures.
+        assert_eq!(unlabeled_counter(&harness, "db_persist_failures"), 0);
+
+        let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
+        persistence_tx.send(handler.session_context().await.take().unwrap()).unwrap();
+        drop(persistence_tx);
+        persistence_worker::run_persistence_service(persistence_rx, harness.metrics.clone()).await;
+
+        assert_eq!(unlabeled_counter(&harness, "db_persist_failures"), 1);
+        // TODO: b/571198870 - pull_and_rebase does not count failing to
+        // decrypt the stored database in db_decryption_failures.
+        assert_eq!(unlabeled_counter(&harness, "db_decryption_failures"), 0);
     }
 
     /// A duplicated name is a state the caller has to repair, not a server

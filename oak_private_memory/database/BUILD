@@ -78,6 +78,7 @@ rust_test(
     data = ["testdata/golden_icing_export.pb"],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
+        "//:metrics_testing",
         "@oak_crates_index//:googletest",
         "@rules_rust//tools/runfiles",
     ],

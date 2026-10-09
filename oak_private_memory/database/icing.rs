@@ -899,14 +899,25 @@ impl IcingMetaDatabase {
         Ok(Self { icing_search_engine, applied_operations: vec![], config })
     }
 
+    // TODO: b/571198870 - production Icing initialization still records into
+    // the global metrics, because `IcingMetaDatabase::new` and `import` don't
+    // take a `Metrics` yet. Only the test-facing
+    // `initialize_icing_database_with_metrics` can record elsewhere.
     fn initialize_icing_database(
         base_dir_str: &str,
+    ) -> anyhow::Result<cxx::UniquePtr<icing::IcingSearchEngine>> {
+        Self::initialize_icing_database_with_metrics(base_dir_str, &metrics::get_global_metrics())
+    }
+
+    fn initialize_icing_database_with_metrics(
+        base_dir_str: &str,
+        metrics: &metrics::Metrics,
     ) -> anyhow::Result<cxx::UniquePtr<icing::IcingSearchEngine>> {
         let options_bytes = icing::get_default_icing_options(base_dir_str).encode_to_vec();
         let icing_search_engine = icing::create_icing_search_engine(&options_bytes);
         let result_proto = icing_search_engine.initialize()?;
 
-        metrics::get_global_metrics().record_icing_initialization_stats(&result_proto);
+        metrics.record_icing_initialization_stats(&result_proto);
 
         ensure!(
             result_proto.status.context("initialize returned no status")?.code
@@ -2540,6 +2551,27 @@ mod tests {
             }),
             ..Default::default()
         }
+    }
+
+    /// Initializing Icing records its initialization stats. A fresh directory
+    /// initializes successfully.
+    #[gtest]
+    fn icing_initialization_records_init_stats_test() -> anyhow::Result<()> {
+        let harness = metrics_testing::TestMetrics::new(metrics::Metrics::new);
+        let dir = tempdir();
+
+        IcingMetaDatabase::initialize_icing_database_with_metrics(dir.as_str(), &harness.metrics)?;
+
+        let snapshot = harness.collect();
+        expect_that!(
+            snapshot.counter_points("icing_init_status"),
+            eq(&std::collections::BTreeMap::from([(
+                metrics_testing::attrs(&[("status_code", "OK")]),
+                1
+            )]))
+        );
+        expect_that!(snapshot.histogram("icing_init_latency_ms", &[]).count, eq(1));
+        Ok(())
     }
 
     /// Deleting a memory must remove *all* of its views, including when there

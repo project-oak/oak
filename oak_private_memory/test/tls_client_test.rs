@@ -23,23 +23,58 @@
 
 use std::{
     io::BufReader,
+    net::SocketAddr,
     sync::Arc,
     time::{Duration, SystemTime},
 };
 
 use client::{PrivateMemoryAppClient, PrivateMemoryTlsClient};
+use futures::{SinkExt, StreamExt, channel::mpsc, lock::Mutex};
 use oak_session_tls::{
-    ClientContextConfig, OakSessionTlsClientContext, OakSessionTlsServerContext,
+    ClientContextConfig, OakSessionTls, OakSessionTlsClientContext, OakSessionTlsServerContext,
     ServerContextConfig, utils,
 };
-use private_memory_test_utils::{start_server_with_tls, system_time_to_timestamp};
+use private_memory_server_lib::{app::ApplicationConfig, metrics::Metrics};
+use private_memory_test_utils::{
+    default_test_application_config, start_server_with_tls, start_server_with_tls_and_metrics,
+    system_time_to_timestamp,
+};
 use runfiles::Runfiles;
+use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_client::SealedMemoryServiceClient;
 use sealed_memory_rust_proto::{
-    oak::private_memory::{LlmView, LlmViews},
+    oak::private_memory::{LlmView, LlmViews, TlsSessionFrame},
     prelude::v1::*,
 };
 
 static TEST_EK: &[u8; 32] = b"aaaabbbbccccddddeeeeffffgggghhhh";
+
+type TestMetrics = metrics_testing::TestMetrics<Metrics>;
+
+/// Returns [`Metrics`] wired to a private in-memory meter provider, so a test
+/// can read back what the server recorded.
+fn test_metrics() -> TestMetrics {
+    TestMetrics::new(Metrics::new)
+}
+
+/// Starts a TLS-enabled server configured by `config_fn` that records into
+/// `harness`, and returns its URL along with the join handles that must be
+/// kept alive.
+async fn start_tls_server_recording_into(
+    harness: &TestMetrics,
+    config_fn: fn(SocketAddr) -> ApplicationConfig,
+) -> (
+    String,
+    tokio::task::JoinHandle<anyhow::Result<()>>,
+    tokio::task::JoinHandle<anyhow::Result<()>>,
+    tokio::task::JoinHandle<()>,
+) {
+    let server_ctx = Arc::new(test_server_context());
+    let (addr, server, db, persistence) =
+        start_server_with_tls_and_metrics(Some(server_ctx), config_fn, harness.metrics.clone())
+            .await
+            .unwrap();
+    (format!("http://{addr}"), server, db, persistence)
+}
 
 /// Resolves a workspace-relative path using the bazel runfiles.
 fn resolve_runfile(path: &str) -> std::path::PathBuf {
@@ -102,9 +137,9 @@ fn test_client_context() -> OakSessionTlsClientContext {
 /// (register, keysync, add memory, retrieve) work end-to-end.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_tls_session_basic() {
-    let server_ctx = Arc::new(test_server_context());
-    let (addr, _server, _db, _persistence) = start_server_with_tls(Some(server_ctx)).await.unwrap();
-    let url = format!("http://{}", addr);
+    let harness = test_metrics();
+    let (url, _server, _db, _persistence) =
+        start_tls_server_recording_into(&harness, default_test_application_config).await;
     let pm_uid = "tls_test_user";
 
     let client_ctx = test_client_context();
@@ -135,6 +170,13 @@ async fn test_tls_session_basic() {
     let response = client.get_memory_by_id(&memory_id, None).await.unwrap();
     assert!(response.success);
     assert_eq!(response.memory.unwrap().id, memory_id);
+
+    // One handshake, then every frame after it counts towards `total`:
+    // registration, key sync, add and get.
+    let snapshot = harness.collect();
+    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "Handshake")]), 1);
+    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "total")]), 4);
+    assert_eq!(snapshot.counter("tls_handshake_failures", &[]), 0);
 }
 
 /// Verifies that delete_memory works through a TLS session.
@@ -230,4 +272,167 @@ async fn test_noise_still_works_with_tls_enabled() {
 
     let response = client.get_memory_by_id(&memory_id, None).await.unwrap();
     assert!(response.success);
+}
+
+/// The request and response halves of a raw `StartTlsSession` stream.
+struct RawTlsStream {
+    requests: mpsc::Sender<TlsSessionFrame>,
+    responses: tonic::Streaming<TlsSessionFrame>,
+}
+
+/// Buffer size of the request channel; tests send one frame at a time.
+const RAW_REQUEST_BUFFER: usize = 10;
+
+/// Opens a raw `StartTlsSession` stream.
+async fn open_tls_stream(url: &str) -> RawTlsStream {
+    let mut client = SealedMemoryServiceClient::connect(url.to_string()).await.unwrap();
+    let (requests, request_stream) = mpsc::channel(RAW_REQUEST_BUFFER);
+    let responses = client.start_tls_session(request_stream).await.unwrap().into_inner();
+    RawTlsStream { requests, responses }
+}
+
+/// Opens a raw `StartTlsSession` stream and completes the TLS handshake, for
+/// sending frames that `PrivateMemoryTlsClient` cannot produce.
+async fn open_raw_tls_session(url: &str) -> (OakSessionTls, RawTlsStream) {
+    // The handshake's send and receive closures both need the stream, so they
+    // share it; the lock is async because it is held across `.await`s.
+    let transport = Arc::new(Mutex::new(open_tls_stream(url).await));
+    let (session, _initial_data) = test_client_context()
+        .new_initialized_session(
+            |tls_frame| {
+                let transport = transport.clone();
+                async move {
+                    transport.lock().await.requests.send(TlsSessionFrame { tls_frame }).await?;
+                    Ok::<_, anyhow::Error>(())
+                }
+            },
+            {
+                let transport = transport.clone();
+                move || {
+                    let transport = transport.clone();
+                    async move {
+                        let frame = transport.lock().await.responses.next().await.transpose()?;
+                        Ok::<_, anyhow::Error>(frame.map(|frame| frame.tls_frame))
+                    }
+                }
+            },
+        )
+        .await
+        .unwrap();
+    let stream = Arc::into_inner(transport)
+        .expect("handshake closures still hold the transport")
+        .into_inner();
+    (session, stream)
+}
+
+/// A failed TLS handshake is counted, both as a TLS handshake failure and as
+/// a failed `Handshake` request.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_tls_handshake_failure_is_counted() {
+    let harness = test_metrics();
+    let (url, _server, _db, _persistence) =
+        start_tls_server_recording_into(&harness, default_test_application_config).await;
+    let mut stream = open_tls_stream(&url).await;
+
+    stream
+        .requests
+        .send(TlsSessionFrame { tls_frame: b"not a TLS record".to_vec() })
+        .await
+        .unwrap();
+
+    let status = match stream.responses.next().await {
+        Some(Err(status)) => status,
+        other => panic!("expected the handshake to fail, got {other:?}"),
+    };
+    assert_eq!(status.code(), tonic::Code::Internal);
+    let snapshot = harness.collect();
+    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "Handshake")]), 1);
+    assert_eq!(snapshot.counter("rpc_failure_count", &[("request_type", "Handshake")]), 1);
+    assert_eq!(snapshot.counter("tls_handshake_failures", &[]), 1);
+}
+
+/// A frame that cannot be decrypted after the handshake is counted as a
+/// decryption failure.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_tls_undecryptable_frame_is_counted() {
+    let harness = test_metrics();
+    let (url, _server, _db, _persistence) =
+        start_tls_server_recording_into(&harness, default_test_application_config).await;
+    let (_session, mut stream) = open_raw_tls_session(&url).await;
+
+    stream
+        .requests
+        .send(TlsSessionFrame { tls_frame: b"not a TLS record".to_vec() })
+        .await
+        .unwrap();
+
+    let status = loop {
+        match stream.responses.next().await {
+            // Skip post-handshake frames the server may still send.
+            Some(Ok(_)) => continue,
+            Some(Err(status)) => break status,
+            None => panic!("expected the stream to fail"),
+        }
+    };
+    assert_eq!(status.code(), tonic::Code::InvalidArgument);
+    let snapshot = harness.collect();
+    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "DecryptionFailure")]), 1);
+    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "total")]), 1);
+}
+
+/// A post-handshake frame that decrypts to no application data is counted as
+/// an empty TLS frame and does not end the session.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_tls_empty_frame_is_counted() {
+    let harness = test_metrics();
+    let (url, _server, _db, _persistence) =
+        start_tls_server_recording_into(&harness, default_test_application_config).await;
+    let (_session, RawTlsStream { mut requests, mut responses }) = open_raw_tls_session(&url).await;
+
+    requests.send(TlsSessionFrame { tls_frame: vec![] }).await.unwrap();
+    // Close the request stream; the server ends the response stream once it
+    // has processed everything, so the counters are final afterwards.
+    drop(requests);
+    while let Some(frame) = responses.next().await {
+        frame.expect("an empty frame must not fail the stream");
+    }
+
+    let snapshot = harness.collect();
+    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "EmptyTlsFrame")]), 1);
+    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "total")]), 1);
+}
+
+/// A gRPC decode limit small enough that one oversized frame exceeds it, while
+/// every TLS handshake message still fits.
+const SMALL_DECODE_LIMIT: usize = 64 * 1024;
+
+/// Server config whose gRPC decode limit is small enough for a test to exceed.
+fn config_with_small_decode_limit(db_addr: SocketAddr) -> ApplicationConfig {
+    ApplicationConfig {
+        max_grpc_decode_size_bytes: SMALL_DECODE_LIMIT,
+        ..default_test_application_config(db_addr)
+    }
+}
+
+/// If a frame after the handshake cannot be received (here, because it
+/// exceeds the server's gRPC decode limit), the failure is counted.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_tls_receive_failure_is_counted() {
+    let harness = test_metrics();
+    let (url, _server, _db, _persistence) =
+        start_tls_server_recording_into(&harness, config_with_small_decode_limit).await;
+    let (_session, mut stream) = open_raw_tls_session(&url).await;
+
+    stream
+        .requests
+        .send(TlsSessionFrame { tls_frame: vec![0; 2 * SMALL_DECODE_LIMIT] })
+        .await
+        .unwrap();
+
+    // The server records the failure, then ends the response stream.
+    while let Some(Ok(_)) = stream.responses.next().await {}
+    let snapshot = harness.collect();
+    assert_eq!(snapshot.counter("tls_receive_failures", &[]), 1);
+    // The oversized frame never reached the dispatch loop.
+    assert_eq!(snapshot.counter("rpc_count", &[("request_type", "total")]), 0);
 }

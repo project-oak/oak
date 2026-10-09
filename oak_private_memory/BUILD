@@ -131,6 +131,17 @@ rust_test(
     crate = ":metrics",
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
+        ":metrics_testing",
+    ],
+)
+
+rust_library(
+    name = "metrics_testing",
+    testonly = True,
+    srcs = ["src/metrics_testing.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        "@oak_crates_index//:opentelemetry",
         "@oak_crates_index//:opentelemetry_sdk",
     ],
 )
@@ -357,6 +368,7 @@ rust_test(
     deps = [
         ":attestation_testing",
         ":client",
+        ":metrics_testing",
         ":private_memory_server_lib",
         ":private_memory_test_database_server_lib",
         ":private_memory_test_utils",
@@ -416,13 +428,17 @@ rust_test(
     data = ["@oak//oak_session/tls/testing:test_keys"],
     deps = [
         ":client",
+        ":metrics_testing",
         ":private_memory_server_lib",
         ":private_memory_test_utils",
         "//proto:sealed_memory_rust_proto",
+        "//proto/grpc:sealed_memory_grpc_proto",
         "@oak//oak_session/tls/rust:oak_session_tls",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:futures",
         "@oak_crates_index//:rustls-pki-types",
         "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tonic",
         "@rules_rust//tools/runfiles",
     ],
 )

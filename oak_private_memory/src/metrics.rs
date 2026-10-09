@@ -771,258 +771,23 @@ mod tests {
 
 /// Tests that read back the values exported by [`Metrics`].
 ///
-/// Each test builds a fresh [`SdkMeterProvider`] whose periodic reader pushes
-/// into an in-test [`SnapshotExporter`], and constructs [`Metrics`] from its
-/// meter. Values are read by calling `force_flush` on the provider, which
-/// synchronously collects and exports. This mirrors production wiring
-/// (`Metrics::new(&Meter)`) without touching the global metrics singleton, so
-/// tests are deterministic and independent of each other.
-///
-/// `ManualReader` and `InMemoryMetricExporter` would be simpler, but they are
-/// gated behind `opentelemetry_sdk` features that are not enabled in
-/// `@oak_crates_index`. `PeriodicReader` spawns a background worker thread per
-/// test instance (its 1-hour interval never fires during a test; it's cleaned
-/// up on drop). That's fine at this scale, but if the suite grows, enabling
-/// the `testing` / in-memory exporter features would avoid the threads.
+/// Each test builds a fresh [`TestMetrics`] (see the `metrics_testing` crate),
+/// which wires [`Metrics`] to a private in-memory meter provider, so tests are
+/// deterministic and independent of each other and of the global metrics
+/// singleton.
 #[cfg(test)]
 mod value_tests {
-    use std::{
-        collections::{BTreeMap, BTreeSet},
-        sync::Mutex,
-        time::Duration,
-    };
+    use std::collections::{BTreeMap, BTreeSet};
 
-    use opentelemetry::metrics::MeterProvider as _;
-    use opentelemetry_sdk::{
-        error::OTelSdkResult,
-        metrics::{
-            PeriodicReader, SdkMeterProvider, Temporality,
-            data::{AggregatedMetrics, MetricData, ResourceMetrics},
-            exporter::PushMetricExporter,
-        },
-    };
+    use metrics_testing::{Attrs, INF, attrs};
 
     use super::*;
 
-    const INF: f64 = f64::INFINITY;
+    type TestMetrics = metrics_testing::TestMetrics<Metrics>;
 
-    /// The `(name, metric)` pairs from a single export.
-    type ExportedMetrics = Vec<(String, ExportedMetric)>;
-
-    /// A [`PushMetricExporter`] that keeps an owned copy of the most recent
-    /// export so the test can inspect it.
-    #[derive(Clone, Default)]
-    struct SnapshotExporter {
-        latest: Arc<Mutex<Option<ExportedMetrics>>>,
-    }
-
-    impl PushMetricExporter for SnapshotExporter {
-        fn export(
-            &self,
-            metrics: &ResourceMetrics,
-        ) -> impl std::future::Future<Output = OTelSdkResult> + Send {
-            let exported = metrics
-                .scope_metrics()
-                .flat_map(|scope| scope.metrics())
-                .map(|metric| {
-                    (
-                        metric.name().to_string(),
-                        ExportedMetric {
-                            description: metric.description().to_string(),
-                            unit: metric.unit().to_string(),
-                            data: convert(metric.data()),
-                        },
-                    )
-                })
-                .collect();
-            *self.latest.lock().unwrap() = Some(exported);
-            std::future::ready(Ok(()))
-        }
-
-        fn force_flush(&self) -> OTelSdkResult {
-            Ok(())
-        }
-
-        fn shutdown_with_timeout(&self, _timeout: Duration) -> OTelSdkResult {
-            Ok(())
-        }
-
-        fn temporality(&self) -> Temporality {
-            Temporality::Cumulative
-        }
-    }
-
-    /// Sorted `(key, value)` attribute pairs identifying a time series.
-    type Attrs = Vec<(String, String)>;
-
-    fn attrs(pairs: &[(&str, &str)]) -> Attrs {
-        let mut attrs: Attrs =
-            pairs.iter().map(|(key, value)| (key.to_string(), value.to_string())).collect();
-        attrs.sort();
-        attrs
-    }
-
-    fn to_attrs<'a>(kvs: impl Iterator<Item = &'a KeyValue>) -> Attrs {
-        let mut attrs: Attrs =
-            kvs.map(|kv| (kv.key.as_str().to_string(), kv.value.as_str().into_owned())).collect();
-        attrs.sort();
-        attrs
-    }
-
-    #[derive(Clone, Debug, PartialEq)]
-    struct HistogramPoint {
-        count: u64,
-        sum: u64,
-        bounds: Vec<f64>,
-        bucket_counts: Vec<u64>,
-    }
-
-    impl HistogramPoint {
-        /// Returns `(upper_bound, count)` for every non-empty bucket. The
-        /// overflow bucket has an upper bound of [`INF`].
-        fn nonzero_buckets(&self) -> Vec<(f64, u64)> {
-            self.bucket_counts
-                .iter()
-                .enumerate()
-                .filter(|(_, count)| **count > 0)
-                .map(|(index, count)| (self.bounds.get(index).copied().unwrap_or(INF), *count))
-                .collect()
-        }
-    }
-
-    #[derive(Clone, Debug, PartialEq)]
-    enum Data {
-        Sum { monotonic: bool, points: BTreeMap<Attrs, u64> },
-        Gauge(BTreeMap<Attrs, u64>),
-        Histogram(BTreeMap<Attrs, HistogramPoint>),
-    }
-
-    #[derive(Clone, Debug)]
-    struct ExportedMetric {
-        description: String,
-        unit: String,
-        data: Data,
-    }
-
-    /// The metrics exported by a single collection, keyed by metric name.
-    struct Snapshot(BTreeMap<String, ExportedMetric>);
-
-    impl Snapshot {
-        fn names(&self) -> BTreeSet<&str> {
-            self.0.keys().map(String::as_str).collect()
-        }
-
-        fn get(&self, name: &str) -> &ExportedMetric {
-            self.0
-                .get(name)
-                .unwrap_or_else(|| panic!("metric {name} not exported; got {:?}", self.names()))
-        }
-
-        fn counter_points(&self, name: &str) -> &BTreeMap<Attrs, u64> {
-            match &self.get(name).data {
-                Data::Sum { monotonic: true, points } => points,
-                other => panic!("{name} is not a monotonic sum: {other:?}"),
-            }
-        }
-
-        fn counter(&self, name: &str, pairs: &[(&str, &str)]) -> u64 {
-            *self
-                .counter_points(name)
-                .get(&attrs(pairs))
-                .unwrap_or_else(|| panic!("{name} has no point for {pairs:?}"))
-        }
-
-        fn gauge_points(&self, name: &str) -> &BTreeMap<Attrs, u64> {
-            match &self.get(name).data {
-                Data::Gauge(points) => points,
-                other => panic!("{name} is not a gauge: {other:?}"),
-            }
-        }
-
-        fn histogram_points(&self, name: &str) -> &BTreeMap<Attrs, HistogramPoint> {
-            match &self.get(name).data {
-                Data::Histogram(points) => points,
-                other => panic!("{name} is not a histogram: {other:?}"),
-            }
-        }
-
-        fn histogram(&self, name: &str, pairs: &[(&str, &str)]) -> &HistogramPoint {
-            self.histogram_points(name)
-                .get(&attrs(pairs))
-                .unwrap_or_else(|| panic!("{name} has no point for {pairs:?}"))
-        }
-    }
-
-    /// Converts exported data into [`Data`]. Only `u64` instruments are
-    /// handled because every instrument [`Metrics`] defines is `u64`; any other
-    /// data type means a new instrument kind was added, so this panics to make
-    /// the test helper get updated alongside it.
-    fn convert(data: &AggregatedMetrics) -> Data {
-        match data {
-            AggregatedMetrics::U64(MetricData::Sum(sum)) => Data::Sum {
-                monotonic: sum.is_monotonic(),
-                points: sum
-                    .data_points()
-                    .map(|point| (to_attrs(point.attributes()), point.value()))
-                    .collect(),
-            },
-            AggregatedMetrics::U64(MetricData::Gauge(gauge)) => Data::Gauge(
-                gauge
-                    .data_points()
-                    .map(|point| (to_attrs(point.attributes()), point.value()))
-                    .collect(),
-            ),
-            AggregatedMetrics::U64(MetricData::Histogram(histogram)) => Data::Histogram(
-                histogram
-                    .data_points()
-                    .map(|point| {
-                        (
-                            to_attrs(point.attributes()),
-                            HistogramPoint {
-                                count: point.count(),
-                                sum: point.sum(),
-                                bounds: point.bounds().collect(),
-                                bucket_counts: point.bucket_counts().collect(),
-                            },
-                        )
-                    })
-                    .collect(),
-            ),
-            other => panic!("unexpected metric data: {other:?}"),
-        }
-    }
-
-    /// [`Metrics`] wired to a private in-memory meter provider.
-    struct TestMetrics {
-        metrics: Metrics,
-        exporter: SnapshotExporter,
-        provider: SdkMeterProvider,
-    }
-
-    impl TestMetrics {
-        fn new() -> Self {
-            let exporter = SnapshotExporter::default();
-            // The interval is irrelevant: tests export via `force_flush`.
-            let reader = PeriodicReader::builder(exporter.clone())
-                .with_interval(Duration::from_secs(3600))
-                .build();
-            let provider = SdkMeterProvider::builder().with_reader(reader).build();
-            let metrics = Metrics::new(&provider.meter("sealed_memory_service_test"));
-            Self { metrics, exporter, provider }
-        }
-
-        /// Collects and returns all currently exported metrics.
-        fn collect(&self) -> Snapshot {
-            *self.exporter.latest.lock().unwrap() = None;
-            self.provider.force_flush().expect("failed to flush metrics");
-            let exported =
-                self.exporter.latest.lock().unwrap().take().expect("nothing was exported");
-            let mut snapshot = BTreeMap::new();
-            for (name, metric) in exported {
-                assert!(snapshot.insert(name.clone(), metric).is_none(), "duplicate metric {name}");
-            }
-            Snapshot(snapshot)
-        }
+    /// Returns [`Metrics`] wired to a private in-memory meter provider.
+    fn test_metrics() -> TestMetrics {
+        TestMetrics::new(Metrics::new)
     }
 
     /// A metric method that takes no arguments.
@@ -1075,7 +840,7 @@ mod value_tests {
 
     #[test]
     fn startup_exports_zero_initialized_instruments() {
-        let harness = TestMetrics::new();
+        let harness = test_metrics();
         let snapshot = harness.collect();
 
         let empty: &[(&str, &str)] = &[];
@@ -1161,10 +926,10 @@ mod value_tests {
     /// configure its own, read from a probe histogram instead of copying
     /// the SDK's default values into this test.
     fn otel_default_histogram_boundaries() -> Vec<f64> {
-        let harness = TestMetrics::new();
-        let probe =
-            harness.provider.meter("probe").u64_histogram("default_boundaries_probe").build();
-        probe.record(0, &[]);
+        let harness = metrics_testing::TestMetrics::new(|meter| {
+            meter.u64_histogram("default_boundaries_probe").build()
+        });
+        harness.metrics.record(0, &[]);
         harness.collect().histogram("default_boundaries_probe", &[]).bounds.clone()
     }
 
@@ -1177,7 +942,7 @@ mod value_tests {
 
     #[test]
     fn instrument_names_units_descriptions_and_boundaries() {
-        let harness = TestMetrics::new();
+        let harness = test_metrics();
         let metrics = &harness.metrics;
         // Record into every instrument so that all of them are exported.
         metrics.record_db_save_speed(1);
@@ -1421,7 +1186,7 @@ mod value_tests {
             (request(R::SyncDatabaseRequest(Default::default())), "SyncDatabaseRequest"),
         ];
 
-        let harness = TestMetrics::new();
+        let harness = test_metrics();
         for (name, expected) in &cases {
             assert_eq!(Value::from(name.clone()).as_str(), *expected);
             harness.metrics.inc_requests(name.clone());
@@ -1439,7 +1204,7 @@ mod value_tests {
 
     #[test]
     fn inc_requests_counts_per_request_type() {
-        let harness = TestMetrics::new();
+        let harness = test_metrics();
         let metrics = &harness.metrics;
         metrics.inc_requests(RequestMetricName::total());
         metrics.inc_requests(RequestMetricName::total());
@@ -1466,7 +1231,7 @@ mod value_tests {
 
     #[test]
     fn inc_failures_counts_per_request_type() {
-        let harness = TestMetrics::new();
+        let harness = test_metrics();
         let metrics = &harness.metrics;
         metrics.inc_failures(RequestMetricName::total());
         metrics.inc_failures(RequestMetricName::handshake());
@@ -1491,7 +1256,7 @@ mod value_tests {
 
     #[test]
     fn record_latency_records_request_type_and_total() {
-        let harness = TestMetrics::new();
+        let harness = test_metrics();
         let metrics = &harness.metrics;
         // Zero is rounded up to 1 ms.
         metrics.record_latency(0, RequestMetricName::handshake());
@@ -1521,7 +1286,7 @@ mod value_tests {
 
     #[test]
     fn record_latency_with_total_name_double_counts_total() {
-        let harness = TestMetrics::new();
+        let harness = test_metrics();
         // TODO: b/571198870 - if `record_latency` is called with
         // `RequestMetricName::total()`, the sample is recorded twice in the
         // `total` series. Its only caller (`SealedMemorySessionHandler::handle`)
@@ -1535,7 +1300,7 @@ mod value_tests {
 
     #[test]
     fn db_size_uses_explicit_byte_buckets() {
-        let harness = TestMetrics::new();
+        let harness = test_metrics();
         for size in [0, 1, MB, MB + 1, 50 * MB, 60 * MB, 500 * MB, 600 * MB] {
             harness.metrics.record_db_size(size as u64);
         }
@@ -1564,7 +1329,7 @@ mod value_tests {
 
     #[test]
     fn db_init_latency_is_labelled_by_db_size_bucket() {
-        let harness = TestMetrics::new();
+        let harness = test_metrics();
         harness.metrics.record_db_init_latency(1_500, bucket_db_size(15 * MB));
         harness.metrics.record_db_init_latency(40_000, bucket_db_size(200 * MB));
 
@@ -1603,7 +1368,7 @@ mod value_tests {
         // tail, 120_000 is the last boundary and 120_001 overflows to `INF`.
         let values = [0, 5, 6, 7_500, 15_000, 120_000, 120_001];
         for (name, record, startup) in LATENCY_HISTOGRAMS {
-            let harness = TestMetrics::new();
+            let harness = test_metrics();
             for value in values {
                 record(&harness.metrics, value);
             }
@@ -1633,7 +1398,7 @@ mod value_tests {
     fn count_histograms_record_into_count_buckets() {
         let values = [0, 1, 2, 3, 4, 10, 11, 10_000, 10_001];
         for (name, record, startup) in COUNT_HISTOGRAMS {
-            let harness = TestMetrics::new();
+            let harness = test_metrics();
             for value in values {
                 record(&harness.metrics, value);
             }
@@ -1661,7 +1426,7 @@ mod value_tests {
     #[test]
     fn speed_histograms_round_up_and_record_into_speed_buckets() {
         for (name, record) in SPEED_HISTOGRAMS {
-            let harness = TestMetrics::new();
+            let harness = test_metrics();
             // Zero is rounded up to 1.
             for value in [0, 1, 4, 10_001] {
                 record(&harness.metrics, value);
@@ -1677,7 +1442,7 @@ mod value_tests {
     #[test]
     fn unit_counters_increment_by_one() {
         for (name, inc) in UNIT_COUNTERS {
-            let harness = TestMetrics::new();
+            let harness = test_metrics();
             for _ in 0..3 {
                 inc(&harness.metrics);
             }
@@ -1696,7 +1461,7 @@ mod value_tests {
     #[test]
     fn amount_counters_increment_by_amount() {
         for (name, inc) in AMOUNT_COUNTERS {
-            let harness = TestMetrics::new();
+            let harness = test_metrics();
             inc(&harness.metrics, 0);
             assert_eq!(harness.collect().counter(name, &[]), 0, "{name}");
             inc(&harness.metrics, 2);
@@ -1715,7 +1480,7 @@ mod value_tests {
 
     #[test]
     fn db_persist_queue_size_gauge_records_last_value() {
-        let harness = TestMetrics::new();
+        let harness = test_metrics();
         harness.metrics.record_db_persist_queue_size(5);
         assert_eq!(
             harness.collect().gauge_points("db_persist_queue_size"),
@@ -1742,7 +1507,7 @@ mod value_tests {
 
     #[test]
     fn icing_init_status_maps_status_codes() {
-        let harness = TestMetrics::new();
+        let harness = test_metrics();
         let metrics = &harness.metrics;
         metrics.record_icing_initialization_stats(&init_result(Some(
             icing::status_proto::Code::Ok as i32,
@@ -1783,7 +1548,7 @@ mod value_tests {
 
     #[test]
     fn icing_initialization_stats_map_to_metrics() {
-        let harness = TestMetrics::new();
+        let harness = test_metrics();
         let mut result = init_result(Some(icing::status_proto::Code::Ok as i32));
         result.initialize_stats = Some(icing::InitializeStatsProto {
             latency_ms: Some(150),
@@ -1848,7 +1613,7 @@ mod value_tests {
 
     #[test]
     fn icing_initialization_stats_skip_unset_fields() {
-        let harness = TestMetrics::new();
+        let harness = test_metrics();
         let mut result = init_result(Some(icing::status_proto::Code::Ok as i32));
         result.initialize_stats =
             Some(icing::InitializeStatsProto { latency_ms: Some(7), ..Default::default() });
