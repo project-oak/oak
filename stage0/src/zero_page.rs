@@ -373,6 +373,16 @@ impl ZeroPage {
     pub fn set_type_of_loader(&mut self, loader_type: u8) {
         self.inner.hdr.type_of_loader = loader_type;
     }
+
+    /// Returns the linear memory size starting at the kernel load address
+    /// required for kernel initialization and in-place decompression, as
+    /// specified by the `init_size` field of the setup header.
+    ///
+    /// See <https://www.kernel.org/doc/html/latest/arch/x86/boot.html> for more
+    /// details.
+    pub fn kernel_init_size(&self) -> usize {
+        self.inner.hdr.init_size as usize
+    }
 }
 
 /// Builds an E820 table by reading the low and high memory amount from CMOS.

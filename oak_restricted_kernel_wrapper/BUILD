@@ -13,11 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+load("@rules_rust//rust:defs.bzl", "rust_test")
+load("//bazel:defs.bzl", "any_platform")
 load(":rules.bzl", "kernel_bzimage_and_measurements")
 
 package(
     default_visibility = ["//:internal"],
     licenses = ["notice"],
+)
+
+rust_test(
+    name = "oak_restricted_kernel_wrapper_test",
+    size = "small",
+    srcs = ["src/elf.rs"],
+    crate_root = "src/elf.rs",
+    target_compatible_with = any_platform([
+        "//:x86_64-linux-setting",
+    ]),
+    deps = [
+        "//oak_linux_boot_params",
+        "@oak_crates_index//:elf",
+        "@oak_crates_index//:googletest",
+        "@oak_crates_index//:x86_64",
+    ],
 )
 
 kernel_bzimage_and_measurements(

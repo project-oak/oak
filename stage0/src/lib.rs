@@ -411,7 +411,10 @@ pub fn rust64_start<P: hal::Platform + hal::FirmwarePlatform>() -> ! {
     //  - Do not log anything any more.
     //  - Do not allocate memory.
     P::deinit_platform();
-    paging::remap_first_huge_page::<P>();
+    paging::remap_first_huge_page::<P>(
+        kernel.start(),
+        kernel.len().max(zero_page.kernel_init_size()),
+    );
 
     unsafe {
         kernel.jump_to_kernel(zero_page);

@@ -26,7 +26,7 @@ use core::{
 use oak_core::sync::OnceCell;
 use spinning_top::Spinlock;
 use x86_64::{
-    PhysAddr,
+    PhysAddr, VirtAddr, align_up,
     instructions::tlb::flush_all,
     structures::paging::{
         Page, PageSize, PageTable as BasePageTable, PageTableIndex, PhysFrame, Size2MiB, Size4KiB,
@@ -315,14 +315,14 @@ pub fn init_page_table_refs<P: Platform>() {
         }
         entry.set_address::<P>(
             PhysAddr::new((i as u64) * Size4KiB::SIZE),
-            PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+            PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
             PageAssignment::Private,
         );
     });
     // Let the first entry of PD_0 point to pt_0:
     pd_0[0].set_lower_level_table::<P>(
         pt_0.as_ref(),
-        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+        PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
     );
 
     let page_tables = PageTableRefs { pml4, pdpt, pd_0, pd_3, pt_0 };
@@ -343,7 +343,10 @@ pub fn map_additional_memory<P: Platform>() {
         pd.iter_mut().enumerate().skip(1).for_each(|(i, entry)| {
             entry.set_address::<P>(
                 PhysAddr::new((i as u64) * Size2MiB::SIZE),
-                PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
+                PageTableFlags::PRESENT
+                    | PageTableFlags::WRITABLE
+                    | PageTableFlags::HUGE_PAGE
+                    | PageTableFlags::NO_EXECUTE,
                 PageAssignment::Private,
             );
         });
@@ -353,17 +356,36 @@ pub fn map_additional_memory<P: Platform>() {
 }
 
 // Remaps the first 2MiB of memory, which was previously mapped as 512 4KiB
-// pages, as a single 2MiB huge page again.
-pub fn remap_first_huge_page<P: Platform>() {
+// pages, as a single 2MiB huge page again, and clears NO_EXECUTE on the first
+// 2MiB page and the 2MiB pages covering the loaded kernel image.
+pub fn remap_first_huge_page<P: Platform>(kernel_start: VirtAddr, kernel_size: usize) {
     {
         let mut page_tables = PAGE_TABLE_REFS.get().expect("page tables not initiallized").lock();
         let pd = &mut page_tables.pd_0;
 
+        // Allow identity-mapped 2MiB huge pages for the first 2MiB of memory
+        // again. We also clear NO_EXECUTE here because the Linux compressed
+        // boot stub (startup_64) places and executes a 32-bit trampoline in low
+        // memory (< 640 KiB) when transitioning between 4-level and 5-level
+        // paging (LA57); see:
+        // https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/arch/x86/boot/compressed/pgtable_64.c?h=v6.12.110
         pd[0].set_address::<P>(
             PhysAddr::new(0x0),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
             PageAssignment::Private,
         );
+
+        let start_index = (kernel_start.as_u64() / Size2MiB::SIZE) as usize;
+        let end_addr =
+            align_up(kernel_start.as_u64().saturating_add(kernel_size as u64), Size2MiB::SIZE);
+        let end_index = (end_addr / Size2MiB::SIZE) as usize;
+        for (i, entry) in pd.iter_mut().enumerate().take(end_index).skip(start_index.max(1)) {
+            entry.set_address::<P>(
+                PhysAddr::new((i as u64) * Size2MiB::SIZE),
+                PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
+                PageAssignment::Private,
+            );
+        }
     }
 
     flush_all();
@@ -390,7 +412,7 @@ pub fn share_page<P: Platform>(page: Page<Size4KiB>) {
         let pt = &mut page_tables.pt_0;
         pt[page.p1_index()].set_address::<P>(
             PhysAddr::new(page_start),
-            PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+            PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
             PageAssignment::Shared,
         );
     }
@@ -414,7 +436,7 @@ pub fn unshare_page<P: Platform>(page: Page<Size4KiB>) {
         let pt = &mut page_tables.pt_0;
         pt[page.p1_index()].set_address::<P>(
             PhysAddr::new(page_start),
-            PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+            PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
             PageAssignment::Private,
         );
     }

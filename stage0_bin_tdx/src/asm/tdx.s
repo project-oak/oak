@@ -97,12 +97,14 @@ _tdx_64bit_start:
     # Set the fourth entry of PDPT to point to PD_3 (3..4GiB).
     movl ${pdpt}, %eax
     movl ${pd_3}, %esi
-    orl $3, %esi              # esi |= 3 (PRESENT and WRITABLE)
+    orl $1, %esi              # esi |= 1 (PRESENT)
     movl %esi, 24(%eax)        # set first half of PDPT[3], each entry is 8 bytes
 
     # Set the first entry of PD_0 to point to and identity mapped huge page (0..2MiB).
+    movl ${pd_0}, %eax
     movl $0x83, %esi           # esi = 0x0 | 131 (PRESENT and WRITABLE and HUGE_PAGE)
-    movl %esi, ({pd_0})        # set first half of PD_0[0]
+    movl %esi, (%eax)          # set first half of PD_0[0]
+    movl $0x80000000, 4(%eax)  # set NO_EXECUTE (bit 63) in second half of PD_0[0]
 
     # Set the last entry of PD_3 to point to an identity-mapped 2MiB huge page ((4GiB-2MiB)..4GiB).
     # This is where the firmware ROM image is mapped, so we don't make it writable.

@@ -144,7 +144,7 @@ where
         .map(|(entry, frame)| {
             entry.set_address::<Sev>(
                 frame.start_address(),
-                PageTableFlags::PRESENT | flags,
+                PageTableFlags::PRESENT | PageTableFlags::NO_EXECUTE | flags,
                 PageAssignment::Private,
             )
         })
@@ -309,8 +309,10 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
     if page_tables.pdpt[1].flags().contains(PageTableFlags::PRESENT) {
         panic!("PDPT[1] is in use");
     }
-    page_tables.pdpt[1]
-        .set_lower_level_table::<Sev>(validation_pd.page_table.as_ref(), PageTableFlags::PRESENT);
+    page_tables.pdpt[1].set_lower_level_table::<Sev>(
+        validation_pd.page_table.as_ref(),
+        PageTableFlags::PRESENT | PageTableFlags::NO_EXECUTE,
+    );
 
     // Page table, for validation with 4 KiB pages.
     let mut validation_pt = MappedPage::new(VirtAddr::new(Size2MiB::SIZE)).unwrap();
@@ -320,8 +322,10 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
     if page_tables.pd_0[1].flags().contains(PageTableFlags::PRESENT) {
         panic!("PD_0[1] is in use");
     }
-    page_tables.pd_0[1]
-        .set_lower_level_table::<Sev>(validation_pt.page_table.as_ref(), PageTableFlags::PRESENT);
+    page_tables.pd_0[1].set_lower_level_table::<Sev>(
+        validation_pt.page_table.as_ref(),
+        PageTableFlags::PRESENT | PageTableFlags::NO_EXECUTE,
+    );
 
     // We already pvalidated the memory in the first 640KiB of RAM in the boot
     // assembly code. We avoid redoing this as calling pvalidate again on these

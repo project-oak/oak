@@ -177,12 +177,14 @@ sev_msr_done:
     # Set the fourth entry of PDPT to point to PD_3 (3..4GiB).
     mov ${pdpt}, %eax
     mov ${pd_3}, %esi
-    orl $3, %esi              # esi |= 3 (PRESENT and WRITABLE)
+    orl $1, %esi              # esi |= 1 (PRESENT)
     mov %esi, 24(%eax)        # set first half of PDPT[3], each entry is 8 bytes
 
     # Set the first entry of PD_0 to point to and identity mapped huge page (0..2MiB).
+    mov ${pd_0}, %eax
     mov $0x83, %esi           # esi = 0x0 | 131 (PRESENT and WRITABLE and HUGE_PAGE)
-    mov %esi, ({pd_0})        # set first half of PD_0[0]
+    mov %esi, (%eax)          # set first half of PD_0[0]
+    movl $0x80000000, 4(%eax) # set NO_EXECUTE (bit 63) in second half of PD_0[0]
 
     # Set the last entry of PD_3 to point to an identity-mapped 2MiB huge page ((4GiB-2MiB)..4GiB).
     # This is where the firmware ROM image is mapped, so we don't make it writable.
@@ -239,7 +241,7 @@ sev_msr_done:
     # always encrypted).
     # The encrypted bit is in the second half of each 8-byte entry, so we add an extra offset of 4 bytes.
     mov ${pd_0}, %eax
-    mov %esi, 4(%eax)         # set second half of PD_0[0]
+    orl %esi, 4(%eax)         # set encrypted bit in second half of PD_0[0] (preserving NO_EXECUTE)
     mov ${pd_3}, %eax
     mov %esi, 0xFFC(%eax)     # set second half of PD_3[511], each entry is 8 bytes
 no_encryption:
@@ -252,10 +254,10 @@ no_encryption:
     mov $0b100000, %eax
     mov %eax, %cr4
 
-    # Read EFER, enable LME
+    # Read EFER, enable LME and NXE
     mov $0xC0000080, %ecx
     rdmsr
-    or $0x00000100, %eax
+    or $0x00000900, %eax
     wrmsr
 
     # Protected mode + paging

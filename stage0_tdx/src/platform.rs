@@ -115,7 +115,9 @@ fn setup_mailbox() {
     assert!(addr_of!(TD_MAILBOX) as u64 == TD_MAILBOX_LOCATION, "TD Mailbox is misplaced");
     info!("Creating OS Mailbox");
     let os_mailbox = Box::new_in(OsMailbox::default(), &BOOT_ALLOC);
-    let os_mailbox_ptr = Box::leak(os_mailbox) as *const OsMailbox; // Let the allocator forget about it so it never deallocates it.
+    let os_mailbox_ptr = Box::leak(os_mailbox) as *const OsMailbox; // Let the allocator forget
+    // about it so it never
+    // deallocates it.
 
     // Use the firmware mailbox to tell APs where the OS mailbox is.
     // Safety: this is the only access to the structure at TD_MAILBOX_START.
@@ -133,8 +135,10 @@ fn init_tdx_page_tables() -> lock_api::MutexGuard<'static, spinning_top::RawSpin
         panic!("PDPT[1] is in use");
     }
 
-    page_tables.pdpt[1]
-        .set_lower_level_table::<Tdx>(accept_pd_pt.as_ref(), PageTableFlags::PRESENT);
+    page_tables.pdpt[1].set_lower_level_table::<Tdx>(
+        accept_pd_pt.as_ref(),
+        PageTableFlags::PRESENT | PageTableFlags::NO_EXECUTE,
+    );
     info!("added pdpt[1]");
 
     info!("adding pd_0[1]");
@@ -142,8 +146,10 @@ fn init_tdx_page_tables() -> lock_api::MutexGuard<'static, spinning_top::RawSpin
     if page_tables.pd_0[1].flags().contains(PageTableFlags::PRESENT) {
         panic!("PD_0[1] is in use");
     }
-    page_tables.pd_0[1]
-        .set_lower_level_table::<Tdx>(accept_pt_pt.as_ref(), PageTableFlags::PRESENT);
+    page_tables.pd_0[1].set_lower_level_table::<Tdx>(
+        accept_pt_pt.as_ref(),
+        PageTableFlags::PRESENT | PageTableFlags::NO_EXECUTE,
+    );
     info!("added pd_0[1]");
     page_tables
 }
