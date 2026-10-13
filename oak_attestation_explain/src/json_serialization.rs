@@ -129,6 +129,8 @@ pub fn serialize_intel_tdx_attestation_report(
         hardware_id,
         cpu_svn,
         pce_svn,
+        qe_cpu_svn,
+        qe_isv_svn,
     } = instance;
 
     json!({
@@ -139,6 +141,8 @@ pub fn serialize_intel_tdx_attestation_report(
         "hardware_id": hex::encode(hardware_id),
         "cpu_svn": hex::encode(cpu_svn),
         "pce_svn": pce_svn,
+        "qe_cpu_svn": hex::encode(qe_cpu_svn),
+        "qe_isv_svn": qe_isv_svn,
     })
 }
 

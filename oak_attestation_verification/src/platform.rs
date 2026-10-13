@@ -39,7 +39,7 @@ use zerocopy::FromBytes;
 
 use crate::{
     amd::{get_product, verify_attestation_report_signature},
-    intel::extract_pck_extension_data_from_quote,
+    intel::{extract_pck_extension_data_from_quote, extract_qe_report_data_from_quote},
     x509::{check_certificate_validity, verify_cert_signature},
 };
 
@@ -301,6 +301,8 @@ pub fn convert_intel_tdx_attestation_quote(
     anyhow::ensure!(quote.body.mrsigner_seam == &[0u8; 48], "TDX quote has non-zero MRSIGNERSEAM");
     let pck_ext = extract_pck_extension_data_from_quote(wrapper)
         .context("extracting PCK extension data from TDX quote")?;
+    let qe_report_data = extract_qe_report_data_from_quote(wrapper)
+        .context("extracting QE report data from TDX quote")?;
     Ok(IntelTdxAttestationReport {
         report_data: quote.body.report_data.to_vec(),
         tee_tcb_svn: Some(new_tdx_tcb_svn(quote.body.tee_tcb_svn)),
@@ -309,6 +311,8 @@ pub fn convert_intel_tdx_attestation_quote(
         hardware_id: pck_ext.ppid,
         cpu_svn: pck_ext.cpu_svn,
         pce_svn: pck_ext.pce_svn,
+        qe_cpu_svn: qe_report_data.cpu_svn,
+        qe_isv_svn: qe_report_data.isv_svn,
     })
 }
 

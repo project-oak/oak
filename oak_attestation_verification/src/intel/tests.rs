@@ -30,8 +30,9 @@ use x509_cert::{
 };
 
 use super::{
-    PCK_ROOT, RtmrEmulator, extract_pck_extension_data_from_quote, verify_intel_tdx_quote_validity,
-    verify_qe_report_identity, verify_quote_cert_chain_and_extract_leaf,
+    PCK_ROOT, RtmrEmulator, extract_pck_extension_data_from_quote,
+    extract_qe_report_data_from_quote, verify_intel_tdx_quote_validity, verify_qe_report_identity,
+    verify_quote_cert_chain_and_extract_leaf,
 };
 use crate::x509::verify_cert_signature;
 
@@ -334,6 +335,8 @@ fn qe_report_with_unexpected_mr_signer_fails() {
     // bytes 898..930 of the evidence).
     quote_buffer[899] = 0;
     assert!(verify_qe_report_identity_from_quote(&quote_buffer).is_err());
+    let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
+    assert!(crate::platform::convert_intel_tdx_attestation_quote(&wrapper).is_err());
 }
 
 #[test]
@@ -344,6 +347,8 @@ fn qe_report_with_unexpected_isv_prod_id_fails() {
     // bytes 1026..1028 of the evidence).
     quote_buffer[1026] = 1;
     assert!(verify_qe_report_identity_from_quote(&quote_buffer).is_err());
+    let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
+    assert!(crate::platform::convert_intel_tdx_attestation_quote(&wrapper).is_err());
 }
 
 #[test]
@@ -354,6 +359,8 @@ fn qe_report_with_debug_attribute_fails() {
     // bytes 818..834 of the evidence).
     quote_buffer[818] |= 0x02;
     assert!(verify_qe_report_identity_from_quote(&quote_buffer).is_err());
+    let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
+    assert!(crate::platform::convert_intel_tdx_attestation_quote(&wrapper).is_err());
 }
 
 #[test]
@@ -364,6 +371,8 @@ fn qe_report_with_unexpected_misc_select_fails() {
     // bytes 786..790 of the evidence).
     quote_buffer[786] = 1;
     assert!(verify_qe_report_identity_from_quote(&quote_buffer).is_err());
+    let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
+    assert!(crate::platform::convert_intel_tdx_attestation_quote(&wrapper).is_err());
 }
 
 #[test]
@@ -526,4 +535,17 @@ fn extract_pck_extension_data_succeeds() {
     assert_eq!(pck_data.ppid.len(), 16);
     assert_eq!(pck_data.cpu_svn.len(), 16);
     assert!(pck_data.pce_svn > 0);
+}
+
+#[test]
+fn extract_qe_report_data_succeeds() {
+    let quote_buffer = get_evidence_quote_bytes();
+    let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
+    let qe_data = extract_qe_report_data_from_quote(&wrapper).expect("QE report extraction failed");
+    assert_eq!(qe_data.cpu_svn.len(), 16);
+    assert!(qe_data.isv_svn > 0);
+    let report = crate::platform::convert_intel_tdx_attestation_quote(&wrapper)
+        .expect("TDX quote conversion failed");
+    assert_eq!(report.qe_cpu_svn, qe_data.cpu_svn);
+    assert_eq!(report.qe_isv_svn, qe_data.isv_svn);
 }

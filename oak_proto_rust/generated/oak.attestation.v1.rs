@@ -2287,7 +2287,7 @@ pub struct AmdAttestationReport {
     pub current_mit_vector: ::core::option::Option<u64>,
 }
 /// Values extracted from an Intel TDX attestation report.
-/// NEXT_ID: 8
+/// NEXT_ID: 10
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct IntelTdxAttestationReport {
     /// The custom bytes that were passed to the report when it was requested.
@@ -2315,6 +2315,13 @@ pub struct IntelTdxAttestationReport {
     /// The PCE SVN of the Intel TDX platform from the PCK leaf certificate.
     #[prost(uint32, tag = "7")]
     pub pce_svn: u32,
+    /// The 16-byte CPU SVN from the Quoting Enclave report.
+    #[prost(bytes = "vec", tag = "8")]
+    pub qe_cpu_svn: ::prost::alloc::vec::Vec<u8>,
+    /// The ISV SVN (security version number) of the Intel TDX Quoting Enclave
+    /// from the Quoting Enclave report.
+    #[prost(uint32, tag = "9")]
+    pub qe_isv_svn: u32,
 }
 /// Values extracted from a fake attestation report when not running in a TEE.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]

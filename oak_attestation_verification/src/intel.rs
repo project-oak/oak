@@ -62,6 +62,13 @@ pub struct PckExtensionData {
     pub pce_svn: u32,
 }
 
+/// Values extracted from the Quoting Enclave report in an Intel TDX quote.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QeReportData {
+    pub cpu_svn: Vec<u8>,
+    pub isv_svn: u32,
+}
+
 // Identity of the Intel TDX Quoting Enclave (TD_QE), as published by Intel at
 // <https://api.trustedservices.intel.com/tdx/certification/v4/qe/identity>.
 //
@@ -272,6 +279,22 @@ pub fn extract_pck_extension_data_from_quote(
         };
     let leaf = certificates.first().ok_or_else(|| anyhow!("certificate chain is empty"))?;
     extract_pck_extension_data(leaf)
+}
+
+/// Verifies the Quoting Enclave identity and extracts the CPU SVN and ISV SVN
+/// from the Quoting Enclave report in a TDX quote.
+pub fn extract_qe_report_data_from_quote(quote: &TdxQuoteWrapper) -> anyhow::Result<QeReportData> {
+    let signature_data = quote.parse_signature_data().context("parsing signature data")?;
+    let report_certification = match signature_data.certification_data {
+        QeCertificationData::QeReportCertificationData(report_certification) => {
+            Ok(report_certification)
+        }
+        _ => Err(anyhow!("signature data contains the wrong type of certification data")),
+    }?;
+    let qe_report =
+        report_certification.parse_enclave_report_body().context("parsing enclave report body")?;
+    verify_qe_report_identity(&qe_report).context("verifying quoting enclave identity")?;
+    Ok(QeReportData { cpu_svn: qe_report.cpu_svn.to_vec(), isv_svn: u32::from(qe_report.isv_svn) })
 }
 
 /// Extracts the SGX extension values (PPID, CPUSVN, PCESVN) from an Intel PCK
