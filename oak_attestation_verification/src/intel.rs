@@ -17,10 +17,11 @@
 //! Utilities for validating Intel provisioning certificates and attestation
 //! quotes.
 
+use alloc::vec::Vec;
 use core::convert::Into;
 
 use anyhow::{Context, anyhow};
-use const_oid::AssociatedOid;
+use const_oid::{AssociatedOid, ObjectIdentifier};
 use oak_digest::{Sha256, Sha384};
 use oak_tdx_quote::{EnclaveReportBody, QeCertificationData, TdxQuoteWrapper};
 use oak_time::Instant;
@@ -30,7 +31,8 @@ use p256::{
 };
 use x509_cert::{
     Certificate,
-    der::{Decode, DecodePem, referenced::OwnedToRef},
+    attr::AttributeTypeAndValue,
+    der::{Decode, DecodePem, asn1::OctetStringRef, referenced::OwnedToRef},
     ext::pkix::{BasicConstraints, KeyUsage},
 };
 
@@ -39,6 +41,26 @@ use crate::x509::{check_certificate_validity, verify_cert_signature};
 const PCK_ROOT: &str = include_str!("../data/Intel_SGX_Provisioning_Certification_RootCA.pem");
 /// The size in bytes of a SHA2-384 digest.
 const SHA2_384_DIGEST_SIZE: usize = 48;
+/// The size in bytes of the Intel SGX/TDX PPID.
+const PPID_SIZE: usize = 16;
+/// The size in bytes of the Intel SGX/TDX CPUSVN.
+const CPU_SVN_SIZE: usize = 16;
+
+// OIDs from Section 3.3 of the Intel SGX PCK Certificate and CRL Profile at
+// <https://download.01.org/intel-sgx/latest/dcap-latest/linux/docs/SGX_PCK_Certificate_CRL_Spec-1.4.pdf>.
+const SGX_EXTENSION_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.2.840.113741.1.13.1");
+const PPID_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.2.840.113741.1.13.1.1");
+const TCB_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.2.840.113741.1.13.1.2");
+const PCESVN_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.2.840.113741.1.13.1.2.17");
+const CPUSVN_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.2.840.113741.1.13.1.2.18");
+
+/// Values extracted from the SGX extension of an Intel PCK leaf certificate.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PckExtensionData {
+    pub ppid: Vec<u8>,
+    pub cpu_svn: Vec<u8>,
+    pub pce_svn: u32,
+}
 
 // Identity of the Intel TDX Quoting Enclave (TD_QE), as published by Intel at
 // <https://api.trustedservices.intel.com/tdx/certification/v4/qe/identity>.
@@ -75,6 +97,16 @@ pub fn verify_intel_tdx_quote_validity(
     verification_time: Instant,
     quote: &TdxQuoteWrapper,
 ) -> anyhow::Result<()> {
+    let parsed_quote = quote.parse_quote().context("parsing quote")?;
+    anyhow::ensure!(
+        parsed_quote.body.seam_attributes == 0,
+        "TDX quote has non-zero SEAMATTRIBUTES"
+    );
+    anyhow::ensure!(
+        parsed_quote.body.mrsigner_seam == &[0u8; 48],
+        "TDX quote has non-zero MRSIGNERSEAM"
+    );
+
     let signature_data = quote.parse_signature_data().context("parsing signature data")?;
 
     let report_certification = match signature_data.certification_data {
@@ -216,6 +248,102 @@ pub fn verify_quote_cert_chain_and_extract_leaf(
         signee = signer;
     }
     Ok(leaf)
+}
+
+/// Extracts the PCK SGX extension data (PPID, CPUSVN, PCESVN) from the leaf
+/// PCK certificate in a TDX quote.
+pub fn extract_pck_extension_data_from_quote(
+    quote: &TdxQuoteWrapper,
+) -> anyhow::Result<PckExtensionData> {
+    let signature_data = quote.parse_signature_data().context("parsing signature data")?;
+    let report_certification = match signature_data.certification_data {
+        QeCertificationData::QeReportCertificationData(report_certification) => {
+            Ok(report_certification)
+        }
+        _ => Err(anyhow!("signature data contains the wrong type of certification data")),
+    }?;
+    let certificates =
+        if let QeCertificationData::PckCertChain(chain) = report_certification.certification_data {
+            Certificate::load_pem_chain(chain)
+                .map_err(anyhow::Error::msg)
+                .context("parsing certificate chain")?
+        } else {
+            anyhow::bail!("certification data is not a PCK certificate chain");
+        };
+    let leaf = certificates.first().ok_or_else(|| anyhow!("certificate chain is empty"))?;
+    extract_pck_extension_data(leaf)
+}
+
+/// Extracts the SGX extension values (PPID, CPUSVN, PCESVN) from an Intel PCK
+/// leaf certificate.
+pub fn extract_pck_extension_data(cert: &Certificate) -> anyhow::Result<PckExtensionData> {
+    let extensions = cert
+        .tbs_certificate
+        .extensions
+        .as_ref()
+        .ok_or_else(|| anyhow!("PCK certificate has no extensions"))?;
+    let sgx_ext = extensions
+        .iter()
+        .find(|ext| ext.extn_id == SGX_EXTENSION_OID)
+        .ok_or_else(|| anyhow!("PCK certificate is missing SGX extension"))?;
+
+    let sgx_extensions: Vec<AttributeTypeAndValue> =
+        Decode::from_der(sgx_ext.extn_value.as_bytes())
+            .map_err(anyhow::Error::msg)
+            .context("parsing SGX extension ASN.1 sequence")?;
+
+    let mut ppid: Option<Vec<u8>> = None;
+    let mut cpu_svn: Option<Vec<u8>> = None;
+    let mut pce_svn: Option<u32> = None;
+
+    for ext in sgx_extensions {
+        if ext.oid == PPID_OID {
+            let ppid_octets: OctetStringRef<'_> =
+                ext.value.decode_as().map_err(anyhow::Error::msg).context("parsing PPID")?;
+            anyhow::ensure!(
+                ppid_octets.as_bytes().len() == PPID_SIZE,
+                "unexpected PPID length: got {}, expected {}",
+                ppid_octets.as_bytes().len(),
+                PPID_SIZE
+            );
+            ppid = Some(ppid_octets.as_bytes().to_vec());
+        } else if ext.oid == TCB_OID {
+            let tcb_components: Vec<AttributeTypeAndValue> = ext
+                .value
+                .decode_as()
+                .map_err(anyhow::Error::msg)
+                .context("parsing TCB sequence")?;
+            for tcb_ext in tcb_components {
+                if tcb_ext.oid == CPUSVN_OID {
+                    let cpu_svn_octets: OctetStringRef<'_> = tcb_ext
+                        .value
+                        .decode_as()
+                        .map_err(anyhow::Error::msg)
+                        .context("parsing CPUSVN")?;
+                    anyhow::ensure!(
+                        cpu_svn_octets.as_bytes().len() == CPU_SVN_SIZE,
+                        "unexpected CPUSVN length: got {}, expected {}",
+                        cpu_svn_octets.as_bytes().len(),
+                        CPU_SVN_SIZE
+                    );
+                    cpu_svn = Some(cpu_svn_octets.as_bytes().to_vec());
+                } else if tcb_ext.oid == PCESVN_OID {
+                    let svn: u16 = tcb_ext
+                        .value
+                        .decode_as()
+                        .map_err(anyhow::Error::msg)
+                        .context("parsing PCESVN")?;
+                    pce_svn = Some(u32::from(svn));
+                }
+            }
+        }
+    }
+
+    Ok(PckExtensionData {
+        ppid: ppid.ok_or_else(|| anyhow!("PPID not found in PCK SGX extension"))?,
+        cpu_svn: cpu_svn.ok_or_else(|| anyhow!("CPUSVN not found in PCK SGX extension"))?,
+        pce_svn: pce_svn.ok_or_else(|| anyhow!("PCESVN not found in PCK SGX extension"))?,
+    })
 }
 
 fn get_extension<'a, T: AssociatedOid + Decode<'a>>(

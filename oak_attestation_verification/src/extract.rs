@@ -38,10 +38,14 @@ use oak_proto_rust::oak::{
     },
 };
 use oak_sev_snp_attestation_report::AttestationReport;
+use oak_tdx_quote::TdxQuoteWrapper;
 use prost::Message;
 use zerocopy::FromBytes;
 
-use crate::{platform::convert_amd_sev_snp_attestation_report, verifier::EventLogType};
+use crate::{
+    platform::{convert_amd_sev_snp_attestation_report, convert_intel_tdx_attestation_quote},
+    verifier::EventLogType,
+};
 
 pub(crate) struct ApplicationKeyValues {
     pub(crate) encryption_public_key: Vec<u8>,
@@ -326,7 +330,7 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
 }
 
 /// Extracts values from the attestation report.
-fn extract_root_values(root_layer: &RootLayerEvidence) -> anyhow::Result<RootLayerData> {
+pub fn extract_root_values(root_layer: &RootLayerEvidence) -> anyhow::Result<RootLayerData> {
     match root_layer.platform() {
         TeePlatform::Unspecified => Err(anyhow::anyhow!("unspecified TEE platform")),
         TeePlatform::AmdSevSnp => {
@@ -339,7 +343,11 @@ fn extract_root_values(root_layer: &RootLayerEvidence) -> anyhow::Result<RootLay
             let converted_attestation_report = convert_amd_sev_snp_attestation_report(report)?;
             Ok(RootLayerData { report: Some(Report::SevSnp(converted_attestation_report)) })
         }
-        TeePlatform::IntelTdx => Err(anyhow::anyhow!("not supported")),
+        TeePlatform::IntelTdx => {
+            let wrapper = TdxQuoteWrapper::new(root_layer.remote_attestation_report.as_slice());
+            let converted_attestation_report = convert_intel_tdx_attestation_quote(&wrapper)?;
+            Ok(RootLayerData { report: Some(Report::Tdx(converted_attestation_report)) })
+        }
         TeePlatform::None => {
             // We use an unsigned, mostly empty AMD SEV-SNP attestation report as a fake
             // when not running in a TEE.

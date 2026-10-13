@@ -30,8 +30,8 @@ use x509_cert::{
 };
 
 use super::{
-    PCK_ROOT, RtmrEmulator, verify_intel_tdx_quote_validity, verify_qe_report_identity,
-    verify_quote_cert_chain_and_extract_leaf,
+    PCK_ROOT, RtmrEmulator, extract_pck_extension_data_from_quote, verify_intel_tdx_quote_validity,
+    verify_qe_report_identity, verify_quote_cert_chain_and_extract_leaf,
 };
 use crate::x509::verify_cert_signature;
 
@@ -495,4 +495,35 @@ fn tampered_event_log_doesnt_match_rtmr_evidence() {
         expected,
         "RTMR2 in quote matches the value calculated from the tampered event log"
     );
+}
+
+#[test]
+fn tdx_quote_with_nonzero_seam_attributes_fails() {
+    let mut quote_buffer = get_evidence_quote_bytes();
+    // Change a byte in SEAMATTRIBUTES (bytes 160..168 of the TDX quote).
+    quote_buffer[160] = 1;
+    let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
+    assert!(verify_intel_tdx_quote_validity(get_valid_time(), &wrapper).is_err());
+    assert!(crate::platform::convert_intel_tdx_attestation_quote(&wrapper).is_err());
+}
+
+#[test]
+fn tdx_quote_with_nonzero_mrsigner_seam_fails() {
+    let mut quote_buffer = get_evidence_quote_bytes();
+    // Change a byte in MRSIGNERSEAM (bytes 112..160 of the TDX quote).
+    quote_buffer[112] = 1;
+    let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
+    assert!(verify_intel_tdx_quote_validity(get_valid_time(), &wrapper).is_err());
+    assert!(crate::platform::convert_intel_tdx_attestation_quote(&wrapper).is_err());
+}
+
+#[test]
+fn extract_pck_extension_data_succeeds() {
+    let quote_buffer = get_evidence_quote_bytes();
+    let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
+    let pck_data =
+        extract_pck_extension_data_from_quote(&wrapper).expect("PCK extension extraction failed");
+    assert_eq!(pck_data.ppid.len(), 16);
+    assert_eq!(pck_data.cpu_svn.len(), 16);
+    assert!(pck_data.pce_svn > 0);
 }

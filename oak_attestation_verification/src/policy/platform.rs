@@ -222,19 +222,15 @@ impl Policy<RootLayerEvidence> for IntelTdxPolicy {
         intel::verify_intel_tdx_quote_validity(verification_time, &wrapper)
             .context("verifying TDX quote validity")?;
 
-        let quote = wrapper
-            .parse_quote()
-            .map_err(|err| anyhow::anyhow!("invalid Intel TDX attestation quote: {}", err))?;
-
         // Verify attestation quote values.
-        let quote_values = convert_intel_tdx_attestation_quote(&quote);
+        let quote_values = convert_intel_tdx_attestation_quote(&wrapper)?;
         let expected_values = get_intel_tdx_expected_values(&self.reference_values)
             .context("getting Intel TDX expected values")?;
         verify_intel_tdx_attestation_quote(&quote_values, &expected_values)
             .context("verifying Intel TDX attestation quote values")?;
 
         let mut results = EventAttestationResults { ..Default::default() };
-        set_initial_measurement(&mut results, quote.body.mr_td.as_slice());
+        set_initial_measurement(&mut results, quote_values.mr_td.as_slice());
         Ok(results)
     }
 }

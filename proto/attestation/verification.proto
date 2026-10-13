@@ -232,7 +232,7 @@ message AmdAttestationReport {
 }
 
 // Values extracted from an Intel TDX attestation report.
-// NEXT_ID: 5
+// NEXT_ID: 8
 message IntelTdxAttestationReport {
   // The custom bytes that were passed to the report when it was requested.
   bytes report_data = 1;
@@ -247,6 +247,17 @@ message IntelTdxAttestationReport {
   // startup. This implicitly includes the measurement of the Stage 0 firmware
   // binary.
   bytes mr_td = 4;
+
+  // The hardware ID (16-byte PPID) of the Intel TDX platform from the PCK leaf
+  // certificate.
+  bytes hardware_id = 5;
+
+  // The 16-byte CPU SVN of the Intel TDX platform from the PCK leaf
+  // certificate.
+  bytes cpu_svn = 6;
+
+  // The PCE SVN of the Intel TDX platform from the PCK leaf certificate.
+  uint32 pce_svn = 7;
 }
 
 // Values extracted from a fake attestation report when not running in a TEE.

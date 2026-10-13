@@ -38,7 +38,7 @@ mod x509;
 mod test_util;
 
 pub use expect::get_expected_values;
-pub use extract::extract_evidence;
+pub use extract::{extract_evidence, extract_root_values};
 pub use key_util::convert_pem_to_raw;
 use oak_proto_rust::oak::attestation::v1::{
     Endorsement, EndorsementDetails, EndorsementReferenceValue, PesEndorsementReferenceValue,

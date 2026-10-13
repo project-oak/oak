@@ -121,13 +121,24 @@ pub fn serialize_intel_tdx_attestation_report(
     // all fields. If a new field is added to the struct, this code won't
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
-    let IntelTdxAttestationReport { report_data, tee_tcb_svn, debug, mr_td } = instance;
+    let IntelTdxAttestationReport {
+        report_data,
+        tee_tcb_svn,
+        debug,
+        mr_td,
+        hardware_id,
+        cpu_svn,
+        pce_svn,
+    } = instance;
 
     json!({
         "report_data": hex::encode(report_data),
         "tee_tcb_svn": tee_tcb_svn.as_ref().map(serialize_tdx_tcb_svn),
         "debug": debug,
         "mr_td": hex::encode(mr_td),
+        "hardware_id": hex::encode(hardware_id),
+        "cpu_svn": hex::encode(cpu_svn),
+        "pce_svn": pce_svn,
     })
 }
 

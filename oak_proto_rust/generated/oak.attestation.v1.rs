@@ -2287,7 +2287,7 @@ pub struct AmdAttestationReport {
     pub current_mit_vector: ::core::option::Option<u64>,
 }
 /// Values extracted from an Intel TDX attestation report.
-/// NEXT_ID: 5
+/// NEXT_ID: 8
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct IntelTdxAttestationReport {
     /// The custom bytes that were passed to the report when it was requested.
@@ -2304,6 +2304,17 @@ pub struct IntelTdxAttestationReport {
     /// binary.
     #[prost(bytes = "vec", tag = "4")]
     pub mr_td: ::prost::alloc::vec::Vec<u8>,
+    /// The hardware ID (16-byte PPID) of the Intel TDX platform from the PCK leaf
+    /// certificate.
+    #[prost(bytes = "vec", tag = "5")]
+    pub hardware_id: ::prost::alloc::vec::Vec<u8>,
+    /// The 16-byte CPU SVN of the Intel TDX platform from the PCK leaf
+    /// certificate.
+    #[prost(bytes = "vec", tag = "6")]
+    pub cpu_svn: ::prost::alloc::vec::Vec<u8>,
+    /// The PCE SVN of the Intel TDX platform from the PCK leaf certificate.
+    #[prost(uint32, tag = "7")]
+    pub pce_svn: u32,
 }
 /// Values extracted from a fake attestation report when not running in a TEE.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]

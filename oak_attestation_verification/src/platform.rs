@@ -29,7 +29,7 @@ use oak_proto_rust::oak::{
     },
 };
 use oak_sev_snp_attestation_report::{AmdProduct, AttestationReport, PlatformInfo};
-use oak_tdx_quote::{ParsedTdxQuote, TdAttributes};
+use oak_tdx_quote::{TdAttributes, TdxQuoteWrapper};
 use oak_time::Instant;
 use x509_cert::{
     Certificate,
@@ -39,6 +39,7 @@ use zerocopy::FromBytes;
 
 use crate::{
     amd::{get_product, verify_attestation_report_signature},
+    intel::extract_pck_extension_data_from_quote,
     x509::{check_certificate_validity, verify_cert_signature},
 };
 
@@ -290,13 +291,25 @@ pub fn initial_measurement_to_raw_digest(initial_measurement: &[u8]) -> RawDiges
     RawDigest { sha2_384: initial_measurement.to_vec(), ..Default::default() }
 }
 
-pub fn convert_intel_tdx_attestation_quote(quote: &ParsedTdxQuote) -> IntelTdxAttestationReport {
-    IntelTdxAttestationReport {
+pub fn convert_intel_tdx_attestation_quote(
+    wrapper: &TdxQuoteWrapper,
+) -> anyhow::Result<IntelTdxAttestationReport> {
+    let quote = wrapper
+        .parse_quote()
+        .map_err(|err| anyhow::anyhow!("invalid Intel TDX attestation quote: {}", err))?;
+    anyhow::ensure!(quote.body.seam_attributes == 0, "TDX quote has non-zero SEAMATTRIBUTES");
+    anyhow::ensure!(quote.body.mrsigner_seam == &[0u8; 48], "TDX quote has non-zero MRSIGNERSEAM");
+    let pck_ext = extract_pck_extension_data_from_quote(wrapper)
+        .context("extracting PCK extension data from TDX quote")?;
+    Ok(IntelTdxAttestationReport {
         report_data: quote.body.report_data.to_vec(),
         tee_tcb_svn: Some(new_tdx_tcb_svn(quote.body.tee_tcb_svn)),
         debug: quote.body.td_attributes.contains(TdAttributes::DEBUG),
         mr_td: quote.body.mr_td.to_vec(),
-    }
+        hardware_id: pck_ext.ppid,
+        cpu_svn: pck_ext.cpu_svn,
+        pce_svn: pck_ext.pce_svn,
+    })
 }
 
 pub fn new_tdx_tcb_svn(tee_tcb_svn: &[u8; 16]) -> TdxTcbSvn {
