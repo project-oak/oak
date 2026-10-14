@@ -44,6 +44,13 @@ use thiserror::Error;
 const QUOTE_HEADER_SIZE: usize = 48;
 const QUOTE_BODY_SIZE: usize = 584;
 
+/// Maximum supported nesting depth for the certification data chain. A valid
+/// quote nests a single `QeReportCertificationData` whose own certification
+/// data is a PCK certificate chain, so this bound sits well above any
+/// legitimate quote while stopping a crafted quote from recursing without
+/// limit through nested `QeReportCertificationData` structures.
+const MAX_QE_CERT_DATA_DEPTH: usize = 8;
+
 /// Possible errors
 #[derive(Error, Debug)]
 pub enum TdxQuoteError {
@@ -341,7 +348,14 @@ pub enum QeCertificationData<'a> {
 
 impl<'a> QeCertificationData<'a> {
     /// Parses a TDX quote header from a byte slice.
-    fn parse(bytes: &'a [u8]) -> nom::IResult<&'a [u8], Self> {
+    ///
+    /// `depth` tracks how many `QeReportCertificationData` structures have been
+    /// entered on the current recursion path, so that a crafted quote nesting
+    /// them cannot recurse without bound.
+    fn parse(bytes: &'a [u8], depth: usize) -> nom::IResult<&'a [u8], Self> {
+        if depth > MAX_QE_CERT_DATA_DEPTH {
+            return Err(nom::Err::Failure(nom::error::Error::new(bytes, ErrorKind::TooLarge)));
+        }
         let (rest, certification_data_type) = le_u16(bytes)?;
         let (rest, length) = le_u32(rest)?;
         let (rest, bytes) = take(length)(rest)?;
@@ -365,7 +379,8 @@ impl<'a> QeCertificationData<'a> {
                 Ok((rest, QeCertificationData::PckCertChain(bytes)))
             }
             QeCertificationDataType::QeReportCertificationData => {
-                let (_, report_certification_data) = QeReportCertificationData::parse(bytes)?;
+                let (_, report_certification_data) =
+                    QeReportCertificationData::parse(bytes, depth + 1)?;
                 Ok((
                     rest,
                     QeCertificationData::QeReportCertificationData(Box::new(
@@ -463,7 +478,7 @@ impl<'a> QuoteSignatureData<'a> {
     fn parse(bytes: &'a [u8]) -> nom::IResult<&'a [u8], Self> {
         let (rest, quote_signature) = take(64usize)(bytes)?;
         let (rest, ecdsa_attestation_key) = take(64usize)(rest)?;
-        let (rest, certification_data) = QeCertificationData::parse(rest)?;
+        let (rest, certification_data) = QeCertificationData::parse(rest, 0)?;
         Ok((
             rest,
             // Unwrapping is OK here since we know the slices must have the right length if
@@ -491,12 +506,12 @@ pub struct QeReportCertificationData<'a> {
 }
 
 impl<'a> QeReportCertificationData<'a> {
-    fn parse(bytes: &'a [u8]) -> nom::IResult<&'a [u8], Self> {
+    fn parse(bytes: &'a [u8], depth: usize) -> nom::IResult<&'a [u8], Self> {
         let (rest, report_body) = take(384usize)(bytes)?;
         let (rest, signature) = take(64usize)(rest)?;
         let (rest, authentication_data_length) = le_u16(rest)?;
         let (rest, authentication_data) = take(authentication_data_length as usize)(rest)?;
-        let (rest, certification_data) = QeCertificationData::parse(rest)?;
+        let (rest, certification_data) = QeCertificationData::parse(rest, depth)?;
         Ok((
             rest,
             // Unwrapping is OK here since we know the slices must have the right length if
@@ -652,5 +667,52 @@ mod tests {
         assert_that!(enclave_report.reserved3, eq(&[0u8; 96]));
         assert_that!(enclave_report.reserved4, eq(&[0u8; 60]));
         assert_that!(enclave_report.report_data, not(eq(&[0u8; 64])));
+    }
+
+    // Builds a terminal (non-recursing) PCK cert chain certification data entry.
+    fn terminal_cert_data() -> Vec<u8> {
+        let mut v = Vec::new();
+        v.extend_from_slice(&(QeCertificationDataType::PckCertChain as u16).to_le_bytes());
+        v.extend_from_slice(&0u32.to_le_bytes());
+        v
+    }
+
+    // Wraps `inner` certification data bytes in one QeReportCertificationData
+    // carried by a type-6 QeCertificationData, so parsing it recurses once.
+    fn wrap_qe_report_cert_data(inner: &[u8]) -> Vec<u8> {
+        let mut body = Vec::new();
+        body.extend_from_slice(&[0u8; 384]); // report_body
+        body.extend_from_slice(&[0u8; 64]); // signature
+        body.extend_from_slice(&0u16.to_le_bytes()); // authentication_data_length
+        body.extend_from_slice(inner);
+        let mut v = Vec::new();
+        v.extend_from_slice(
+            &(QeCertificationDataType::QeReportCertificationData as u16).to_le_bytes(),
+        );
+        v.extend_from_slice(&(body.len() as u32).to_le_bytes());
+        v.extend_from_slice(&body);
+        v
+    }
+
+    fn nested_cert_data(depth: usize) -> Vec<u8> {
+        let mut cur = terminal_cert_data();
+        for _ in 0..depth {
+            cur = wrap_qe_report_cert_data(&cur);
+        }
+        cur
+    }
+
+    #[test]
+    fn single_level_qe_report_cert_data_parses() {
+        let bytes = nested_cert_data(1);
+        assert!(QeCertificationData::parse(&bytes, 0).is_ok());
+    }
+
+    #[test]
+    fn deeply_nested_qe_report_cert_data_is_rejected() {
+        // Without a depth bound this recurses once per nesting level and
+        // overflows the stack; the bound makes it a clean parse error instead.
+        let bytes = nested_cert_data(MAX_QE_CERT_DATA_DEPTH + 4);
+        assert!(QeCertificationData::parse(&bytes, 0).is_err());
     }
 }
