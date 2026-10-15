@@ -272,3 +272,65 @@ fn test_get_authorized_digests_merges_static_and_dynamic() {
     assert!(digests.contains(&b"static_digest".to_vec()));
     assert!(digests.contains(&b"endorsement_digest".to_vec()));
 }
+
+#[test]
+fn test_get_authorized_digests_empty_static_list_fails() {
+    let params = AuthorizedWorkloadEndorsementParams {
+        authorized_image_digests: Some(vec![]),
+        authorized_endorsement_path: None,
+        authorized_endorsement_signature_path: None,
+        authorized_endorsement_verifying_key_pem_path: None,
+    };
+    let verification_time = oak_time::make_instant!("2026-07-15T12:00:00Z");
+    let result = params.get_authorized_digests(verification_time);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("no image digests"));
+}
+
+#[test]
+fn test_get_authorized_digests_endorsement_without_sha256_subject_fails() {
+    let dir = tempdir().unwrap();
+    let (signing_key, public_key_pem) = create_test_keys();
+
+    let endorsement_path = dir.path().join("endorsement.json");
+    let sig_path = dir.path().join("endorsement.sig");
+    let key_path = dir.path().join("key.pem");
+
+    let endorsement_json = r#"{
+        "_type": "https://in-toto.io/Statement/v1",
+        "subject": [
+            {
+                "name": "test",
+                "digest": {
+                    "sha512": "cc564c5f64a18fc6e53dd737ec19774b68b609eb59cac4f13dcfd25cb61f3f68"
+                }
+            }
+        ],
+        "predicateType": "https://project-oak.github.io/oak/tr/endorsement/v1",
+        "predicate": {
+            "issuedOn": "2026-07-14T12:00:00Z",
+            "validity": {
+                "notBefore": "2026-07-14T12:00:00Z",
+                "notAfter": "2026-07-21T12:00:00Z"
+            }
+        }
+    }"#;
+
+    std::fs::write(&endorsement_path, endorsement_json.as_bytes()).unwrap();
+    std::fs::write(&key_path, public_key_pem).unwrap();
+
+    let signature: Signature = signing_key.sign(endorsement_json.as_bytes());
+    std::fs::write(&sig_path, signature.to_der()).unwrap();
+
+    let params = AuthorizedWorkloadEndorsementParams {
+        authorized_image_digests: None,
+        authorized_endorsement_path: Some(endorsement_path.to_str().unwrap().to_string()),
+        authorized_endorsement_signature_path: Some(sig_path.to_str().unwrap().to_string()),
+        authorized_endorsement_verifying_key_pem_path: Some(key_path.to_str().unwrap().to_string()),
+    };
+
+    let verification_time = oak_time::make_instant!("2026-07-15T12:00:00Z");
+    let result = params.get_authorized_digests(verification_time);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("no image digests"));
+}

@@ -81,6 +81,18 @@ impl AuthorizedWorkloadEndorsementParams {
             }
         }
 
+        // The caller treats an empty list as "no digest authorization
+        // configured" and skips the workload check, so a configured
+        // allowlist that names no digests must not be returned as
+        // empty.
+        if (self.authorized_image_digests.is_some() || self.authorized_endorsement_path.is_some())
+            && allowed_digests.is_empty()
+        {
+            anyhow::bail!(
+                "digest authorization is configured but authorizes no image digests (expected at least one sha256 subject)"
+            );
+        }
+
         allowed_digests
             .into_iter()
             .map(|hex_digest| hex::decode(hex_digest).context("decoding hex digest"))
