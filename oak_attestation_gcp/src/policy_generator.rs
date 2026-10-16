@@ -73,7 +73,16 @@ pub fn confidential_space_policy_from_reference_values(
                 WorkloadReferenceValues::ImageReferenceValue(Box::new(ref_value.clone()));
             Ok(ConfidentialSpacePolicy::new(root_certificate, workload_ref_values))
         }
-        None => Ok(ConfidentialSpacePolicy::new_unendorsed(root_certificate)),
+        Some(confidential_space_reference_values::ContainerImage::SkipWorkloadVerification(_)) => {
+            Ok(ConfidentialSpacePolicy::new_unendorsed(root_certificate))
+        }
+        // Fail closed: an unset `container_image` must not silently disable
+        // workload identity verification, otherwise any container running on
+        // Confidential Space would be accepted. Callers that really want this
+        // must opt in explicitly via `skip_workload_verification`.
+        None => Err(anyhow::anyhow!(
+            "container_image reference values missing: workload identity cannot be verified; set skip_workload_verification to explicitly opt out"
+        )),
     }
 }
 
@@ -82,7 +91,7 @@ mod tests {
     use oak_file_utils::read_testdata_string;
     use oak_proto_rust::oak::attestation::v1::{
         ConfidentialSpaceReferenceValues, CosignReferenceValues as CosignReferenceValuesProto,
-        confidential_space_reference_values,
+        SkipVerification, confidential_space_reference_values,
     };
     use verify_endorsement::create_verifying_key_from_pem;
 
@@ -133,11 +142,28 @@ mod tests {
     }
 
     #[test]
-    fn confidential_space_policy_no_workload_reference_values_succeeds() {
+    fn confidential_space_policy_no_workload_reference_values_fails() {
         let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
 
         let reference_values =
             ConfidentialSpaceReferenceValues { root_certificate_pem, r#container_image: None };
+
+        let policy = confidential_space_policy_from_reference_values(&reference_values);
+        assert!(policy.is_err(), "Policy succeeded when it should have failed");
+    }
+
+    #[test]
+    fn confidential_space_policy_explicit_skip_workload_verification_succeeds() {
+        let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
+
+        let reference_values = ConfidentialSpaceReferenceValues {
+            root_certificate_pem,
+            r#container_image: Some(
+                confidential_space_reference_values::ContainerImage::SkipWorkloadVerification(
+                    SkipVerification {},
+                ),
+            ),
+        };
 
         let policy = confidential_space_policy_from_reference_values(&reference_values);
         assert!(policy.is_ok(), "Failed: {:?}", policy.err().unwrap());

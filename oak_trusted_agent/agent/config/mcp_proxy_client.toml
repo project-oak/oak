@@ -20,3 +20,6 @@ attestation_generators = []
 [[attestation_verifiers]]
 type = "confidential_space"
 root_certificate_pem_path = "/etc/confidential_space_root.pem"
+# The proxy only verifies that the peer runs on Confidential Space; it does not
+# check the peer's container identity.
+skip_workload_verification = true

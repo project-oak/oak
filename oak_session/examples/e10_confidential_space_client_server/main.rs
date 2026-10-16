@@ -34,7 +34,7 @@ mod intro_import {
     // These are used by the server,
     pub use oak_attestation::public_key::{PublicKeyAttester, PublicKeyEndorser};
     // This is the endorsemment format for a public key in a JWT tokens.
-    pub use oak_proto_rust::oak::attestation::v1::{ConfidentialSpaceEndorsement, ConfidentialSpaceReferenceValues};
+    pub use oak_proto_rust::oak::attestation::v1::{ConfidentialSpaceEndorsement, ConfidentialSpaceReferenceValues, confidential_space_reference_values};
 
     // The client will use these to verify the server's evidence.
     pub use oak_attestation_verification::EventLogVerifier;
@@ -97,12 +97,18 @@ fn main() {
     // Create a client session configured with peer attestation.
     // The setup implicitly adds a binding verifier that relies on the key,
     // which is extracted from the evidence.
+    // Verify that the workload runs a container image from the expected
+    // repository. In production you would typically pin an exact digest, or use
+    // an endorsed policy where the container image is signed by the developer.
     let reference_values = ConfidentialSpaceReferenceValues {
         root_certificate_pem: CSPACE_ROOT.to_owned(),
-        r#container_image: None,
+        r#container_image: Some(
+            confidential_space_reference_values::ContainerImage::ContainerImageReferencePrefix(
+                "europe-west2-docker.pkg.dev/oak-ci/example-enclave-apps/echo_enclave_app"
+                    .to_owned(),
+            ),
+        ),
     };
-    // Normally you would use an endorsed policy where the workload (a container) is
-    // signed by the developer and the signature committed to Rekor, using Cosign.
     let policy = confidential_space_policy_from_reference_values(&reference_values)
         .expect("failed to generate policy");
 

@@ -28,7 +28,7 @@ use oak_proto_rust::{
         RawDigest as CommonRawDigest,
         attestation::v1::{
             BinaryReferenceValue, ConfidentialSpaceEndorsement, ConfidentialSpaceReferenceValues,
-            Digests, binary_reference_value, confidential_space_reference_values,
+            Digests, SkipVerification, binary_reference_value, confidential_space_reference_values,
         },
     },
 };
@@ -86,6 +86,11 @@ pub struct ConfidentialSpaceVerifierParams {
     pub container_reference_prefix: Option<String>,
     #[serde(flatten)]
     pub authorized_workload_endorsement: AuthorizedWorkloadEndorsementParams,
+    /// Explicitly opts out of verifying the peer's workload container
+    /// identity: any container running on Confidential Space will be accepted.
+    /// Mutually exclusive with the other workload verification options.
+    #[serde(default)]
+    pub skip_workload_verification: bool,
 }
 
 impl ConfidentialSpaceVerifierParams {
@@ -104,7 +109,28 @@ impl ConfidentialSpaceVerifierParams {
             );
         }
 
-        let container_image = if !allowed_digests.is_empty() {
+        if self.skip_workload_verification
+            && (self.container_reference_prefix.is_some() || !allowed_digests.is_empty())
+        {
+            anyhow::bail!(
+                "cannot specify skip_workload_verification together with container_reference_prefix or authorized_image_digests / authorized_endorsement_path"
+            );
+        }
+
+        if !self.skip_workload_verification
+            && self.container_reference_prefix.is_none()
+            && allowed_digests.is_empty()
+        {
+            anyhow::bail!(
+                "no workload verification configured: specify either container_reference_prefix or authorized_image_digests / authorized_endorsement_path, or explicitly set skip_workload_verification = true"
+            );
+        }
+
+        let container_image = if self.skip_workload_verification {
+            Some(confidential_space_reference_values::ContainerImage::SkipWorkloadVerification(
+                SkipVerification {},
+            ))
+        } else if !allowed_digests.is_empty() {
             let raw_digests: Vec<CommonRawDigest> = allowed_digests
                 .into_iter()
                 .map(|digest| CommonRawDigest { sha2_256: digest, ..Default::default() })

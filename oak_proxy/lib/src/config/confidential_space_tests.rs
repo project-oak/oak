@@ -40,6 +40,7 @@ fn test_get_authorized_digests_with_manual_list() {
             authorized_endorsement_signature_path: None,
             authorized_endorsement_verifying_key_pem_path: None,
         },
+        skip_workload_verification: false,
     };
 
     let verification_time = oak_time::make_instant!("2026-07-15T12:00:00Z");
@@ -105,6 +106,7 @@ fn test_get_authorized_digests_merging() {
                 key_path.to_str().unwrap().to_string(),
             ),
         },
+        skip_workload_verification: false,
     };
 
     let verification_time = oak_time::make_instant!("2026-07-15T12:00:00Z");
@@ -132,6 +134,7 @@ fn test_mutual_exclusion_error() {
             authorized_endorsement_signature_path: None,
             authorized_endorsement_verifying_key_pem_path: None,
         },
+        skip_workload_verification: false,
     };
 
     let builder = oak_session::config::SessionConfig::builder(
@@ -143,6 +146,56 @@ fn test_mutual_exclusion_error() {
         Err(err) => assert!(err.to_string().contains(
             "cannot specify both container_reference_prefix and authorized_image_digests / authorized_endorsement_path"
         )),
+        Ok(_) => panic!("expected mutual exclusion error"),
+    }
+}
+
+#[test]
+fn test_missing_workload_verification_error() {
+    let dir = tempdir().unwrap();
+    let root_cert_path = dir.path().join("root.pem");
+    std::fs::write(&root_cert_path, "dummy cert").unwrap();
+
+    let params = ConfidentialSpaceVerifierParams {
+        root_certificate_pem_path: root_cert_path.to_str().unwrap().to_string(),
+        container_reference_prefix: None,
+        authorized_workload_endorsement: Default::default(),
+        skip_workload_verification: false,
+    };
+
+    let builder = oak_session::config::SessionConfig::builder(
+        oak_session::attestation::AttestationType::Bidirectional,
+        oak_session::handshake::HandshakeType::NoiseNN,
+    );
+    let result = params.apply(builder);
+    match result {
+        Err(err) => assert!(err.to_string().contains("no workload verification configured")),
+        Ok(_) => panic!("expected missing workload verification error"),
+    }
+}
+
+#[test]
+fn test_skip_workload_verification_mutual_exclusion_error() {
+    let dir = tempdir().unwrap();
+    let root_cert_path = dir.path().join("root.pem");
+    std::fs::write(&root_cert_path, "dummy cert").unwrap();
+
+    let params = ConfidentialSpaceVerifierParams {
+        root_certificate_pem_path: root_cert_path.to_str().unwrap().to_string(),
+        container_reference_prefix: Some("gcr.io/my-project/my-app".to_string()),
+        authorized_workload_endorsement: Default::default(),
+        skip_workload_verification: true,
+    };
+
+    let builder = oak_session::config::SessionConfig::builder(
+        oak_session::attestation::AttestationType::Bidirectional,
+        oak_session::handshake::HandshakeType::NoiseNN,
+    );
+    let result = params.apply(builder);
+    match result {
+        Err(err) => assert!(
+            err.to_string().contains("cannot specify skip_workload_verification together with")
+        ),
         Ok(_) => panic!("expected mutual exclusion error"),
     }
 }

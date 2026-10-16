@@ -1626,10 +1626,13 @@ pub struct ConfidentialSpaceReferenceValues {
     /// attestations.
     #[prost(string, tag = "1")]
     pub root_certificate_pem: ::prost::alloc::string::String,
-    /// Reference values specific to the workload container.
+    /// Reference values specific to the workload container. Must be set: leaving
+    /// it unset is a verification error. To verify only that the workload runs on
+    /// Confidential Space without checking the container identity, explicitly set
+    /// `skip_workload_verification`.
     #[prost(
         oneof = "confidential_space_reference_values::ContainerImage",
-        tags = "2, 3, 5"
+        tags = "2, 3, 5, 6"
     )]
     pub container_image: ::core::option::Option<
         confidential_space_reference_values::ContainerImage,
@@ -1637,7 +1640,10 @@ pub struct ConfidentialSpaceReferenceValues {
 }
 /// Nested message and enum types in `ConfidentialSpaceReferenceValues`.
 pub mod confidential_space_reference_values {
-    /// Reference values specific to the workload container.
+    /// Reference values specific to the workload container. Must be set: leaving
+    /// it unset is a verification error. To verify only that the workload runs on
+    /// Confidential Space without checking the container identity, explicitly set
+    /// `skip_workload_verification`.
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum ContainerImage {
         /// Deprecated.
@@ -1653,6 +1659,10 @@ pub mod confidential_space_reference_values {
         /// Used to verify the container image.
         #[prost(message, tag = "5")]
         ImageReferenceValue(super::BinaryReferenceValue),
+        /// Explicitly opts out of verifying the workload container identity. Any
+        /// container running on (non-debug) Confidential Space will be accepted.
+        #[prost(message, tag = "6")]
+        SkipWorkloadVerification(super::SkipVerification),
     }
 }
 #[derive(Clone, PartialEq, ::prost::Message)]

@@ -579,7 +579,10 @@ message ConfidentialSpaceReferenceValues {
   // attestations.
   string root_certificate_pem = 1;
 
-  // Reference values specific to the workload container.
+  // Reference values specific to the workload container. Must be set: leaving
+  // it unset is a verification error. To verify only that the workload runs on
+  // Confidential Space without checking the container identity, explicitly set
+  // `skip_workload_verification`.
   oneof container_image {
     // Deprecated.
     CosignReferenceValues cosign_reference_values = 2 [deprecated = true];
@@ -592,6 +595,10 @@ message ConfidentialSpaceReferenceValues {
 
     // Used to verify the container image.
     BinaryReferenceValue image_reference_value = 5;
+
+    // Explicitly opts out of verifying the workload container identity. Any
+    // container running on (non-debug) Confidential Space will be accepted.
+    SkipVerification skip_workload_verification = 6;
   }
 }
 

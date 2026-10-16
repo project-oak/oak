@@ -163,7 +163,17 @@ impl AssertionVerifier for GcpAssertionVerifier {
                         &cs_assertion.container_image_endorsement,
                     )?;
                 }
+                // Explicit opt-out of workload identity verification.
+                ContainerImage::SkipWorkloadVerification(_) => {}
             }
+        } else {
+            // Fail closed: an unset `container_image` must not silently disable
+            // workload identity verification. Callers that really want this must
+            // opt in explicitly via `skip_workload_verification`.
+            return Err(anyhow!(
+                "container_image reference values missing: workload identity cannot be verified; set skip_workload_verification to explicitly opt out"
+            )
+            .into());
         }
 
         let expected_nonce = generate_nonce_from_asserted_data(asserted_data);
@@ -196,7 +206,7 @@ mod tests {
     use oak_file_utils::{read_testdata, read_testdata_string};
     use oak_proto_rust::oak::attestation::v1::{
         BinaryReferenceValue, CosignReferenceValues, Endorsement, Signature, SignedEndorsement,
-        binary_reference_value, endorsement::Format,
+        SkipVerification, binary_reference_value, endorsement::Format,
     };
     use oak_time::make_instant;
     use prost::Message;
@@ -213,6 +223,10 @@ mod tests {
         0x64, 0x27, 0x41, 0x53, 0x48, 0x51, 0x5b, 0x76, 0x78, 0x47, 0x11, 0x12, 0x43, 0x01, 0x61,
         0x64, 0x66,
     ];
+
+    // Matches the container image reference in the testdata tokens.
+    const TEST_IMAGE_REFERENCE_PREFIX: &str =
+        "europe-west2-docker.pkg.dev/oak-ci/example-enclave-apps/echo_enclave_app";
 
     fn make_signed_endorsement(
         endorsement_filename: &str,
@@ -277,8 +291,56 @@ mod tests {
             reference_values: ConfidentialSpaceReferenceValues {
                 root_certificate_pem: read_testdata_string!("root_ca_cert.pem"),
                 container_image: Some(ContainerImage::ContainerImageReferencePrefix(
-                    "europe-west2-docker.pkg.dev/oak-ci/example-enclave-apps/echo_enclave_app"
-                        .to_string(),
+                    TEST_IMAGE_REFERENCE_PREFIX.to_string(),
+                )),
+            },
+        };
+
+        let assertion = Assertion {
+            content: ConfidentialSpaceAssertion {
+                jwt_token: read_testdata!("valid_token.jwt"),
+                container_image_endorsement: None,
+            }
+            .encode_to_vec(),
+        };
+
+        verifier.verify(&assertion, &BINDING_KEY_BYTES, make_instant!("2025-07-01T17:31:32Z"))?;
+        Ok(())
+    }
+
+    #[test]
+    fn verify_fails_with_missing_container_image_reference_values() {
+        let verifier = GcpAssertionVerifier {
+            audience: OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
+            reference_values: ConfidentialSpaceReferenceValues {
+                root_certificate_pem: read_testdata_string!("root_ca_cert.pem"),
+                container_image: None,
+            },
+        };
+
+        // The token is otherwise valid, so the only reason to reject it is the
+        // missing workload reference values.
+        let assertion = Assertion {
+            content: ConfidentialSpaceAssertion {
+                jwt_token: read_testdata!("valid_token.jwt"),
+                container_image_endorsement: None,
+            }
+            .encode_to_vec(),
+        };
+
+        let result =
+            verifier.verify(&assertion, &BINDING_KEY_BYTES, make_instant!("2025-07-01T17:31:32Z"));
+        assert!(result.is_err(), "verification succeeded without workload reference values");
+    }
+
+    #[test]
+    fn verify_succeeds_with_explicit_skip_workload_verification() -> anyhow::Result<()> {
+        let verifier = GcpAssertionVerifier {
+            audience: OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
+            reference_values: ConfidentialSpaceReferenceValues {
+                root_certificate_pem: read_testdata_string!("root_ca_cert.pem"),
+                container_image: Some(ContainerImage::SkipWorkloadVerification(
+                    SkipVerification {},
                 )),
             },
         };
@@ -301,7 +363,9 @@ mod tests {
             audience: OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
             reference_values: ConfidentialSpaceReferenceValues {
                 root_certificate_pem: read_testdata_string!("root_ca_cert.pem"),
-                container_image: None,
+                container_image: Some(ContainerImage::ContainerImageReferencePrefix(
+                    TEST_IMAGE_REFERENCE_PREFIX.to_string(),
+                )),
             },
         };
 
@@ -327,7 +391,9 @@ mod tests {
             audience: OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
             reference_values: ConfidentialSpaceReferenceValues {
                 root_certificate_pem: read_testdata_string!("root_ca_cert.pem"),
-                container_image: None,
+                container_image: Some(ContainerImage::ContainerImageReferencePrefix(
+                    TEST_IMAGE_REFERENCE_PREFIX.to_string(),
+                )),
             },
         };
 

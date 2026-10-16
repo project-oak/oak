@@ -287,9 +287,17 @@ you can specify a static list of hex-encoded digests via
 
 **Mutual Exclusion Rules:**
 
+- Exactly one workload verification option must be configured for a
+  `confidential_space` verifier: `container_reference_prefix`,
+  `authorized_image_digests` / `authorized_endorsement_path`, or
+  `skip_workload_verification = true`. Omitting all of them returns a
+  configuration error.
 - Specifying `container_reference_prefix` alongside `authorized_image_digests`
   (or `authorized_endorsement_path`) returns a configuration error. Choose
   either prefix verification or exact digest authorization.
+- `skip_workload_verification = true` explicitly disables verification of the
+  peer's container identity: any container running on Confidential Space is
+  accepted. Only use it when workload identity is verified some other way.
 
 #### Advanced: Dynamic Operator Signed Endorsements (`endorsement/v1`)
 
@@ -319,6 +327,8 @@ type = "confidential_space"
 type = "confidential_space"
 # Download from https://confidentialcomputing.googleapis.com/.well-known/confidential_space_root.crt
 root_certificate_pem_path = "/path/to/confidential_space_root.crt"
+# Only accept workloads running a container image with this reference prefix.
+container_reference_prefix = "europe-west1-docker.pkg.dev/my-project/my-repo/my-image@sha256:..."
 ```
 
 ## Extending Attestation

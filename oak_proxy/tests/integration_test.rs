@@ -757,8 +757,9 @@ async fn attestation_output_file_on_failed_attestation_test() -> anyhow::Result<
         oak_proxy_lib::config::confidential_space::ConfidentialSpaceVerifierParams {
             root_certificate_pem_path: "oak_attestation_gcp/data/confidential_space_root.pem"
                 .to_string(),
-            container_reference_prefix: None,
+            container_reference_prefix: Some("gcr.io/example/workload".to_string()),
             authorized_workload_endorsement: Default::default(),
+            skip_workload_verification: false,
         },
     );
     let (mut stream, _, _processes) = start_attestation_output_proxies(

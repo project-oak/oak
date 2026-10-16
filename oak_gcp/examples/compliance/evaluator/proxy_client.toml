@@ -16,6 +16,7 @@ root_certificate_pem_path = "oak_attestation_gcp/data/confidential_space_root.pe
 
 # Authorized sha256 container image digest of the compliance-evaluator image.
 # Replace with the digest published by terraform or docker build/push.
+# Required: the proxy refuses to start without a workload verification option.
 # Example:
 # authorized_image_digests = [
 #     "f396d33389aad72d8098d9fcfdf544e32d00de04c2179952ca9760a3c18c35f5"

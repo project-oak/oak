@@ -1050,6 +1050,9 @@ pub fn serialize_confidential_space_reference_values(
                 result["image_reference_value"] =
                     serialize_binary_reference_value(image_reference_value);
             }
+            confidential_space_reference_values::ContainerImage::SkipWorkloadVerification(_) => {
+                result["skip_workload_verification"] = json!({});
+            }
         }
     }
     result
