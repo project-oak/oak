@@ -483,7 +483,15 @@ pub fn find_suitable_dma_address(
             }
 
             // Align the start address down in case the end was not aligned.
-            Some(PhysAddr::new(end.checked_sub(padded_size).unwrap()).align_down(Size4KiB::SIZE))
+            let candidate =
+                PhysAddr::new(end.checked_sub(padded_size).unwrap()).align_down(Size4KiB::SIZE);
+            // Never place host-supplied data over stage0's own memory (page
+            // tables, stack, EBDA, TDX mailboxes, short-term heap): everything
+            // firmware-owned lives below the end of the short-term heap.
+            if candidate.as_u64() < crate::allocator::HEAP_END.as_u64() {
+                return None;
+            }
+            Some(candidate)
         })
         .max_by(PhysAddr::cmp)
         .ok_or("no suitable memory available for dma buffer")
@@ -579,5 +587,32 @@ impl Firmware for TestFirmware {
         let file = self.files.get(file.name()?).ok_or("file not found")?;
         buf.copy_from_slice(file);
         Ok(file.len())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use googletest::prelude::*;
+
+    use super::*;
+
+    #[gtest]
+    fn test_find_suitable_dma_address_rejects_below_heap_end() {
+        let e820 = [
+            BootE820Entry::new(0, 0x100000, E820EntryType::RAM),
+            BootE820Entry::new(0x100000, 0x100000, E820EntryType::RAM),
+        ];
+        let res = find_suitable_dma_address(0x1000, &e820);
+        expect_that!(res, err(anything()));
+    }
+
+    #[gtest]
+    fn test_find_suitable_dma_address_accepts_above_heap_end() {
+        let e820 = [
+            BootE820Entry::new(0, 0x100000, E820EntryType::RAM),
+            BootE820Entry::new(0x200000, 0x100000, E820EntryType::RAM),
+        ];
+        let res = find_suitable_dma_address(0x1000, &e820);
+        expect_that!(res, ok(eq(PhysAddr::new(0x2FF000))));
     }
 }

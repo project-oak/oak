@@ -93,17 +93,26 @@ pub fn setup_high_allocator(zero_page: &mut ZeroPage) -> Result<(), &'static str
             .e820_table()
             .iter()
             .rfind(|&entry| {
-                // We're only interested in (a) entries that are regular memory and (b) that
-                // start below the 1G mark, with enough space for a 1M chunk.
+                // We're only interested in (a) entries that are regular memory, (b) that
+                // start below the 1G mark, with enough space for a 1M chunk, and (c) that
+                // leave room for the reservation above the firmware-owned low region
+                // (page tables, stack, EBDA, TDX mailboxes, short-term heap).
                 entry.entry_type() == Some(E820EntryType::RAM)
                     && entry.addr() < (0x4000_0000 - HIGH_MEM_SIZE)
                     && entry.size() >= HIGH_MEM_SIZE
+                    && (entry.end() as u64)
+                        >= crate::allocator::HEAP_END.as_u64() + (HIGH_MEM_SIZE as u64)
             })
             .ok_or("could not find memory for ACPI tables")?;
         let mem_end = core::cmp::min(0x4000_0000, entry.end());
         let Some(mem_start) = mem_end.checked_sub(HIGH_MEM_SIZE) else {
             return Err("ACPI memory region too small to reserve HIGH_MEM_SIZE");
         };
+        // Defense in depth: never alias firmware-owned memory even if the
+        // entry-level filter above changes later.
+        if (mem_start as u64) < crate::allocator::HEAP_END.as_u64() {
+            return Err("ACPI high memory region would overlap stage0 memory");
+        }
         mem_start
     };
     // reserve the memory for ACPI tables
@@ -532,5 +541,14 @@ mod tests {
             commands[0].invoke(&mut files, &mut TestFirmware, None, &mut digest),
             err(anything())
         );
+    }
+
+    #[gtest]
+    pub fn test_setup_high_allocator_rejects_below_heap_end() {
+        let mut zero_page = ZeroPage::new();
+        // RAM region only goes up to 0x200000 (2 MiB), which is < HEAP_END +
+        // HIGH_MEM_SIZE (3 MiB)
+        zero_page.insert_e820_entry(BootE820Entry::new(0, 0x200000, E820EntryType::RAM));
+        expect_that!(setup_high_allocator(&mut zero_page), err(anything()));
     }
 }
