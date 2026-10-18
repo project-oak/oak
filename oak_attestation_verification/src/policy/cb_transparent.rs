@@ -205,10 +205,13 @@ impl Policy<[u8]> for TransparentLayer1Policy {
 /// each package has a corresponding (possibly empty) endorsement. This may be
 /// useful in the event that the reference values include a 'Skip' entry.
 ///
-/// NOTE: The ordering of the `binary_mpms` must match the ordering of the
-/// packages in the [`CbLayer2TransparentEvent`], both in the reference values
-/// and in the endorsements: the entry at index `i` appraises the package at
-/// index `i`, so the two lists must have the same length.
+/// NOTE: The ordering of the `binary_mpms` endorsements must match the ordering
+/// of the packages in the [`CbLayer2TransparentEvent`].
+///
+/// The order of the packages in the evidence is not deterministic, so the
+/// reference values are matched to the packages one-to-one rather than by
+/// index: every package must be appraised by a distinct reference value entry,
+/// and the two lists must have the same length.
 pub struct TransparentLayer2Policy {
     reference_values: CbLayer2TransparentReferenceValues,
 }
@@ -275,10 +278,11 @@ impl Policy<[u8]> for TransparentLayer2Policy {
             binary_mpms.resize_with(event.packages.len(), SignedEndorsement::default);
         }
 
-        let mut package_validities: alloc::vec::Vec<Option<Validity>> =
-            alloc::vec::Vec::with_capacity(event.packages.len());
-        let mut package_verifications: alloc::vec::Vec<TLogVerificationResults> =
-            alloc::vec::Vec::new();
+        // For each package, the reference value entries that accept it, along with
+        // the validity and transparency log results of that appraisal.
+        let mut candidates: alloc::vec::Vec<
+            alloc::vec::Vec<(usize, Option<Validity>, Option<TLogVerificationResults>)>,
+        > = alloc::vec::Vec::with_capacity(event.packages.len());
 
         for (i, package) in event.packages.iter().enumerate() {
             // The ordering of the endorsements must match the order of the packages in the
@@ -297,23 +301,41 @@ impl Policy<[u8]> for TransparentLayer2Policy {
                 );
             }
 
-            // The reference value at the same index appraises this package.
-            // Searching the whole list instead lets a `Skip` entry meant for one
-            // position satisfy every other package, and retries a package against
-            // the remaining entries once its own endorsement has failed to verify.
-            let (expected, validity, tlog_record) = acquire_mpm_expected_values(
-                verification_time.into_unix_millis(),
-                Some(matching_endorsement),
-                &ref_values[i],
-            )
-            .with_context(|| {
-                alloc::format!("acquiring expected values for package {}", package.mpm_version_id)
-            })?;
-            compare_text_value(&package.mpm_version_id, &expected)
-                .with_context(|| alloc::format!("verifying package {}", package.mpm_version_id))?;
+            let mut accepted = alloc::vec::Vec::new();
+            for (j, ref_val) in ref_values.iter().enumerate() {
+                if let Ok((expected, validity, tlog_record)) = acquire_mpm_expected_values(
+                    verification_time.into_unix_millis(),
+                    Some(matching_endorsement),
+                    ref_val,
+                ) && compare_text_value(&package.mpm_version_id, &expected).is_ok()
+                {
+                    accepted.push((j, validity, tlog_record));
+                }
+            }
+            anyhow::ensure!(
+                !accepted.is_empty(),
+                "package {} could not be verified",
+                package.mpm_version_id
+            );
+            candidates.push(accepted);
+        }
 
-            package_verifications.extend(tlog_record);
+        // Each reference value entry may be consumed by at most one package, so a
+        // `Skip` entry cannot satisfy several packages at once.
+        let assignment = match_packages_to_ref_values(&candidates, ref_values.len())
+            .context("packages could not be matched one-to-one with reference values")?;
+
+        let mut package_validities: alloc::vec::Vec<Option<Validity>> =
+            alloc::vec::Vec::with_capacity(event.packages.len());
+        let mut package_verifications: alloc::vec::Vec<TLogVerificationResults> =
+            alloc::vec::Vec::new();
+        for (accepted, j) in candidates.into_iter().zip(assignment) {
+            let (_, validity, tlog_record) = accepted
+                .into_iter()
+                .find(|(k, _, _)| *k == j)
+                .expect("assigned reference value must be a candidate");
             package_validities.push(validity);
+            package_verifications.extend(tlog_record);
         }
 
         let validity = intersect_all_validity(package_validities);
@@ -327,6 +349,52 @@ impl Policy<[u8]> for TransparentLayer2Policy {
         }
         Ok(result)
     }
+}
+
+/// Finds a one-to-one assignment of packages to reference value entries, where
+/// `candidates[i]` lists the entries that accept package `i`. Returns the entry
+/// assigned to each package, or `None` if no such assignment exists.
+fn match_packages_to_ref_values<T, U>(
+    candidates: &[alloc::vec::Vec<(usize, T, U)>],
+    num_ref_values: usize,
+) -> Option<alloc::vec::Vec<usize>> {
+    // Augmenting path search: try to give package `i` an entry, displacing the
+    // package currently holding it if that package can be moved elsewhere.
+    fn assign<T, U>(
+        i: usize,
+        candidates: &[alloc::vec::Vec<(usize, T, U)>],
+        visited: &mut [bool],
+        owner: &mut [Option<usize>],
+    ) -> bool {
+        for (j, _, _) in &candidates[i] {
+            let j = *j;
+            if visited[j] {
+                continue;
+            }
+            visited[j] = true;
+            if owner[j].is_none_or(|k| assign(k, candidates, visited, owner)) {
+                owner[j] = Some(i);
+                return true;
+            }
+        }
+        false
+    }
+
+    let mut owner = alloc::vec![None; num_ref_values];
+    for i in 0..candidates.len() {
+        let mut visited = alloc::vec![false; num_ref_values];
+        if !assign(i, candidates, &mut visited, &mut owner) {
+            return None;
+        }
+    }
+
+    let mut assignment = alloc::vec![0; candidates.len()];
+    for (j, i) in owner.into_iter().enumerate() {
+        if let Some(i) = i {
+            assignment[i] = j;
+        }
+    }
+    Some(assignment)
 }
 
 #[cfg(test)]
@@ -1115,9 +1183,8 @@ mod tests {
         assert!(get_validity(&result).is_none(), "skip-only policy should not set validity");
     }
 
-    /// A `Skip` reference value only covers the package at its own index: the
-    /// package at another index must still satisfy the reference value
-    /// configured for that position.
+    /// A `Skip` reference value is consumed by a single package: it cannot
+    /// satisfy a second package that no other reference value accepts.
     #[test]
     #[allow(deprecated)]
     fn transparent_layer2_skip_ref_value_does_not_cover_other_packages_fails() {
@@ -1194,5 +1261,70 @@ mod tests {
         let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
 
         assert!(result.is_err(), "a missing package must not pass verification");
+    }
+
+    fn versions_ref_value(
+        version: &str,
+    ) -> oak_proto_rust::oak::attestation::v1::MpmReferenceValue {
+        use oak_proto_rust::oak::attestation::v1::{
+            MpmReferenceValue, MpmVersionIds, mpm_reference_value::Type as MrvType,
+        };
+        MpmReferenceValue {
+            r#type: Some(MrvType::Versions(MpmVersionIds { versions: vec![version.into()] })),
+        }
+    }
+
+    fn layer2_evidence(versions: &[&str]) -> Vec<u8> {
+        let event = CbLayer2TransparentEvent {
+            packages: versions
+                .iter()
+                .map(|v| MpmPackage { mpm_version_id: (*v).into(), ..Default::default() })
+                .collect(),
+        };
+        encode_event_proto(
+            "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
+            &event,
+        )
+    }
+
+    /// The packages may be reported in any order relative to the reference
+    /// values.
+    #[test]
+    #[allow(deprecated)]
+    fn transparent_layer2_packages_out_of_order_succeeds() {
+        let reference_values = CbLayer2TransparentReferenceValues {
+            binary_mpm: None,
+            binary_mpms: vec![versions_ref_value("pkg_a/1.0"), versions_ref_value("pkg_b/2.0")],
+        };
+        let policy = TransparentLayer2Policy::new(&reference_values);
+        let evidence = layer2_evidence(&["pkg_b/2.0", "pkg_a/1.0"]);
+
+        let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
+
+        assert!(result.is_ok(), "out-of-order packages should verify: {result:?}");
+    }
+
+    /// A package accepted by a `Skip` entry gives it up when another package
+    /// is only accepted by that entry.
+    #[test]
+    #[allow(deprecated)]
+    fn transparent_layer2_skip_reassigned_to_unpinned_package_succeeds() {
+        use oak_proto_rust::oak::attestation::v1::{
+            MpmReferenceValue, SkipVerification, mpm_reference_value::Type as MrvType,
+        };
+
+        let reference_values = CbLayer2TransparentReferenceValues {
+            binary_mpm: None,
+            binary_mpms: vec![
+                MpmReferenceValue { r#type: Some(MrvType::Skip(SkipVerification {})) },
+                versions_ref_value("pkg_a/1.0"),
+            ],
+        };
+        let policy = TransparentLayer2Policy::new(&reference_values);
+        let evidence = layer2_evidence(&["pkg_a/1.0", "pkg_b/2.0"]);
+
+        let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
+
+        assert!(result.is_ok(), "a one-to-one matching exists: {result:?}");
     }
 }
