@@ -43,7 +43,10 @@ rust_test(
     data = [
         "//oak_attestation_verification/testdata:endorsement",
     ],
-    target_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
     deps = [
         "//oak_attestation_verification:test_util",
         "//oak_crypto:oak_crypto_tink",
