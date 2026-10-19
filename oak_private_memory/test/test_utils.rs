@@ -132,12 +132,46 @@ pub async fn start_server_with_metrics(
     .await
 }
 
+/// Returns a memory info reader that always reports all memory as available.
+///
+/// The server rejects new sessions once RAM utilization exceeds 80%, so tests
+/// that don't exercise memory admission control use this instead of the real
+/// `/proc/meminfo`, which would make them depend on how loaded the host is.
+pub fn ample_memory_reader() -> app::meminfo::MemInfoReader {
+    Arc::new(|| Ok(app::meminfo::MemoryInfo { total_bytes: 1 << 30, available_bytes: 1 << 30 }))
+}
+
 /// Like [`start_server_with_metrics`], but the server creates the config of
 /// each Noise session with `session_config_factory`.
 pub async fn start_server_with_session_config_factory(
     config_fn: fn(SocketAddr) -> ApplicationConfig,
     clock: Option<Arc<dyn Clock>>,
     session_config_factory: Arc<dyn Fn() -> SessionConfig + Send + Sync>,
+    metrics: Arc<Metrics>,
+) -> Result<(
+    SocketAddr,
+    tokio::task::JoinHandle<Result<()>>,
+    tokio::task::JoinHandle<Result<()>>,
+    tokio::task::JoinHandle<()>,
+)> {
+    start_server_with_meminfo_reader(
+        config_fn,
+        clock,
+        session_config_factory,
+        ample_memory_reader(),
+        metrics,
+    )
+    .await
+}
+
+/// Like [`start_server_with_session_config_factory`], but uses `meminfo_reader`
+/// to sample available memory so tests can change memory pressure while
+/// sessions are open.
+pub async fn start_server_with_meminfo_reader(
+    config_fn: fn(SocketAddr) -> ApplicationConfig,
+    clock: Option<Arc<dyn Clock>>,
+    session_config_factory: Arc<dyn Fn() -> SessionConfig + Send + Sync>,
+    meminfo_reader: app::meminfo::MemInfoReader,
     metrics: Arc<Metrics>,
 ) -> Result<(
     SocketAddr,
@@ -163,7 +197,7 @@ pub async fn start_server_with_session_config_factory(
 
     Ok((
         addr,
-        tokio::spawn(app::service::create(
+        tokio::spawn(app::service::create_with_meminfo_reader(
             listener,
             application_config,
             metrics,
@@ -171,6 +205,7 @@ pub async fn start_server_with_session_config_factory(
             session_config_factory,
             None, // TLS not configured in tests
             clock,
+            meminfo_reader,
         )),
         db_handle,
         persistence_join_handle,
@@ -190,6 +225,8 @@ pub fn default_test_application_config(db_addr: SocketAddr) -> ApplicationConfig
         enable_int8_embedding: false,
         allowed_memory_sources: vec![],
         min_available_memory_ratio: app::meminfo::DEFAULT_MIN_AVAILABLE_MEMORY_RATIO,
+        request_min_available_memory_ratio:
+            app::meminfo::DEFAULT_REQUEST_MIN_AVAILABLE_MEMORY_RATIO,
         max_map_count_ratio: app::admission::DEFAULT_MAX_MAP_COUNT_RATIO,
         max_active_sessions: app::admission::DEFAULT_MAX_ACTIVE_SESSIONS,
     }
@@ -228,6 +265,28 @@ pub async fn start_server_with_tls_and_metrics(
     tokio::task::JoinHandle<Result<()>>,
     tokio::task::JoinHandle<()>,
 )> {
+    start_server_with_tls_and_meminfo_reader(
+        tls_server_context,
+        config_fn,
+        ample_memory_reader(),
+        metrics,
+    )
+    .await
+}
+
+/// Like [`start_server_with_tls_and_metrics`], but uses `meminfo_reader` to
+/// sample available memory.
+pub async fn start_server_with_tls_and_meminfo_reader(
+    tls_server_context: Option<Arc<OakSessionTlsServerContext>>,
+    config_fn: fn(SocketAddr) -> ApplicationConfig,
+    meminfo_reader: app::meminfo::MemInfoReader,
+    metrics: Arc<Metrics>,
+) -> Result<(
+    SocketAddr,
+    tokio::task::JoinHandle<Result<()>>,
+    tokio::task::JoinHandle<Result<()>>,
+    tokio::task::JoinHandle<()>,
+)> {
     init_logging();
 
     let (db_addr, db_handle) = start_test_database().await?;
@@ -244,7 +303,7 @@ pub async fn start_server_with_tls_and_metrics(
 
     Ok((
         addr,
-        tokio::spawn(app::service::create(
+        tokio::spawn(app::service::create_with_meminfo_reader(
             listener,
             application_config,
             metrics,
@@ -252,6 +311,7 @@ pub async fn start_server_with_tls_and_metrics(
             std::sync::Arc::new(attestation_testing::dummy_server_session_config),
             tls_server_context,
             Arc::new(SystemClock),
+            meminfo_reader,
         )),
         db_handle,
         persistence_join_handle,
@@ -287,6 +347,8 @@ pub async fn start_container_server() -> Result<(
         enable_int8_embedding: false,
         allowed_memory_sources: vec![],
         min_available_memory_ratio: app::meminfo::DEFAULT_MIN_AVAILABLE_MEMORY_RATIO,
+        request_min_available_memory_ratio:
+            app::meminfo::DEFAULT_REQUEST_MIN_AVAILABLE_MEMORY_RATIO,
         max_map_count_ratio: app::admission::DEFAULT_MAX_MAP_COUNT_RATIO,
         max_active_sessions: app::admission::DEFAULT_MAX_ACTIVE_SESSIONS,
     };

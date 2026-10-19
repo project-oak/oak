@@ -551,3 +551,93 @@ async fn test_tls_receive_failure_is_counted() {
         &[],
     );
 }
+
+/// New `StartTlsSession` connections are rejected once RAM utilization exceeds
+/// 80% (`MemAvailable / MemTotal < 0.20`), while follow-up RPCs on an
+/// already-open `StartTlsSession` stream continue to succeed until RAM
+/// utilization exceeds 90% (`MemAvailable / MemTotal < 0.10`), at which point
+/// follow-up RPCs are rejected with `RESOURCE_EXHAUSTED` and counted in
+/// `rpc_failure_count` under the request's type.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_tls_low_memory_rejects_followup_requests_on_open_session() {
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    let harness = test_metrics();
+    let available = Arc::new(AtomicU64::new(500));
+    let available_for_reader = available.clone();
+    let server_ctx = Arc::new(test_server_context());
+    let (addr, _server, _db, _persistence) =
+        private_memory_test_utils::start_server_with_tls_and_meminfo_reader(
+            Some(server_ctx),
+            default_test_application_config,
+            Arc::new(move || {
+                Ok(private_memory_server_lib::app::meminfo::MemoryInfo {
+                    total_bytes: 1000,
+                    available_bytes: available_for_reader.load(Ordering::Acquire),
+                })
+            }),
+            harness.metrics.clone(),
+        )
+        .await
+        .unwrap();
+    let url = format!("http://{addr}");
+
+    let (mut session, mut stream) = open_raw_tls_session(&url).await;
+
+    // At 85% RAM utilization (15% available < 20% new-session threshold), a
+    // new StartTlsSession handshake is rejected with RESOURCE_EXHAUSTED, while
+    // follow-up RPCs on the already-open stream still pass admission and reach
+    // the handler, which fails them only because no KeySync ran.
+    available.store(150, Ordering::Release);
+    let mut client = SealedMemoryServiceClient::connect(url.clone()).await.unwrap();
+    let (_tx, request_stream) = mpsc::channel(RAW_REQUEST_BUFFER);
+    let err = client.start_tls_session(request_stream).await;
+    assert_eq!(err.unwrap_err().code(), tonic::Code::ResourceExhausted);
+
+    let request = SealedMemoryRequest {
+        request: Some(sealed_memory_request::Request::AddMemoryRequest(Default::default())),
+        request_id: 1,
+    };
+    let tls_frame = session.encrypt(&request.encode_to_vec()).unwrap();
+    stream.requests.send(TlsSessionFrame { tls_frame }).await.unwrap();
+    let mut plaintext = vec![];
+    while plaintext.is_empty() {
+        let frame = stream.responses.next().await.unwrap().unwrap();
+        plaintext = session.decrypt(&frame.tls_frame).unwrap();
+    }
+    match SealedMemoryResponse::decode(plaintext.as_slice()).unwrap().response {
+        Some(sealed_memory_response::Response::Error(status)) => {
+            assert_eq!(tonic::Code::from(status.code), tonic::Code::FailedPrecondition)
+        }
+        other => panic!("expected FailedPrecondition error response, got {other:?}"),
+    }
+
+    // Push RAM utilization over 90% (9% available < 10% threshold).
+    available.store(90, Ordering::Release);
+    let before = harness.collect();
+
+    let request = SealedMemoryRequest {
+        request: Some(sealed_memory_request::Request::AddMemoryRequest(Default::default())),
+        request_id: 2,
+    };
+    let tls_frame = session.encrypt(&request.encode_to_vec()).unwrap();
+    stream.requests.send(TlsSessionFrame { tls_frame }).await.unwrap();
+    let mut plaintext = vec![];
+    while plaintext.is_empty() {
+        let frame = stream.responses.next().await.unwrap().unwrap();
+        plaintext = session.decrypt(&frame.tls_frame).unwrap();
+    }
+
+    match SealedMemoryResponse::decode(plaintext.as_slice()).unwrap().response {
+        Some(sealed_memory_response::Response::Error(status)) => {
+            assert_eq!(tonic::Code::from(status.code), tonic::Code::ResourceExhausted)
+        }
+        other => panic!("expected an error response, got {other:?}"),
+    }
+    assert_increments(
+        &harness,
+        &before,
+        &[("AddMemoryRequest", 1), ("total", 1)],
+        &[("AddMemoryRequest", "RESOURCE_EXHAUSTED", 1), ("total", "RESOURCE_EXHAUSTED", 1)],
+    );
+}

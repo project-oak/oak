@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Admission control for new sessions.
+//! Admission control for sessions and follow-up RPCs.
 //!
 //! [`AdmissionController`] decides, before any expensive per-session work,
 //! whether the enclave accepts a new session. It rejects the session with
@@ -25,7 +25,21 @@
 //! - **Memory mappings:** the process map count reaches `max_map_count_ratio`
 //!   of the kernel's `vm.max_map_count`.
 //! - **Available memory:** `MemAvailable / MemTotal` falls below
-//!   `min_available_memory_ratio`.
+//!   `min_available_memory_ratio` (default 0.20, i.e. 80% RAM utilization).
+//!
+//! Stopping new session admissions at 80% RAM utilization leaves headroom for
+//! already-open sessions. Because active streaming connections stay open even
+//! after new connections are blocked, [`AdmissionController::admit_request`]
+//! also runs a second memory check (`request_min_available_memory_ratio`,
+//! default 0.10, i.e. 90% RAM utilization) on every follow-up RPC call on an
+//! open session, rejecting follow-up requests with `RESOURCE_EXHAUSTED` if RAM
+//! utilization exceeds 90%. Available memory is sampled at most once per
+//! [`crate::meminfo::MEMINFO_SAMPLE_INTERVAL`], so this check stays cheap on
+//! every request.
+//!
+//! Rejections are counted in metrics individually, but logged at most once per
+//! [`REJECTION_LOG_INTERVAL`] (per kind: new sessions, follow-up RPCs), since
+//! under sustained pressure they can arrive on every request.
 //!
 //! A session is counted from admission until its [`ActiveSessionGuard`] is
 //! dropped. The guard travels with the session's `UserSessionContext` into
@@ -73,6 +87,13 @@ pub const DEFAULT_MAX_MAP_COUNT: u64 = 1_048_576;
 /// few MB, so it is done at most once per interval no matter how many sessions
 /// arrive.
 pub const MAP_COUNT_SAMPLE_INTERVAL: Duration = Duration::from_secs(1);
+
+/// The shortest time between two log lines for rejections of the same kind
+/// (new sessions or follow-up RPCs), or for failures to read
+/// `/proc/meminfo`. Occurrences in between are only counted, and the count is
+/// included in the next log line. The `session_rejected` and
+/// `rpc_failure_count` metrics still count every rejection.
+pub const REJECTION_LOG_INTERVAL: Duration = Duration::from_secs(10);
 
 const PROC_SELF_MAPS: &str = "/proc/self/maps";
 const PROC_MAX_MAP_COUNT: &str = "/proc/sys/vm/max_map_count";
@@ -232,21 +253,108 @@ fn count_lines(path: &Path) -> std::io::Result<u64> {
     }
 }
 
-/// Decides whether a new session may start.
+/// Limits a repeated log line to at most one per interval, counting the
+/// occurrences that were not logged.
+struct LogRateLimiter {
+    interval: Duration,
+    /// When the line was last logged, and how many occurrences were
+    /// suppressed since.
+    state: Mutex<(Option<Instant>, u64)>,
+}
+
+impl LogRateLimiter {
+    fn new(interval: Duration) -> Self {
+        Self { interval, state: Mutex::new((None, 0)) }
+    }
+
+    /// Records an occurrence at `now`. Returns the number of occurrences
+    /// suppressed since the last logged one if this one should be logged, or
+    /// `None` if it should be suppressed.
+    fn should_log_at(&self, now: Instant) -> Option<u64> {
+        let mut state = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        let (last_logged, suppressed) = &mut *state;
+        if let Some(last_logged) = *last_logged
+            && now.saturating_duration_since(last_logged) < self.interval
+        {
+            *suppressed += 1;
+            return None;
+        }
+        *last_logged = Some(now);
+        Some(std::mem::take(suppressed))
+    }
+}
+
+/// Returns the suffix for a rate-limited log line noting how many earlier
+/// occurrences were `suppressed`, or an empty string if none were.
+fn not_logged_suffix(suppressed: u64) -> String {
+    if suppressed == 0 {
+        String::new()
+    } else {
+        format!(" ({suppressed} earlier occurrences not logged)")
+    }
+}
+
+/// Returns `request_ratio` if it is in `(0.0, min_available_memory_ratio]`, and
+/// otherwise logs an error and returns a value in that range.
+///
+/// Follow-up RPCs on open sessions must not be rejected at a lower RAM
+/// utilization than new sessions, and a non-positive ratio would disable the
+/// check. Unlike the other thresholds, an invalid value has a safe
+/// replacement, so the enclave keeps serving instead of crash-looping on
+/// startup:
+/// - a ratio above `min_available_memory_ratio` is clamped to it;
+/// - a non-positive or NaN ratio is replaced with
+///   [`crate::meminfo::DEFAULT_REQUEST_MIN_AVAILABLE_MEMORY_RATIO`] (or
+///   `min_available_memory_ratio`, if lower).
+fn sanitize_request_min_available_memory_ratio(
+    request_ratio: f64,
+    min_available_memory_ratio: f64,
+) -> f64 {
+    if request_ratio > 0.0 && request_ratio <= min_available_memory_ratio {
+        return request_ratio;
+    }
+    let replacement = if request_ratio > min_available_memory_ratio {
+        min_available_memory_ratio
+    } else {
+        crate::meminfo::DEFAULT_REQUEST_MIN_AVAILABLE_MEMORY_RATIO.min(min_available_memory_ratio)
+    };
+    log::error!(
+        "misconfigured request_min_available_memory_ratio={request_ratio}: must be in (0.0, min_available_memory_ratio={min_available_memory_ratio}], using {replacement}"
+    );
+    replacement
+}
+
+/// Decides whether a new session or a follow-up request on an open session may
+/// proceed.
 pub struct AdmissionController {
     max_active_sessions: usize,
     max_map_count_ratio: f64,
     min_available_memory_ratio: f64,
+    request_min_available_memory_ratio: f64,
     sessions: Arc<SessionCounter>,
     map_monitor: MapCountMonitor,
+    meminfo_reader: crate::meminfo::MemInfoReader,
     metrics: Arc<metrics::Metrics>,
+    session_rejection_log: LogRateLimiter,
+    request_rejection_log: LogRateLimiter,
+    meminfo_error_log: LogRateLimiter,
 }
 
 impl AdmissionController {
+    /// Creates a controller enforcing the given limits.
+    ///
+    /// Panics if `max_active_sessions`, `max_map_count_ratio` or
+    /// `min_available_memory_ratio` is out of range.
+    /// `request_min_available_memory_ratio` outside
+    /// `(0.0, min_available_memory_ratio]` is logged as an error and replaced:
+    /// clamped to `min_available_memory_ratio` if above it, or set to
+    /// [`crate::meminfo::DEFAULT_REQUEST_MIN_AVAILABLE_MEMORY_RATIO`] (capped
+    /// at `min_available_memory_ratio`) if non-positive.
     pub fn new(
         max_active_sessions: usize,
         max_map_count_ratio: f64,
         min_available_memory_ratio: f64,
+        request_min_available_memory_ratio: f64,
         map_monitor: MapCountMonitor,
         metrics: Arc<metrics::Metrics>,
     ) -> Self {
@@ -264,8 +372,14 @@ impl AdmissionController {
             max_map_count_ratio > 0.0 && max_map_count_ratio <= 1.0,
             "Misconfigured max_map_count_ratio! Must be in (0.0, 1.0]."
         );
+        // Unlike the limits above, an invalid request ratio has a safe
+        // replacement, so it is logged and replaced instead.
+        let request_min_available_memory_ratio = sanitize_request_min_available_memory_ratio(
+            request_min_available_memory_ratio,
+            min_available_memory_ratio,
+        );
         log::info!(
-            "admission control: max_active_sessions={max_active_sessions}, max_map_count_ratio={max_map_count_ratio} (vm.max_map_count={}), min_available_memory_ratio={min_available_memory_ratio}",
+            "admission control: max_active_sessions={max_active_sessions}, max_map_count_ratio={max_map_count_ratio} (vm.max_map_count={}), min_available_memory_ratio={min_available_memory_ratio}, request_min_available_memory_ratio={request_min_available_memory_ratio}",
             map_monitor.max_map_count()
         );
         metrics.record_max_active_sessions(max_active_sessions as u64);
@@ -273,10 +387,23 @@ impl AdmissionController {
             max_active_sessions,
             max_map_count_ratio,
             min_available_memory_ratio,
+            request_min_available_memory_ratio,
             sessions: SessionCounter::new(metrics.clone()),
             map_monitor,
+            meminfo_reader: crate::meminfo::system_meminfo_reader(),
             metrics,
+            session_rejection_log: LogRateLimiter::new(REJECTION_LOG_INTERVAL),
+            request_rejection_log: LogRateLimiter::new(REJECTION_LOG_INTERVAL),
+            meminfo_error_log: LogRateLimiter::new(REJECTION_LOG_INTERVAL),
         }
+    }
+
+    /// Replaces the memory info reader (used in tests to simulate memory
+    /// pressure changes while sessions are already open). The default reader
+    /// is [`crate::meminfo::system_meminfo_reader`].
+    pub fn with_meminfo_reader(mut self, meminfo_reader: crate::meminfo::MemInfoReader) -> Self {
+        self.meminfo_reader = meminfo_reader;
+        self
     }
 
     /// Number of currently live sessions.
@@ -315,8 +442,34 @@ impl AdmissionController {
         };
         // On rejection below, `guard` is dropped and the slot released.
         self.check_map_count()?;
-        self.check_memory_availability()?;
+        if let Err(message) = self.check_memory_availability(self.min_available_memory_ratio) {
+            return Err(self.reject(SessionRejectReason::LowMemory, message));
+        }
         Ok(guard)
+    }
+
+    /// Admits a follow-up RPC on an already-open session, or rejects it with
+    /// `RESOURCE_EXHAUSTED` when available memory falls below
+    /// `request_min_available_memory_ratio`.
+    ///
+    /// Active sessions stay open even when [`Self::admit`] stops accepting new
+    /// connections, so follow-up RPCs on those streams must also be gated
+    /// before they allocate more RAM. The caller records the rejection in
+    /// `rpc_failure_count` under the request's variant; `session_rejected`
+    /// counts only rejected new sessions.
+    pub fn admit_request(&self) -> tonic::Result<()> {
+        if let Err(message) =
+            self.check_memory_availability(self.request_min_available_memory_ratio)
+        {
+            if let Some(suppressed) = self.request_rejection_log.should_log_at(Instant::now()) {
+                log::warn!(
+                    "rejecting request on active session (low_memory): {message}{}",
+                    not_logged_suffix(suppressed)
+                );
+            }
+            return Err(tonic::Status::resource_exhausted(message));
+        }
+        Ok(())
     }
 
     fn check_map_count(&self) -> tonic::Result<()> {
@@ -338,26 +491,25 @@ impl AdmissionController {
         Ok(())
     }
 
-    /// Checks system available memory against `min_available_memory_ratio`.
-    fn check_memory_availability(&self) -> tonic::Result<()> {
-        let threshold = self.min_available_memory_ratio;
-        match crate::meminfo::read_system_meminfo() {
+    /// Checks system available memory against `threshold`, returning the
+    /// low-memory error message when below threshold.
+    fn check_memory_availability(&self, threshold: f64) -> Result<(), String> {
+        match (self.meminfo_reader)() {
             Ok(meminfo) => {
                 if meminfo.is_below_threshold(threshold) {
-                    return Err(self.reject(
-                        SessionRejectReason::LowMemory,
-                        format!(
-                            "server memory is critically low: {:.1}% available (threshold: {:.1}%)",
-                            meminfo.available_ratio() * 100.0,
-                            threshold * 100.0
-                        ),
+                    return Err(format!(
+                        "server memory is critically low: {:.1}% available (threshold: {:.1}%)",
+                        meminfo.available_ratio() * 100.0,
+                        threshold * 100.0
                     ));
                 }
             }
             Err(e) => {
                 // Log warning when meminfo cannot be read (e.g. non-Linux or test env), fail
-                // open.
-                log::warn!("reading /proc/meminfo: {e}");
+                // open. This runs on every request, so the warning is rate-limited.
+                if let Some(suppressed) = self.meminfo_error_log.should_log_at(Instant::now()) {
+                    log::warn!("reading /proc/meminfo: {e}{}", not_logged_suffix(suppressed));
+                }
             }
         }
         Ok(())
@@ -365,7 +517,13 @@ impl AdmissionController {
 
     fn reject(&self, reason: SessionRejectReason, message: String) -> tonic::Status {
         self.metrics.inc_session_rejected(reason);
-        log::warn!("rejecting new session ({}): {message}", reason.as_str());
+        if let Some(suppressed) = self.session_rejection_log.should_log_at(Instant::now()) {
+            log::warn!(
+                "rejecting new session ({}): {message}{}",
+                reason.as_str(),
+                not_logged_suffix(suppressed)
+            );
+        }
         tonic::Status::resource_exhausted(message)
     }
 }
@@ -421,9 +579,14 @@ mod tests {
             max_active_sessions,
             ratio,
             crate::meminfo::DEFAULT_MIN_AVAILABLE_MEMORY_RATIO,
+            crate::meminfo::DEFAULT_REQUEST_MIN_AVAILABLE_MEMORY_RATIO,
             monitor,
             metrics::get_global_metrics(),
         )
+        // Report ample memory so tests don't depend on how loaded the host is.
+        .with_meminfo_reader(Arc::new(|| {
+            Ok(crate::meminfo::MemoryInfo { total_bytes: 1000, available_bytes: 1000 })
+        }))
     }
 
     fn disabled_monitor() -> MapCountMonitor {
@@ -587,5 +750,118 @@ mod tests {
     #[should_panic(expected = "Misconfigured max_map_count_ratio")]
     fn invalid_map_count_ratio_panics() {
         controller(1.5, disabled_monitor());
+    }
+
+    #[test]
+    fn request_memory_ratio_above_session_memory_ratio_is_clamped() {
+        assert_eq!(sanitize_request_min_available_memory_ratio(0.25, 0.20), 0.20);
+    }
+
+    #[test]
+    fn non_positive_request_memory_ratio_falls_back_to_default() {
+        let default = crate::meminfo::DEFAULT_REQUEST_MIN_AVAILABLE_MEMORY_RATIO;
+        assert_eq!(sanitize_request_min_available_memory_ratio(0.0, 0.20), default);
+        assert_eq!(sanitize_request_min_available_memory_ratio(-0.1, 0.20), default);
+        assert_eq!(sanitize_request_min_available_memory_ratio(f64::NAN, 0.20), default);
+        // The default itself is clamped to the new-session ratio.
+        assert_eq!(sanitize_request_min_available_memory_ratio(0.0, 0.05), 0.05);
+    }
+
+    #[test]
+    fn valid_request_memory_ratio_is_kept() {
+        assert_eq!(sanitize_request_min_available_memory_ratio(0.15, 0.20), 0.15);
+        assert_eq!(sanitize_request_min_available_memory_ratio(0.20, 0.20), 0.20);
+    }
+
+    #[test]
+    fn misconfigured_request_memory_ratio_does_not_panic() {
+        let admission = AdmissionController::new(
+            DEFAULT_MAX_ACTIVE_SESSIONS,
+            DEFAULT_MAX_MAP_COUNT_RATIO,
+            0.20,
+            0.25,
+            disabled_monitor(),
+            metrics::get_global_metrics(),
+        )
+        .with_meminfo_reader(Arc::new(|| {
+            Ok(crate::meminfo::MemoryInfo { total_bytes: 1000, available_bytes: 210 })
+        }));
+        // With 21% available, a request ratio of 0.25 would reject follow-up
+        // RPCs; clamped to 0.20 they are admitted, like new sessions.
+        assert!(admission.admit_request().is_ok());
+        assert!(admission.admit().is_ok());
+    }
+
+    #[test]
+    fn log_rate_limiter_logs_once_per_interval_and_counts_suppressed() {
+        let limiter = LogRateLimiter::new(Duration::from_secs(10));
+        let start = Instant::now();
+        assert_eq!(limiter.should_log_at(start), Some(0));
+        assert_eq!(limiter.should_log_at(start + Duration::from_secs(1)), None);
+        assert_eq!(limiter.should_log_at(start + Duration::from_secs(9)), None);
+        assert_eq!(limiter.should_log_at(start + Duration::from_secs(10)), Some(2));
+        assert_eq!(limiter.should_log_at(start + Duration::from_secs(11)), None);
+        assert_eq!(limiter.should_log_at(start + Duration::from_secs(25)), Some(1));
+        assert_eq!(not_logged_suffix(0), "");
+        assert_eq!(not_logged_suffix(2), " (2 earlier occurrences not logged)");
+    }
+
+    #[test]
+    fn admit_rejects_new_sessions_at_80_pct_and_followup_rpcs_at_90_pct() {
+        use std::sync::atomic::AtomicU64;
+
+        let available = Arc::new(AtomicU64::new(500));
+        let available_for_reader = available.clone();
+        let admission = controller_with_cap(2, DEFAULT_MAX_MAP_COUNT_RATIO, disabled_monitor())
+            .with_meminfo_reader(Arc::new(move || {
+                Ok(crate::meminfo::MemoryInfo {
+                    total_bytes: 1000,
+                    available_bytes: available_for_reader.load(Ordering::Acquire),
+                })
+            }));
+
+        // Session is admitted while memory is at 50% utilization.
+        let _guard = admission.admit().unwrap();
+
+        // At 80% RAM utilization (20% available), both new sessions and
+        // follow-up RPCs still succeed.
+        available.store(200, Ordering::Release);
+        assert!(admission.admit().is_ok());
+        assert!(admission.admit_request().is_ok());
+
+        // Between 80% and 90% RAM utilization (e.g. 85% used = 15% available),
+        // new sessions are rejected with RESOURCE_EXHAUSTED, while follow-up
+        // RPCs on the already-open session continue to succeed.
+        available.store(199, Ordering::Release);
+        assert_eq!(admission.admit().unwrap_err().code(), tonic::Code::ResourceExhausted);
+        assert_eq!(admission.active_sessions(), 1);
+        assert!(admission.admit_request().is_ok());
+        available.store(100, Ordering::Release);
+        assert_eq!(admission.admit().unwrap_err().code(), tonic::Code::ResourceExhausted);
+        assert!(admission.admit_request().is_ok());
+
+        // Once RAM utilization exceeds 90% (< 10% available), follow-up RPCs on
+        // the already-open session are also rejected with RESOURCE_EXHAUSTED.
+        available.store(99, Ordering::Release);
+        let err = admission.admit_request().unwrap_err();
+        assert_eq!(err.code(), tonic::Code::ResourceExhausted);
+        assert!(err.message().contains("server memory is critically low"), "{}", err.message());
+
+        // When memory recovers into the 80%..=90% band (e.g. 85% used),
+        // follow-up RPCs on the open session succeed again while new sessions
+        // stay blocked until utilization drops back to <= 80%.
+        available.store(150, Ordering::Release);
+        assert!(admission.admit_request().is_ok());
+        assert_eq!(admission.admit().unwrap_err().code(), tonic::Code::ResourceExhausted);
+
+        available.store(200, Ordering::Release);
+        assert!(admission.admit().is_ok());
+    }
+
+    #[test]
+    fn admit_request_fails_open_when_meminfo_unreadable() {
+        let admission = controller(DEFAULT_MAX_MAP_COUNT_RATIO, disabled_monitor())
+            .with_meminfo_reader(Arc::new(|| Err(anyhow::anyhow!("procfs unavailable"))));
+        assert!(admission.admit_request().is_ok());
     }
 }

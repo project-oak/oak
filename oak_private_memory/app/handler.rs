@@ -41,8 +41,12 @@ use tonic::transport::Channel;
 use zeroize::Zeroizing;
 
 use crate::{
-    IntoTonicResult, admission::ActiveSessionGuard, context::UserSessionContext,
-    db_client::SharedDbClient, packing::ResponsePacking, persistence_worker,
+    IntoTonicResult,
+    admission::{ActiveSessionGuard, AdmissionController},
+    context::UserSessionContext,
+    db_client::SharedDbClient,
+    packing::ResponsePacking,
+    persistence_worker,
 };
 
 // The implementation for one active Oak Private Memory session.
@@ -59,6 +63,7 @@ pub struct SealedMemorySessionHandler {
     enable_int8_embedding: bool,
     allowed_memory_sources: Vec<String>,
     session_guard: Option<ActiveSessionGuard>,
+    admission: Option<Arc<AdmissionController>>,
 }
 
 impl Drop for SealedMemorySessionHandler {
@@ -111,6 +116,7 @@ impl SealedMemorySessionHandler {
             enable_int8_embedding,
             allowed_memory_sources,
             session_guard: None,
+            admission: None,
         }
     }
 
@@ -120,6 +126,20 @@ impl SealedMemorySessionHandler {
     pub fn with_session_guard(mut self, session_guard: ActiveSessionGuard) -> Self {
         self.session_guard = Some(session_guard);
         self
+    }
+
+    /// Attaches the admission controller so follow-up RPCs on this session are
+    /// gated by the memory threshold before executing.
+    pub fn with_admission(mut self, admission: Arc<AdmissionController>) -> Self {
+        self.admission = Some(admission);
+        self
+    }
+
+    fn admit_request(&self) -> tonic::Result<()> {
+        match &self.admission {
+            Some(admission) => admission.admit_request(),
+            None => Ok(()),
+        }
     }
 
     pub async fn session_context(&self) -> RwLockWriteGuard<'_, Option<UserSessionContext>> {
@@ -832,6 +852,10 @@ impl SealedMemorySessionHandler {
     /// Handles a serialized `SealedMemoryRequest` and returns the serialized
     /// `SealedMemoryResponse`.
     ///
+    /// Follow-up requests are rejected in-band with `RESOURCE_EXHAUSTED` while
+    /// the enclave is critically low on memory (see
+    /// [`AdmissionController::admit_request`]), without closing the session.
+    ///
     /// Records each failed request once in `rpc_failure_count`, so callers
     /// must not record the errors returned from here again.
     pub async fn handle(&self, request_bytes: &[u8]) -> tonic::Result<Vec<u8>> {
@@ -862,7 +886,14 @@ impl SealedMemorySessionHandler {
 
         let start_time = Instant::now();
 
-        let result = self.handle_request_variant(request_variant).await;
+        let result = match self.admit_request() {
+            Ok(()) => self.handle_request_variant(request_variant).await,
+            Err(status) => {
+                // Free the decoded request right away: memory is critically low.
+                drop(request_variant);
+                Err(status)
+            }
+        };
 
         let (mut response, error_code) = match result {
             Ok(resp) => (resp, None),
@@ -2163,5 +2194,117 @@ mod tests {
 
         assert_eq!(status.code(), tonic::Code::Internal);
         assert!(status.message().contains("icing exploded"), "message was: {}", status.message());
+    }
+
+    /// New sessions are rejected past 80% RAM utilization while follow-up RPCs
+    /// on an already-open session continue to succeed until RAM utilization
+    /// exceeds 90%, at which point follow-up RPCs are rejected with
+    /// `RESOURCE_EXHAUSTED`.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn handle_rejects_followup_requests_when_memory_exceeds_90_pct() {
+        use std::{
+            path::Path,
+            sync::atomic::{AtomicU64, Ordering},
+        };
+
+        use crate::admission::{
+            DEFAULT_MAX_ACTIVE_SESSIONS, DEFAULT_MAX_MAP_COUNT_RATIO, MapCountMonitor,
+        };
+
+        let harness = test_metrics();
+        let available = Arc::new(AtomicU64::new(500));
+        let available_for_reader = available.clone();
+        let monitor = MapCountMonitor::new(
+            Path::new("/nonexistent/maps"),
+            Path::new("/nonexistent/max_map_count"),
+            Duration::ZERO,
+        );
+        let admission = Arc::new(
+            AdmissionController::new(
+                DEFAULT_MAX_ACTIVE_SESSIONS,
+                DEFAULT_MAX_MAP_COUNT_RATIO,
+                crate::meminfo::DEFAULT_MIN_AVAILABLE_MEMORY_RATIO,
+                crate::meminfo::DEFAULT_REQUEST_MIN_AVAILABLE_MEMORY_RATIO,
+                monitor,
+                harness.metrics.clone(),
+            )
+            .with_meminfo_reader(Arc::new(move || {
+                Ok(crate::meminfo::MemoryInfo {
+                    total_bytes: 1000,
+                    available_bytes: available_for_reader.load(Ordering::Acquire),
+                })
+            })),
+        );
+
+        let guard = admission.admit().unwrap();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(start_test_db().await, harness.metrics.clone());
+        let handler = handler.with_session_guard(guard).with_admission(admission.clone());
+
+        // Push RAM utilization to 85% (15% available): new sessions are now
+        // rejected at the 80% threshold, while follow-up RPCs on the
+        // already-open session still succeed.
+        available.store(150, Ordering::Release);
+        assert_eq!(admission.admit().unwrap_err().code(), tonic::Code::ResourceExhausted);
+
+        let pm_uid = "followup_low_memory_user";
+        handler
+            .handle(
+                &SealedMemoryRequest {
+                    request: Some(sealed_memory_request::Request::UserRegistrationRequest(
+                        registration_request(pm_uid),
+                    )),
+                    request_id: 1,
+                }
+                .encode_to_vec(),
+            )
+            .await
+            .unwrap();
+        handler
+            .handle(
+                &SealedMemoryRequest {
+                    request: Some(sealed_memory_request::Request::KeySyncRequest(
+                        key_sync_request(pm_uid, None),
+                    )),
+                    request_id: 2,
+                }
+                .encode_to_vec(),
+            )
+            .await
+            .unwrap();
+
+        // Push RAM utilization over 90% (9% available < 10% threshold).
+        available.store(90, Ordering::Release);
+        let before = harness.collect();
+
+        let add_req = SealedMemoryRequest {
+            request: Some(sealed_memory_request::Request::AddMemoryRequest(AddMemoryRequest {
+                memory: Some(memory_expiring_in_an_hour()),
+            })),
+            request_id: 3,
+        };
+        assert_eq!(handle_expecting_error(&handler, add_req).await, tonic::Code::ResourceExhausted);
+
+        let snapshot = harness.collect();
+        assert_eq!(
+            snapshot.counter_increments(&before, "rpc_count"),
+            BTreeMap::from([(request_series("AddMemoryRequest"), 1)])
+        );
+        assert_eq!(
+            snapshot.counter_increments(&before, "rpc_failure_count"),
+            BTreeMap::from([
+                (failure_series("AddMemoryRequest", "RESOURCE_EXHAUSTED"), 1),
+                (failure_series("total", "RESOURCE_EXHAUSTED"), 1),
+            ])
+        );
+        // `session_rejected` counts only new session rejections, not follow-up RPCs.
+        assert_eq!(snapshot.counter_increments(&before, "session_rejected"), BTreeMap::new());
+
+        // Once RAM drops back into the 80%..=90% band (85% used), the open
+        // session can execute RPCs again while new sessions remain blocked.
+        available.store(150, Ordering::Release);
+        assert_eq!(admission.admit().unwrap_err().code(), tonic::Code::ResourceExhausted);
+        let id = add_memory(&handler).await;
+        assert!(memory_is_readable(&handler, &id).await);
     }
 }

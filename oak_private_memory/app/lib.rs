@@ -72,12 +72,23 @@ pub struct ApplicationConfig {
     #[serde(default)]
     pub allowed_memory_sources: Vec<String>,
 
-    /// Minimum available memory ratio required to initialize new sessions
-    /// (`MemAvailable` / `MemTotal`). Rejects incoming new session
-    /// handshakes with `RESOURCE_EXHAUSTED` when available RAM drops below this
-    /// ratio threshold. Default: 0.05 (5%).
+    /// Minimum available memory ratio (`MemAvailable` / `MemTotal`) required to
+    /// accept new sessions. Rejects incoming session handshakes with
+    /// `RESOURCE_EXHAUSTED` when available RAM drops below this ratio
+    /// threshold, leaving headroom for already-open sessions. Default: 0.20
+    /// (20% available, i.e. 80% RAM utilization).
     #[serde(default = "default_min_available_memory_ratio")]
     pub min_available_memory_ratio: f64,
+
+    /// Minimum available memory ratio (`MemAvailable` / `MemTotal`) required to
+    /// execute follow-up RPCs on already-open sessions. Rejects follow-up RPC
+    /// calls in-band with `RESOURCE_EXHAUSTED` when available RAM drops below
+    /// this ratio threshold. Must be in `(0.0, min_available_memory_ratio]`;
+    /// out-of-range values are logged as errors and replaced at startup (see
+    /// `admission::AdmissionController::new`) rather than failing startup.
+    /// Default: 0.10 (10% available, i.e. 90% RAM utilization).
+    #[serde(default = "default_request_min_available_memory_ratio")]
+    pub request_min_available_memory_ratio: f64,
 
     /// Maximum process map count (lines in `/proc/self/maps`) as a fraction of
     /// `vm.max_map_count`. Each session owns an Icing instance (~55-70 memory
@@ -105,6 +116,10 @@ fn default_max_map_count_ratio() -> f64 {
 
 fn default_min_available_memory_ratio() -> f64 {
     crate::meminfo::DEFAULT_MIN_AVAILABLE_MEMORY_RATIO
+}
+
+fn default_request_min_available_memory_ratio() -> f64 {
+    crate::meminfo::DEFAULT_REQUEST_MIN_AVAILABLE_MEMORY_RATIO
 }
 
 fn default_max_database_size_bytes() -> usize {
@@ -198,13 +213,19 @@ mod tests {
             config.min_available_memory_ratio,
             crate::meminfo::DEFAULT_MIN_AVAILABLE_MEMORY_RATIO
         );
+        assert_eq!(
+            config.request_min_available_memory_ratio,
+            crate::meminfo::DEFAULT_REQUEST_MIN_AVAILABLE_MEMORY_RATIO
+        );
 
         let custom_json = r#"{
             "database_service_host": "127.0.0.1:8080",
-            "min_available_memory_ratio": 0.10
+            "min_available_memory_ratio": 0.25,
+            "request_min_available_memory_ratio": 0.15
         }"#;
         let config = serde_json::from_str::<ApplicationConfig>(custom_json).unwrap();
-        assert_eq!(config.min_available_memory_ratio, 0.10);
+        assert_eq!(config.min_available_memory_ratio, 0.25);
+        assert_eq!(config.request_min_available_memory_ratio, 0.15);
     }
 
     #[test]

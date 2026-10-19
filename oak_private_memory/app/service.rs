@@ -72,16 +72,21 @@ impl SealedMemoryServiceImplementation {
         session_config_factory: Arc<dyn Fn() -> SessionConfig + Send + Sync>,
         tls_server_context: Option<Arc<OakSessionTlsServerContext>>,
         clock: Arc<dyn Clock>,
+        meminfo_reader: crate::meminfo::MemInfoReader,
     ) -> Self {
         // Panics on misconfigured thresholds to surface the error early rather
         // than silently disabling.
-        let admission = Arc::new(AdmissionController::new(
-            application_config.max_active_sessions,
-            application_config.max_map_count_ratio,
-            application_config.min_available_memory_ratio,
-            MapCountMonitor::new_for_current_process(),
-            metrics.clone(),
-        ));
+        let admission = Arc::new(
+            AdmissionController::new(
+                application_config.max_active_sessions,
+                application_config.max_map_count_ratio,
+                application_config.min_available_memory_ratio,
+                application_config.request_min_available_memory_ratio,
+                MapCountMonitor::new_for_current_process(),
+                metrics.clone(),
+            )
+            .with_meminfo_reader(meminfo_reader),
+        );
 
         Self {
             db_client: Arc::new(SharedDbClient::new(
@@ -113,6 +118,7 @@ impl SealedMemoryServiceImplementation {
         let session_guard = self.admission.admit()?;
         OakSessionHandler::new(
             session_guard,
+            self.admission.clone(),
             &self.metrics,
             &self.persistence_tx,
             self.db_client.clone(),
@@ -166,6 +172,7 @@ impl OakSessionHandler {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         session_guard: ActiveSessionGuard,
+        admission: Arc<AdmissionController>,
         metrics: &Arc<metrics::Metrics>,
         persistence_tx: &mpsc::UnboundedSender<UserSessionContext>,
         db_client: Arc<SharedDbClient>,
@@ -193,7 +200,8 @@ impl OakSessionHandler {
                 enable_int8_embedding,
                 allowed_memory_sources,
             )
-            .with_session_guard(session_guard),
+            .with_session_guard(session_guard)
+            .with_admission(admission),
         })
     }
 
@@ -332,6 +340,7 @@ impl TlsSessionHandler {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         session_guard: ActiveSessionGuard,
+        admission: Arc<AdmissionController>,
         metrics: &Arc<metrics::Metrics>,
         persistence_tx: &mpsc::UnboundedSender<UserSessionContext>,
         db_client: Arc<SharedDbClient>,
@@ -357,7 +366,8 @@ impl TlsSessionHandler {
                 enable_int8_embedding,
                 allowed_memory_sources,
             )
-            .with_session_guard(session_guard),
+            .with_session_guard(session_guard)
+            .with_admission(admission),
         }
     }
 }
@@ -471,6 +481,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         self.record_session_start(&admitted);
         let (session_guard, tls_ctx) = admitted?;
 
+        let admission = self.admission.clone();
         let metrics = self.metrics.clone();
         let persistence_tx = self.persistence_tx.clone();
         let db_client = self.db_client.clone();
@@ -532,6 +543,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
 
             let tls_handler = TlsSessionHandler::new(
                 session_guard,
+                admission,
                 &metrics,
                 &persistence_tx,
                 db_client,
@@ -777,6 +789,33 @@ pub async fn create(
     tls_server_context: Option<Arc<OakSessionTlsServerContext>>,
     clock: Arc<dyn Clock>,
 ) -> Result<(), anyhow::Error> {
+    create_with_meminfo_reader(
+        listener,
+        application_config,
+        metrics,
+        persistence_tx,
+        session_config_factory,
+        tls_server_context,
+        clock,
+        crate::meminfo::system_meminfo_reader(),
+    )
+    .await
+}
+
+/// Like [`create`], but uses `meminfo_reader` to sample available memory (used
+/// in integration tests to simulate memory pressure changes after sessions are
+/// already open).
+#[allow(clippy::too_many_arguments)]
+pub async fn create_with_meminfo_reader(
+    listener: TcpListener,
+    application_config: ApplicationConfig,
+    metrics: Arc<metrics::Metrics>,
+    persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
+    session_config_factory: Arc<dyn Fn() -> SessionConfig + Send + Sync>,
+    tls_server_context: Option<Arc<OakSessionTlsServerContext>>,
+    clock: Arc<dyn Clock>,
+    meminfo_reader: crate::meminfo::MemInfoReader,
+) -> Result<(), anyhow::Error> {
     let max_grpc_decode_size_bytes = application_config.max_grpc_decode_size_bytes;
     let service = SealedMemoryServiceImplementation::new(
         application_config,
@@ -785,6 +824,7 @@ pub async fn create(
         session_config_factory,
         tls_server_context,
         clock,
+        meminfo_reader,
     );
 
     // Keep the admission gauges fresh even when no new sessions arrive. The

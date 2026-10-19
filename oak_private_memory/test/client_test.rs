@@ -1818,16 +1818,6 @@ async fn test_failure_points_have_request_type_and_status_code() {
     );
 }
 
-/// Server config whose minimum available memory ratio no real host meets, so
-/// every new session is rejected as low on memory.
-fn config_with_unreachable_memory_threshold(db_addr: std::net::SocketAddr) -> ApplicationConfig {
-    ApplicationConfig {
-        // No real host has this much of its memory available.
-        min_available_memory_ratio: 0.999_999,
-        ..default_test_application_config(db_addr)
-    }
-}
-
 /// Every session RPC.
 const ALL_RPCS: [SessionRpc; 4] = [
     SessionRpc::Invoke,
@@ -1841,13 +1831,22 @@ const ALL_RPCS: [SessionRpc; 4] = [
 #[tokio::test(flavor = "multi_thread")]
 async fn test_low_memory_rejections_are_counted() {
     let harness = test_metrics();
-    let (addr, _server, _db, _persistence) = start_server_with_metrics(
-        config_with_unreachable_memory_threshold,
-        None,
-        harness.metrics.clone(),
-    )
-    .await
-    .unwrap();
+    // 10% available is below the default 20% new-session threshold.
+    let (addr, _server, _db, _persistence) =
+        private_memory_test_utils::start_server_with_meminfo_reader(
+            default_test_application_config,
+            None,
+            Arc::new(attestation_testing::dummy_server_session_config),
+            Arc::new(|| {
+                Ok(private_memory_server_lib::app::meminfo::MemoryInfo {
+                    total_bytes: 1000,
+                    available_bytes: 100,
+                })
+            }),
+            harness.metrics.clone(),
+        )
+        .await
+        .unwrap();
     let url = format!("http://{addr}");
 
     for rpc in ALL_RPCS {
@@ -1856,8 +1855,7 @@ async fn test_low_memory_rejections_are_counted() {
         assert_eq!(
             status.code(),
             tonic::Code::ResourceExhausted,
-            "{rpc:?} was not rejected for low memory ({status:?}); the server only rejects \
-             sessions for low memory if /proc/meminfo is readable"
+            "{rpc:?} was not rejected for low memory ({status:?})"
         );
         assert_increments(
             &harness,
@@ -1958,5 +1956,77 @@ async fn test_map_count_rejections_are_counted() {
             BTreeMap::from([(attrs(&[("reason", "map_count")]), 1)]),
             "{rpc:?}"
         );
+    }
+}
+
+/// New sessions are rejected once RAM utilization exceeds 80% (`MemAvailable /
+/// MemTotal < 0.20`), while follow-up RPCs on an already-open session on any
+/// Noise streaming RPC (`Invoke`, `InvokeAsync`, `StartSession`) continue to
+/// succeed until RAM utilization exceeds 90% (`MemAvailable / MemTotal <
+/// 0.10`), at which point follow-up RPCs are rejected with `RESOURCE_EXHAUSTED`
+/// and counted in `rpc_failure_count` under the request's type.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_low_memory_rejects_followup_requests_on_open_sessions() {
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    let harness = test_metrics();
+    let available = Arc::new(AtomicU64::new(500));
+    let available_for_reader = available.clone();
+    let (addr, _server, _db, _persistence) =
+        private_memory_test_utils::start_server_with_meminfo_reader(
+            default_test_application_config,
+            None,
+            Arc::new(attestation_testing::dummy_server_session_config),
+            Arc::new(move || {
+                Ok(private_memory_server_lib::app::meminfo::MemoryInfo {
+                    total_bytes: 1000,
+                    available_bytes: available_for_reader.load(Ordering::Acquire),
+                })
+            }),
+            harness.metrics.clone(),
+        )
+        .await
+        .unwrap();
+    let url = format!("http://{addr}");
+
+    for rpc in NOISE_RPCS {
+        available.store(500, Ordering::Release);
+        let mut session = RawNoiseSession::open(&url, rpc).await;
+
+        // At 85% RAM utilization (15% available < 20% new-session threshold),
+        // new connections are rejected with RESOURCE_EXHAUSTED, while follow-up
+        // RPCs on the already-open stream still pass admission (up to 90% used)
+        // and reach the handler, which fails them only because no KeySync ran.
+        available.store(150, Ordering::Release);
+        assert_eq!(open_rejected_stream(&url, rpc).await.code(), tonic::Code::ResourceExhausted);
+        let response = session.invoke(add_memory_request()).await;
+        assert_eq!(error_code(&response), tonic::Code::FailedPrecondition, "{rpc:?}");
+
+        available.store(100, Ordering::Release);
+        let response = session.invoke(add_memory_request()).await;
+        assert_eq!(error_code(&response), tonic::Code::FailedPrecondition, "{rpc:?}");
+
+        // Once RAM utilization exceeds 90% (9% available < 10% threshold),
+        // follow-up RPCs on the open stream are rejected with
+        // RESOURCE_EXHAUSTED before running the handler.
+        available.store(90, Ordering::Release);
+        let before = harness.collect();
+        let response = session.invoke(add_memory_request()).await;
+        assert_eq!(error_code(&response), tonic::Code::ResourceExhausted, "{rpc:?}");
+        assert_increments(
+            &harness,
+            &before,
+            &[("AddMemoryRequest", 1), ("total", 1)],
+            &[("AddMemoryRequest", "RESOURCE_EXHAUSTED", 1), ("total", "RESOURCE_EXHAUSTED", 1)],
+            rpc,
+        );
+
+        // When RAM drops back into the 80%..=90% band (85% used), the open
+        // stream works again while new sessions remain blocked.
+        available.store(150, Ordering::Release);
+        assert_eq!(open_rejected_stream(&url, rpc).await.code(), tonic::Code::ResourceExhausted);
+        let response = session.invoke(add_memory_request()).await;
+        assert_eq!(error_code(&response), tonic::Code::FailedPrecondition, "{rpc:?}");
+        session.close().await;
     }
 }
