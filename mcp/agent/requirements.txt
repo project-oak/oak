@@ -8,7 +8,7 @@ a2a-sdk[http-server]==1.1.0
     # via -r requirements.in
 aiohappyeyeballs==2.6.2
     # via aiohttp
-aiohttp==3.14.3
+aiohttp==3.14.4
     # via litellm
 aiosignal==1.4.0
     # via aiohttp
@@ -279,7 +279,7 @@ websockets==15.0.1
     # via
     #   google-adk
     #   google-genai
-yarl==1.24.2
+yarl==1.25.1
     # via aiohttp
 zipp==4.1.0
     # via importlib-metadata
