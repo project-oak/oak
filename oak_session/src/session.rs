@@ -384,7 +384,6 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
                     attestation_state.peer_attestation_verdict.get_assertion_verification_results(),
                     &handshake_result.handshake_state.peer_assertion_bindings,
                     attestation_state.attestation_binding_token.as_slice(),
-                    attestation_state.legacy_attestation_binding_token.as_slice(),
                     handshake_result.handshake_state.handshake_binding_token.as_slice(),
                 ) {
                     if let Some(publisher) = attestation_publisher {
@@ -941,13 +940,10 @@ fn verify_assertion_session_binding(
     verified_bound_assertions: &BTreeMap<String, BoundAssertionVerifierResult>,
     assertion_bindings: &BTreeMap<String, SessionBinding>,
     attestation_binding_token: &[u8],
-    legacy_attestation_binding_token: &[u8],
     handshake_hash: &[u8],
 ) -> Result<(), Error> {
     let assertion_bound_data =
         create_session_binding_token(attestation_binding_token, handshake_hash);
-    let legacy_assertion_bound_data =
-        create_session_binding_token(legacy_attestation_binding_token, handshake_hash);
     for (id, result) in verified_bound_assertions {
         if let BoundAssertionVerifierResult::Success { verified_bound_assertion: assertion } =
             result
@@ -955,14 +951,9 @@ fn verify_assertion_session_binding(
             let binding = assertion_bindings
                 .get(id)
                 .ok_or(anyhow!("peer hasn't sent an assertion binding for ID {id}"))?;
-            if let Err(err) = assertion.verify_binding(assertion_bound_data.as_slice(), binding) {
-                // TODO: b/533986916 - Remove fallback once pre-built enclave binaries
-                // have migrated to length-prefixed assertion serialization.
-                assertion
-                    .verify_binding(legacy_assertion_bound_data.as_slice(), binding)
-                    .map_err(|_| err)
-                    .context("couldn't verify the assertion binding for ID {id}")?;
-            }
+            assertion
+                .verify_binding(assertion_bound_data.as_slice(), binding)
+                .context("couldn't verify the assertion binding for ID {id}")?;
         }
     }
     Ok(())
