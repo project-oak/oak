@@ -107,5 +107,6 @@ async fn establish_noise_session(
     }
 
     log::info!("[Client] Oak Session established with server proxy.");
-    Ok((NoiseProxySession::new(session), stream))
+    let verified_attestation_ids = config::verified_attestation_ids(&config.attestation_verifiers);
+    Ok((NoiseProxySession::new(session, verified_attestation_ids), stream))
 }

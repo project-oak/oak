@@ -17,8 +17,9 @@
 pub mod authorized_endorsement;
 pub mod confidential_space;
 
-use std::{net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
+use std::{collections::BTreeSet, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
 
+use oak_proto_rust::attestation::CONFIDENTIAL_SPACE_ATTESTATION_ID;
 use oak_session::{
     attestation::AttestationType,
     config::{SessionConfig, SessionConfigBuilder},
@@ -147,6 +148,19 @@ impl VerifierConfig {
             VerifierConfig::ConfidentialSpace(params) => params.apply(builder),
         }
     }
+
+    /// The ID under which [`VerifierConfig::apply`] registers the peer verifier.
+    pub fn attestation_id(&self) -> &'static str {
+        match self {
+            VerifierConfig::ConfidentialSpace(_) => CONFIDENTIAL_SPACE_ATTESTATION_ID,
+        }
+    }
+}
+
+/// Returns the IDs of the peer verifiers that [`build_session_config`]
+/// configures for `attestation_verifiers`.
+pub fn verified_attestation_ids(attestation_verifiers: &[VerifierConfig]) -> BTreeSet<String> {
+    attestation_verifiers.iter().map(|verifier| verifier.attestation_id().to_string()).collect()
 }
 
 pub fn build_session_config(
