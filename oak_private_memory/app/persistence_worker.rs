@@ -24,9 +24,13 @@ use prost::Message;
 use sealed_memory_rust_proto::{
     oak::private_memory::EncryptedMetadataBlob, prelude::v1::SyncDatabaseResponse,
 };
-use tokio::{sync::mpsc, time::Instant};
+use tokio::{sync::mpsc, task::JoinSet, time::Instant};
 
 static MAX_RETRY_ATTEMPTS: u64 = 25;
+
+/// Maximum number of user sessions persisted concurrently by the background
+/// persistence worker.
+pub(crate) const MAX_CONCURRENT_PERSISTS: usize = 8;
 
 /// Minimum number of optimizable (deleted/expired) documents before calling
 /// Icing.Optimize. GetOptimizeInfo (~0.16ms) is called on every persist to
@@ -179,6 +183,20 @@ pub async fn sync_persist_database(
     Ok(SyncDatabaseResponse {})
 }
 
+async fn persist_one_session(mut user_context: UserSessionContext, metrics: Arc<Metrics>) {
+    // Optimize is expensive (~1s for a 30MB database) and always rebuilds
+    // the entire index. Use GetOptimizeInfo (~0.16ms) to check whether
+    // there are enough deleted/expired documents to warrant optimization.
+    if let Err(e) = maybe_optimize(&mut user_context.database, &metrics) {
+        error!("optimizing database: {e:?}");
+    }
+
+    if let Err(e) = persist_database(&mut user_context, &metrics).await {
+        metrics.inc_db_persist_failures();
+        error!("Failed to persist database: {:?}", e);
+    }
+}
+
 // Attempt to persist the database up to MAX_RETRY_ATTEMPTS times.
 // Retries only occur when the FailedPrecondition error code is returned from
 // the underlying database layer.
@@ -221,25 +239,60 @@ async fn persist_database(
     anyhow::bail!("Failed to persist after {} attempts", MAX_RETRY_ATTEMPTS);
 }
 
+/// Persists each session received on `rx` in its own task, with at most
+/// `MAX_CONCURRENT_PERSISTS` persisting at once.
+///
+/// A session is only taken off `rx` when a worker slot is free, so sessions
+/// waiting for a slot stay in `rx` and `rx.len()` is the number of queued
+/// sessions.
+///
+/// Sessions are not ordered per `uid`. Sessions for the same `uid` may persist
+/// concurrently: the versioned metadata write rejects a stale version, and
+/// `persist_database` then rebases onto the latest blob and retries, as it
+/// already must for writes from other enclaves and from `SyncDatabase`. As a
+/// result, the mutations of the session whose write commits last are applied
+/// last, regardless of the order in which the sessions closed.
 pub async fn run_persistence_service(
     mut rx: mpsc::UnboundedReceiver<UserSessionContext>,
     metrics: Arc<Metrics>,
 ) {
     info!("Persistence service started");
-    while let Some(mut user_context) = rx.recv().await {
-        info!("Persistence service received a session to save");
-        metrics.record_db_persist_queue_size(rx.len() as u64);
+    let mut persisting_tasks: JoinSet<()> = JoinSet::new();
+    let mut rx_open = true;
 
-        // Optimize is expensive (~1s for a 30MB database) and always rebuilds
-        // the entire index. Use GetOptimizeInfo (~0.16ms) to check whether
-        // there are enough deleted/expired documents to warrant optimization.
-        if let Err(e) = maybe_optimize(&mut user_context.database, &metrics) {
-            error!("optimizing database: {e:?}");
-        }
-
-        if let Err(e) = persist_database(&mut user_context, &metrics).await {
-            metrics.inc_db_persist_failures();
-            info!("Failed to persist database: {:?}", e);
+    // Stay alive while:
+    // 1. `rx_open`: the channel is open, even when idle (0 tasks in
+    //    `persisting_tasks`).
+    // 2. `!persisting_tasks.is_empty()`: save tasks are still running and must not
+    //    be aborted.
+    // Exits only when the channel closes AND all saves have drained.
+    //
+    // At least one branch is always enabled inside the loop: when all
+    // `MAX_CONCURRENT_PERSISTS` slots are busy the `rx` branch is disabled, but
+    // `persisting_tasks` is then non-empty.
+    while rx_open || !persisting_tasks.is_empty() {
+        tokio::select! {
+            biased;
+            maybe_ctx = rx.recv(),
+                if rx_open && persisting_tasks.len() < MAX_CONCURRENT_PERSISTS =>
+            {
+                match maybe_ctx {
+                    Some(user_context) => {
+                        info!("Persistence service received a session to save");
+                        metrics.record_db_persist_queue_size(rx.len() as u64);
+                        persisting_tasks.spawn(persist_one_session(user_context, metrics.clone()));
+                    }
+                    None => {
+                        rx_open = false;
+                    }
+                }
+            }
+            Some(join_result) = persisting_tasks.join_next(), if !persisting_tasks.is_empty() => {
+                if let Err(join_error) = join_result {
+                    metrics.inc_db_persist_failures();
+                    error!("Persistence task panicked or was cancelled: {join_error:?}");
+                }
+            }
         }
     }
     info!("Persistence service finished");

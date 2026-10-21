@@ -2012,8 +2012,10 @@ mod tests {
     }
 
     /// Ending a session counts it in the persist queue size as soon as it is
-    /// queued, and the persistence worker records how many sessions are still
-    /// queued whenever it picks one up.
+    /// queued, and the gauge returns to 0 once the worker drains the queue.
+    /// Recording the remaining queue size when the worker picks up a session
+    /// is covered by
+    /// `persistence_service_queues_session_when_at_max_concurrency`.
     #[tokio::test(flavor = "multi_thread")]
     async fn persist_queue_size_counts_queued_sessions() {
         let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
@@ -2034,20 +2036,7 @@ mod tests {
         // Both sessions are queued before the worker runs.
         assert_eq!(queue_size(), 2);
 
-        let (arrived, release) = service.hold_next_metadata_write().await;
-        let worker = tokio::spawn(persistence_worker::run_persistence_service(
-            persistence_rx,
-            harness.metrics.clone(),
-        ));
-        tokio::time::timeout(Duration::from_secs(30), arrived)
-            .await
-            .expect("the persistence worker never wrote the first session")
-            .unwrap();
-        // The first session is being persisted and the second one is queued.
-        assert_eq!(queue_size(), 1);
-
-        release.send(()).unwrap();
-        worker.await.unwrap();
+        persistence_worker::run_persistence_service(persistence_rx, harness.metrics.clone()).await;
         assert_eq!(queue_size(), 0);
         assert_eq!(unlabeled_counter(&harness, "db_persist_failures"), 0);
     }
@@ -2109,6 +2098,245 @@ mod tests {
         ] {
             assert!(!harness.collect().names().contains(name), "{name}");
         }
+    }
+
+    /// Up to `MAX_CONCURRENT_PERSISTS` (8) distinct-user sessions persist
+    /// concurrently and all succeed.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn persistence_service_persists_max_concurrent_sessions() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let db_addr = start_test_db_with_service(service.clone()).await;
+        let harness = test_metrics();
+        let mut contexts = Vec::new();
+        for i in 0..persistence_worker::MAX_CONCURRENT_PERSISTS {
+            let pm_uid = format!("concurrent_user_{i}");
+            let (handler, _persistence_rx) =
+                connect_handler_with_metrics(db_addr, harness.metrics.clone());
+            start_session_with_changes(&handler, &pm_uid).await;
+            contexts.push(handler.session_context().await.take().unwrap());
+        }
+
+        let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
+        let worker = tokio::spawn(persistence_worker::run_persistence_service(
+            persistence_rx,
+            harness.metrics.clone(),
+        ));
+
+        // Hold each of the 8 writes inside `write_metadata_blob_stream` before
+        // sending the next one, proving all 8 tasks execute concurrently.
+        let mut releases = Vec::with_capacity(persistence_worker::MAX_CONCURRENT_PERSISTS);
+        for (i, context) in contexts.into_iter().enumerate() {
+            let (arrived, release) = service.hold_next_metadata_write().await;
+            persistence_tx.send(context).unwrap();
+            tokio::time::timeout(Duration::from_secs(30), arrived)
+                .await
+                .unwrap_or_else(|_| panic!("concurrent session {i} never reached write"))
+                .unwrap();
+            releases.push(release);
+        }
+        drop(persistence_tx);
+
+        for release in releases {
+            release.send(()).unwrap();
+        }
+        worker.await.unwrap();
+
+        for i in 0..persistence_worker::MAX_CONCURRENT_PERSISTS {
+            let pm_uid = format!("concurrent_user_{i}");
+            assert_eq!(service.get_metdata_blob_inner(&pm_uid).await.unwrap().version, "1");
+        }
+        assert_eq!(harness.collect().gauge("db_persist_queue_size", &[]), 0);
+        assert_eq!(unlabeled_counter(&harness, "db_persist_failures"), 0);
+    }
+
+    /// When `MAX_CONCURRENT_PERSISTS` (8) tasks are already persisting, an
+    /// additional session stays queued in the channel rather than being
+    /// dropped or writing immediately, and is persisted as soon as a slot frees
+    /// up.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn persistence_service_queues_session_when_at_max_concurrency() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let db_addr = start_test_db_with_service(service.clone()).await;
+        let harness = test_metrics();
+        let total_sessions = persistence_worker::MAX_CONCURRENT_PERSISTS + 1;
+        let mut contexts = Vec::new();
+        for i in 0..total_sessions {
+            let pm_uid = format!("overflow_user_{i}");
+            let (handler, _persistence_rx) =
+                connect_handler_with_metrics(db_addr, harness.metrics.clone());
+            start_session_with_changes(&handler, &pm_uid).await;
+            contexts.push(handler.session_context().await.take().unwrap());
+        }
+
+        let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
+        let worker = tokio::spawn(persistence_worker::run_persistence_service(
+            persistence_rx,
+            harness.metrics.clone(),
+        ));
+
+        let mut context_iter = contexts.into_iter();
+        let mut releases = Vec::with_capacity(persistence_worker::MAX_CONCURRENT_PERSISTS);
+        for i in 0..persistence_worker::MAX_CONCURRENT_PERSISTS {
+            let (arrived, release) = service.hold_next_metadata_write().await;
+            persistence_tx.send(context_iter.next().unwrap()).unwrap();
+            tokio::time::timeout(Duration::from_secs(30), arrived)
+                .await
+                .unwrap_or_else(|_| panic!("persisting session {i} never reached write"))
+                .unwrap();
+            releases.push(release);
+        }
+
+        // All 8 worker slots are now occupied. Arm a hold for the 9th write
+        // and send the 9th session, counting it in the queue size as
+        // `SealedMemorySessionHandler::drop` does.
+        let (mut arrived_9th, release_9th) = service.hold_next_metadata_write().await;
+        harness.metrics.inc_db_persist_queue_size();
+        persistence_tx.send(context_iter.next().unwrap()).unwrap();
+        drop(persistence_tx);
+        assert_eq!(harness.collect().gauge("db_persist_queue_size", &[]), 1);
+
+        // Because all 8 slots are still held, the worker must leave the 9th
+        // session in the channel, so it must not reach
+        // `write_metadata_blob_stream`.
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        assert!(arrived_9th.try_recv().is_err());
+        assert_eq!(harness.collect().gauge("db_persist_queue_size", &[]), 1);
+
+        // Free one slot; the worker must now take the 9th session off the
+        // channel and persist it.
+        releases.remove(0).send(()).unwrap();
+        tokio::time::timeout(Duration::from_secs(30), arrived_9th)
+            .await
+            .expect("queued 9th session never started after a slot opened")
+            .unwrap();
+        // The worker recorded the remaining queue size when the 9th session
+        // picked up the freed slot.
+        assert_eq!(harness.collect().gauge("db_persist_queue_size", &[]), 0);
+
+        release_9th.send(()).unwrap();
+        for release in releases {
+            release.send(()).unwrap();
+        }
+        worker.await.unwrap();
+
+        for i in 0..total_sessions {
+            let pm_uid = format!("overflow_user_{i}");
+            assert_eq!(service.get_metdata_blob_inner(&pm_uid).await.unwrap().version, "1");
+        }
+        assert_eq!(harness.collect().gauge("db_persist_queue_size", &[]), 0);
+        assert_eq!(unlabeled_counter(&harness, "db_persist_failures"), 0);
+    }
+
+    /// `MAX_CONCURRENT_PERSISTS` (8) sessions for the same `uid` persist
+    /// concurrently: each one starts writing while the earlier ones' writes
+    /// are still held. Once released, every write that loses the version
+    /// check rebases onto the latest persisted database and retries, so all
+    /// memories survive and no persist fails.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn persistence_service_persists_same_uid_concurrently() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let db_addr = start_test_db_with_service(service.clone()).await;
+        let harness = test_metrics();
+        let pm_uid = "same_uid_concurrent_user";
+
+        let mut memories = Vec::new();
+        let mut contexts = Vec::new();
+        for i in 0..persistence_worker::MAX_CONCURRENT_PERSISTS {
+            let (handler, _rx) = connect_handler_with_metrics(db_addr, harness.metrics.clone());
+            if i == 0 {
+                handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+            }
+            handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+            memories.push(add_memory(&handler).await);
+            contexts.push(handler.session_context().await.take().unwrap());
+        }
+
+        let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
+        let worker = tokio::spawn(persistence_worker::run_persistence_service(
+            persistence_rx,
+            harness.metrics.clone(),
+        ));
+
+        // Each session for the same uid must reach its write while the writes
+        // of the sessions sent before it are still held.
+        let mut releases = Vec::with_capacity(persistence_worker::MAX_CONCURRENT_PERSISTS);
+        for (i, context) in contexts.into_iter().enumerate() {
+            let (arrived, release) = service.hold_next_metadata_write().await;
+            persistence_tx.send(context).unwrap();
+            tokio::time::timeout(Duration::from_secs(30), arrived)
+                .await
+                .unwrap_or_else(|_| {
+                    panic!(
+                        "same-uid session {i} never reached write while earlier writes were held"
+                    )
+                })
+                .unwrap();
+            releases.push(release);
+        }
+        drop(persistence_tx);
+
+        // Release all writes. Exactly one write commits per version, and each
+        // commit appends a "1" to the version.
+        for release in releases {
+            release.send(()).unwrap();
+        }
+        worker.await.unwrap();
+
+        assert_eq!(
+            service.get_metdata_blob_inner(pm_uid).await.unwrap().version,
+            "1".repeat(persistence_worker::MAX_CONCURRENT_PERSISTS)
+        );
+        assert_eq!(harness.collect().gauge("db_persist_queue_size", &[]), 0);
+        assert_eq!(unlabeled_counter(&harness, "db_persist_failures"), 0);
+
+        let (fresh, _fresh_rx) = connect_handler(db_addr);
+        fresh.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        for memory in &memories {
+            assert!(memory_is_readable(&fresh, memory).await, "memory {memory} was lost");
+        }
+    }
+
+    /// If a spawned persistence task panics, the coordinator records a failure,
+    /// reaping the panicked task frees its worker slot, and other
+    /// sessions (including another session for the same `uid`) continue
+    /// persisting normally.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn persistence_service_recovers_from_task_panic() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let db_addr = start_test_db_with_service(service.clone()).await;
+        let harness = test_metrics();
+        let panic_uid = "panic_recovery_user";
+        let healthy_uid = "healthy_neighbor_user";
+
+        let (bad_handler, _bad_rx) = connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        start_session_with_changes(&bad_handler, panic_uid).await;
+        let mut bad_context = bad_handler.session_context().await.take().unwrap();
+        // AES-GCM key initialization panics when the DEK length is not 32 bytes.
+        *bad_context.dek = vec![0u8; 7];
+
+        let (retry_handler, _retry_rx) =
+            connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        retry_handler.key_sync_handler(key_sync_request(panic_uid, None)).await.unwrap();
+        add_memory(&retry_handler).await;
+        let retry_context = retry_handler.session_context().await.take().unwrap();
+
+        let (healthy_handler, _healthy_rx) =
+            connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        start_session_with_changes(&healthy_handler, healthy_uid).await;
+        let healthy_context = healthy_handler.session_context().await.take().unwrap();
+
+        let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
+        persistence_tx.send(bad_context).unwrap();
+        persistence_tx.send(retry_context).unwrap();
+        persistence_tx.send(healthy_context).unwrap();
+        drop(persistence_tx);
+
+        persistence_worker::run_persistence_service(persistence_rx, harness.metrics.clone()).await;
+
+        assert_eq!(unlabeled_counter(&harness, "db_persist_failures"), 1);
+        assert_eq!(service.get_metdata_blob_inner(panic_uid).await.unwrap().version, "1");
+        assert_eq!(service.get_metdata_blob_inner(healthy_uid).await.unwrap().version, "1");
+        assert_eq!(harness.collect().gauge("db_persist_queue_size", &[]), 0);
     }
 
     /// A session that is persisted on close stays counted in `active_sessions`
