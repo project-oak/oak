@@ -1013,7 +1013,7 @@
     },
     "@@oak+//bazel:extensions.bzl%oak_toolchains": {
       "general": {
-        "bzlTransitiveDigest": "jc5X32mBmWV4O6Fbo2M5loWWKpIDfleVPRUOL5gf70E=",
+        "bzlTransitiveDigest": "evHBJ5GlyDwnkdh57UOyUd9Tgo/2K4r9am2XF8bp4h8=",
         "usagesDigest": "zysa/FzJODkwvk5gNb+IWyj7LXJUy2ETiTVMrxyp7k4=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -1026,8 +1026,8 @@
           "oak_cc_toolchain_sysroot": {
             "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
-              "sha256": "9aec6a36a9962828273f20aab4fda51da0087cda6e2b513cd06cdfa2805f9548",
-              "url": "https://storage.googleapis.com/oak-bins/sysroot/9aec6a36a9962828273f20aab4fda51da0087cda6e2b513cd06cdfa2805f9548.tar.xz"
+              "sha256": "5b06aac7338d68f9795948b0fd5918acaa45e5d5add1755fd454dcb05cc84cc8",
+              "url": "https://storage.googleapis.com/oak-bins/sysroot/5b06aac7338d68f9795948b0fd5918acaa45e5d5add1755fd454dcb05cc84cc8.tar.xz"
             }
           }
         },
@@ -1045,7 +1045,7 @@
         "bzlTransitiveDigest": "IIspOFb2zj/H+Hcij9i5MHLFU9VOavZTaA+///L/76w=",
         "usagesDigest": "WqFS+erRQO0FnSIuWY/4A0BgxztdEULNjavEWxi0j0c=",
         "recordedFileInputs": {
-          "@@oak+//MODULE.bazel": "13cbbc6733b036e19313899641ee9ea727427391db4a86c36796c7df4e871d6e"
+          "@@oak+//MODULE.bazel": "dd3bf30fa12fea4ac512350837cbba739b7dd1ec9165cb09a9102936c53bb72f"
         },
         "recordedDirentsInputs": {},
         "envVariables": {},

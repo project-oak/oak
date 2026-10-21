@@ -16,16 +16,16 @@ version: 1
 
 # Corresponding to the debian_snapshot version in
 # oak_containers/system_image/base/base_image.Dockerfile.
-# SHA256: 1710bde34461551a19a47c787885ec9ad7058d9a5bead2affb8d088fa2f8502b
+# SHA256: a717a33469731894e77e912ea7d714e27c2dc38ee6554fd1a3102e92999cfc66
 sources:
   - channel: trixie main
     urls:
-      - https://snapshot-cloudflare.debian.org/archive/debian/20260803T000000Z
-      - https://snapshot.debian.org/archive/debian/20260803T000000Z
+      - https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z
+      - https://snapshot.debian.org/archive/debian/20261020T000000Z
   - channel: trixie-security main
     urls:
-      - https://snapshot-cloudflare.debian.org/archive/debian-security/20260803T000000Z
-      - https://snapshot.debian.org/archive/debian-security/20260803T000000Z
+      - https://snapshot-cloudflare.debian.org/archive/debian-security/20261020T000000Z
+      - https://snapshot.debian.org/archive/debian-security/20261020T000000Z
 
 archs:
   - 'amd64'

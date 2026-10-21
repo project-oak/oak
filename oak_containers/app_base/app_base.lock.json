@@ -9,9 +9,9 @@
 					"version": "1.3.4.20250131-1"
 				},
 				{
-					"key": "libc6_2.41-12-p-deb13u3_amd64",
+					"key": "libc6_2.41-12-p-deb13u4_amd64",
 					"name": "libc6",
-					"version": "2.41-12+deb13u3"
+					"version": "2.41-12+deb13u4"
 				},
 				{
 					"key": "libgcc-s1_14.2.0-19_amd64",
@@ -24,14 +24,14 @@
 					"version": "14.2.0-19"
 				}
 			],
-			"key": "base-files_13.8-p-deb13u6_amd64",
+			"key": "base-files_13.8-p-deb13u7_amd64",
 			"name": "base-files",
-			"sha256": "c4bb697554ef3e6588b38ffb73e27a22698c2b9525b1c7223b06d42d155e63fa",
+			"sha256": "fcd42bb5cb63f7bfc4326a92541247872206d60a192fdff65ca14eb83ed408b9",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260803T000000Z/pool/main/b/base-files/base-files_13.8+deb13u6_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260803T000000Z/pool/main/b/base-files/base-files_13.8+deb13u6_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z/pool/main/b/base-files/base-files_13.8+deb13u7_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20261020T000000Z/pool/main/b/base-files/base-files_13.8+deb13u7_amd64.deb"
 			],
-			"version": "13.8+deb13u6"
+			"version": "13.8+deb13u7"
 		},
 		{
 			"arch": "amd64",
@@ -40,22 +40,22 @@
 			"name": "mawk",
 			"sha256": "ade14470c4dff8921bca6ca8b1ea20eadc0f2178b48caff3c74534b17a633292",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260803T000000Z/pool/main/m/mawk/mawk_1.3.4.20250131-1_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260803T000000Z/pool/main/m/mawk/mawk_1.3.4.20250131-1_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z/pool/main/m/mawk/mawk_1.3.4.20250131-1_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20261020T000000Z/pool/main/m/mawk/mawk_1.3.4.20250131-1_amd64.deb"
 			],
 			"version": "1.3.4.20250131-1"
 		},
 		{
 			"arch": "amd64",
 			"dependencies": [],
-			"key": "libc6_2.41-12-p-deb13u3_amd64",
+			"key": "libc6_2.41-12-p-deb13u4_amd64",
 			"name": "libc6",
-			"sha256": "8ffd13165b9ee3f067e2ee670df718e48c1bdaa18676ac93d1de761dbbb3913c",
+			"sha256": "967aa62605721081c3eb2a17650611a792aa802d76a6511d1840242623d204c9",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260803T000000Z/pool/main/g/glibc/libc6_2.41-12+deb13u3_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260803T000000Z/pool/main/g/glibc/libc6_2.41-12+deb13u3_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z/pool/main/g/glibc/libc6_2.41-12+deb13u4_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20261020T000000Z/pool/main/g/glibc/libc6_2.41-12+deb13u4_amd64.deb"
 			],
-			"version": "2.41-12+deb13u3"
+			"version": "2.41-12+deb13u4"
 		},
 		{
 			"arch": "amd64",
@@ -64,8 +64,8 @@
 			"name": "libgcc-s1",
 			"sha256": "3c71917b490d1a17aed43196a2787a256ecf060526cdb20216a74bedc061b150",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260803T000000Z/pool/main/g/gcc-14/libgcc-s1_14.2.0-19_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260803T000000Z/pool/main/g/gcc-14/libgcc-s1_14.2.0-19_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z/pool/main/g/gcc-14/libgcc-s1_14.2.0-19_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20261020T000000Z/pool/main/g/gcc-14/libgcc-s1_14.2.0-19_amd64.deb"
 			],
 			"version": "14.2.0-19"
 		},
@@ -76,8 +76,8 @@
 			"name": "gcc-14-base",
 			"sha256": "5b6825de4263824b78c4c51f6476414f3b4e89c2ab63e81dc8b9b5501e867cf6",
 			"urls": [
-				"https://snapshot-cloudflare.debian.org/archive/debian/20260803T000000Z/pool/main/g/gcc-14/gcc-14-base_14.2.0-19_amd64.deb",
-				"https://snapshot.debian.org/archive/debian/20260803T000000Z/pool/main/g/gcc-14/gcc-14-base_14.2.0-19_amd64.deb"
+				"https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z/pool/main/g/gcc-14/gcc-14-base_14.2.0-19_amd64.deb",
+				"https://snapshot.debian.org/archive/debian/20261020T000000Z/pool/main/g/gcc-14/gcc-14-base_14.2.0-19_amd64.deb"
 			],
 			"version": "14.2.0-19"
 		}
