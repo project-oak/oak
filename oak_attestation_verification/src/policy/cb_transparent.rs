@@ -278,11 +278,9 @@ impl Policy<[u8]> for TransparentLayer2Policy {
             binary_mpms.resize_with(event.packages.len(), SignedEndorsement::default);
         }
 
-        // For each package, the reference value entries that accept it, along with
-        // the validity and transparency log results of that appraisal.
-        let mut candidates: alloc::vec::Vec<
-            alloc::vec::Vec<(usize, Option<Validity>, Option<TLogVerificationResults>)>,
-        > = alloc::vec::Vec::with_capacity(event.packages.len());
+        // For each package, the reference value entries that accept it.
+        let mut candidates: alloc::vec::Vec<alloc::vec::Vec<RefValueCandidate>> =
+            alloc::vec::Vec::with_capacity(event.packages.len());
 
         for (i, package) in event.packages.iter().enumerate() {
             // The ordering of the endorsements must match the order of the packages in the
@@ -350,6 +348,10 @@ impl Policy<[u8]> for TransparentLayer2Policy {
         Ok(result)
     }
 }
+
+/// A reference value entry that accepts a package, along with the validity and
+/// transparency log results of that appraisal.
+type RefValueCandidate = (usize, Option<Validity>, Option<TLogVerificationResults>);
 
 /// Finds a one-to-one assignment of packages to reference value entries, where
 /// `candidates[i]` lists the entries that accept package `i`. Returns the entry
