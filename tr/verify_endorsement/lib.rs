@@ -1119,7 +1119,10 @@ mod tests {
         TLogReferenceValues {
             strategy: Some(t_log_reference_values::Strategy::Any(())),
             c2sp: Some(C2sptLogProofReferenceValue { policy: c2sp_policy }),
-            pes: Some(PesReferenceValue { key_set: Some(VerifyingKeySet::default()) }),
+            pes: Some(PesReferenceValue {
+                key_set: Some(VerifyingKeySet::default()),
+                ..Default::default()
+            }),
             ..Default::default()
         }
     }

@@ -1044,6 +1044,79 @@ pub struct C2sptLogProofReferenceValue {
     #[prost(string, tag = "2")]
     pub policy: ::prost::alloc::string::String,
 }
+/// Reference value specifying criteria for accepting the Time-Stamp Authority
+/// (TSA) X.509 certificate chain embedded in an RFC 3161 Time-Stamp Token (TST)
+/// and other properties of the timestamp token.
+///
+/// Wrapping a trusted certificate in this message allows future per-TSA
+/// certificate chain and timestamp token constraints (such as expected TSA
+/// policy OIDs or certificate subject constraints) to be added alongside the
+/// trust anchor.
+///
+/// Authoritative specifications:
+///
+/// * RFC 3161 (Time-Stamp Protocol): <https://www.rfc-editor.org/rfc/rfc3161>
+/// * RFC 5280 (Internet X.509 PKI Certificate and CRL Profile):
+///   <https://www.rfc-editor.org/rfc/rfc5280>
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct TimeStampTokenReferenceValue {
+    /// DER-encoded X.509v3 certificate provided by the TSA provider and used as a
+    /// trust anchor to validate the TSA certificate chain embedded in the
+    /// `TimeStampToken` against.
+    ///
+    /// When validating the `TimeStampToken`'s certificate chain against this
+    /// trusted certificate, the following fields and extensions of this
+    /// certificate are inspected:
+    ///
+    /// * `tbsCertificate.subject`: matched against the `issuer` Distinguished Name
+    ///   of the certificate in the `TimeStampToken`'s chain that it issued.
+    /// * `tbsCertificate.subjectPublicKeyInfo`: used to verify the signature on
+    ///   the certificate in the `TimeStampToken`'s chain that it issued. Supported
+    ///   key types are RSA (PKCS#1 v1.5 with SHA-256, SHA-384, or SHA-512) and
+    ///   ECDSA (NIST P-256 or P-384 with SHA-256, SHA-384, or SHA-512).
+    /// * `tbsCertificate.extensions`: when this certificate issues a subordinate
+    ///   certificate in the `TimeStampToken`'s chain, `BasicConstraints` must be
+    ///   present with `cA = TRUE` (and any `pathLenConstraint` satisfied), and
+    ///   `KeyUsage` (if present) must assert `keyCertSign`.
+    #[prost(bytes = "vec", tag = "1")]
+    pub trusted_certificate_der: ::prost::alloc::vec::Vec<u8>,
+}
+/// Set of trusted Time-Stamp Authority (TSA) timestamp token reference values.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct TimeStampTokenReferenceValueSet {
+    /// Reference values for each accepted TSA certificate chain and timestamp
+    /// token configuration. Multiple entries may be specified to trust more than
+    /// one TSA or to support certificate rotation. Verification succeeds if at
+    /// least one RFC 3161 `TimeStampToken` on the PES confirmation signature
+    /// chains to the trusted certificate (and satisfies any other token criteria)
+    /// in any of the configured entries.
+    #[prost(message, repeated, tag = "1")]
+    pub reference_values: ::prost::alloc::vec::Vec<TimeStampTokenReferenceValue>,
+}
+/// Reference value that controls how RFC 3161 Time-Stamp Tokens (TSTs) on PES
+/// confirmation signatures are verified.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct TsaReferenceValue {
+    /// When `TsaReferenceValue` is present, `type` must be populated; leaving
+    /// `type` unset is a verification error.
+    #[prost(oneof = "tsa_reference_value::Type", tags = "1, 2")]
+    pub r#type: ::core::option::Option<tsa_reference_value::Type>,
+}
+/// Nested message and enum types in `TsaReferenceValue`.
+pub mod tsa_reference_value {
+    /// When `TsaReferenceValue` is present, `type` must be populated; leaving
+    /// `type` unset is a verification error.
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Type {
+        /// Deliberately disables TSA timestamp verification.
+        #[prost(message, tag = "1")]
+        Skip(super::SkipVerification),
+        /// Verifies that the PES confirmation signature carries a valid RFC 3161
+        /// `TimeStampToken` chaining to at least one trusted TSA in this set.
+        #[prost(message, tag = "2")]
+        TimeStampToken(super::TimeStampTokenReferenceValueSet),
+    }
+}
 /// Reference value for verifying a PES confirmation.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct PesReferenceValue {
@@ -1058,6 +1131,16 @@ pub struct PesReferenceValue {
     /// remain verifiable.
     #[prost(message, optional, tag = "1")]
     pub key_set: ::core::option::Option<VerifyingKeySet>,
+    /// Controls verification of RFC 3161 `TimeStampToken`s attached to PES
+    /// confirmation signatures.
+    ///
+    /// During migration, omitting `tsa` is also treated as skipping TSA
+    /// verification, whereas an empty `tsa {}` (with no `type` variant set) fails
+    /// verification.
+    /// TODO: b/571449442 - Enforce check, omitting the 'tsa' must result in
+    /// failure
+    #[prost(message, optional, tag = "2")]
+    pub tsa: ::core::option::Option<TsaReferenceValue>,
 }
 /// Encapsulates parameters related to verification of receipts from
 /// t-log-like setups. If nothing should be verified, then this needs to be
@@ -1184,6 +1267,10 @@ pub struct PesEndorsementReferenceValue {
     /// with an INVALID_ARGUMENT error.
     #[prost(message, optional, tag = "3")]
     pub additional_required_claims: ::core::option::Option<ClaimReferenceValue>,
+    /// Controls verification of RFC 3161 `TimeStampToken`s attached to PES
+    /// confirmation signatures. See `PesReferenceValue.tsa` for details.
+    #[prost(message, optional, tag = "4")]
+    pub tsa: ::core::option::Option<TsaReferenceValue>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct BinaryReferenceValue {

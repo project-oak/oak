@@ -321,6 +321,7 @@ impl EndorsementData {
                             keys: [service_verifying_key].to_vec(),
                             ..Default::default()
                         }),
+                        ..Default::default()
                     }),
                     ..Default::default()
                 }),
@@ -347,6 +348,7 @@ impl EndorsementData {
             key_set: pes_reference_value.key_set,
             publisher_id: "ecdsa-publisher@google.com".to_string(),
             additional_required_claims: self.ref_value.required_claims.clone(),
+            tsa: pes_reference_value.tsa,
         }
     }
 }

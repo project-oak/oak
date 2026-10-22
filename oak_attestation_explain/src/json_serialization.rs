@@ -601,15 +601,50 @@ pub fn serialize_endorsement_reference_value(
     })
 }
 
+fn serialize_time_stamp_token_reference_value(
+    instance: &TimeStampTokenReferenceValue,
+) -> serde_json::Value {
+    let TimeStampTokenReferenceValue { trusted_certificate_der } = instance;
+    json!({
+        "trusted_certificate_der": hex::encode(trusted_certificate_der),
+    })
+}
+
+fn serialize_time_stamp_token_reference_value_set(
+    instance: &TimeStampTokenReferenceValueSet,
+) -> serde_json::Value {
+    let TimeStampTokenReferenceValueSet { reference_values } = instance;
+    json!({
+        "reference_values": reference_values
+            .iter()
+            .map(serialize_time_stamp_token_reference_value)
+            .collect::<Vec<_>>(),
+    })
+}
+
+fn serialize_tsa_reference_value(instance: &TsaReferenceValue) -> serde_json::Value {
+    let TsaReferenceValue { r#type } = instance;
+    match r#type {
+        Some(tsa_reference_value::Type::Skip(instance)) => {
+            json!({ "skip": serialize_skip_verification(instance) })
+        }
+        Some(tsa_reference_value::Type::TimeStampToken(instance)) => {
+            json!({ "time_stamp_token": serialize_time_stamp_token_reference_value_set(instance) })
+        }
+        None => json!(null),
+    }
+}
+
 pub fn serialize_pes_endorsement_reference_value(
     instance: &PesEndorsementReferenceValue,
 ) -> serde_json::Value {
-    let PesEndorsementReferenceValue { key_set, publisher_id, additional_required_claims } =
+    let PesEndorsementReferenceValue { key_set, publisher_id, additional_required_claims, tsa } =
         instance;
     json!({
         "key_set": key_set.as_ref().map(serialize_verifying_key_set),
         "publisher_id": publisher_id,
         "additional_required_claims": additional_required_claims.as_ref().map(serialize_claim_reference_value),
+        "tsa": tsa.as_ref().map(serialize_tsa_reference_value),
     })
 }
 

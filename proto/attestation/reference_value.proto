@@ -110,6 +110,66 @@ message C2SPTLogProofReferenceValue {
   string policy = 2;
 }
 
+// Reference value specifying criteria for accepting the Time-Stamp Authority
+// (TSA) X.509 certificate chain embedded in an RFC 3161 Time-Stamp Token (TST)
+// and other properties of the timestamp token.
+//
+// Wrapping a trusted certificate in this message allows future per-TSA
+// certificate chain and timestamp token constraints (such as expected TSA
+// policy OIDs or certificate subject constraints) to be added alongside the
+// trust anchor.
+//
+// Authoritative specifications:
+// - RFC 3161 (Time-Stamp Protocol): https://www.rfc-editor.org/rfc/rfc3161
+// - RFC 5280 (Internet X.509 PKI Certificate and CRL Profile):
+//   https://www.rfc-editor.org/rfc/rfc5280
+message TimeStampTokenReferenceValue {
+  // DER-encoded X.509v3 certificate provided by the TSA provider and used as a
+  // trust anchor to validate the TSA certificate chain embedded in the
+  // `TimeStampToken` against.
+  //
+  // When validating the `TimeStampToken`'s certificate chain against this
+  // trusted certificate, the following fields and extensions of this
+  // certificate are inspected:
+  // - `tbsCertificate.subject`: matched against the `issuer` Distinguished Name
+  //   of the certificate in the `TimeStampToken`'s chain that it issued.
+  // - `tbsCertificate.subjectPublicKeyInfo`: used to verify the signature on
+  //   the certificate in the `TimeStampToken`'s chain that it issued. Supported
+  //   key types are RSA (PKCS#1 v1.5 with SHA-256, SHA-384, or SHA-512) and
+  //   ECDSA (NIST P-256 or P-384 with SHA-256, SHA-384, or SHA-512).
+  // - `tbsCertificate.extensions`: when this certificate issues a subordinate
+  //   certificate in the `TimeStampToken`'s chain, `BasicConstraints` must be
+  //   present with `cA = TRUE` (and any `pathLenConstraint` satisfied), and
+  //   `KeyUsage` (if present) must assert `keyCertSign`.
+  bytes trusted_certificate_der = 1;
+}
+
+// Set of trusted Time-Stamp Authority (TSA) timestamp token reference values.
+message TimeStampTokenReferenceValueSet {
+  // Reference values for each accepted TSA certificate chain and timestamp
+  // token configuration. Multiple entries may be specified to trust more than
+  // one TSA or to support certificate rotation. Verification succeeds if at
+  // least one RFC 3161 `TimeStampToken` on the PES confirmation signature
+  // chains to the trusted certificate (and satisfies any other token criteria)
+  // in any of the configured entries.
+  repeated TimeStampTokenReferenceValue reference_values = 1;
+}
+
+// Reference value that controls how RFC 3161 Time-Stamp Tokens (TSTs) on PES
+// confirmation signatures are verified.
+message TsaReferenceValue {
+  // When `TsaReferenceValue` is present, `type` must be populated; leaving
+  // `type` unset is a verification error.
+  oneof type {
+    // Deliberately disables TSA timestamp verification.
+    SkipVerification skip = 1;
+
+    // Verifies that the PES confirmation signature carries a valid RFC 3161
+    // `TimeStampToken` chaining to at least one trusted TSA in this set.
+    TimeStampTokenReferenceValueSet time_stamp_token = 2;
+  }
+}
+
 // Reference value for verifying a PES confirmation.
 message PesReferenceValue {
   // The PES service's public verifying key(s) used to verify the PES signature.
@@ -122,6 +182,16 @@ message PesReferenceValue {
   // multiple keys can be listed here so that both old and new endorsements
   // remain verifiable.
   VerifyingKeySet key_set = 1;
+
+  // Controls verification of RFC 3161 `TimeStampToken`s attached to PES
+  // confirmation signatures.
+  //
+  // During migration, omitting `tsa` is also treated as skipping TSA
+  // verification, whereas an empty `tsa {}` (with no `type` variant set) fails
+  // verification.
+  // TODO: b/571449442 - Enforce check, omitting the 'tsa' must result in
+  // failure
+  TsaReferenceValue tsa = 2;
 }
 
 // Encapsulates parameters related to verification of receipts from
@@ -233,6 +303,10 @@ message PesEndorsementReferenceValue {
   // If `publisher_id` is included in this field, the request will be rejected
   // with an INVALID_ARGUMENT error.
   ClaimReferenceValue additional_required_claims = 3;
+
+  // Controls verification of RFC 3161 `TimeStampToken`s attached to PES
+  // confirmation signatures. See `PesReferenceValue.tsa` for details.
+  TsaReferenceValue tsa = 4;
 }
 
 message BinaryReferenceValue {
