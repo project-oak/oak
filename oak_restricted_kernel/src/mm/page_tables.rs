@@ -206,7 +206,14 @@ impl RootPageTable {
             VirtAddr::new(0xFFFF_FFFF_FFFF_FFFF - 1)
         });
         while start < limit {
-            let range = Page::range(start, start + count as u64);
+            // `start + count` panics if the end of the range overflows or is
+            // not a canonical address. Such a range can't be allocated anyway,
+            // and as `start` only moves forward, neither can any later one.
+            let end = (count as u64)
+                .checked_mul(S::SIZE)
+                .and_then(|len| start.start_address().as_u64().checked_add(len))
+                .and_then(|end| VirtAddr::try_new(end).ok())?;
+            let range = Page::range(start, Page::containing_address(end));
 
             // If it turns out something in that range was allocated, we move forward to the
             // page after that and try again.
