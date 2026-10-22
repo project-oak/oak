@@ -32,6 +32,8 @@ rust_library(
         "//util/digest:oak_digest",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:base64",
+        "@oak_crates_index//:chrono",
+        "@oak_crates_index//:const-oid",
         "@oak_crates_index//:hex",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
@@ -41,7 +43,10 @@ rust_library(
 
 rust_test(
     name = "pes_test",
-    compile_data = ["testdata/pes_confirmation.json"],
+    compile_data = [
+        "testdata/globalsign_token.b64",
+        "testdata/pes_confirmation.json",
+    ],
     crate = ":pes",
     target_compatible_with = ["@platforms//os:linux"],
     deps = [

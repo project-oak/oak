@@ -19,7 +19,10 @@ extern crate alloc;
 
 mod json;
 mod pae;
+mod time_stamp_token;
 
+#[cfg(test)]
+mod parsing_tests;
 #[cfg(test)]
 mod tests;
 
