@@ -25,9 +25,10 @@ use rustls::{
     client::{
         WebPkiServerVerifier,
         danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier},
+        verify_server_name,
     },
     server::{
-        WebPkiClientVerifier,
+        ParsedCertificate, WebPkiClientVerifier,
         danger::{ClientCertVerified, ClientCertVerifier},
     },
 };
@@ -226,6 +227,11 @@ impl ServerCertVerifier for DelegatingServerCertVerifier {
         ocsp_response: &[u8],
         now: UnixTime,
     ) -> Result<ServerCertVerified, rustls::Error> {
+        // The inner verifier only checks the name once the chain verifies, so
+        // check it here: the custom verifier may override chain errors, but
+        // never a name mismatch.
+        verify_server_name(&ParsedCertificate::try_from(end_entity)?, server_name)?;
+
         let verified_res = self.inner.verify_server_cert(
             end_entity,
             intermediates,
@@ -233,14 +239,6 @@ impl ServerCertVerifier for DelegatingServerCertVerifier {
             ocsp_response,
             now,
         );
-
-        if let Err(rustls::Error::InvalidCertificate(rustls::CertificateError::NotValidForName)) =
-            verified_res
-        {
-            return Err(rustls::Error::InvalidCertificate(
-                rustls::CertificateError::NotValidForName,
-            ));
-        }
 
         let verify_result = verified_res.as_ref().map(|_| ());
 
@@ -367,6 +365,11 @@ impl ServerCertVerifier for CustomOnlyServerCertVerifier {
         ocsp_response: &[u8],
         now: UnixTime,
     ) -> Result<ServerCertVerified, rustls::Error> {
+        // The inner verifier only checks the name once the chain verifies, so
+        // check it here: the custom verifier may override chain errors, but
+        // never a name mismatch.
+        verify_server_name(&ParsedCertificate::try_from(end_entity)?, server_name)?;
+
         let verified_res = self.inner.verify_server_cert(
             end_entity,
             intermediates,
@@ -374,14 +377,6 @@ impl ServerCertVerifier for CustomOnlyServerCertVerifier {
             ocsp_response,
             now,
         );
-
-        if let Err(rustls::Error::InvalidCertificate(rustls::CertificateError::NotValidForName)) =
-            verified_res
-        {
-            return Err(rustls::Error::InvalidCertificate(
-                rustls::CertificateError::NotValidForName,
-            ));
-        }
 
         let verify_result = verified_res.as_ref().map(|_| ());
         self.custom
