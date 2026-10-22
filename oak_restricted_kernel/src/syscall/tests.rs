@@ -14,7 +14,19 @@
 // limitations under the License.
 //
 
-use super::fd::copy_max_slice;
+use alloc::boxed::Box;
+
+use oak_restricted_kernel_interface::{
+    Errno,
+    syscalls::{MmapFlags, MmapProtection},
+};
+use x86_64::{
+    VirtAddr,
+    structures::paging::{Page, PageTable, Size2MiB},
+};
+
+use super::{fd::copy_max_slice, mmap::mmap};
+use crate::mm::page_tables::RootPageTable;
 
 #[test]
 fn shorter_dst_copy() {
@@ -41,4 +53,30 @@ fn empty_copy() {
     let length = copy_max_slice(src, dst);
     assert_eq!(length, 0);
     assert_eq!(dst, &[1; 5])
+}
+
+#[test]
+fn mmap_fixed_range_past_user_space() {
+    // Starts in user space, but the 4 MiB range ends past the lower half.
+    let result = mmap(
+        Some(VirtAddr::new(0x7FFF_FFE0_0000)),
+        4 << 20,
+        MmapProtection::PROT_READ,
+        MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE | MmapFlags::MAP_FIXED,
+    );
+    assert!(matches!(result, Err(Errno::EINVAL)));
+}
+
+#[test]
+fn find_unallocated_pages_range_past_address_space() {
+    let page_table = RootPageTable::new(Box::leak(Box::new(PageTable::new())), VirtAddr::zero());
+    let start = Page::<Size2MiB>::containing_address(VirtAddr::new(0x20_0000));
+
+    // The end of the range would be past the canonical lower half.
+    assert_eq!(page_table.find_unallocated_pages(start, 1 << 26), None);
+    // The end of the range would overflow.
+    let high_start = Page::<Size2MiB>::containing_address(VirtAddr::new(0xFFFF_FFFF_FFC0_0000));
+    assert_eq!(page_table.find_unallocated_pages(high_start, 2), None);
+    // A range that fits is still found.
+    assert_eq!(page_table.find_unallocated_pages(start, 2), Some(Page::range(start, start + 2)));
 }
