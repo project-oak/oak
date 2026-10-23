@@ -14,7 +14,11 @@
 // limitations under the License.
 //
 
-use std::{collections::VecDeque, fmt, time::Duration};
+use std::{
+    collections::{BTreeSet, VecDeque},
+    fmt,
+    time::Duration,
+};
 
 use bytes::Bytes;
 use futures::{SinkExt, StreamExt};
@@ -85,6 +89,10 @@ impl<P: ProxySession + ?Sized> ProxySession for Box<P> {
 /// A ProxySession implementation for standard Noise-based Oak Sessions.
 pub struct NoiseProxySession<S> {
     session: S,
+    /// IDs of the peer attestation verifiers configured for the session. Only
+    /// evidence under these IDs has been verified once the session is open;
+    /// the peer can send evidence under any other ID and it is kept unverified.
+    verified_attestation_ids: BTreeSet<String>,
 }
 
 impl<S> NoiseProxySession<S>
@@ -93,8 +101,8 @@ where
     S::Input: Message + Default + Send + 'static,
     S::Output: Message + Default + Send + 'static,
 {
-    pub fn new(session: S) -> Self {
-        Self { session }
+    pub fn new(session: S, verified_attestation_ids: BTreeSet<String>) -> Self {
+        Self { session, verified_attestation_ids }
     }
 }
 
@@ -127,39 +135,31 @@ where
         use base64::Engine;
         use oak_attestation_verification::decode_event_proto;
         use oak_proto_rust::oak::attestation::v1::{
-            ConfidentialSpaceAssertion, ConfidentialSpaceEndorsement, SessionBindingPublicKeyData,
+            ConfidentialSpaceEndorsement, SessionBindingPublicKeyData,
         };
-        use prost::Message;
 
-        let evidence = self.session.get_peer_attestation_evidence().ok()?;
-        if evidence.evidence.is_empty() && evidence.assertions.is_empty() {
+        let mut evidence = self.session.get_peer_attestation_evidence().ok()?;
+        // Peer assertions are never verified here because the proxy configures no
+        // assertion verifiers, and evidence under an ID without a verifier is
+        // accepted unverified. Report only what a configured verifier checked.
+        evidence.evidence.retain(|id, _| self.verified_attestation_ids.contains(id));
+        if evidence.evidence.is_empty() {
             return None;
         }
         let handshake_handle = hex::encode(&evidence.handshake_hash);
 
         let mut jwt_string = None;
-        for assertion in evidence.assertions.values() {
-            if let Ok(cs_assertion) =
-                ConfidentialSpaceAssertion::decode(assertion.content.as_slice())
-                && let Ok(jwt) = String::from_utf8(cs_assertion.jwt_token.clone())
-            {
-                jwt_string = Some(jwt);
-                break;
-            }
-        }
-        if jwt_string.is_none() {
-            for endorsed_evidence in evidence.evidence.values() {
-                if let Some(endorsements) = &endorsed_evidence.endorsements {
-                    for event in &endorsements.events {
-                        if let Ok(cs_endorsement) = ConfidentialSpaceEndorsement::try_from(event) {
-                            jwt_string = Some(cs_endorsement.jwt_token.clone());
-                            break;
-                        }
+        for endorsed_evidence in evidence.evidence.values() {
+            if let Some(endorsements) = &endorsed_evidence.endorsements {
+                for event in &endorsements.events {
+                    if let Ok(cs_endorsement) = ConfidentialSpaceEndorsement::try_from(event) {
+                        jwt_string = Some(cs_endorsement.jwt_token.clone());
+                        break;
                     }
                 }
-                if jwt_string.is_some() {
-                    break;
-                }
+            }
+            if jwt_string.is_some() {
+                break;
             }
         }
 
@@ -427,3 +427,7 @@ pub async fn proxy<S: ProxySession>(
 
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "proxy_tests.rs"]
+mod tests;

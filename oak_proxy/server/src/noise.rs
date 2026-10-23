@@ -91,5 +91,6 @@ async fn establish_noise_session(
         }
     }
 
-    Ok((NoiseProxySession::new(session), stream))
+    let verified_attestation_ids = config::verified_attestation_ids(&config.attestation_verifiers);
+    Ok((NoiseProxySession::new(session, verified_attestation_ids), stream))
 }
