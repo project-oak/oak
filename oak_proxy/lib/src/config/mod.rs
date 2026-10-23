@@ -149,7 +149,8 @@ impl VerifierConfig {
         }
     }
 
-    /// The ID under which [`VerifierConfig::apply`] registers the peer verifier.
+    /// The ID under which [`VerifierConfig::apply`] registers the peer
+    /// verifier.
     pub fn attestation_id(&self) -> &'static str {
         match self {
             VerifierConfig::ConfidentialSpace(_) => CONFIDENTIAL_SPACE_ATTESTATION_ID,
