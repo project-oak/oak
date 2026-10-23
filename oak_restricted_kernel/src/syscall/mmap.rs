@@ -34,7 +34,10 @@ use x86_64::{
     },
 };
 
-use crate::{FRAME_ALLOCATOR, PAGE_TABLES, mm::encryption_aware_page_table_flags};
+use crate::{
+    FRAME_ALLOCATOR, PAGE_TABLES,
+    mm::{encryption_aware_page_table_flags, is_user_range},
+};
 
 pub fn mmap(
     addr: Option<VirtAddr>,
@@ -73,6 +76,14 @@ pub fn mmap(
     let size =
         (size as u64).checked_next_multiple_of(Size2MiB::SIZE).ok_or(Errno::EINVAL)? as usize;
     let count = size / Size2MiB::SIZE as usize;
+
+    // A fixed mapping must fit in user space. Check this before building the
+    // page range below, as `start + count` panics if the range runs past the
+    // end of the canonical lower half.
+    if flags.contains(MmapFlags::MAP_FIXED) && !is_user_range(addr.as_u64(), size) {
+        log::warn!("mmap: requested range not in user space: {:?}, size {}", addr, size);
+        return Err(Errno::EINVAL);
+    }
 
     // Allocate enough physical frames to cover the request.
     // Iterator that keeps allocating physical frames.
