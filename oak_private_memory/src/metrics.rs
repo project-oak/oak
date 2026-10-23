@@ -56,6 +56,9 @@ pub struct Metrics {
     db_connect_retries: Counter<u64>,
     // Number of failures when persisting the database.
     db_persist_failures: Counter<u64>,
+    // Number of database calls retried because the host rejected them with
+    // RESOURCE_EXHAUSTED (host memory pressure).
+    db_resource_exhausted_retries: Counter<u64>,
     // Number of failures when syncing keys.
     decrypt_dek_failures: Counter<u64>,
     // Number of failures when deserializing user info.
@@ -444,6 +447,13 @@ impl Metrics {
             .u64_counter("orphaned_blob_deletes")
             .with_description("Number of blobs that should have been soft-deleted but were not.")
             .build();
+        let db_resource_exhausted_retries = meter
+            .u64_counter("db_resource_exhausted_retries")
+            .with_description(
+                "Number of database calls retried after the host rejected them with \
+                 RESOURCE_EXHAUSTED.",
+            )
+            .build();
 
         let icing_init_status = meter
             .u64_counter("icing_init_status")
@@ -469,6 +479,7 @@ impl Metrics {
             .build();
 
         orphaned_blob_deletes.add(0, &[]);
+        db_resource_exhausted_retries.add(0, &[]);
 
         Self {
             rpc_count,
@@ -483,6 +494,7 @@ impl Metrics {
             db_persist_attempts,
             db_connect_retries,
             db_persist_failures,
+            db_resource_exhausted_retries,
             decrypt_dek_failures,
             user_info_deserialization_failures,
             db_decryption_failures,
@@ -611,6 +623,12 @@ impl Metrics {
 
     pub fn inc_db_persist_failures(&self) {
         self.db_persist_failures.add(1, &[]);
+    }
+
+    /// Records that a database call is retried because the host rejected it
+    /// with `RESOURCE_EXHAUSTED`.
+    pub fn inc_db_resource_exhausted_retries(&self) {
+        self.db_resource_exhausted_retries.add(1, &[]);
     }
 
     pub fn inc_decrypt_dek_failures(&self) {
@@ -1042,6 +1060,7 @@ mod value_tests {
     const UNIT_COUNTERS: &[(&str, IncFn)] = &[
         ("db_connect_retries", Metrics::inc_db_connect_retries),
         ("db_persist_failures", Metrics::inc_db_persist_failures),
+        ("db_resource_exhausted_retries", Metrics::inc_db_resource_exhausted_retries),
         ("decrypt_dek_failures", Metrics::inc_decrypt_dek_failures),
         ("user_info_deserialization_failures", Metrics::inc_user_info_deserialization_failures),
         ("db_decryption_failures", Metrics::inc_db_decryption_failures),
@@ -1394,6 +1413,13 @@ mod value_tests {
                 "orphaned_blob_deletes",
                 "",
                 "Number of blobs that should have been soft-deleted but were not.",
+                Counter,
+            ),
+            (
+                "db_resource_exhausted_retries",
+                "",
+                "Number of database calls retried after the host rejected them with \
+                 RESOURCE_EXHAUSTED.",
                 Counter,
             ),
             (

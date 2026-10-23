@@ -13,7 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{collections::HashMap, time::Duration};
+use std::{
+    collections::{HashMap, VecDeque},
+    sync::atomic::{AtomicUsize, Ordering},
+    time::Duration,
+};
 
 use anyhow::anyhow;
 use log::debug;
@@ -46,6 +50,20 @@ pub struct SealedMemoryDatabaseServiceTestImpl {
     pub unencrypted_database: Mutex<HashMap<String, DataBlob>>,
     pub held_unencrypted_write: Mutex<Option<HeldWrite>>,
     pub held_metadata_write: Mutex<Option<HeldWrite>>,
+    /// Statuses that the next streamed metadata blob writes fail with, in
+    /// order. See [`Self::fail_next_metadata_writes`].
+    pub metadata_write_failures: Mutex<VecDeque<tonic::Status>>,
+    /// Statuses that the next streamed metadata blob reads fail with, in
+    /// order. See [`Self::fail_next_metadata_reads`].
+    pub metadata_read_failures: Mutex<VecDeque<tonic::Status>>,
+    /// Number of streamed metadata blob writes received, including failed
+    /// ones.
+    pub metadata_write_calls: AtomicUsize,
+    /// The blob of every streamed metadata blob write received, including
+    /// failed ones, in order.
+    pub metadata_write_payloads: Mutex<Vec<Vec<u8>>>,
+    /// Number of streamed metadata blob reads received, including failed ones.
+    pub metadata_read_calls: AtomicUsize,
 }
 
 pub struct HeldWrite {
@@ -61,6 +79,11 @@ impl Default for SealedMemoryDatabaseServiceTestImpl {
             unencrypted_database: Mutex::new(HashMap::new()),
             held_unencrypted_write: Mutex::new(None),
             held_metadata_write: Mutex::new(None),
+            metadata_write_failures: Mutex::new(VecDeque::new()),
+            metadata_read_failures: Mutex::new(VecDeque::new()),
+            metadata_write_calls: AtomicUsize::new(0),
+            metadata_write_payloads: Mutex::new(Vec::new()),
+            metadata_read_calls: AtomicUsize::new(0),
         }
     }
 }
@@ -85,6 +108,26 @@ impl SealedMemoryDatabaseServiceTestImpl {
         *self.held_metadata_write.lock().await =
             Some(HeldWrite { arrived: arrived_tx, release: release_rx });
         (arrived_rx, release_tx)
+    }
+
+    /// Makes the next `count` streamed metadata blob writes fail with `code`
+    /// without storing anything, like the real host does when it rejects a
+    /// call under memory pressure (`RESOURCE_EXHAUSTED`).
+    pub async fn fail_next_metadata_writes(&self, code: tonic::Code, count: usize) {
+        self.metadata_write_failures
+            .lock()
+            .await
+            .extend((0..count).map(|_| tonic::Status::new(code, "injected write failure")));
+    }
+
+    /// Makes the next `count` streamed metadata blob reads fail with `code`
+    /// before reading anything, like the real host does when it rejects a
+    /// call under memory pressure (`RESOURCE_EXHAUSTED`).
+    pub async fn fail_next_metadata_reads(&self, code: tonic::Code, count: usize) {
+        self.metadata_read_failures
+            .lock()
+            .await
+            .extend((0..count).map(|_| tonic::Status::new(code, "injected read failure")));
     }
 
     pub async fn add_blob_inner(&self, id: String, blob: DataBlob) {
@@ -191,6 +234,7 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
         &self,
         request: tonic::Request<tonic::Streaming<WriteMetadataBlobStreamRequest>>,
     ) -> Result<tonic::Response<WriteMetadataBlobStreamResponse>, tonic::Status> {
+        self.metadata_write_calls.fetch_add(1, Ordering::SeqCst);
         let mut stream = request.into_inner();
         let mut full_blob = Vec::new();
         let mut version = String::new();
@@ -211,6 +255,10 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
                 }
                 None => {}
             }
+        }
+        self.metadata_write_payloads.lock().await.push(full_blob.clone());
+        if let Some(status) = self.metadata_write_failures.lock().await.pop_front() {
+            return Err(status);
         }
 
         let held = self.held_metadata_write.lock().await.take();
@@ -236,6 +284,10 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
         &self,
         request: tonic::Request<ReadMetadataBlobStreamRequest>,
     ) -> Result<tonic::Response<Self::ReadMetadataBlobStreamStream>, tonic::Status> {
+        self.metadata_read_calls.fetch_add(1, Ordering::SeqCst);
+        if let Some(status) = self.metadata_read_failures.lock().await.pop_front() {
+            return Err(status);
+        }
         let request = request.into_inner();
         let blob = self.get_metdata_blob_inner(&request.id).await;
 

@@ -52,7 +52,7 @@ async fn test_streaming_metadata_blob() {
     let result = client
         .add_metadata_blob_stream(
             &id,
-            metadata_blob.clone(),
+            &metadata_blob,
             prost_types::Timestamp { seconds: 1893456000, nanos: 0 },
         )
         .await

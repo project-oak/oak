@@ -73,12 +73,18 @@ pub trait DataBlobHandler {
         id: &BlobId,
         coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<Option<EncryptedMetadataBlob>>;
+    /// Fails with the host's `tonic::Status` itself as the error (not wrapped
+    /// in context), so that callers can retry host rejections such as
+    /// `RESOURCE_EXHAUSTED`.
     async fn add_metadata_blob_stream(
         &mut self,
         id: &BlobId,
-        metadata_blob: EncryptedMetadataBlob,
+        metadata_blob: &EncryptedMetadataBlob,
         coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<MetadataPersistResult>;
+    /// Fails with the host's `tonic::Status` itself as the error (not wrapped
+    /// in context), so that callers can retry host rejections such as
+    /// `RESOURCE_EXHAUSTED`.
     async fn get_metadata_blob_stream(
         &mut self,
         id: &BlobId,
@@ -167,7 +173,7 @@ impl DataBlobHandler for ExternalDbClient {
     async fn add_metadata_blob_stream(
         &mut self,
         id: &BlobId,
-        metadata_blob: EncryptedMetadataBlob,
+        metadata_blob: &EncryptedMetadataBlob,
         coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<MetadataPersistResult> {
         let blob =
@@ -179,7 +185,7 @@ impl DataBlobHandler for ExternalDbClient {
             request: Some(write_metadata_blob_stream_request::Request::MetadataBlob(
                 MetadataBlob {
                     data_blob: Some(DataBlob { id: id.clone(), blob: first_chunk.to_vec() }),
-                    version: metadata_blob.version,
+                    version: metadata_blob.version.clone(),
                 },
             )),
             coarsened_expiration_timestamp: Some(coarsened_expiration_timestamp),
