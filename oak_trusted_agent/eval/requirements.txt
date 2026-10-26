@@ -888,9 +888,9 @@ openai==3.19.0 \
     --hash=sha256:890174cae80a47357035477532b6eabbc3d31220f021896dcc2640943e87b78d \
     --hash=sha256:eaa59585332e54abf71c8011d9bfdb3b4aecead73a0aad977e979756756d42df
     # via agentdojo
-opentelemetry-api==1.44.0 \
-    --hash=sha256:67647e5e9566edcf421166fdf022b3537f818635daa852b289e34604dc6fb33a \
-    --hash=sha256:94b98c893a91b88657eaac1e3ba89618cdb85be6918196705354f34728b2cdef
+opentelemetry-api==1.45.1 \
+    --hash=sha256:aa38ed19bcc084ba42782a73255b3582283eced7ad6dddbd6695189e69adfb75 \
+    --hash=sha256:b31553efa588ae44bc306f863c785c5333a9ecc091248c6ee68b4b6c87fdedfb
     # via google-api-core
 orderly-set==5.5.0 \
     --hash=sha256:46f0b801948e98f427b412fcabb831677194c05c3b699b80de260374baa0b1e7 \
