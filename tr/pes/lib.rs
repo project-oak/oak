@@ -263,6 +263,17 @@ pub fn verify_pes_endorsement(
     //    claim.
     let mut combined_required_claims =
         ref_value.additional_required_claims.clone().unwrap_or_default();
+    // `validate` only falls back to the deprecated `claim_types` when `claims` is
+    // empty, which is never the case once the publisher claim is added, so fold
+    // them into `claims` first.
+    #[allow(deprecated)]
+    if combined_required_claims.claims.is_empty() {
+        combined_required_claims.claims =
+            core::mem::take(&mut combined_required_claims.claim_types)
+                .into_iter()
+                .map(|r#type| Claim { r#type, annotations: Default::default() })
+                .collect();
+    }
     let mut publisher_annotations = alloc::collections::BTreeMap::new();
     publisher_annotations.insert("publisher_id".to_string(), ref_value.publisher_id.clone());
     combined_required_claims.claims.push(Claim {

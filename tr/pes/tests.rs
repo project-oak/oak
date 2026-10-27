@@ -489,6 +489,37 @@ fn test_verify_pes_endorsement_failure_missing_required_claim() {
 }
 
 #[test]
+#[allow(deprecated)]
+fn test_verify_pes_endorsement_failure_missing_required_claim_type() {
+    let endorsement_bytes = make_test_endorsement_statement();
+    let (pes_confirmation_bytes, pes_key_set, _) =
+        create_test_pes_confirmation_bytes(&endorsement_bytes);
+
+    let endorsement = Endorsement {
+        format: EndorsementFormat::EndorsementFormatJsonIntoto.into(),
+        serialized: endorsement_bytes,
+        subject: vec![],
+    };
+    let req_claims = ClaimReferenceValue {
+        claim_types: vec!["https://example.com/missing_claim".to_string()],
+        ..Default::default()
+    };
+    let ref_value = PesEndorsementReferenceValue {
+        key_set: Some(pes_key_set),
+        publisher_id: "test-publisher@google.com".to_string(),
+        additional_required_claims: Some(req_claims),
+    };
+
+    let result = verify_pes_endorsement(
+        Instant::from_unix_millis(1000),
+        &endorsement,
+        &pes_confirmation_bytes,
+        &ref_value,
+    );
+    assert!(result.is_err());
+}
+
+#[test]
 fn test_verify_pes_endorsement_failure_publisher_id_in_additional_claims() {
     let endorsement_bytes = make_test_endorsement_statement();
     let (pes_confirmation_bytes, pes_key_set, _) =
