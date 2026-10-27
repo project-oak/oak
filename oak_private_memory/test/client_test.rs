@@ -35,7 +35,10 @@ use oak_session::{
     config::SessionConfig,
     handshake::HandshakeType,
 };
-use private_memory_server_lib::{app::ApplicationConfig, metrics::Metrics};
+use private_memory_server_lib::{
+    app::{ApplicationConfig, admission::ADMISSION_REJECTED_METADATA_KEY},
+    metrics::Metrics,
+};
 use private_memory_test_utils::{
     default_test_application_config, start_server, start_server_with_config,
     start_server_with_metrics, start_server_with_session_config_factory, system_time_to_timestamp,
@@ -1672,6 +1675,11 @@ async fn test_message_without_session_request_is_counted() {
     );
 }
 
+/// Returns the admission-rejection marker on a rejected stream's status.
+fn admission_rejection_marker(status: &tonic::Status) -> Option<&str> {
+    status.metadata().get(ADMISSION_REJECTED_METADATA_KEY).map(|value| value.to_str().unwrap())
+}
+
 /// Opens a stream with `rpc`, and returns the status the server rejected it
 /// with.
 async fn open_rejected_stream(url: &str, rpc: SessionRpc) -> tonic::Status {
@@ -1698,6 +1706,7 @@ async fn test_tls_session_without_tls_is_counted() {
     let status = open_rejected_stream(&url, SessionRpc::StartTlsSession).await;
 
     assert_eq!(status.code(), tonic::Code::Unimplemented);
+    assert_eq!(admission_rejection_marker(&status), None);
     assert_increments(
         &harness,
         &before,
@@ -1857,6 +1866,7 @@ async fn test_low_memory_rejections_are_counted() {
             tonic::Code::ResourceExhausted,
             "{rpc:?} was not rejected for low memory ({status:?})"
         );
+        assert_eq!(admission_rejection_marker(&status), Some("low_memory"), "{rpc:?}");
         assert_increments(
             &harness,
             &before,
@@ -1901,6 +1911,7 @@ async fn test_session_cap_rejections_are_counted() {
         let before = harness.collect();
         let status = open_rejected_stream(&url, rpc).await;
         assert_eq!(status.code(), tonic::Code::ResourceExhausted, "{rpc:?}: {status:?}");
+        assert_eq!(admission_rejection_marker(&status), Some("max_sessions"), "{rpc:?}");
         assert_increments(
             &harness,
             &before,
@@ -1944,6 +1955,7 @@ async fn test_map_count_rejections_are_counted() {
         let before = harness.collect();
         let status = open_rejected_stream(&url, rpc).await;
         assert_eq!(status.code(), tonic::Code::ResourceExhausted, "{rpc:?}: {status:?}");
+        assert_eq!(admission_rejection_marker(&status), Some("map_count"), "{rpc:?}");
         assert_increments(
             &harness,
             &before,

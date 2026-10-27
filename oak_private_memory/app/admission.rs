@@ -37,6 +37,14 @@
 //! [`crate::meminfo::MEMINFO_SAMPLE_INTERVAL`], so this check stays cheap on
 //! every request.
 //!
+//! A rejected new session ends the stream with `RESOURCE_EXHAUSTED` before the
+//! handshake. The status also carries [`ADMISSION_REJECTED_METADATA_KEY`] (set
+//! to the reject reason) as gRPC metadata, so the untrusted host can tell this
+//! apart from other `RESOURCE_EXHAUSTED` errors (e.g. gRPC's message size
+//! limit) and report it as task-overload throttling. A rejected follow-up RPC
+//! is returned inside the encrypted response instead, and the stream stays
+//! open.
+//!
 //! Rejections are counted in metrics individually, but logged at most once per
 //! [`REJECTION_LOG_INTERVAL`] (per kind: new sessions, follow-up RPCs), since
 //! under sustained pressure they can arrive on every request.
@@ -67,6 +75,12 @@ use std::{
 use metrics::SessionRejectReason;
 
 pub const DEFAULT_MAX_ACTIVE_SESSIONS: usize = 1000;
+
+/// gRPC metadata key set on the status of a new session rejected by
+/// [`AdmissionController::admit`]. The value is the reject reason
+/// (`max_sessions`, `low_memory` or `map_count`), so the untrusted host can
+/// report the rejection as task-overload throttling.
+pub const ADMISSION_REJECTED_METADATA_KEY: &str = "x-sealed-memory-admission-rejected";
 
 /// Default fraction of `vm.max_map_count` above which new sessions are
 /// rejected. The remaining 20% is headroom for sessions admitted before the
@@ -524,7 +538,12 @@ impl AdmissionController {
                 not_logged_suffix(suppressed)
             );
         }
-        tonic::Status::resource_exhausted(message)
+        let mut status = tonic::Status::resource_exhausted(message);
+        status.metadata_mut().insert(
+            ADMISSION_REJECTED_METADATA_KEY,
+            tonic::metadata::MetadataValue::from_static(reason.as_str()),
+        );
+        status
     }
 }
 
@@ -589,6 +608,10 @@ mod tests {
         }))
     }
 
+    fn rejection_marker(status: &tonic::Status) -> Option<&str> {
+        status.metadata().get(ADMISSION_REJECTED_METADATA_KEY).map(|value| value.to_str().unwrap())
+    }
+
     fn disabled_monitor() -> MapCountMonitor {
         MapCountMonitor::new(
             Path::new("/nonexistent/maps"),
@@ -648,6 +671,7 @@ mod tests {
         let err = admission.admit().unwrap_err();
         assert_eq!(err.code(), tonic::Code::ResourceExhausted);
         assert!(err.message().contains("too many active sessions"), "{}", err.message());
+        assert_eq!(rejection_marker(&err), Some("max_sessions"));
         assert_eq!(admission.active_sessions(), 2);
         // Closing a session frees a slot.
         drop(a);
@@ -693,6 +717,7 @@ mod tests {
         let err = admission.admit().unwrap_err();
         assert_eq!(err.code(), tonic::Code::ResourceExhausted);
         assert!(err.message().contains("memory mapping limit"), "{}", err.message());
+        assert_eq!(rejection_marker(&err), Some("map_count"));
         // Rejected sessions are not counted.
         assert_eq!(admission.active_sessions(), 0);
 
@@ -833,7 +858,9 @@ mod tests {
         // new sessions are rejected with RESOURCE_EXHAUSTED, while follow-up
         // RPCs on the already-open session continue to succeed.
         available.store(199, Ordering::Release);
-        assert_eq!(admission.admit().unwrap_err().code(), tonic::Code::ResourceExhausted);
+        let err = admission.admit().unwrap_err();
+        assert_eq!(err.code(), tonic::Code::ResourceExhausted);
+        assert_eq!(rejection_marker(&err), Some("low_memory"));
         assert_eq!(admission.active_sessions(), 1);
         assert!(admission.admit_request().is_ok());
         available.store(100, Ordering::Release);
@@ -846,6 +873,8 @@ mod tests {
         let err = admission.admit_request().unwrap_err();
         assert_eq!(err.code(), tonic::Code::ResourceExhausted);
         assert!(err.message().contains("server memory is critically low"), "{}", err.message());
+        // Follow-up RPC rejections are returned in-band, without the marker.
+        assert_eq!(rejection_marker(&err), None);
 
         // When memory recovers into the 80%..=90% band (e.g. 85% used),
         // follow-up RPCs on the open session succeed again while new sessions
