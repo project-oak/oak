@@ -130,7 +130,9 @@ impl HandshakeInitiator {
             .noise
             .decrypt_and_hash(&handshake_response.ciphertext)
             .map_err(|_| Error::DecryptFailed)?;
-        assert_eq!(plaintext.len(), 0);
+        if !plaintext.is_empty() {
+            return Err(Error::InvalidHandshake);
+        }
         let (write_key, read_key) = self.noise.traffic_keys();
         Ok((self.noise.handshake_hash(), OrderedCrypter::new(&read_key, &write_key)))
     }

@@ -18,8 +18,11 @@ use alloc::{boxed::Box, vec};
 use crate::{
     identity_key::{IdentityKey, IdentityKeyHandle},
     noise_handshake::{
-        NONCE_LEN, OrderedCrypter, SYMMETRIC_KEY_LEN, UnorderedCrypter, client::HandshakeInitiator,
-        error::Error, respond_kk, respond_nk, respond_nn,
+        NONCE_LEN, NoiseMessage, OrderedCrypter, P256Scalar, SYMMETRIC_KEY_LEN, UnorderedCrypter,
+        client::HandshakeInitiator,
+        error::Error,
+        noise::{HandshakeType, Noise},
+        p256_scalar_mult, respond_kk, respond_nk, respond_nn,
     },
 };
 
@@ -212,6 +215,45 @@ fn process_nn_handshake() {
         let plaintext = client_crypter.decrypt(&ciphertext).unwrap();
         assert_eq!(message, &plaintext);
     }
+}
+
+/// Regression test: the initiator must reject a handshake response that
+/// carries a payload instead of panicking on it.
+///
+/// `finish_response` already returns `Error::InvalidHandshake` when the
+/// initiator's message carries a payload, but `process_response` asserted on
+/// the responder's payload instead. The response is produced by whoever holds
+/// the other end of the handshake, so in the NN pattern any on-path party could
+/// crash the initiator with a single message.
+#[test]
+fn nn_handshake_rejects_response_with_payload() {
+    let mut initiator = HandshakeInitiator::new_nn();
+    let message = initiator.build_initial_message().unwrap();
+
+    // Act as a responder that follows the NN pattern but encrypts a payload
+    // into the second message instead of the empty payload the initiator
+    // expects.
+    let mut noise = Noise::new(HandshakeType::Nn);
+    noise.mix_hash(&[0; 1]);
+    noise.mix_hash(&message.ephemeral_public_key);
+    noise.mix_key(&message.ephemeral_public_key);
+    noise.decrypt_and_hash(&message.ciphertext).unwrap();
+    let ephemeral_priv = P256Scalar::generate();
+    let ephemeral_pub = ephemeral_priv.compute_public_key();
+    noise.mix_hash(&ephemeral_pub);
+    noise.mix_key(&ephemeral_pub);
+    let ee_ecdh_bytes = p256_scalar_mult(
+        &ephemeral_priv,
+        message.ephemeral_public_key.as_slice().try_into().unwrap(),
+    )
+    .unwrap();
+    noise.mix_key(&ee_ecdh_bytes);
+    let response = NoiseMessage {
+        ciphertext: noise.encrypt_and_hash(b"unexpected payload"),
+        ephemeral_public_key: ephemeral_pub.to_vec(),
+    };
+
+    assert_eq!(initiator.process_response(&response).err(), Some(Error::InvalidHandshake));
 }
 
 /// Regression test: `UnorderedCrypter` must not update its replay state from
