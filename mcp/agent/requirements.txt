@@ -34,7 +34,7 @@ attrs==26.1.0
     #   referencing
 authlib==1.7.2
     # via google-adk
-certifi==2026.6.17
+certifi==2026.10.18
     # via
     #   httpcore
     #   httpx
