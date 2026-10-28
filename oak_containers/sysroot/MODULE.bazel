@@ -17,13 +17,44 @@ module(
     version = "0.1.0",
 )
 
-bazel_dep(name = "rules_distroless", version = "0.6.1")
+bazel_dep(name = "rules_distroless", version = "0.9.4")
 bazel_dep(name = "rules_pkg", version = "1.0.1")
 
 apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
+
+# Corresponding to the debian_snapshot version in
+# oak_containers/system_image/base/base_image.Dockerfile.
+# SHA256: a717a33469731894e77e912ea7d714e27c2dc38ee6554fd1a3102e92999cfc66
+apt.sources_list(
+    architectures = ["amd64"],
+    components = ["main"],
+    suites = ["trixie"],
+    types = ["deb"],
+    uris = [
+        "https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z",
+        "https://snapshot.debian.org/archive/debian/20261020T000000Z",
+    ],
+)
+apt.sources_list(
+    architectures = ["amd64"],
+    components = ["main"],
+    suites = ["trixie-security"],
+    types = ["deb"],
+    uris = [
+        "https://snapshot-cloudflare.debian.org/archive/debian-security/20261020T000000Z",
+        "https://snapshot.debian.org/archive/debian-security/20261020T000000Z",
+    ],
+)
 apt.install(
-    name = "sysroot",
-    lock = "@@//:sysroot.lock.json",
-    manifest = "//:sysroot.yaml",
+    dependency_set = "sysroot",
+    packages = [
+        "libc6-dev",
+        "libstdc++-12-dev",
+        "libsystemd-dev",
+    ],
+    suites = [
+        "trixie",
+        "trixie-security",
+    ],
 )
 use_repo(apt, "sysroot")

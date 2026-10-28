@@ -42,12 +42,13 @@ tarball contains:
    - Your application binary is placed at `/usr/local/bin/` by default.
    - Base system files are included from the `base_image`.
 
-### `app_base.yaml`
+### `oak_containers_app_base` (`MODULE.bazel`)
 
-This file defines the base image using `rules_distroless`. It specifies the
-Debian snapshot and the minimal set of packages (`base-files`) included in the
-default base image. This ensures a small, reproducible, and secure starting
-point for applications.
+The root `MODULE.bazel` defines the base image using `rules_distroless`
+(`apt.install` for `oak_containers_app_base`). It specifies the Debian snapshot
+and the minimal set of packages (`base-files`) included in the default base
+image. This ensures a small, reproducible, and secure starting point for
+applications.
 
 ### `oak_app_config` Rule
 

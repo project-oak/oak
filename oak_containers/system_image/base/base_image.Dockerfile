@@ -3,8 +3,8 @@
 # debian:stable-20261020-slim - https://hub.docker.com/_/debian/tags
 #
 # Note; if you change this version, you should change the sysroot version in
-# oak_containers/sysroot/sysroot.yaml and the app_base version  in
-# oak_containers/app_base/app_base.yaml to match.
+# oak_containers/sysroot/MODULE.bazel and the app_base version in
+# MODULE.bazel to match.
 ARG debian_snapshot=sha256:a717a33469731894e77e912ea7d714e27c2dc38ee6554fd1a3102e92999cfc66
 FROM debian@${debian_snapshot}
 

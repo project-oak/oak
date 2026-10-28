@@ -275,13 +275,42 @@ use_repo(oak_toolchains, "oak_cc_toolchain_sysroot", "umoci")
 # On macOS, uses system-installed umoci (via Nix). See umoci_toolchain.bzl.
 register_toolchains("@umoci//:umoci_toolchain", "@umoci//:umoci_toolchain_darwin")
 
-bazel_dep(name = "rules_distroless", version = "0.6.1")
+bazel_dep(name = "rules_distroless", version = "0.9.4")
 
 apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
+
+# Corresponding to the debian_snapshot version in
+# oak_containers/system_image/base/base_image.Dockerfile.
+# SHA256: a717a33469731894e77e912ea7d714e27c2dc38ee6554fd1a3102e92999cfc66
+apt.sources_list(
+    architectures = ["amd64"],
+    components = ["main"],
+    suites = ["trixie"],
+    types = ["deb"],
+    uris = [
+        "https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z",
+        "https://snapshot.debian.org/archive/debian/20261020T000000Z",
+    ],
+)
+apt.sources_list(
+    architectures = ["amd64"],
+    components = ["main"],
+    suites = ["trixie-security"],
+    types = ["deb"],
+    uris = [
+        "https://snapshot-cloudflare.debian.org/archive/debian-security/20261020T000000Z",
+        "https://snapshot.debian.org/archive/debian-security/20261020T000000Z",
+    ],
+)
 apt.install(
-    name = "oak_containers_app_base",
-    lock = "//oak_containers/app_base:app_base.lock.json",
-    manifest = "//oak_containers/app_base:app_base.yaml",
+    dependency_set = "oak_containers_app_base",
+    packages = [
+        "base-files",
+    ],
+    suites = [
+        "trixie",
+        "trixie-security",
+    ],
 )
 use_repo(apt, "oak_containers_app_base")
 

@@ -15,19 +15,17 @@ nvidia-system-image:
 # Update and rebuild the Oak Containers sysroot.
 [working-directory: "../oak_containers/sysroot"]
 sysroot:
-    bazel run @sysroot//:lock
-    bazel build sysroot
+    bazel build --lockfile_mode=update sysroot
 
 [working-directory: "../oak_containers/sysroot"]
 sysroot-dev:
-    bazel run @sysroot//:lock
-    bazel build sysroot-dev
+    bazel build --lockfile_mode=update sysroot-dev
     @printf "\nAbsolute Location:\n\n  $(pwd)/bazel-bin/sysroot-dev.tar\n\n"
 
 # Update the Oak Containers App base.
 [working-directory: ".."]
 app_base:
-    bazel run @oak_containers_app_base//:lock
+    bazel build --lockfile_mode=update //oak_containers/app_base:flat
 
 [working-directory: ".."]
 push-system-image:
@@ -38,6 +36,5 @@ push-nvidia-system-image:
 
 [working-directory: "../oak_containers/sysroot"]
 push-sysroot:
-    bazel run @sysroot//:lock
-    bazel build sysroot
+    bazel build --lockfile_mode=update sysroot
     bazel run push
