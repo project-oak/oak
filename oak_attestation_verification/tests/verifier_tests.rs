@@ -1234,3 +1234,32 @@ fn verify_dice_chain_rejects_unsigned_application_key_certificates() {
         );
     }
 }
+
+#[test]
+fn verify_rejects_unsigned_user_data_certificate() {
+    use coset::{CborSerializable, CoseSign1Builder, HeaderBuilder, iana};
+    use oak_attestation_verification::verifier::verify_software_rooted_dice_chain;
+
+    let d = AttestationData::load_cb();
+    verify_dice_chain_and_extract_evidence(&d.evidence)
+        .expect("genuine CB evidence without user data cert should verify");
+
+    let mut forged_evidence = d.evidence.clone();
+    let protected = HeaderBuilder::new().algorithm(iana::Algorithm::ES256).build();
+    let forged_cert = CoseSign1Builder::new()
+        .protected(protected)
+        .payload(b"forged-user-data".to_vec())
+        .signature(vec![0u8; 64])
+        .build();
+    forged_evidence.signed_user_data_certificate =
+        forged_cert.to_vec().expect("failed to serialize forged CoseSign1");
+
+    assert!(
+        verify_dice_chain_and_extract_evidence(&forged_evidence).is_err(),
+        "forged signed_user_data_certificate must be rejected by verify_dice_chain_and_extract_evidence"
+    );
+    assert!(
+        verify_software_rooted_dice_chain(&forged_evidence).is_err(),
+        "forged signed_user_data_certificate must be rejected by verify_software_rooted_dice_chain"
+    );
+}

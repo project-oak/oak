@@ -201,6 +201,14 @@ pub fn verify_software_rooted_dice_chain(evidence: &Evidence) -> anyhow::Result<
         anyhow::bail!("event log is not present in the evidence");
     }
 
+    if !evidence.signed_user_data_certificate.is_empty() {
+        verify_user_data_certificate(
+            &evidence.signed_user_data_certificate,
+            &last_layer_verifying_key,
+        )
+        .context("verifying signed user data certificate")?;
+    }
+
     Ok(last_layer_verifying_key)
 }
 
@@ -481,6 +489,14 @@ pub fn verify_dice_chain_and_extract_evidence(
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("no application keys in evidence"))?;
         verify_application_keys(appl_keys, &last_layer_verifying_key)?;
+    }
+
+    if !evidence.signed_user_data_certificate.is_empty() {
+        verify_user_data_certificate(
+            &evidence.signed_user_data_certificate,
+            &last_layer_verifying_key,
+        )
+        .context("verifying signed user data certificate")?;
     }
 
     // Verify the event log claim for this layer if it exists. This is done for all
