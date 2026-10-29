@@ -47,6 +47,9 @@ set -euo pipefail
 CORES="${CORES:-6,7}"
 ITERATIONS="${ITERATIONS:-10}"
 MEMORY="${MEMORY:-1024M}"
+SNP="${SNP:-0}"
+VM_BIOS="${VM_BIOS:-}"
+ALLOW_SEABIOS="${ALLOW_SEABIOS:-0}"
 PLATFORMS="${PLATFORMS:-oak vm vm-tuned}"
 PROBE_TIMEOUT_MS="${PROBE_TIMEOUT_MS:-100}"
 POLL_INTERVAL_MS="${POLL_INTERVAL_MS:-5}"
@@ -60,6 +63,13 @@ Environment variables:
   CORES=6,7               Logical CPUs to pin every launch to
   ITERATIONS=10           Cold boots per platform
   MEMORY=1024M            Guest memory
+  SNP=0                   Set to 1 to run the SEV-SNP legs. Needs an SNP host
+                          and VM_BIOS for the VM legs.
+  VM_BIOS=<path>          Firmware for the VM legs' guest. Required whenever a
+                          VM platform is run so plain and SEV-SNP runs boot the
+                          same OVMF (unless ALLOW_SEABIOS=1 under SNP=0).
+  ALLOW_SEABIOS=0         Set to 1 under SNP=0 to allow the VM legs to boot
+                          QEMU's default SeaBIOS without VM_BIOS.
   PLATFORMS=...           Which platforms to measure, from oak, vm, vm-tuned
   PROBE_TIMEOUT_MS=100    Bound on how long one readiness probe may block
   POLL_INTERVAL_MS=5      Gap between readiness probes
@@ -104,6 +114,38 @@ SHELL_ENV=(direnv exec "${REPO_ROOT}")
 # The trivial workload. `debug` exists to have a benchmark that does nothing,
 # which is what a boot measurement wants inside its window.
 WORKLOAD=(--benchmark=debug --iterations=1 --warmup-iterations=0)
+
+has_vm_platform() {
+  local p
+  for p in ${PLATFORMS}; do
+    [[ ${p} == vm || ${p} == vm-tuned ]] && return 0
+  done
+  return 1
+}
+
+OAK_SNP_ARGS=()
+VM_SNP_ARGS=()
+if [[ ${SNP} == 1 ]]; then
+  OAK_SNP_ARGS=(--vm-type=sev-snp)
+  VM_SNP_ARGS=(--vm-type=sev-snp)
+fi
+if has_vm_platform; then
+  if [[ -z ${VM_BIOS} ]]; then
+    if [[ ${SNP} == 1 ]]; then
+      echo "SNP=1 needs VM_BIOS pointing at firmware that boots a confidential guest" >&2
+      exit 1
+    elif [[ ${ALLOW_SEABIOS} != 1 ]]; then
+      echo "the vm platforms require VM_BIOS=/path/to/OVMF.fd so plain and SEV-SNP runs boot the same firmware (set ALLOW_SEABIOS=1 to boot QEMU's default SeaBIOS)" >&2
+      exit 1
+    fi
+  else
+    if [[ ! -f ${VM_BIOS} ]]; then
+      echo "VM_BIOS is not a file: ${VM_BIOS}" >&2
+      exit 1
+    fi
+    VM_SNP_ARGS+=(--bios="${VM_BIOS}")
+  fi
+fi
 
 # Extracts one field from the `boot-latency` line the CLIs print.
 field() {
@@ -157,6 +199,8 @@ write_manifest() {
     echo "poll interval: ${POLL_INTERVAL_MS} ms"
     echo "platforms, sampled round-robin: ${PLATFORMS}"
     echo "guest vCPUs: 1"
+    echo "sev-snp: ${SNP}"
+    echo "vm firmware: ${VM_BIOS:-seabios (ALLOW_SEABIOS=1)}"
     echo "workload: ${WORKLOAD[*]}"
     # Inside the nix shell, or the VMM this whole benchmark measures goes
     # unrecorded.
@@ -195,6 +239,7 @@ take_sample() {
       line=$("${PIN[@]}" "${BAZEL[@]}" run -c opt \
         //oak_benchmarks/oak_enclave_app:oak_enclave_app_run -- \
         --memory-size="${MEMORY}" "${WORKLOAD[@]}" --report-boot-latency \
+        "${OAK_SNP_ARGS[@]}" \
         2>>"${log}" | grep '^boot-latency ') || true
       ;;
     vm | vm-tuned)
@@ -202,9 +247,9 @@ take_sample() {
       # the tuning is the only thing that differs between them.
       line=$("${PIN[@]}" "${BAZEL[@]}" run -c opt //oak_benchmarks/linux_cli -- \
         --vm-image="${IMAGE[${platform}]}" --run-vm-script="${RUN_VM_SCRIPT}" \
-        --memory-size="${MEMORY}" "${WORKLOAD[@]}" --report-boot-latency \
-        --probe-timeout-ms="${PROBE_TIMEOUT_MS}" \
-        --poll-interval-ms="${POLL_INTERVAL_MS}" \
+        --memory-size="${MEMORY}" --vm-cpus=1 "${WORKLOAD[@]}" \
+        --report-boot-latency --probe-timeout-ms="${PROBE_TIMEOUT_MS}" \
+        --poll-interval-ms="${POLL_INTERVAL_MS}" "${VM_SNP_ARGS[@]}" \
         2>>"${log}" | grep '^boot-latency ') || true
       ;;
     *)

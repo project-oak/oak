@@ -871,6 +871,7 @@ bazel build //oak_benchmarks/oak_paper/crypto_channel:crypto_channel_vm
 ```bash
 ./oak_benchmarks/linux_vm/run_vm.sh \
     --image=bazel-bin/oak_benchmarks/oak_paper/crypto_channel/crypto_channel_vm.qcow2 \
+    --bios=/path/to/OVMF.fd \
     --port=5000 \
     --port=5001 \
     --port=5002 \
@@ -902,6 +903,7 @@ BASE_IMAGE=$(bazel cquery @debian_nocloud_qcow2//file --output=files)
 ```bash
 ./oak_benchmarks/linux_vm/run_vm.sh \
     --image=/tmp/crypto-channel.qcow2 \
+    --bios=/path/to/OVMF.fd \
     --port=5000 \
     --port=5001 \
     --port=5002 \
@@ -978,9 +980,10 @@ encryption on its own: the `RK` legs differ from the plain VM legs in both the
 kernel and the encryption, and this leg moves only one of the two.
 
 A confidential guest boots firmware carrying a SEV metadata table, so `--bios`
-is required; SeaBIOS does not have one. The NIC also gains `iommu_platform=on`,
-without which Linux refuses to probe a virtio device in an encrypted guest and
-the VM comes up with no network.
+is required; SeaBIOS does not have one. Pass `--bios=<ovmf>` (or export
+`VM_BIOS=<ovmf>`) on the plain leg as well so both legs boot identical firmware.
+The NIC also gains `iommu_platform=on`, without which Linux refuses to probe a
+virtio device in an encrypted guest and the VM comes up with no network.
 
 Packaged OVMF is often too old even when it does carry the table: Debian 12's
 edk2 2022.11 leaves the guest in xAPIC mode and QEMU then dies on the page state

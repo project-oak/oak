@@ -55,10 +55,13 @@ import time
 # previous one has been seen, so that a string appearing in an earlier phase
 # cannot be mistaken for a later one.
 MARKERS = [
-    ("GRUB loading", "firmware handed off to GRUB"),
-    ("Loading Linux", "GRUB handed off to the kernel"),
-    ("systemd[1]", "init started"),
-    ("Started app.service", "benchmark service started"),
+    (
+        ("GRUB loading", "Welcome to GRUB", "Booting `Debian"),
+        "firmware handed off to GRUB",
+    ),
+    (("Loading Linux",), "GRUB handed off to the kernel"),
+    (("systemd[1]",), "init started"),
+    (("Started app.service",), "benchmark service started"),
 ]
 
 # Strips the ANSI colour systemd writes to the console, which would otherwise
@@ -82,6 +85,17 @@ def main():
   parser.add_argument("--memory", default="1G", help="guest memory")
   parser.add_argument("--cpus", type=int, default=1, help="guest vCPUs")
   parser.add_argument(
+      "--vm-type",
+      default="default",
+      choices=["default", "sev", "sev-es", "sev-snp"],
+      help="VM type passed to run_vm.sh",
+  )
+  parser.add_argument(
+      "--bios",
+      default=os.environ.get("VM_BIOS", ""),
+      help="firmware blob passed to run_vm.sh (defaults to $VM_BIOS if set)",
+  )
+  parser.add_argument(
       "--timeout",
       type=float,
       default=60.0,
@@ -89,13 +103,27 @@ def main():
   )
   args = parser.parse_args()
 
+  if args.vm_type != "default" and not args.bios:
+    print(
+        f"--vm-type={args.vm_type} requires --bios=/path/to/OVMF.fd (or"
+        " $VM_BIOS)",
+        file=sys.stderr,
+    )
+    return 1
+  if args.bios and not os.path.isfile(args.bios):
+    print(f"firmware not found: {args.bios}", file=sys.stderr)
+    return 1
+
   command = [
       args.run_vm_script,
       f"--image={args.image}",
       f"--port={args.port}",
       f"--memory={args.memory}",
       f"--cpus={args.cpus}",
+      f"--vm-type={args.vm_type}",
   ]
+  if args.bios:
+    command.append(f"--bios={args.bios}")
 
   start = time.monotonic()
   # A process group, so that killing the wrapper takes QEMU with it: run_vm.sh
@@ -121,13 +149,15 @@ def main():
 
   pending = list(MARKERS)
   found = []
+  captured_lines = []
   try:
     while pending and time.monotonic() - start < args.timeout:
       line = process.stdout.readline()
       if not line:
         break
+      captured_lines.append(line)
       line = ANSI.sub("", line)
-      if pending[0][0] in line:
+      if any(m in line for m in pending[0][0]):
         found.append((time.monotonic() - start, pending[0][1]))
         pending.pop(0)
   finally:
@@ -139,9 +169,12 @@ def main():
       os.killpg(process.pid, signal.SIGKILL)
 
   if not found:
+    if process.returncode and captured_lines:
+      print("".join(captured_lines), file=sys.stderr, end="")
     print("no boot markers seen; is this a Linux image?", file=sys.stderr)
     return 1
 
+  print(f"firmware: {args.bios if args.bios else 'SeaBIOS (QEMU default)'}")
   print(f"{'at':>10}  {'phase took':>10}  event")
   print(f"{'ms':>10}  {'ms':>10}")
   previous = 0.0

@@ -72,11 +72,12 @@ Runs a VM image:
 ```bash
 ./oak_benchmarks/linux_vm/run_vm.sh \
     --image=<path>            # Required: qcow2 image
+    --cpus=<n>                # Optional: Number of vCPUs (default: 1)
     --port=<port>             # Optional: Port forward (repeatable, user net only)
     --net=<user|tap>          # Optional: Network mode (default: user)
     --headless                # Optional: Run in background
     --vm-type=<type>          # Optional: default, sev, sev-es or sev-snp
-    --bios=<path>             # Optional: firmware, required by a confidential guest
+    --bios=<path>             # Optional: firmware, required by a confidential guest (default: $VM_BIOS)
     --cbitpos=<n>             # Optional: encryption bit position (default: 51)
 ```
 

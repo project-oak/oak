@@ -33,9 +33,11 @@ MEMORY_WORKING_SET="${MEMORY_WORKING_SET:-268435456}"
 # Run the confidential-computing legs. Off by default because it needs an
 # SEV-SNP host: on anything else QEMU refuses to start and every sample fails.
 SNP="${SNP:-0}"
-# Firmware for the VM legs' guest, which SNP needs and the distribution's
-# SeaBIOS cannot provide. The enclave legs bring their own, Stage 0.
+# Firmware for the VM legs' guest. Required whenever the vm platform is run so
+# plain and SEV-SNP runs boot identical OVMF firmware; set ALLOW_SEABIOS=1 to
+# opt into QEMU's default SeaBIOS under SNP=0. The enclave legs bring Stage 0.
 VM_BIOS="${VM_BIOS:-}"
+ALLOW_SEABIOS="${ALLOW_SEABIOS:-0}"
 # Message sizes to sweep the size-sensitive benchmarks over, space separated.
 #
 # Empty by default, which leaves every benchmark at the CLI's own default and
@@ -124,22 +126,38 @@ sizes_or_default() {
 # iteration, so its footprint follows iterations_for. The service gives it a
 # one-entry pre-built map whatever this flag says, so passing a size would
 # change nothing.
-# Per-runner arguments for the confidential legs, empty unless SNP=1.
+has_vm_platform() {
+  local p
+  for p in ${PLATFORMS}; do
+    [[ ${p} == vm || ${p} == vm-tuned ]] && return 0
+  done
+  return 1
+}
+
+# Per-runner arguments for the VM legs. VM_BIOS is required whenever a VM leg
+# is selected (unless ALLOW_SEABIOS=1 under SNP=0) so the unencrypted and
+# SEV-SNP VM runs boot identical firmware.
 OAK_SNP_ARGS=()
 VM_SNP_ARGS=()
 if [[ ${SNP} == 1 ]]; then
   OAK_SNP_ARGS=(--vm-type=sev-snp)
-  # Only the VM legs need firmware; the enclave legs bring Stage 0.
-  if [[ ${PLATFORMS} == *vm* ]]; then
-    if [[ -z ${VM_BIOS} ]]; then
+  VM_SNP_ARGS=(--vm-type=sev-snp)
+fi
+if has_vm_platform; then
+  if [[ -z ${VM_BIOS} ]]; then
+    if [[ ${SNP} == 1 ]]; then
       echo "SNP=1 needs VM_BIOS pointing at firmware that boots a confidential guest" >&2
       exit 1
+    elif [[ ${ALLOW_SEABIOS} != 1 ]]; then
+      echo "the vm platform requires VM_BIOS=/path/to/OVMF.fd so plain and SEV-SNP runs boot the same firmware (set ALLOW_SEABIOS=1 to boot QEMU's default SeaBIOS)" >&2
+      exit 1
     fi
+  else
     if [[ ! -f ${VM_BIOS} ]]; then
       echo "VM_BIOS is not a file: ${VM_BIOS}" >&2
       exit 1
     fi
-    VM_SNP_ARGS=(--vm-type=sev-snp --bios="${VM_BIOS}")
+    VM_SNP_ARGS+=(--bios="${VM_BIOS}")
   fi
 fi
 
@@ -198,10 +216,14 @@ Environment variables:
                              the two VM legs are given a guest to match.
   SNP=0                      Set to 1 to run the SEV-SNP legs. Needs an SNP
                              host, and VM_BIOS for the VM legs.
-  VM_BIOS=<path>             Firmware for the VM legs' guest, required by SNP.
-                             It has to be recent: edk2 2022.11 carries the SEV
-                             metadata table but still fails to boot a
+  VM_BIOS=<path>             Firmware for the VM legs' guest. Required whenever
+                             the vm platform is run so plain and SEV-SNP runs
+                             boot the same OVMF (unless ALLOW_SEABIOS=1 under
+                             SNP=0). It has to be recent: edk2 2022.11 carries
+                             the SEV metadata table but still fails to boot a
                              confidential guest.
+  ALLOW_SEABIOS=0            Set to 1 under SNP=0 to allow the vm platform to
+                             boot QEMU's default SeaBIOS without VM_BIOS.
   DATA_SIZES=...             Space-separated byte counts to sweep hashing and
                              AEAD over, for the overhead-versus-intensity
                              curve. Unset measures each benchmark once at the
@@ -255,7 +277,7 @@ write_manifest() {
     echo "benchmarks: ${BENCHMARKS[*]}"
     echo "data sizes: ${DATA_SIZES:-cli default}"
     echo "sev-snp: ${SNP}"
-    echo "vm firmware: ${VM_BIOS:-none}"
+    echo "vm firmware: ${VM_BIOS:-seabios (ALLOW_SEABIOS=1)}"
     echo "revision: $(jj --ignore-working-copy log -r @ --no-graph -T 'commit_id' 2>/dev/null || echo unknown)"
     echo
     echo "not controlled:"

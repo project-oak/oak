@@ -471,8 +471,8 @@ quietly put the whole benchmark inside the enclave's boot figure.
 
 What the comparison does not equalise, and what any reading of it has to carry:
 
-- the enclave boots a kernel directly, while the VM goes through SeaBIOS, GRUB
-  and a qcow2 disk;
+- the enclave boots a kernel directly, while the VM goes through firmware
+  (SeaBIOS by default, or OVMF when `VM_BIOS` is set), GRUB and a qcow2 disk;
 - the enclave answers over a virtio console on a Unix socket, while the VM
   answers over SLIRP, TCP, HTTP/2 and gRPC, so its readiness includes DHCP;
 - no sample runs against a cold host page cache: the build writes every image
@@ -496,9 +496,9 @@ to nanoseconds at all.
 
 Known gaps, with what they are worth on this host:
 
-- the VM still boots through SeaBIOS and GRUB, where the enclave gets a direct
-  kernel boot. Giving the VM the same removes about 0.6 s more. It needs a
-  change to `linux_vm/run_vm.sh`, which is not ours to make here.
+- the VM still boots through firmware (OVMF via `VM_BIOS`, or SeaBIOS with
+  `ALLOW_SEABIOS=1`) and GRUB, where the enclave gets a direct kernel boot.
+  Giving the VM a direct kernel boot removes about 0.6 s more.
 - the VM gets one vCPU to match the restricted kernel, which cannot have more.
   Two vCPUs would save it about 0.3 s.
 - roughly 0.8 s of the Linux figure is `systemd-networkd` and DHCP, on the
@@ -518,8 +518,13 @@ particular is dominated by that console. Use `tune_vm_image.sh --keep-console`
 to produce a tuned image it can still read.
 
 ```bash
-ITERATIONS=10 oak_benchmarks/scripts/boot_latency.sh
+ITERATIONS=10 VM_BIOS=/path/to/OVMF.fd oak_benchmarks/scripts/boot_latency.sh
 ```
+
+Both `boot_latency.sh` and `run_matrix.sh` require `VM_BIOS` whenever a Linux VM
+leg is enabled so plain and SEV-SNP runs boot identical firmware (set
+`ALLOW_SEABIOS=1` under `SNP=0` to opt into QEMU's default SeaBIOS). Set `SNP=1`
+alongside `VM_BIOS` to measure cold boot under SEV-SNP on all three platforms.
 
 ## Manual Building
 

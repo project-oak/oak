@@ -523,7 +523,7 @@ fn tls_local_tcp_benchmark(c: &mut Criterion) {
 }
 /// Message shown when a VM leg cannot reach its server.
 const VM_CONNECT_HELP: &str = "Couldn't connect to VM. Make sure the VM is running with:\n\
-     ./oak_benchmarks/linux_vm/run_vm.sh --image=<path> --port=5000 --port=5001 --port=5002 --headless";
+     ./oak_benchmarks/linux_vm/run_vm.sh --image=<path> --bios=<ovmf> --port=5000 --port=5001 --port=5002 --headless";
 
 fn plaintext_vm_tcp_benchmark(c: &mut Criterion) {
     let addr = get_vm_addr("plaintext", DEFAULT_PLAINTEXT_PORT);

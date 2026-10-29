@@ -27,12 +27,12 @@ set -o pipefail
 # Default values.
 IMAGE=""
 MEMORY="1G"
-CPUS="2"
+CPUS="1"
 INTERACTIVE=false
 HEADLESS=false
 VM_TYPE="default"
 QEMU_BINARY="qemu-system-x86_64"
-BIOS=""
+BIOS="${VM_BIOS:-}"
 CBITPOS="51"
 NET="user"
 TAP_DEVICE="oaktap0"
@@ -46,7 +46,7 @@ Required:
 
 Optional:
   --memory=SIZE        Memory size (default: 1G)
-  --cpus=N             Number of CPUs (default: 2)
+  --cpus=N             Number of CPUs (default: 1)
   --port=PORT          Forward host PORT to guest PORT (user networking only,
                        can be repeated)
   --net=MODE           user (default) or tap. See below.
@@ -56,6 +56,7 @@ Optional:
   --vm-type=TYPE       default (no memory encryption), sev, sev-es or sev-snp
   --qemu=PATH          Path to QEMU binary (default: qemu-system-x86_64)
   --bios=PATH          Firmware blob, needed by a confidential guest
+                       (defaults to \$VM_BIOS if set)
   --cbitpos=N          Encryption bit position (default: 51, Milan and Genoa;
                        Naples and Rome use 47)
 
@@ -318,6 +319,7 @@ if [[ ${INTERACTIVE} == true ]]; then
   if [[ ${VM_TYPE} != default ]]; then
     echo "  Type:   ${VM_TYPE}"
   fi
+  echo "  BIOS:   ${BIOS:-SeaBIOS (QEMU default)}"
   echo ""
   echo "Press Ctrl+A, X to exit the VM."
   echo ""
@@ -346,6 +348,7 @@ else
   if [[ ${VM_TYPE} != default ]]; then
     echo "  Type:   ${VM_TYPE}"
   fi
+  echo "  BIOS:   ${BIOS:-SeaBIOS (QEMU default)}"
   echo ""
   echo "Press Ctrl+C to stop the VM."
   echo ""
