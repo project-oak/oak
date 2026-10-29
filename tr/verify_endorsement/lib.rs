@@ -379,7 +379,7 @@ impl Leg {
             Some(Err(_)) => Status::Failed,
         };
         let error = match outcome {
-            Some(Err(error)) => Some(format!("{error}")),
+            Some(Err(error)) => Some(format!("{error:#}")),
             _ => None,
         };
         Leg { name, status, error }
@@ -1160,6 +1160,19 @@ mod tests {
 
         let err = verify_tlog(&tlog, &signed_endorsement, &endorsement.key, 0).unwrap_err();
         assert!(err.to_string().contains("C2SP"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn verify_tlog_detail_includes_the_cause_of_a_failed_leg() {
+        let (endorsement, mut signed_endorsement, policy) = endorsement_with_c2sp_proof();
+        signed_endorsement.c2sp_tlog_proof = b"not a valid proof".to_vec();
+        let tlog = tlog_any_with_c2sp_and_failing_pes(policy);
+
+        let err = verify_tlog(&tlog, &signed_endorsement, &endorsement.key, 0).unwrap_err();
+        assert!(
+            err.to_string().contains("C2SP: verifying C2SP tlog proof: "),
+            "unexpected error: {err}"
+        );
     }
 
     #[test]
