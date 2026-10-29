@@ -64,7 +64,7 @@ fastapi==0.138.0
     # via google-adk
 fastuuid==0.14.0
     # via litellm
-filelock==3.29.4
+filelock==4.2.1
     # via huggingface-hub
 frozenlist==1.8.0
     # via
