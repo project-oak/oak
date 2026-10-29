@@ -18,23 +18,24 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "cc/crypto/tink/signature/ecdsa_p256_parameters.h"
 #include "cc/utils/status/status.h"
 #include "tink/config/global_registry.h"
 #include "tink/keyset_handle.h"
 #include "tink/proto_keyset_format.h"
 #include "tink/public_key_sign.h"
+#include "tink/signature/ecdsa_parameters.h"
 #include "tink/signature/signature_config.h"
-#include "tink/signature/signature_key_templates.h"
 
 namespace oak::crypto::tink {
 
 using ::crypto::tink::ConfigGlobalRegistry;
+using ::crypto::tink::EcdsaParameters;
 using ::crypto::tink::KeyGenConfigGlobalRegistry;
 using ::crypto::tink::KeysetHandle;
 using ::crypto::tink::PublicKeySign;
 using ::crypto::tink::SerializeKeysetWithoutSecretToProtoKeysetFormat;
 using ::crypto::tink::SignatureConfig;
-using ::crypto::tink::SignatureKeyTemplates;
 using ::oak::util::status::Annotate;
 
 absl::StatusOr<SignatureWrapper> SignWithTink(absl::string_view message) {
@@ -45,9 +46,13 @@ absl::StatusOr<SignatureWrapper> SignWithTink(absl::string_view message) {
   }
 
   // 2) Create a keyset handle.
+  absl::StatusOr<EcdsaParameters> parameters = EcdsaP256Parameters();
+  if (!parameters.ok()) {
+    return Annotate(parameters.status(), "creating ECDSA P-256 parameters");
+  }
   absl::StatusOr<std::unique_ptr<KeysetHandle>> keyset_handle =
-      KeysetHandle::GenerateNew(SignatureKeyTemplates::EcdsaP256(),
-                                KeyGenConfigGlobalRegistry());
+      KeysetHandle::GenerateNewFromParameters(*parameters,
+                                              KeyGenConfigGlobalRegistry());
   if (!keyset_handle.ok()) {
     return Annotate(keyset_handle.status(), "Failed to create keyset handle.");
   }

@@ -43,12 +43,13 @@ testing.
 #include "cc/crypto/certificate/certificate_authority.h"
 #include "cc/crypto/certificate/utils.h"
 #include "cc/crypto/signing_key.h"
+#include "cc/crypto/tink/signature/ecdsa_p256_parameters.h"
 #include "tink/config/global_registry.h"
 #include "tink/keyset_handle.h"
 #include "tink/proto_keyset_format.h"
 #include "tink/public_key_sign.h"
+#include "tink/signature/ecdsa_parameters.h"
 #include "tink/signature/signature_config.h"
-#include "tink/signature/signature_key_templates.h"
 
 ABSL_FLAG(std::string, message_to_sign, "", "Message for the keyset to sign");
 ABSL_FLAG(std::string, purpose, "",
@@ -69,15 +70,16 @@ using ::absl::ParseCommandLine;
 using ::absl::Status;
 using ::absl::StatusOr;
 using ::crypto::tink::ConfigGlobalRegistry;
+using ::crypto::tink::EcdsaParameters;
 using ::crypto::tink::KeyGenConfigGlobalRegistry;
 using ::crypto::tink::KeysetHandle;
 using ::crypto::tink::PublicKeySign;
 using ::crypto::tink::SerializeKeysetWithoutSecretToProtoKeysetFormat;
 using ::crypto::tink::SignatureConfig;
-using ::crypto::tink::SignatureKeyTemplates;
 using ::oak::crypto::CertificateAuthority;
 using ::oak::crypto::SigningKeyHandle;
 using ::oak::crypto::SystemClock;
+using ::oak::crypto::tink::EcdsaP256Parameters;
 using ::oak::crypto::v1::Certificate;
 using ::oak::crypto::v1::Signature;
 
@@ -145,9 +147,11 @@ int main(int argc, char** argv) {
   // Create a keyset handle.
   Status signature_registry = SignatureConfig::Register();
   CHECK_OK(signature_registry);
+  StatusOr<EcdsaParameters> parameters = EcdsaP256Parameters();
+  CHECK_OK(parameters);
   StatusOr<std::unique_ptr<KeysetHandle>> keyset_handle =
-      KeysetHandle::GenerateNew(SignatureKeyTemplates::EcdsaP256(),
-                                KeyGenConfigGlobalRegistry());
+      KeysetHandle::GenerateNewFromParameters(*parameters,
+                                              KeyGenConfigGlobalRegistry());
   CHECK_OK(keyset_handle);
 
   // Get public keyset handle. This should be used for verification.

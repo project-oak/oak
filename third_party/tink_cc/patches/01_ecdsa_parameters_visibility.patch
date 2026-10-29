@@ -1,0 +1,10 @@
+--- a/tink/signature/BUILD.bazel
++++ b/tink/signature/BUILD.bazel
+@@ -774,6 +774,7 @@
+     srcs = ["ecdsa_parameters.cc"],
+     hdrs = ["ecdsa_parameters.h"],
+     include_prefix = "tink/signature",
++    visibility = ["//visibility:public"],
+     deps = [
+         ":signature_parameters",
+         "//tink:parameters",

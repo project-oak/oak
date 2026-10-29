@@ -19,6 +19,7 @@
 #include "absl/status/status.h"
 #include "absl/status/status_matchers.h"
 #include "absl/status/statusor.h"
+#include "cc/crypto/tink/signature/ecdsa_p256_parameters.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "tink/config/global_registry.h"
@@ -27,14 +28,15 @@
 #include "tink/proto_keyset_format.h"
 #include "tink/public_key_sign.h"
 #include "tink/public_key_verify.h"
+#include "tink/signature/ecdsa_parameters.h"
 #include "tink/signature/signature_config.h"
-#include "tink/signature/signature_key_templates.h"
 
 namespace oak::crypto::tink {
 namespace {
 
 using ::crypto::tink::ConfigGlobalRegistry;
 using ::crypto::tink::Configuration;
+using ::crypto::tink::EcdsaParameters;
 using ::crypto::tink::KeyGenConfigGlobalRegistry;
 using ::crypto::tink::KeysetHandle;
 using ::crypto::tink::PublicKeySign;
@@ -42,7 +44,6 @@ using ::crypto::tink::PublicKeyVerify;
 using ::crypto::tink::SerializeKeysetToProtoKeysetFormat;
 using ::crypto::tink::SerializeKeysetWithoutSecretToProtoKeysetFormat;
 using ::crypto::tink::SignatureConfig;
-using ::crypto::tink::SignatureKeyTemplates;
 
 using ::absl_testing::IsOk;
 using ::absl_testing::StatusIs;
@@ -55,10 +56,12 @@ class VerificationUtilsTest : public testing::Test {
     // Create the keyset handle.
     absl::Status signature_registry = SignatureConfig::Register();
     ASSERT_TRUE(signature_registry.ok());
+    absl::StatusOr<EcdsaParameters> parameters = EcdsaP256Parameters();
+    ASSERT_THAT(parameters, IsOk());
     absl::StatusOr<std::unique_ptr<KeysetHandle>> keyset_handle =
-        KeysetHandle::GenerateNew(SignatureKeyTemplates::EcdsaP256(),
-                                  KeyGenConfigGlobalRegistry());
-    ASSERT_TRUE(keyset_handle.ok());
+        KeysetHandle::GenerateNewFromParameters(*parameters,
+                                                KeyGenConfigGlobalRegistry());
+    ASSERT_THAT(keyset_handle, IsOk());
     keyset_handle_ = std::move(*keyset_handle);
 
     // Sign the message.

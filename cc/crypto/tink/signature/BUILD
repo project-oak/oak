@@ -23,6 +23,17 @@ package(
 )
 
 cc_library(
+    name = "ecdsa_p256_parameters",
+    srcs = ["ecdsa_p256_parameters.cc"],
+    hdrs = ["ecdsa_p256_parameters.h"],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        "@com_github_tink_crypto_tink_cc//tink/signature:ecdsa_parameters",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_library(
     name = "verification-ffi",
     srcs = ["verification-ffi.cc"],
     hdrs = ["verification-ffi.h"],
@@ -62,6 +73,7 @@ cc_test(
     srcs = ["verification_utils_test.cc"],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
+        ":ecdsa_p256_parameters",
         ":verification_utils",
         "@com_github_tink_crypto_tink_cc//tink:configuration",
         "@com_github_tink_crypto_tink_cc//tink:keyset_handle",
@@ -69,8 +81,8 @@ cc_test(
         "@com_github_tink_crypto_tink_cc//tink:public_key_sign",
         "@com_github_tink_crypto_tink_cc//tink:public_key_verify",
         "@com_github_tink_crypto_tink_cc//tink/config:global_registry",
+        "@com_github_tink_crypto_tink_cc//tink/signature:ecdsa_parameters",
         "@com_github_tink_crypto_tink_cc//tink/signature:signature_config",
-        "@com_github_tink_crypto_tink_cc//tink/signature:signature_key_templates",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:status_matchers",
         "@com_google_absl//absl/status:statusor",
@@ -101,13 +113,14 @@ cc_library(
     hdrs = ["signature_utils.h"],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
+        ":ecdsa_p256_parameters",
         "//cc/utils/status",
         "@com_github_tink_crypto_tink_cc//tink:keyset_handle",
         "@com_github_tink_crypto_tink_cc//tink:proto_keyset_format",
         "@com_github_tink_crypto_tink_cc//tink:public_key_sign",
         "@com_github_tink_crypto_tink_cc//tink/config:global_registry",
+        "@com_github_tink_crypto_tink_cc//tink/signature:ecdsa_parameters",
         "@com_github_tink_crypto_tink_cc//tink/signature:signature_config",
-        "@com_github_tink_crypto_tink_cc//tink/signature:signature_key_templates",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings:string_view",
     ],
