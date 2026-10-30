@@ -19,7 +19,7 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_servic
 use tonic::transport::Channel;
 use zeroize::Zeroizing;
 
-use crate::admission::ActiveSessionGuard;
+use crate::{admission::ActiveSessionGuard, persistence_worker::PersistTicket};
 
 /// The state for each client connection.
 pub struct UserSessionContext {
@@ -42,4 +42,7 @@ pub struct UserSessionContext {
     /// (and its Icing instance) keeps counting in `active_sessions` until the
     /// context is actually dropped.
     pub session_guard: Option<ActiveSessionGuard>,
+    /// Set while the context is queued for the persistence worker with
+    /// unpersisted changes; the worker closes it with the outcome.
+    pub persist_ticket: Option<PersistTicket>,
 }

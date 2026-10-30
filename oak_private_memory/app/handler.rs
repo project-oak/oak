@@ -32,7 +32,7 @@ use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::{
-    sync::{RwLock, RwLockReadGuard, RwLockWriteGuard, mpsc},
+    sync::{RwLock, RwLockReadGuard, RwLockWriteGuard},
     time::Instant,
 };
 use tonic::transport::Channel;
@@ -44,7 +44,7 @@ use crate::{
     context::UserSessionContext,
     db_client::SharedDbClient,
     packing::ResponsePacking,
-    persistence_worker,
+    persistence_worker::{self, PersistenceQueue},
 };
 
 // The implementation for one active Oak Private Memory session.
@@ -53,7 +53,7 @@ pub struct SealedMemorySessionHandler {
     session_context: RwLock<Option<UserSessionContext>>,
     db_client: Arc<SharedDbClient>,
     metrics: Arc<metrics::Metrics>,
-    persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
+    persistence: PersistenceQueue,
     clock: Arc<dyn Clock>,
     max_database_size_bytes: usize,
     blanket_ttl_seconds: i64,
@@ -80,7 +80,7 @@ impl Drop for SealedMemorySessionHandler {
             // under-count if the worker reads the queue length concurrently;
             // it corrects itself at the next enqueue or pickup.
             self.metrics.inc_db_persist_queue_size();
-            if let Err(e) = self.persistence_tx.send(context) {
+            if let Err(e) = self.persistence.enqueue(context) {
                 self.metrics.dec_db_persist_queue_size();
                 self.metrics.inc_persistence_enqueue_failures();
                 warn!("failed to send session context to persistence service: {}", e);
@@ -93,7 +93,7 @@ impl SealedMemorySessionHandler {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         metrics: Arc<metrics::Metrics>,
-        persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
+        persistence: PersistenceQueue,
         db_client: Arc<SharedDbClient>,
         clock: Arc<dyn Clock>,
         max_database_size_bytes: usize,
@@ -106,7 +106,7 @@ impl SealedMemorySessionHandler {
             session_context: Default::default(),
             db_client,
             metrics,
-            persistence_tx,
+            persistence,
             clock,
             max_database_size_bytes,
             blanket_ttl_seconds,
@@ -579,6 +579,7 @@ impl SealedMemorySessionHandler {
             // Set by `Drop` when handed to the persistence worker; while the
             // handler is alive, the handler's guard covers this context.
             session_guard: None,
+            persist_ticket: None,
         });
         Ok(())
     }
@@ -2210,23 +2211,26 @@ mod tests {
         let db_addr = start_test_db_with_service(service.clone()).await;
         let harness = test_metrics();
         let queue_size = || harness.collect().gauge("db_persist_queue_size", &[]);
-        let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
+        let (persistence, persistence_rx) = PersistenceQueue::new();
+        let tracker = persistence.tracker().clone();
         for pm_uid in ["queue_size_user_1", "queue_size_user_2"] {
-            let handler = connect_handler_with_persistence_tx(
+            let handler = connect_handler_with_persistence(
                 db_addr,
                 harness.metrics.clone(),
-                persistence_tx.clone(),
+                persistence.clone(),
             );
             start_session_with_changes(&handler, pm_uid).await;
             drop(handler);
         }
-        drop(persistence_tx);
+        drop(persistence);
         // Both sessions are queued before the worker runs.
         assert_eq!(queue_size(), 2);
+        assert_eq!(tracker.pending(), 2);
 
         persistence_worker::run_persistence_service(persistence_rx, harness.metrics.clone()).await;
         assert_eq!(queue_size(), 0);
         assert_eq!(unlabeled_counter(&harness, "db_persist_failures"), 0);
+        assert_eq!((tracker.pending(), tracker.saved(), tracker.failed()), (0, 2, 0));
     }
 
     /// A session that cannot be persisted is counted by the persistence
@@ -2267,12 +2271,14 @@ mod tests {
         // The sync failed to decrypt the stored database when rebasing onto it.
         assert_eq!(unlabeled_counter(&harness, "db_decryption_failures"), 1);
 
-        let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
-        persistence_tx.send(handler.session_context().await.take().unwrap()).unwrap();
-        drop(persistence_tx);
+        let (persistence, persistence_rx) = PersistenceQueue::new();
+        let tracker = persistence.tracker().clone();
+        persistence.enqueue(handler.session_context().await.take().unwrap()).unwrap();
+        drop(persistence);
         persistence_worker::run_persistence_service(persistence_rx, harness.metrics.clone()).await;
 
         assert_eq!(unlabeled_counter(&harness, "db_persist_failures"), 1);
+        assert_eq!((tracker.pending(), tracker.saved(), tracker.failed()), (0, 0, 1));
         // The worker's write hit a version conflict, and it failed to decrypt
         // the stored database when rebasing onto it.
         assert_eq!(unlabeled_counter(&harness, "db_decryption_failures"), 2);

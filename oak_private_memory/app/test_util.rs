@@ -35,6 +35,7 @@ use tokio::{net::TcpListener, sync::mpsc};
 use crate::{
     MAX_MEMORY_TTL_SECONDS, METADATA_BLANKET_TTL_SECONDS, context::UserSessionContext,
     db_client::SharedDbClient, handler::SealedMemorySessionHandler,
+    persistence_worker::PersistenceQueue,
 };
 
 /// A valid 256-bit key encryption key shared across all requests in a test.
@@ -94,21 +95,21 @@ pub(crate) fn connect_handler_with_metrics(
     db_addr: SocketAddr,
     metrics: Arc<metrics::Metrics>,
 ) -> (SealedMemorySessionHandler, mpsc::UnboundedReceiver<UserSessionContext>) {
-    let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
-    (connect_handler_with_persistence_tx(db_addr, metrics, persistence_tx), persistence_rx)
+    let (persistence, persistence_rx) = PersistenceQueue::new();
+    (connect_handler_with_persistence(db_addr, metrics, persistence), persistence_rx)
 }
 
-/// Like [`connect_handler_with_metrics`], but sends the session to
-/// `persistence_tx` when the handler is dropped.
-pub(crate) fn connect_handler_with_persistence_tx(
+/// Like [`connect_handler_with_metrics`], but queues the session on
+/// `persistence` when the handler is dropped.
+pub(crate) fn connect_handler_with_persistence(
     db_addr: SocketAddr,
     metrics: Arc<metrics::Metrics>,
-    persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
+    persistence: PersistenceQueue,
 ) -> SealedMemorySessionHandler {
     let db_client = Arc::new(SharedDbClient::new(db_addr, MAX_GRPC_DECODE_SIZE, metrics.clone()));
     SealedMemorySessionHandler::new(
         metrics,
-        persistence_tx,
+        persistence,
         db_client,
         Arc::new(SystemClock),
         MAX_DATABASE_SIZE,

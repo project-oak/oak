@@ -23,8 +23,7 @@ use tokio::net::TcpListener;
 
 const ENCLAVE_APP_PORT: u16 = 8080;
 
-use private_memory_server_lib::app::run_persistence_service;
-use tokio::sync::mpsc;
+use private_memory_server_lib::app::{PersistenceQueue, run_persistence_service};
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -83,7 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind(addr).await?;
 
     let metrics = private_memory_server_lib::metrics::get_global_metrics();
-    let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
+    let (persistence, persistence_rx) = PersistenceQueue::new();
     let persistence_join_handle =
         tokio::spawn(run_persistence_service(persistence_rx, metrics.clone()));
 
@@ -91,7 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         listener,
         application_config,
         metrics,
-        persistence_tx,
+        persistence,
         session_config_factory,
         None, // TLS not yet configured in production
         std::sync::Arc::new(oak_private_memory_database::clock::SystemClock),

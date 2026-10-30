@@ -31,15 +31,15 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_server:
     SealedMemoryService, SealedMemoryServiceServer,
 };
 use sealed_memory_rust_proto::{oak::private_memory::TlsSessionFrame, prelude::v1::*};
-use tokio::{net::TcpListener, sync::mpsc};
+use tokio::net::TcpListener;
 use tokio_stream::{Stream, StreamExt, wrappers::TcpListenerStream};
 
 use crate::{
     ApplicationConfig, IntoTonicResult,
     admission::{ActiveSessionGuard, AdmissionController, MapCountMonitor},
-    context::UserSessionContext,
     db_client::SharedDbClient,
     handler::SealedMemorySessionHandler,
+    persistence_worker::PersistenceQueue,
 };
 
 /// How often the `active_sessions` and `process_map_count` gauges are
@@ -55,7 +55,7 @@ const ADMISSION_GAUGE_REFRESH_INTERVAL: std::time::Duration = std::time::Duratio
 /// `TlsSessionHandler` for TLS).
 struct SealedMemoryServiceImplementation {
     metrics: Arc<metrics::Metrics>,
-    persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
+    persistence: PersistenceQueue,
     db_client: Arc<SharedDbClient>,
     session_config_factory: Arc<dyn Fn() -> SessionConfig + Send + Sync>,
     tls_server_context: Option<Arc<OakSessionTlsServerContext>>,
@@ -68,7 +68,7 @@ impl SealedMemoryServiceImplementation {
     pub fn new(
         application_config: ApplicationConfig,
         metrics: Arc<metrics::Metrics>,
-        persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
+        persistence: PersistenceQueue,
         session_config_factory: Arc<dyn Fn() -> SessionConfig + Send + Sync>,
         tls_server_context: Option<Arc<OakSessionTlsServerContext>>,
         clock: Arc<dyn Clock>,
@@ -95,7 +95,7 @@ impl SealedMemoryServiceImplementation {
                 metrics.clone(),
             )),
             metrics,
-            persistence_tx,
+            persistence,
             session_config_factory,
             tls_server_context,
             clock,
@@ -120,7 +120,7 @@ impl SealedMemoryServiceImplementation {
             session_guard,
             self.admission.clone(),
             &self.metrics,
-            &self.persistence_tx,
+            &self.persistence,
             self.db_client.clone(),
             (self.session_config_factory)(),
             self.clock.clone(),
@@ -174,7 +174,7 @@ impl OakSessionHandler {
         session_guard: ActiveSessionGuard,
         admission: Arc<AdmissionController>,
         metrics: &Arc<metrics::Metrics>,
-        persistence_tx: &mpsc::UnboundedSender<UserSessionContext>,
+        persistence: &PersistenceQueue,
         db_client: Arc<SharedDbClient>,
         session_config: SessionConfig,
         clock: Arc<dyn Clock>,
@@ -191,7 +191,7 @@ impl OakSessionHandler {
             server_session,
             application_handler: SealedMemorySessionHandler::new(
                 metrics.clone(),
-                persistence_tx.clone(),
+                persistence.clone(),
                 db_client,
                 clock,
                 max_database_size_bytes,
@@ -342,7 +342,7 @@ impl TlsSessionHandler {
         session_guard: ActiveSessionGuard,
         admission: Arc<AdmissionController>,
         metrics: &Arc<metrics::Metrics>,
-        persistence_tx: &mpsc::UnboundedSender<UserSessionContext>,
+        persistence: &PersistenceQueue,
         db_client: Arc<SharedDbClient>,
         tls_session: oak_session_tls::OakSessionTls,
         clock: Arc<dyn Clock>,
@@ -357,7 +357,7 @@ impl TlsSessionHandler {
             session: tls_session,
             application_handler: SealedMemorySessionHandler::new(
                 metrics.clone(),
-                persistence_tx.clone(),
+                persistence.clone(),
                 db_client,
                 clock,
                 max_database_size_bytes,
@@ -483,7 +483,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
 
         let admission = self.admission.clone();
         let metrics = self.metrics.clone();
-        let persistence_tx = self.persistence_tx.clone();
+        let persistence = self.persistence.clone();
         let db_client = self.db_client.clone();
         let clock = self.clock.clone();
         let max_database_size_bytes = self.application_config.max_database_size_bytes;
@@ -545,7 +545,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
                 session_guard,
                 admission,
                 &metrics,
-                &persistence_tx,
+                &persistence,
                 db_client,
                 tls_session,
                 clock,
@@ -784,7 +784,7 @@ pub async fn create(
     listener: TcpListener,
     application_config: ApplicationConfig,
     metrics: Arc<metrics::Metrics>,
-    persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
+    persistence: PersistenceQueue,
     session_config_factory: Arc<dyn Fn() -> SessionConfig + Send + Sync>,
     tls_server_context: Option<Arc<OakSessionTlsServerContext>>,
     clock: Arc<dyn Clock>,
@@ -793,7 +793,7 @@ pub async fn create(
         listener,
         application_config,
         metrics,
-        persistence_tx,
+        persistence,
         session_config_factory,
         tls_server_context,
         clock,
@@ -810,7 +810,7 @@ pub async fn create_with_meminfo_reader(
     listener: TcpListener,
     application_config: ApplicationConfig,
     metrics: Arc<metrics::Metrics>,
-    persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
+    persistence: PersistenceQueue,
     session_config_factory: Arc<dyn Fn() -> SessionConfig + Send + Sync>,
     tls_server_context: Option<Arc<OakSessionTlsServerContext>>,
     clock: Arc<dyn Clock>,
@@ -820,7 +820,7 @@ pub async fn create_with_meminfo_reader(
     let service = SealedMemoryServiceImplementation::new(
         application_config,
         metrics,
-        persistence_tx,
+        persistence,
         session_config_factory,
         tls_server_context,
         clock,
@@ -862,6 +862,7 @@ mod tests {
         database::{MAX_DATABASE_SIZE, MAX_GRPC_DECODE_SIZE},
     };
     use prost::Message;
+    use tokio::sync::mpsc;
 
     use super::*;
     use crate::{MAX_MEMORY_TTL_SECONDS, METADATA_BLANKET_TTL_SECONDS};
@@ -913,10 +914,10 @@ mod tests {
         let unreachable = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 1);
         let db_client =
             Arc::new(SharedDbClient::new(unreachable, MAX_GRPC_DECODE_SIZE, metrics.clone()));
-        let (persistence_tx, _) = mpsc::unbounded_channel();
+        let (persistence, _persistence_rx) = PersistenceQueue::new();
         SealedMemorySessionHandler::new(
             metrics,
-            persistence_tx,
+            persistence,
             db_client,
             Arc::new(SystemClock),
             MAX_DATABASE_SIZE,

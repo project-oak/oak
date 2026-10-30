@@ -32,7 +32,7 @@ pub mod service;
 #[cfg(test)]
 mod test_util;
 
-pub use persistence_worker::run_persistence_service;
+pub use persistence_worker::{PersistenceQueue, PersistenceTracker, run_persistence_service};
 
 /// The trusted sever configuration.
 #[derive(Serialize, Deserialize, Debug, Clone)]

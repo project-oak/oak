@@ -14,7 +14,10 @@
 // limitations under the License.
 //
 use std::{
-    sync::{Arc, Mutex, PoisonError},
+    sync::{
+        Arc, Mutex, PoisonError,
+        atomic::{AtomicU64, Ordering},
+    },
     time::Duration,
 };
 
@@ -29,7 +32,7 @@ use sealed_memory_rust_proto::{
     oak::private_memory::EncryptedMetadataBlob, prelude::v1::SyncDatabaseResponse,
 };
 use tokio::{
-    sync::{OwnedSemaphorePermit, Semaphore, mpsc},
+    sync::{OwnedSemaphorePermit, Semaphore, mpsc, watch},
     task::JoinSet,
     time::Instant,
 };
@@ -407,6 +410,119 @@ use crate::{
     dek::{DekNotRotated, switch_to_stored_dek},
 };
 
+/// The sending side of the persistence worker's queue.
+///
+/// Sessions queued here are persisted by [`run_persistence_service`]. Every
+/// session with unpersisted changes is tracked from the moment it is queued
+/// until the worker is done with it, so that a shutdown drain can wait for
+/// the queue to empty and report how each persist went.
+#[derive(Clone)]
+pub struct PersistenceQueue {
+    tx: mpsc::UnboundedSender<UserSessionContext>,
+    tracker: Arc<PersistenceTracker>,
+}
+
+impl PersistenceQueue {
+    /// Creates a queue and the receiver to hand to [`run_persistence_service`].
+    pub fn new() -> (Self, mpsc::UnboundedReceiver<UserSessionContext>) {
+        let (tx, rx) = mpsc::unbounded_channel();
+        (Self { tx, tracker: Arc::new(PersistenceTracker::default()) }, rx)
+    }
+
+    /// Queues `context` for persistence. Fails if the worker has stopped, in
+    /// which case the context is dropped and its changes, if any, count as
+    /// failed.
+    pub fn enqueue(&self, mut context: UserSessionContext) -> anyhow::Result<()> {
+        if context.database.changed() {
+            context.persist_ticket = Some(self.tracker.open_ticket());
+        }
+        self.tx.send(context).map_err(|_| anyhow::anyhow!("persistence worker has stopped"))
+    }
+
+    pub fn tracker(&self) -> &Arc<PersistenceTracker> {
+        &self.tracker
+    }
+}
+
+/// Counts the persists that are queued or in flight, and how finished ones
+/// went.
+#[derive(Default)]
+pub struct PersistenceTracker {
+    /// Number of open [`PersistTicket`]s.
+    pending: watch::Sender<usize>,
+    saved: AtomicU64,
+    failed: AtomicU64,
+}
+
+impl PersistenceTracker {
+    fn open_ticket(self: &Arc<Self>) -> PersistTicket {
+        self.pending.send_modify(|pending| *pending += 1);
+        PersistTicket { tracker: self.clone(), outcome: PersistOutcome::Failed }
+    }
+
+    fn close_ticket(&self, outcome: PersistOutcome) {
+        match outcome {
+            PersistOutcome::Saved => self.saved.fetch_add(1, Ordering::Relaxed),
+            PersistOutcome::Failed => self.failed.fetch_add(1, Ordering::Relaxed),
+        };
+        self.pending.send_modify(|pending| *pending -= 1);
+    }
+
+    /// Persists queued or in flight.
+    pub fn pending(&self) -> usize {
+        *self.pending.borrow()
+    }
+
+    /// Persists that succeeded since the process started.
+    pub fn saved(&self) -> u64 {
+        self.saved.load(Ordering::Relaxed)
+    }
+
+    /// Persists that failed since the process started.
+    pub fn failed(&self) -> u64 {
+        self.failed.load(Ordering::Relaxed)
+    }
+
+    /// Waits until nothing is pending, or until `deadline`. Returns the number
+    /// of persists still pending.
+    pub async fn wait_idle(&self, deadline: Instant) -> usize {
+        let mut pending = self.pending.subscribe();
+        // Hold no `Ref` across the await: it would block `close_ticket`.
+        let _ = tokio::time::timeout_at(deadline, async {
+            let _ = pending.wait_for(|pending| *pending == 0).await;
+        })
+        .await;
+        self.pending()
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PersistOutcome {
+    Saved,
+    Failed,
+}
+
+/// Marks a session with unpersisted changes as queued for persistence.
+///
+/// The worker closes it with the persist's outcome. A ticket that is dropped
+/// without being closed counts as failed.
+pub struct PersistTicket {
+    tracker: Arc<PersistenceTracker>,
+    outcome: PersistOutcome,
+}
+
+impl PersistTicket {
+    pub fn close(mut self, outcome: PersistOutcome) {
+        self.outcome = outcome;
+    }
+}
+
+impl Drop for PersistTicket {
+    fn drop(&mut self) {
+        self.tracker.close_ticket(self.outcome);
+    }
+}
+
 /// Attempts to persist the database once, if it changed, presenting
 /// `lock_token` for the row (empty if the caller holds no lock).
 ///
@@ -671,7 +787,7 @@ async fn persist_one_session(
         error!("optimizing database: {e:?}");
     }
 
-    if let Err(e) = persist_database_with_policy(
+    let outcome = match persist_database_with_policy(
         &mut user_context,
         &metrics,
         PERSISTENCE_WORKER_RETRY_POLICY,
@@ -680,8 +796,15 @@ async fn persist_one_session(
     )
     .await
     {
-        metrics.inc_db_persist_failures();
-        error!("Failed to persist database: {:?}", e);
+        Ok(()) => PersistOutcome::Saved,
+        Err(e) => {
+            metrics.inc_db_persist_failures();
+            error!("Failed to persist database: {:?}", e);
+            PersistOutcome::Failed
+        }
+    };
+    if let Some(ticket) = user_context.persist_ticket.take() {
+        ticket.close(outcome);
     }
 }
 
@@ -2026,5 +2149,45 @@ mod tests {
 
         assert!(error.is::<RowLockLost>(), "{error:?}");
         assert!(ctx.database.changed());
+    }
+
+    #[tokio::test]
+    async fn ticket_closed_as_saved_is_counted_as_saved() {
+        let tracker = Arc::new(PersistenceTracker::default());
+
+        let ticket = tracker.open_ticket();
+        assert_eq!(tracker.pending(), 1);
+        ticket.close(PersistOutcome::Saved);
+
+        assert_eq!((tracker.pending(), tracker.saved(), tracker.failed()), (0, 1, 0));
+    }
+
+    /// A context dropped before the worker persisted it (worker gone, panic)
+    /// must never be reported as saved.
+    #[tokio::test]
+    async fn ticket_dropped_unclosed_is_counted_as_failed() {
+        let tracker = Arc::new(PersistenceTracker::default());
+
+        drop(tracker.open_ticket());
+
+        assert_eq!((tracker.pending(), tracker.saved(), tracker.failed()), (0, 0, 1));
+    }
+
+    #[tokio::test]
+    async fn wait_idle_reports_what_is_still_pending_at_the_deadline() {
+        let tracker = Arc::new(PersistenceTracker::default());
+        let ticket = tracker.open_ticket();
+
+        let left = tracker.wait_idle(Instant::now() + Duration::from_millis(50)).await;
+        assert_eq!(left, 1);
+
+        let waiter = {
+            let tracker = tracker.clone();
+            tokio::spawn(async move {
+                tracker.wait_idle(Instant::now() + Duration::from_secs(60)).await
+            })
+        };
+        ticket.close(PersistOutcome::Saved);
+        assert_eq!(waiter.await.unwrap(), 0);
     }
 }

@@ -34,7 +34,7 @@ use oak_session_tls::OakSessionTlsServerContext;
 pub use private_memory_server_lib::app::{MAX_MEMORY_TTL_SECONDS, METADATA_BLANKET_TTL_SECONDS};
 use private_memory_server_lib::{
     app,
-    app::{ApplicationConfig, run_persistence_service},
+    app::{ApplicationConfig, PersistenceQueue, run_persistence_service},
     metrics::Metrics,
 };
 use runfiles::Runfiles;
@@ -189,7 +189,7 @@ pub async fn start_server_with_meminfo_reader(
 
     let application_config = config_fn(db_addr);
 
-    let (persistence_tx, persistence_rx) = tokio::sync::mpsc::unbounded_channel();
+    let (persistence, persistence_rx) = PersistenceQueue::new();
     let persistence_join_handle =
         tokio::spawn(run_persistence_service(persistence_rx, metrics.clone()));
 
@@ -201,7 +201,7 @@ pub async fn start_server_with_meminfo_reader(
             listener,
             application_config,
             metrics,
-            persistence_tx,
+            persistence,
             session_config_factory,
             None, // TLS not configured in tests
             clock,
@@ -297,7 +297,7 @@ pub async fn start_server_with_tls_and_meminfo_reader(
 
     let application_config = config_fn(db_addr);
 
-    let (persistence_tx, persistence_rx) = tokio::sync::mpsc::unbounded_channel();
+    let (persistence, persistence_rx) = PersistenceQueue::new();
     let persistence_join_handle =
         tokio::spawn(run_persistence_service(persistence_rx, metrics.clone()));
 
@@ -307,7 +307,7 @@ pub async fn start_server_with_tls_and_meminfo_reader(
             listener,
             application_config,
             metrics,
-            persistence_tx,
+            persistence,
             std::sync::Arc::new(attestation_testing::dummy_server_session_config),
             tls_server_context,
             Arc::new(SystemClock),
