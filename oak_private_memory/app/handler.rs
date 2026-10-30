@@ -32,7 +32,7 @@ use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::{
-    sync::{RwLock, RwLockReadGuard, RwLockWriteGuard},
+    sync::{RwLockReadGuard, RwLockWriteGuard},
     time::Instant,
 };
 use tonic::transport::Channel;
@@ -43,6 +43,7 @@ use crate::{
     admission::{ActiveSessionGuard, AdmissionController},
     context::UserSessionContext,
     db_client::SharedDbClient,
+    drain::{DrainController, SessionSlot},
     packing::ResponsePacking,
     persistence_worker::{self, PersistenceQueue},
 };
@@ -50,7 +51,8 @@ use crate::{
 // The implementation for one active Oak Private Memory session.
 // A new instances of this struct is created per-request.
 pub struct SealedMemorySessionHandler {
-    session_context: RwLock<Option<UserSessionContext>>,
+    /// Shared with `DrainController`, which takes the context out at shutdown.
+    session_context: Arc<SessionSlot>,
     db_client: Arc<SharedDbClient>,
     metrics: Arc<metrics::Metrics>,
     persistence: PersistenceQueue,
@@ -62,30 +64,67 @@ pub struct SealedMemorySessionHandler {
     allowed_memory_sources: Vec<String>,
     session_guard: Option<ActiveSessionGuard>,
     admission: Option<Arc<AdmissionController>>,
+    drain: Option<Arc<DrainController>>,
 }
 
 impl Drop for SealedMemorySessionHandler {
     fn drop(&mut self) {
-        if let Some(mut context) = self.session_context.get_mut().take() {
-            if context.disable_persistence_on_close {
-                info!("persistence disabled for this session, skipping");
-                return;
+        let session_guard = self.session_guard.take();
+        match self.session_context.try_write() {
+            Ok(mut slot) => {
+                if let Some(context) = slot.take() {
+                    enqueue_on_close(&self.persistence, &self.metrics, context, session_guard);
+                }
             }
-            // The context (and its Icing instance) outlives this handler while
-            // it waits in the persistence queue; keep it counted until then.
-            context.session_guard = self.session_guard.take();
-            info!("sending session context to persistence service");
-            // Count the session before sending it, so that the worker can't
-            // dequeue it before it's counted. The gauge may still briefly
-            // under-count if the worker reads the queue length concurrently;
-            // it corrects itself at the next enqueue or pickup.
-            self.metrics.inc_db_persist_queue_size();
-            if let Err(e) = self.persistence.enqueue(context) {
-                self.metrics.dec_db_persist_queue_size();
-                self.metrics.inc_persistence_enqueue_failures();
-                warn!("failed to send session context to persistence service: {}", e);
+            // Locked by a drain taking the context out (then nothing is left
+            // to persist) or by a request this handler outlived. Persist
+            // whatever is left once the lock is free.
+            Err(_) => {
+                let slot = self.session_context.clone();
+                let persistence = self.persistence.clone();
+                let metrics = self.metrics.clone();
+                match tokio::runtime::Handle::try_current() {
+                    Ok(runtime) => {
+                        runtime.spawn(async move {
+                            if let Some(context) = slot.write().await.take() {
+                                enqueue_on_close(&persistence, &metrics, context, session_guard);
+                            }
+                        });
+                    }
+                    Err(e) => {
+                        metrics.inc_persistence_enqueue_failures();
+                        warn!("session context is locked and no runtime is available: {e}");
+                    }
+                }
             }
         }
+    }
+}
+
+/// Queues a closed session for persistence, unless its client opted out.
+fn enqueue_on_close(
+    persistence: &PersistenceQueue,
+    metrics: &metrics::Metrics,
+    mut context: UserSessionContext,
+    session_guard: Option<ActiveSessionGuard>,
+) {
+    if context.disable_persistence_on_close {
+        info!("persistence disabled for this session, skipping");
+        return;
+    }
+    // The context (and its Icing instance) outlives its handler while it
+    // waits in the persistence queue; keep it counted until then.
+    context.session_guard = session_guard;
+    info!("sending session context to persistence service");
+    // Count the session before sending it, so that the worker can't dequeue
+    // it before it's counted. The gauge may still briefly under-count if the
+    // worker reads the queue length concurrently; it corrects itself at the
+    // next enqueue or pickup.
+    metrics.inc_db_persist_queue_size();
+    if let Err(e) = persistence.enqueue(context) {
+        metrics.dec_db_persist_queue_size();
+        metrics.inc_persistence_enqueue_failures();
+        warn!("failed to send session context to persistence service: {}", e);
     }
 }
 
@@ -115,6 +154,7 @@ impl SealedMemorySessionHandler {
             allowed_memory_sources,
             session_guard: None,
             admission: None,
+            drain: None,
         }
     }
 
@@ -133,7 +173,18 @@ impl SealedMemorySessionHandler {
         self
     }
 
+    /// Registers this session with `drain`, which refuses its requests once a
+    /// shutdown drain has started and takes its context out to persist it.
+    pub fn with_drain_controller(mut self, drain: Arc<DrainController>) -> Self {
+        drain.register(&self.session_context);
+        self.drain = Some(drain);
+        self
+    }
+
     fn admit_request(&self) -> tonic::Result<()> {
+        if let Some(drain) = &self.drain {
+            drain.refuse_if_draining()?;
+        }
         match &self.admission {
             Some(admission) => admission.admit_request(),
             None => Ok(()),
@@ -2728,5 +2779,68 @@ mod tests {
         assert_eq!(admission.admit().unwrap_err().code(), tonic::Code::ResourceExhausted);
         let id = add_memory(&handler).await;
         assert!(memory_is_readable(&handler, &id).await);
+    }
+
+    /// Once a drain has started, every request on an open session, reads
+    /// included, is refused so that the client retries on another server.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn requests_are_refused_once_draining() {
+        let drain = Arc::new(DrainController::default());
+        let (handler, _persistence_rx) = connect_draining_handler(start_test_db().await, &drain);
+        start_session_with_changes(&handler, "draining_user").await;
+        let read = SealedMemoryRequest {
+            request: Some(sealed_memory_request::Request::GetDatabaseMetricsRequest(
+                GetDatabaseMetricsRequest {},
+            )),
+            ..Default::default()
+        };
+        assert!(handler.handle(&read.encode_to_vec()).await.is_ok());
+
+        drain.start_draining();
+
+        let response = SealedMemoryResponse::decode(
+            handler.handle(&read.encode_to_vec()).await.unwrap().as_slice(),
+        )
+        .unwrap();
+        let Some(sealed_memory_response::Response::Error(error)) = response.response else {
+            panic!("expected an error response, got {response:?}");
+        };
+        assert_eq!(error.code, tonic::Code::Unavailable as i32);
+    }
+
+    /// The drain controller sees a handler's session while the handler is
+    /// alive and forgets it once the handler is dropped.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn drain_controller_tracks_handler_lifetime() {
+        let drain = Arc::new(DrainController::default());
+        let (handler, _persistence_rx) = connect_draining_handler(start_test_db().await, &drain);
+        start_session_with_changes(&handler, "tracked_user").await;
+
+        let live = drain.live_sessions();
+        assert_eq!(live.len(), 1);
+        assert!(live[0].read().await.is_some());
+        drop(live);
+
+        drop(handler);
+        assert!(drain.live_sessions().is_empty());
+    }
+
+    /// A handler dropped while a drain holds its session lock still persists
+    /// whatever the drain left behind, once the lock is free.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn handler_dropped_while_session_is_locked_persists_afterwards() {
+        let drain = Arc::new(DrainController::default());
+        let (handler, mut persistence_rx) = connect_draining_handler(start_test_db().await, &drain);
+        start_session_with_changes(&handler, "locked_user").await;
+        let slot = drain.live_sessions().pop().unwrap();
+
+        let guard = slot.write().await;
+        drop(handler);
+        assert!(persistence_rx.try_recv().is_err(), "persisted while the slot was locked");
+        drop(guard);
+
+        let context =
+            tokio::time::timeout(Duration::from_secs(5), persistence_rx.recv()).await.unwrap();
+        assert!(context.is_some(), "the session was never queued for persistence");
     }
 }

@@ -29,6 +29,7 @@ rust_library(
         "db_client.rs",
         "dek.rs",
         "dek_rotation.rs",
+        "drain.rs",
         "handler.rs",
         "lib.rs",
         "meminfo.rs",

@@ -24,6 +24,7 @@ mod dek;
 // Only reachable from tests until the RotateDek handler lands.
 #[cfg_attr(not(test), allow(dead_code))]
 mod dek_rotation;
+pub mod drain;
 mod handler;
 pub mod meminfo;
 mod packing;

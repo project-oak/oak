@@ -38,6 +38,7 @@ use crate::{
     ApplicationConfig, IntoTonicResult,
     admission::{ActiveSessionGuard, AdmissionController, MapCountMonitor},
     db_client::SharedDbClient,
+    drain::DrainController,
     handler::SealedMemorySessionHandler,
     persistence_worker::PersistenceQueue,
 };
@@ -62,6 +63,8 @@ struct SealedMemoryServiceImplementation {
     clock: Arc<dyn Clock>,
     application_config: ApplicationConfig,
     admission: Arc<AdmissionController>,
+    /// Stops this service from accepting sessions and requests at shutdown.
+    drain: Arc<DrainController>,
 }
 
 impl SealedMemoryServiceImplementation {
@@ -101,6 +104,7 @@ impl SealedMemoryServiceImplementation {
             clock,
             application_config,
             admission,
+            drain: Arc::new(DrainController::default()),
         }
     }
 
@@ -114,11 +118,13 @@ impl SealedMemoryServiceImplementation {
 
     /// Runs admission control, then creates the session's handler.
     fn create_oak_session_handler(&self) -> tonic::Result<OakSessionHandler> {
+        self.drain.refuse_if_draining()?;
         // Admission control runs before the handshake and any Icing init.
         let session_guard = self.admission.admit()?;
         OakSessionHandler::new(
             session_guard,
             self.admission.clone(),
+            self.drain.clone(),
             &self.metrics,
             &self.persistence,
             self.db_client.clone(),
@@ -138,6 +144,7 @@ impl SealedMemoryServiceImplementation {
     fn admit_tls_session(
         &self,
     ) -> tonic::Result<(ActiveSessionGuard, &Arc<OakSessionTlsServerContext>)> {
+        self.drain.refuse_if_draining()?;
         // Admission control runs before the TLS handshake and any Icing init.
         let session_guard = self.admission.admit()?;
         let tls_ctx = self
@@ -173,6 +180,7 @@ impl OakSessionHandler {
     pub fn new(
         session_guard: ActiveSessionGuard,
         admission: Arc<AdmissionController>,
+        drain: Arc<DrainController>,
         metrics: &Arc<metrics::Metrics>,
         persistence: &PersistenceQueue,
         db_client: Arc<SharedDbClient>,
@@ -201,7 +209,8 @@ impl OakSessionHandler {
                 allowed_memory_sources,
             )
             .with_session_guard(session_guard)
-            .with_admission(admission),
+            .with_admission(admission)
+            .with_drain_controller(drain),
         })
     }
 
@@ -341,6 +350,7 @@ impl TlsSessionHandler {
     pub fn new(
         session_guard: ActiveSessionGuard,
         admission: Arc<AdmissionController>,
+        drain: Arc<DrainController>,
         metrics: &Arc<metrics::Metrics>,
         persistence: &PersistenceQueue,
         db_client: Arc<SharedDbClient>,
@@ -367,7 +377,8 @@ impl TlsSessionHandler {
                 allowed_memory_sources,
             )
             .with_session_guard(session_guard)
-            .with_admission(admission),
+            .with_admission(admission)
+            .with_drain_controller(drain),
         }
     }
 }
@@ -482,6 +493,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         let (session_guard, tls_ctx) = admitted?;
 
         let admission = self.admission.clone();
+        let drain = self.drain.clone();
         let metrics = self.metrics.clone();
         let persistence = self.persistence.clone();
         let db_client = self.db_client.clone();
@@ -544,6 +556,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
             let tls_handler = TlsSessionHandler::new(
                 session_guard,
                 admission,
+                drain,
                 &metrics,
                 &persistence,
                 db_client,

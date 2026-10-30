@@ -34,7 +34,7 @@ use tokio::{net::TcpListener, sync::mpsc};
 
 use crate::{
     MAX_MEMORY_TTL_SECONDS, METADATA_BLANKET_TTL_SECONDS, context::UserSessionContext,
-    db_client::SharedDbClient, handler::SealedMemorySessionHandler,
+    db_client::SharedDbClient, drain::DrainController, handler::SealedMemorySessionHandler,
     persistence_worker::PersistenceQueue,
 };
 
@@ -97,6 +97,15 @@ pub(crate) fn connect_handler_with_metrics(
 ) -> (SealedMemorySessionHandler, mpsc::UnboundedReceiver<UserSessionContext>) {
     let (persistence, persistence_rx) = PersistenceQueue::new();
     (connect_handler_with_persistence(db_addr, metrics, persistence), persistence_rx)
+}
+
+/// Like [`connect_handler`], but registers the handler with `drain`.
+pub(crate) fn connect_draining_handler(
+    db_addr: SocketAddr,
+    drain: &Arc<DrainController>,
+) -> (SealedMemorySessionHandler, mpsc::UnboundedReceiver<UserSessionContext>) {
+    let (handler, persistence_rx) = connect_handler(db_addr);
+    (handler.with_drain_controller(drain.clone()), persistence_rx)
 }
 
 /// Like [`connect_handler_with_metrics`], but queues the session on
