@@ -21,6 +21,7 @@ syntax = "proto3";
 
 package oak.private_memory;
 
+import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "google/rpc/status.proto";
 import "proto/session/session.proto";
@@ -685,4 +686,36 @@ service SealedMemoryService {
   // followed by TLS-encrypted application payloads.
   rpc StartTlsSession(stream TlsSessionFrame) returns (stream TlsSessionFrame) {
   }
+}
+
+// Request to persist all open sessions before a planned shutdown.
+message DrainRequest {
+  // Maximum time to spend draining.
+  google.protobuf.Duration timeout = 1;
+}
+
+// Drain result. Each open session is counted in exactly one field below.
+message DrainResponse {
+  // Persisted successfully.
+  int64 sessions_saved = 1;
+
+  // Persist failed; changes are lost.
+  int64 sessions_failed = 2;
+
+  // Not persisted before `timeout`; changes are lost.
+  int64 sessions_left_over = 3;
+
+  // Skipped if `SessionConfig.disable_persistence_on_close` = true.
+  int64 sessions_skipped = 4;
+
+  // Had no unpersisted changes.
+  int64 sessions_clean = 5;
+}
+
+// Host-only service; never exposed to clients.
+service SealedMemoryHostService {
+  // Stops accepting new sessions and messages, persists all open sessions, and
+  // reports the counts. Only the first call drains; subsequent/concurrent calls
+  // fail with FAILED_PRECONDITION.
+  rpc Drain(DrainRequest) returns (DrainResponse) {}
 }
