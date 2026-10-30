@@ -2908,4 +2908,183 @@ mod tests {
             tokio::time::timeout(Duration::from_secs(5), persistence_rx.recv()).await.unwrap();
         assert!(context.is_some(), "the session was never queued for persistence");
     }
+
+    mod drain {
+        use sealed_memory_rust_proto::oak::private_memory::DrainResponse;
+
+        use super::*;
+
+        const DRAIN_TIMEOUT: Duration = Duration::from_secs(30);
+
+        /// A persistence queue with a worker consuming it.
+        fn start_persistence_worker() -> PersistenceQueue {
+            let (persistence, persistence_rx) = PersistenceQueue::new();
+            tokio::spawn(persistence_worker::run_persistence_service(
+                persistence_rx,
+                metrics::get_global_metrics(),
+            ));
+            persistence
+        }
+
+        async fn key_synced_handler(
+            db_addr: SocketAddr,
+            drain: &Arc<DrainController>,
+            pm_uid: &str,
+            session_config: Option<SessionConfig>,
+        ) -> (SealedMemorySessionHandler, mpsc::UnboundedReceiver<UserSessionContext>) {
+            let (handler, persistence_rx) = connect_draining_handler(db_addr, drain);
+            handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+            handler.key_sync_handler(key_sync_request(pm_uid, session_config)).await.unwrap();
+            (handler, persistence_rx)
+        }
+
+        /// Whether `id` is persisted for `pm_uid`, as seen from a new session.
+        async fn is_persisted(db_addr: SocketAddr, pm_uid: &str, id: &str) -> bool {
+            let (handler, _persistence_rx) = connect_handler(db_addr);
+            handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+            memory_is_readable(&handler, id).await
+        }
+
+        /// The breaking case: an acknowledged write on a session that is still
+        /// open survives a stop, and every open session lands in exactly one
+        /// bucket of the response.
+        #[tokio::test(flavor = "multi_thread")]
+        async fn drain_persists_open_sessions_and_reports_each_bucket() {
+            let db_addr = start_test_db().await;
+            let drain = Arc::new(DrainController::default());
+            let (dirty, mut rx_dirty) =
+                key_synced_handler(db_addr, &drain, "drain_dirty", None).await;
+            let id = add_memory(&dirty).await;
+            let opted_out = Some(SessionConfig { disable_persistence_on_close: true });
+            let (skipped, mut rx_skipped) =
+                key_synced_handler(db_addr, &drain, "drain_skipped", opted_out).await;
+            add_memory(&skipped).await;
+            // A new user's database counts as changed until its first persist,
+            // so a clean session is one that has synced.
+            let (clean, _rx3) = key_synced_handler(db_addr, &drain, "drain_clean", None).await;
+            clean.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+            let (_not_synced, _rx4) = connect_draining_handler(db_addr, &drain);
+            assert!(!is_persisted(db_addr, "drain_dirty", &id).await);
+
+            let response = drain.drain(DRAIN_TIMEOUT, &start_persistence_worker()).await.unwrap();
+
+            assert_eq!(
+                response,
+                DrainResponse {
+                    sessions_saved: 1,
+                    sessions_skipped: 1,
+                    sessions_clean: 1,
+                    ..Default::default()
+                }
+            );
+            assert!(is_persisted(db_addr, "drain_dirty", &id).await);
+            // The drain took the contexts; dropping the handlers persists
+            // nothing more.
+            drop((dirty, skipped));
+            assert!(rx_dirty.try_recv().is_err() && rx_skipped.try_recv().is_err());
+        }
+
+        /// A persist that fails is reported as failed, never as done.
+        #[tokio::test(flavor = "multi_thread")]
+        async fn drain_counts_failed_persists() {
+            let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+            let db_addr = start_test_db_with_service(service.clone()).await;
+            let drain = Arc::new(DrainController::default());
+            let (handler, _rx) = key_synced_handler(db_addr, &drain, "drain_failing", None).await;
+            add_memory(&handler).await;
+            store_undecryptable_metadata_blob(&service, "drain_failing").await;
+
+            let response = drain.drain(DRAIN_TIMEOUT, &start_persistence_worker()).await.unwrap();
+
+            assert_eq!(response, DrainResponse { sessions_failed: 1, ..Default::default() });
+        }
+
+        /// A persist still running at the deadline is reported as left over,
+        /// and keeps running: the enclave may still have time before it stops.
+        #[tokio::test(flavor = "multi_thread")]
+        async fn drain_reports_persists_that_outlive_the_timeout_as_left_over() {
+            let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+            let db_addr = start_test_db_with_service(service.clone()).await;
+            let drain = Arc::new(DrainController::default());
+            let (handler, _rx) = key_synced_handler(db_addr, &drain, "drain_slow", None).await;
+            let id = add_memory(&handler).await;
+            let (arrived, release) = service.hold_next_metadata_write().await;
+            let persistence = start_persistence_worker();
+
+            let response = drain.drain(Duration::from_millis(500), &persistence).await.unwrap();
+
+            assert_eq!(response, DrainResponse { sessions_left_over: 1, ..Default::default() });
+            arrived.await.unwrap();
+            release.send(()).unwrap();
+            persistence.tracker().wait_idle(Instant::now() + DRAIN_TIMEOUT).await;
+            assert!(is_persisted(db_addr, "drain_slow", &id).await);
+        }
+
+        /// A drain persists a session once the request running on it is done.
+        /// (The session lock already stops it from taking a busy session.)
+        #[tokio::test(flavor = "multi_thread")]
+        async fn drain_waits_for_the_request_running_on_a_session() {
+            let db_addr = start_test_db().await;
+            let drain = Arc::new(DrainController::default());
+            let (handler, _rx) = key_synced_handler(db_addr, &drain, "drain_busy", None).await;
+            add_memory(&handler).await;
+            // Stands in for a request holding the session while it runs.
+            let in_flight = drain.live_sessions().pop().unwrap();
+            let guard = in_flight.write().await;
+
+            let draining = {
+                let drain = drain.clone();
+                tokio::spawn(async move {
+                    drain.drain(DRAIN_TIMEOUT, &start_persistence_worker()).await.unwrap()
+                })
+            };
+            drop(guard);
+
+            let response = draining.await.unwrap();
+            assert_eq!(response, DrainResponse { sessions_saved: 1, ..Default::default() });
+        }
+
+        /// A session still running a request at the deadline is reported as
+        /// left over.
+        #[tokio::test(flavor = "multi_thread")]
+        async fn drain_reports_sessions_busy_at_the_deadline_as_left_over() {
+            let db_addr = start_test_db().await;
+            let drain = Arc::new(DrainController::default());
+            let (handler, _rx) =
+                key_synced_handler(db_addr, &drain, "drain_busy_deadline", None).await;
+            add_memory(&handler).await;
+            // Stands in for a request that outlives the drain.
+            let in_flight = drain.live_sessions().pop().unwrap();
+            let _guard = in_flight.write().await;
+
+            let response =
+                drain.drain(Duration::from_millis(100), &start_persistence_worker()).await.unwrap();
+
+            assert_eq!(response, DrainResponse { sessions_left_over: 1, ..Default::default() });
+        }
+
+        /// Only one drain runs; a concurrent one is refused and the session is
+        /// persisted exactly once.
+        #[tokio::test(flavor = "multi_thread")]
+        async fn concurrent_drain_is_refused() {
+            let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+            let db_addr = start_test_db_with_service(service.clone()).await;
+            let drain = Arc::new(DrainController::default());
+            let (handler, _rx) = key_synced_handler(db_addr, &drain, "drain_twice", None).await;
+            add_memory(&handler).await;
+            let persistence = start_persistence_worker();
+
+            let (first, second) = tokio::join!(
+                drain.drain(DRAIN_TIMEOUT, &persistence),
+                drain.drain(DRAIN_TIMEOUT, &persistence)
+            );
+
+            let (ok, refused) = if first.is_ok() { (first, second) } else { (second, first) };
+            assert_eq!(ok.unwrap().sessions_saved, 1);
+            assert_eq!(refused.unwrap_err().code(), tonic::Code::FailedPrecondition);
+            // The test database appends one character to the version per write.
+            let stored = service.metadata_database.lock().await;
+            assert_eq!(stored["drain_twice"].version.len(), 1);
+        }
+    }
 }

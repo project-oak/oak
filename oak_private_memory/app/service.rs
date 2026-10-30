@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{pin::Pin, sync::Arc};
+use std::{pin::Pin, sync::Arc, time::Duration};
 
 use anyhow::anyhow;
 use futures::stream::FuturesOrdered;
@@ -27,10 +27,14 @@ use oak_session::{
     config::SessionConfig,
 };
 use oak_session_tls::OakSessionTlsServerContext;
-use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_server::{
-    SealedMemoryService, SealedMemoryServiceServer,
+use sealed_memory_grpc_proto::oak::private_memory::{
+    sealed_memory_host_service_server::{SealedMemoryHostService, SealedMemoryHostServiceServer},
+    sealed_memory_service_server::{SealedMemoryService, SealedMemoryServiceServer},
 };
-use sealed_memory_rust_proto::{oak::private_memory::TlsSessionFrame, prelude::v1::*};
+use sealed_memory_rust_proto::{
+    oak::private_memory::{DrainRequest, DrainResponse, TlsSessionFrame},
+    prelude::v1::*,
+};
 use tokio::net::TcpListener;
 use tokio_stream::{Stream, StreamExt, wrappers::TcpListenerStream};
 
@@ -789,7 +793,27 @@ async fn run_concurrent_dispatch<S, C>(
     }
 }
 
-/// Creates the gRPC server with both Noise and TLS session support.
+/// The service that only the untrusted host calls.
+struct HostServiceImplementation {
+    drain: Arc<DrainController>,
+    persistence: PersistenceQueue,
+}
+
+#[tonic::async_trait]
+impl SealedMemoryHostService for HostServiceImplementation {
+    async fn drain(
+        &self,
+        request: tonic::Request<DrainRequest>,
+    ) -> Result<tonic::Response<DrainResponse>, tonic::Status> {
+        let timeout = Duration::try_from(request.into_inner().timeout.unwrap_or_default())
+            .map_err(|_| tonic::Status::invalid_argument("timeout must not be negative"))?;
+        let response = self.drain.drain(timeout, &self.persistence).await?;
+        Ok(tonic::Response::new(response))
+    }
+}
+
+/// Creates the gRPC server serving SealedMemoryService (Noise and TLS session
+/// support) and SealedMemoryHostService (host-only control RPCs).
 ///
 /// The `tls_server_context` is optional: if `None`, TLS sessions will return
 /// `UNIMPLEMENTED` when clients attempt to connect via `StartTlsSession`.
@@ -852,11 +876,17 @@ pub async fn create_with_meminfo_reader(
         }
     });
 
+    let host_service = HostServiceImplementation {
+        drain: service.drain.clone(),
+        persistence: service.persistence.clone(),
+    };
+
     tonic::transport::Server::builder()
         .add_service(
             SealedMemoryServiceServer::new(service)
                 .max_decoding_message_size(max_grpc_decode_size_bytes),
         )
+        .add_service(SealedMemoryHostServiceServer::new(host_service))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))

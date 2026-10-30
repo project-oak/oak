@@ -20,21 +20,33 @@
 //! persisted when the client calls `SyncDatabase`, or after the session closes,
 //! by the persistence worker. Whatever is unpersisted when the enclave stops is
 //! lost. Before stopping it, the untrusted host calls
-//! `SealedMemoryHostService.Drain`, which stops accepting sessions and
-//! requests, persists every open session with unpersisted changes, and waits
-//! for the persistence queue to empty.
+//! `SealedMemoryHostService.Drain`, which, within the request's timeout:
+//!
+//! 1. Responds to new sessions and requests with `UNAVAILABLE`.
+//! 2. Queues every open session with unpersisted changes for persistence, once
+//!    the request running on it (if any) is done.
+//! 3. Waits for those persists to finish and reports how they went.
 
-use std::sync::{
-    Arc, Mutex, Weak,
-    atomic::{AtomicBool, Ordering},
+use std::{
+    sync::{
+        Arc, Mutex, Weak,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
 };
 
-use tokio::sync::RwLock;
+use futures::stream::{FuturesUnordered, StreamExt};
+use log::{info, warn};
+use sealed_memory_rust_proto::oak::private_memory::DrainResponse;
+use tokio::{sync::RwLock, time::Instant};
 
-use crate::context::UserSessionContext;
+use crate::{context::UserSessionContext, persistence_worker::PersistenceQueue};
 
 /// The live context of one session, shared between its handler and `Drain`.
 pub type SessionSlot = RwLock<Option<UserSessionContext>>;
+
+/// Cap on a `Drain` request's timeout.
+pub const MAX_DRAIN_TIMEOUT: Duration = Duration::from_secs(900);
 
 /// Ended sessions are pruned from the registry once it has grown by this many
 /// entries since the last pruning, to avoid unbounded growth on a long-lived
@@ -95,6 +107,85 @@ impl DrainController {
     pub fn start_draining(&self) -> bool {
         !self.draining.swap(true, Ordering::SeqCst)
     }
+
+    /// Drains as described in the module docs, for at most `timeout` (capped
+    /// at [`MAX_DRAIN_TIMEOUT`]), queueing persists on `persistence`. Only the
+    /// first call drains; a later one fails with `FAILED_PRECONDITION`.
+    pub async fn drain(
+        &self,
+        timeout: Duration,
+        persistence: &PersistenceQueue,
+    ) -> tonic::Result<DrainResponse> {
+        if !self.start_draining() {
+            return Err(tonic::Status::failed_precondition("drain already in progress"));
+        }
+        info!("draining: refusing new sessions and requests");
+        let deadline = Instant::now() + timeout.min(MAX_DRAIN_TIMEOUT);
+        let tracker = persistence.tracker();
+        let (saved_before, failed_before) = (tracker.saved(), tracker.failed());
+
+        let mut response = DrainResponse::default();
+        let sessions = self.live_sessions();
+        let mut pending_takes: FuturesUnordered<_> =
+            sessions.iter().map(|session| take_and_queue(session, persistence)).collect();
+        let mut taken = 0;
+        while let Ok(Some(found)) = tokio::time::timeout_at(deadline, pending_takes.next()).await {
+            taken += 1;
+            match found {
+                Found::Clean => response.sessions_clean += 1,
+                Found::Skipped => response.sessions_skipped += 1,
+                // Counted as saved, failed or left over by `tracker` below.
+                Found::Queued => {}
+                Found::NoContext => {}
+            }
+        }
+        // Sessions still running a request at the deadline. Counted as left
+        // over, though some may have been clean.
+        let busy_at_deadline = sessions.len() - taken;
+        let sessions_left_over = busy_at_deadline + tracker.wait_idle(deadline).await;
+
+        response.sessions_saved = (tracker.saved() - saved_before) as i64;
+        response.sessions_failed = (tracker.failed() - failed_before) as i64;
+        response.sessions_left_over = sessions_left_over as i64;
+        if response.sessions_failed == 0 && sessions_left_over == 0 {
+            info!("drain complete: {response:?}");
+        } else {
+            warn!("drain incomplete, unpersisted writes will be lost: {response:?}");
+        }
+        Ok(response)
+    }
+}
+
+/// What `take_and_queue` found in a session.
+enum Found {
+    /// Nothing to persist: the session has not key-synced yet, or its handler
+    /// already queued the context on close.
+    NoContext,
+    /// No unpersisted changes.
+    Clean,
+    /// The client opted out of persistence on close.
+    Skipped,
+    Queued,
+}
+
+/// Takes the session's context out once the request running on it (if any) is
+/// done, and queues it for persistence if it has changes to persist.
+async fn take_and_queue(session: &SessionSlot, persistence: &PersistenceQueue) -> Found {
+    let Some(context) = session.write().await.take() else {
+        return Found::NoContext;
+    };
+    if !context.database.changed() {
+        return Found::Clean;
+    }
+    if context.disable_persistence_on_close {
+        return Found::Skipped;
+    }
+    // Fails only if the worker has stopped; the context's ticket then counts
+    // it as failed.
+    if let Err(e) = persistence.enqueue(context) {
+        warn!("drain: queueing a session for persistence: {e}");
+    }
+    Found::Queued
 }
 
 #[cfg(test)]

@@ -124,3 +124,16 @@ know:
 - The blob is streamed via `add_metadata_blob_stream` /
   `get_metadata_blob_stream` to bypass gRPC message size limits.
 - After import, call `optimize()` to compact the database.
+
+### Persistence on close and Drain
+
+- Writes are acknowledged before they are persisted. A session is persisted on
+  `SyncDatabase`, or after its stream closes: the handler's `Drop` queues the
+  `UserSessionContext` on the `PersistenceQueue` (`app/persistence_worker.rs`).
+- A queued context with unpersisted changes carries a `PersistTicket`, which the
+  worker closes with the persist's outcome. Any change to how the worker
+  consumes contexts must keep closing (or dropping) each ticket when it is done
+  with the context: `Drain` waits on them, and an unclosed ticket counts as
+  failed.
+- `SealedMemoryHostService.Drain` (`app/drain.rs`) is called by the untrusted
+  host before a planned shutdown; see the module docs.
