@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -28,6 +28,17 @@ rust_library(
     deps = [
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:lazy_static",
+        "@oak_crates_index//:sha2",
         "@oak_crates_index//:tokio",
+    ],
+)
+
+rust_test(
+    name = "oak_configfs_tsm_tests",
+    crate = ":oak_configfs_tsm",
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        "@oak_crates_index//:googletest",
+        "@oak_crates_index//:tempfile",
     ],
 )
