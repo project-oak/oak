@@ -509,6 +509,7 @@ fn test_verify_pes_endorsement_failure_missing_required_claim_type() {
         key_set: Some(pes_key_set),
         publisher_id: "test-publisher@google.com".to_string(),
         additional_required_claims: Some(req_claims),
+        ..Default::default()
     };
 
     let result = verify_pes_endorsement(
