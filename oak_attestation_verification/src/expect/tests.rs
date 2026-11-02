@@ -314,6 +314,10 @@ fn test_acquire_text_expected_values_validity() {
             pes: Status::NotConfigured.into(),
             subject: "fake_subject_name".to_string(),
             detail: String::new(),
+            subject_digest: format!(
+                "sha256:{}",
+                hex_digest_from_contents(original_content).sha2_256
+            ),
         })
     );
 }

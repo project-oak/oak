@@ -123,6 +123,9 @@ message TLogVerificationResults {
 
   // Error messages from any failed verifications, for logging.
   string detail = 5;
+
+  // Digest of the endorsed subject as `<algorithm>:<hex>`, for logging.
+  string subject_digest = 6;
 }
 
 // Details about the endorsement statement which can be passed across FFI

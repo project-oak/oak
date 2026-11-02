@@ -2213,6 +2213,9 @@ pub struct TLogVerificationResults {
     /// Error messages from any failed verifications, for logging.
     #[prost(string, tag = "5")]
     pub detail: ::prost::alloc::string::String,
+    /// Digest of the endorsed subject as `<algorithm>:<hex>`, for logging.
+    #[prost(string, tag = "6")]
+    pub subject_digest: ::prost::alloc::string::String,
 }
 /// Nested message and enum types in `TLogVerificationResults`.
 pub mod t_log_verification_results {

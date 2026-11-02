@@ -219,6 +219,7 @@ pub fn verify_endorsement(
             verify_tlog(tlog, signed_endorsement, trusted_endorser_key, now_utc_millis)
                 .context("verifying t-log")?;
         record.subject = describe_subject(&statement);
+        record.subject_digest = describe_subject_digest(&statement).unwrap_or_default();
         Some(record)
     } else {
         #[allow(deprecated)]
@@ -255,16 +256,19 @@ fn describe_subject(statement: &DefaultStatement) -> String {
         .first()
         .and_then(|subject| {
             if subject.name.is_empty() {
-                subject
-                    .digest
-                    .iter()
-                    .next()
-                    .map(|(algorithm, value)| format!("{algorithm}:{value}"))
+                describe_subject_digest(statement)
             } else {
                 Some(subject.name.clone())
             }
         })
         .unwrap_or_else(|| String::from("unknown_subject"))
+}
+
+/// Returns the first subject's first digest as `algorithm:digest`.
+fn describe_subject_digest(statement: &DefaultStatement) -> Option<String> {
+    statement.subject.first().and_then(|subject| {
+        subject.digest.iter().next().map(|(algorithm, value)| format!("{algorithm}:{value}"))
+    })
 }
 
 /// Verifies t-log entries according to the aggregation strategy.
@@ -1248,6 +1252,8 @@ mod tests {
         let record = record.expect("tlog reference value should produce a record");
         assert_eq!(record.subject, statement.subject[0].name);
         assert!(!record.subject.is_empty());
+        let (algorithm, value) = statement.subject[0].digest.iter().next().unwrap();
+        assert_eq!(record.subject_digest, format!("{algorithm}:{value}"));
     }
 
     #[test]
