@@ -16,7 +16,7 @@
 use std::{sync::Arc, time::Duration};
 
 use anyhow::Context;
-use external_db_client::{DataBlobHandler, MetadataPersistResult};
+use external_db_client::{DataBlobHandler, MetadataBlobRead, MetadataPersistResult};
 use log::{error, info, warn};
 use metrics::Metrics;
 use oak_private_memory_database::encryption::{decrypt_database, encrypt_database};
@@ -187,7 +187,7 @@ async fn try_persist_database(
 ) -> anyhow::Result<MetadataPersistResult> {
     if !user_context.database.changed() {
         info!("Database is not changed, skip saving");
-        return Ok(MetadataPersistResult::Succeeded);
+        return Ok(MetadataPersistResult::Succeeded { committed_version: None });
     }
     let exported_db = user_context.database.export()?;
     let encrypted_info = exported_db.encrypted_info.context("encrypted info is empty")?;
@@ -227,7 +227,7 @@ async fn try_persist_database(
     };
     drop(metadata_blob);
 
-    if result == MetadataPersistResult::Succeeded {
+    if matches!(result, MetadataPersistResult::Succeeded { .. }) {
         metrics.record_db_persist_latency(elapsed.as_millis() as u64);
         metrics.record_db_size(db_size as u64);
         metrics.record_db_save_speed(metrics::transfer_speed_kb_per_ms(encoded_size, elapsed));
@@ -238,9 +238,11 @@ async fn try_persist_database(
 
 /// Fetch the latest remote blob and rebase the local database onto it.
 ///
-/// If `require_blob` is true, a missing blob is an error (used on CAS retry).
-/// If false, a missing blob is silently skipped (used for initial sync where
-/// the user may not have any persisted data yet).
+/// If `require_blob` is true, a missing blob is an error (used on CAS retry,
+/// after the write was rejected because the blob changed). If false, a missing
+/// blob is silently skipped (used for SyncDatabase, where the user may not have
+/// any persisted data yet), and the host skips sending the blob if it still has
+/// the session's `database_version`.
 ///
 /// Retries the fetch while the host rejects it with `RESOURCE_EXHAUSTED`, as
 /// far as `policy` allows.
@@ -251,12 +253,20 @@ async fn pull_and_rebase(
     policy: ResourceExhaustedRetryPolicy,
 ) -> anyhow::Result<()> {
     let coarsened_expiration_timestamp = user_context.database.calculate_coarsened_blanket_ttl();
+    // Send the session's version, so that an unchanged blob isn't downloaded
+    // again. On CAS retry the blob is known to have changed, so don't.
+    let known_version = (!require_blob && !user_context.database_version.is_empty())
+        .then_some(user_context.database_version.as_str());
     let mut backoff = ResourceExhaustedBackoff::new(policy);
     let (refreshed_blob, fetch_elapsed) = loop {
         let fetch_start = Instant::now();
         match user_context
             .database_service_client
-            .get_metadata_blob_stream(&user_context.uid, coarsened_expiration_timestamp)
+            .get_metadata_blob_stream(
+                &user_context.uid,
+                coarsened_expiration_timestamp,
+                known_version,
+            )
             .await
         {
             Ok(blob) => break (blob, fetch_start.elapsed()),
@@ -265,9 +275,13 @@ async fn pull_and_rebase(
     };
 
     let refreshed_blob = match refreshed_blob {
-        Some(blob) => blob,
-        None if require_blob => anyhow::bail!("no blob found"),
-        None => return Ok(()),
+        MetadataBlobRead::Blob(blob) => blob,
+        MetadataBlobRead::NotModified => {
+            metrics.inc_db_pull_skipped_count();
+            return Ok(());
+        }
+        MetadataBlobRead::NotFound if require_blob => anyhow::bail!("no blob found"),
+        MetadataBlobRead::NotFound => return Ok(()),
     };
     if let Some(encrypted_data_blob) = &refreshed_blob.encrypted_data_blob {
         metrics.record_db_load_speed(metrics::transfer_speed_kb_per_ms(
@@ -367,8 +381,7 @@ async fn persist_one_session(mut user_context: UserSessionContext, metrics: Arc<
 }
 
 // Attempt to persist the database up to MAX_RETRY_ATTEMPTS times.
-// Retries only occur when the FailedPrecondition error code is returned from
-// the underlying database layer.
+// Retries only occur when the write is rejected for a version conflict.
 //
 // Independently, database calls that the host rejects with RESOURCE_EXHAUSTED
 // are retried as far as `policy` allows, without counting as attempts.
@@ -384,7 +397,13 @@ async fn persist_database(
     let now = Instant::now();
     while attempt < MAX_RETRY_ATTEMPTS {
         match try_persist_database(user_context, metrics, policy).await? {
-            MetadataPersistResult::Succeeded => {
+            MetadataPersistResult::Succeeded { committed_version } => {
+                // Track our own write, so that the next sync doesn't mistake
+                // it for a remote change. Without a version from the host,
+                // keep the old one: the next sync then pulls our write back.
+                if let Some(committed_version) = committed_version {
+                    user_context.database_version = committed_version;
+                }
                 if has_changes {
                     // This includes any RESOURCE_EXHAUSTED backoff.
                     let elapsed = now.elapsed();

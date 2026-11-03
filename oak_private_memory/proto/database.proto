@@ -91,7 +91,16 @@ message MetadataBlob {
 message ReadMetadataBlobStreamRequest {
   string id = 1;
   google.protobuf.Timestamp coarsened_expiration_timestamp = 2;
+  // Optional. The version the caller already holds. If non-empty and equal to
+  // the stored version, the server does not read the blob and replies with a
+  // single not_modified message instead of metadata_blob + chunks.
+  // coarsened_expiration_timestamp is applied either way.
+  string known_version = 3;
 }
+
+// The stored metadata blob version equals
+// ReadMetadataBlobStreamRequest.known_version.
+message MetadataBlobNotModified {}
 
 message ReadMetadataBlobStreamResponse {
   oneof response {
@@ -106,6 +115,10 @@ message ReadMetadataBlobStreamResponse {
     // received to construct the final payload. Sending this variant before
     // sending the metadata_blob will result in an error.
     bytes chunk = 2;
+
+    // Sent as the only message when known_version matches. Never followed by
+    // chunks.
+    MetadataBlobNotModified not_modified = 3;
   }
 }
 
@@ -149,6 +162,11 @@ message WriteMetadataBlobStreamResponse {
   // concurrency conflict). The caller should re-fetch the current metadata,
   // re-apply changes, and retry.
   bool version_conflict = 1;
+
+  // The version of the metadata blob committed by this write. Empty if the
+  // write was rejected (version_conflict) or the host could not read it back
+  // after commit.
+  string committed_version = 2;
 }
 
 message ResetDatabaseRequest {}
@@ -278,6 +296,8 @@ service SealedMemoryDatabaseService {
   // Read a metadata blob from the database using a stream.
   // The first response message will contain the metadata_blob.
   // Subsequent response messages will contain chunks of the blob.
+  // If the request's known_version matches the stored version, the only
+  // response message is not_modified instead.
   //
   // The returned metadata_blob will include a version string; this version
   // string should be provided verbatim in the call to WriteMetadataBlobStream

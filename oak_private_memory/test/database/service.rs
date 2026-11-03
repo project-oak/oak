@@ -15,7 +15,7 @@
 
 use std::{
     collections::{HashMap, VecDeque},
-    sync::atomic::{AtomicUsize, Ordering},
+    sync::atomic::{AtomicBool, AtomicUsize, Ordering},
     time::Duration,
 };
 
@@ -27,9 +27,9 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_servic
 use sealed_memory_rust_proto::oak::private_memory::{
     AcquireUnencryptedDataBlobLockRequest, AcquireUnencryptedDataBlobLockResponse, DataBlob,
     DeleteBlobsRequest, DeleteBlobsResponse, ExtendUnencryptedDataBlobLockRequest,
-    ExtendUnencryptedDataBlobLockResponse, MetadataBlob, ReadDataBlobRequest, ReadDataBlobResponse,
-    ReadDataBlobsRequest, ReadDataBlobsResponse, ReadMetadataBlobStreamRequest,
-    ReadMetadataBlobStreamResponse, ReadUnencryptedDataBlobRequest,
+    ExtendUnencryptedDataBlobLockResponse, MetadataBlob, MetadataBlobNotModified,
+    ReadDataBlobRequest, ReadDataBlobResponse, ReadDataBlobsRequest, ReadDataBlobsResponse,
+    ReadMetadataBlobStreamRequest, ReadMetadataBlobStreamResponse, ReadUnencryptedDataBlobRequest,
     ReadUnencryptedDataBlobResponse, ReleaseUnencryptedDataBlobLockRequest,
     ReleaseUnencryptedDataBlobLockResponse, ResetDatabaseRequest, ResetDatabaseResponse,
     WriteDataBlobRequest, WriteDataBlobResponse, WriteDataBlobsRequest, WriteDataBlobsResponse,
@@ -63,6 +63,23 @@ pub struct SealedMemoryDatabaseServiceTestImpl {
     pub metadata_write_payloads: Mutex<Vec<Vec<u8>>>,
     /// Number of streamed metadata blob reads received, including failed ones.
     pub metadata_read_calls: AtomicUsize,
+    /// When true, `ReadMetadataBlobStream` ignores `known_version` and always
+    /// sends the blob.
+    pub ignore_known_version: AtomicBool,
+    /// When set, the next `ReadMetadataBlobStream` replies with exactly these
+    /// messages, e.g. to send a malformed stream.
+    pub next_metadata_stream_reply: Mutex<Option<Vec<ReadMetadataBlobStreamResponse>>>,
+    /// When true, metadata blob writes omit `committed_version` (e.g. when the
+    /// host could not read back the committed version).
+    pub omit_committed_version: AtomicBool,
+    /// The `known_version` of every `ReadMetadataBlobStream` request.
+    pub metadata_stream_known_versions: Mutex<Vec<String>>,
+    /// Number of `ReadMetadataBlobStream` replies that sent the blob.
+    pub metadata_blob_downloads: AtomicUsize,
+    /// Number of `ReadMetadataBlobStream` replies that were `not_modified`.
+    pub metadata_not_modified_replies: AtomicUsize,
+    /// Number of metadata blob writes rejected for a version conflict.
+    pub metadata_write_conflicts: AtomicUsize,
 }
 
 pub struct HeldWrite {
@@ -83,6 +100,13 @@ impl Default for SealedMemoryDatabaseServiceTestImpl {
             metadata_write_calls: AtomicUsize::new(0),
             metadata_write_payloads: Mutex::new(Vec::new()),
             metadata_read_calls: AtomicUsize::new(0),
+            ignore_known_version: AtomicBool::new(false),
+            next_metadata_stream_reply: Mutex::new(None),
+            omit_committed_version: AtomicBool::new(false),
+            metadata_stream_known_versions: Mutex::new(Vec::new()),
+            metadata_blob_downloads: AtomicUsize::new(0),
+            metadata_not_modified_replies: AtomicUsize::new(0),
+            metadata_write_conflicts: AtomicUsize::new(0),
         }
     }
 }
@@ -132,20 +156,35 @@ impl SealedMemoryDatabaseServiceTestImpl {
     pub async fn add_blob_inner(&self, id: String, blob: DataBlob) {
         self.database.lock().await.insert(id, blob);
     }
-    pub async fn add_metadata_blob_inner(&self, id: String, mut blob: MetadataBlob) -> bool {
+    /// Writes `blob` if its version matches the stored one (or nothing is
+    /// stored), and returns the newly committed version. Returns `None` on a
+    /// version conflict.
+    pub async fn add_metadata_blob_inner(
+        &self,
+        id: String,
+        mut blob: MetadataBlob,
+    ) -> Option<String> {
         let mut db = self.metadata_database.lock().await;
 
         // Check if the provided version matches the currently stored version.
         if let Some(existing_blob) = db.get(id.as_str())
             && existing_blob.version != blob.version
         {
-            return false;
+            self.metadata_write_conflicts.fetch_add(1, Ordering::SeqCst);
+            return None;
         }
 
         // Trivial versioning mechanism: just append a 1 for each version increment.
         blob.version = format!("{}1", blob.version);
+        let committed_version = blob.version.clone();
         db.insert(id, blob);
-        true
+        Some(committed_version)
+    }
+
+    /// The `committed_version` to report for a write that committed
+    /// `version`.
+    fn reported_committed_version(&self, version: String) -> String {
+        if self.omit_committed_version.load(Ordering::SeqCst) { String::new() } else { version }
     }
     pub async fn get_blob_inner(&self, id: &str) -> Option<DataBlob> {
         self.database.lock().await.get(id).cloned()
@@ -231,17 +270,21 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
             let _ = release.await;
         }
 
-        let added = self
+        let committed_version = self
             .add_metadata_blob_inner(
                 id.clone(),
                 MetadataBlob { data_blob: Some(DataBlob { id, blob: full_blob }), version },
             )
             .await;
-        if !added {
-            Ok(tonic::Response::new(WriteMetadataBlobStreamResponse { version_conflict: true }))
-        } else {
-            Ok(tonic::Response::new(WriteMetadataBlobStreamResponse { version_conflict: false }))
-        }
+        Ok(tonic::Response::new(match committed_version {
+            Some(version) => WriteMetadataBlobStreamResponse {
+                version_conflict: false,
+                committed_version: self.reported_committed_version(version),
+            },
+            None => {
+                WriteMetadataBlobStreamResponse { version_conflict: true, ..Default::default() }
+            }
+        }))
     }
 
     async fn read_metadata_blob_stream(
@@ -253,17 +296,30 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
             return Err(status);
         }
         let request = request.into_inner();
-        let blob = self.get_metdata_blob_inner(&request.id).await;
-
-        if let Some(blob) = blob {
-            let response = ReadMetadataBlobStreamResponse {
-                response: Some(read_metadata_blob_stream_response::Response::MetadataBlob(blob)),
-            };
-            let stream = tokio_stream::iter(vec![Ok(response)]);
-            Ok(tonic::Response::new(Box::pin(stream)))
-        } else {
-            Err(tonic::Status::not_found("Blob not found"))
+        self.metadata_stream_known_versions.lock().await.push(request.known_version.clone());
+        let reply = |messages: Vec<ReadMetadataBlobStreamResponse>| {
+            let stream: Self::ReadMetadataBlobStreamStream =
+                Box::pin(tokio_stream::iter(messages.into_iter().map(Ok)));
+            Ok(tonic::Response::new(stream))
+        };
+        if let Some(messages) = self.next_metadata_stream_reply.lock().await.take() {
+            return reply(messages);
         }
+        let Some(blob) = self.get_metdata_blob_inner(&request.id).await else {
+            return Err(tonic::Status::not_found("Blob not found"));
+        };
+
+        let response = if !request.known_version.is_empty()
+            && request.known_version == blob.version
+            && !self.ignore_known_version.load(Ordering::SeqCst)
+        {
+            self.metadata_not_modified_replies.fetch_add(1, Ordering::SeqCst);
+            read_metadata_blob_stream_response::Response::NotModified(MetadataBlobNotModified {})
+        } else {
+            self.metadata_blob_downloads.fetch_add(1, Ordering::SeqCst);
+            read_metadata_blob_stream_response::Response::MetadataBlob(blob)
+        };
+        reply(vec![ReadMetadataBlobStreamResponse { response: Some(response) }])
     }
 
     async fn write_unencrypted_data_blob(

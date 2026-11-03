@@ -38,14 +38,40 @@ pub type BlobId = String;
 const CHUNK_SIZE: usize = 1024 * 1024;
 
 // A non-fatal result from an attempt to persist the metadata db.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MetadataPersistResult {
     // The metadata db was persisted, no further action required.
-    Succeeded,
+    //
+    // `committed_version` is the version the write committed, or `None` when
+    // nothing was written (or if the host could not determine it).
+    Succeeded { committed_version: Option<String> },
 
     // The current metadata db is stale; fetch a new one, re-apply your changes,
     // and try persisting again.
     RetryNeeded,
+}
+
+impl MetadataPersistResult {
+    /// A successful write whose committed version is `committed_version`, as
+    /// reported by the host (empty if not reported).
+    fn succeeded(committed_version: String) -> Self {
+        let committed_version = (!committed_version.is_empty()).then_some(committed_version);
+        Self::Succeeded { committed_version }
+    }
+}
+
+// The result of reading the metadata blob with `get_metadata_blob_stream`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum MetadataBlobRead {
+    // The stored metadata blob.
+    Blob(EncryptedMetadataBlob),
+
+    // The stored metadata blob still has the caller's known version, so it
+    // wasn't sent.
+    NotModified,
+
+    // There is no metadata blob.
+    NotFound,
 }
 
 // Handlers for storing raw data blobs in the external database.
@@ -68,6 +94,12 @@ pub trait DataBlobHandler {
         metadata_blob: &EncryptedMetadataBlob,
         coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<MetadataPersistResult>;
+    /// Reads the metadata blob `id`.
+    ///
+    /// If `known_version` is set (and not empty), the host skips sending the
+    /// blob when its stored version is still `known_version`, and this returns
+    /// [`MetadataBlobRead::NotModified`].
+    ///
     /// Fails with the host's `tonic::Status` itself as the error (not wrapped
     /// in context), so that callers can retry host rejections such as
     /// `RESOURCE_EXHAUSTED`.
@@ -75,7 +107,8 @@ pub trait DataBlobHandler {
         &mut self,
         id: &BlobId,
         coarsened_expiration_timestamp: Timestamp,
-    ) -> anyhow::Result<Option<EncryptedMetadataBlob>>;
+        known_version: Option<&str>,
+    ) -> anyhow::Result<MetadataBlobRead>;
     async fn get_blobs(&mut self, ids: &[BlobId])
     -> anyhow::Result<Vec<Option<EncryptedDataBlob>>>;
     async fn add_blobs(
@@ -154,19 +187,19 @@ impl DataBlobHandler for ExternalDbClient {
 
         match write_result {
             Ok(response) => {
-                if response.into_inner().version_conflict {
+                let response = response.into_inner();
+                if response.version_conflict {
                     return Ok(MetadataPersistResult::RetryNeeded);
                 }
+                Ok(MetadataPersistResult::succeeded(response.committed_version))
             }
             Err(ref status) if status.code() == Code::FailedPrecondition => {
                 // Backwards compatibility: old host returns FAILED_PRECONDITION
                 // as an RPC error. Remove this branch once host is updated.
-                return Ok(MetadataPersistResult::RetryNeeded);
+                Ok(MetadataPersistResult::RetryNeeded)
             }
-            Err(status) => return Err(status.into()),
+            Err(status) => Err(status.into()),
         }
-
-        Ok(MetadataPersistResult::Succeeded)
     }
 
     async fn get_blob(&mut self, id: &BlobId) -> anyhow::Result<Option<EncryptedDataBlob>> {
@@ -194,60 +227,69 @@ impl DataBlobHandler for ExternalDbClient {
         &mut self,
         id: &BlobId,
         coarsened_expiration_timestamp: Timestamp,
-    ) -> anyhow::Result<Option<EncryptedMetadataBlob>> {
-        match self
+        known_version: Option<&str>,
+    ) -> anyhow::Result<MetadataBlobRead> {
+        let known_version = known_version.unwrap_or_default();
+        let response = self
             .read_metadata_blob_stream(ReadMetadataBlobStreamRequest {
                 id: id.clone(),
                 coarsened_expiration_timestamp: Some(coarsened_expiration_timestamp),
+                known_version: known_version.to_string(),
             })
-            .await
-        {
-            Ok(response) => {
-                let mut response_stream = response.into_inner();
-                let mut full_blob = Vec::new();
-
-                let first_response = match response_stream.next().await {
-                    Some(res) => res?,
-                    None => return Ok(None),
-                };
-
-                let version = match first_response.response {
-                    Some(read_metadata_blob_stream_response::Response::MetadataBlob(metadata)) => {
-                        if let Some(data_blob) = metadata.data_blob {
-                            full_blob.extend_from_slice(&data_blob.blob);
-                        }
-                        metadata.version
-                    }
-                    _ => anyhow::bail!("Expected MetadataBlob as the first message in the stream"),
-                };
-
-                while let Some(response) = response_stream.next().await {
-                    let response = response?;
-                    match response.response {
-                        Some(read_metadata_blob_stream_response::Response::Chunk(chunk)) => {
-                            full_blob.extend_from_slice(&chunk);
-                        }
-                        _ => anyhow::bail!("Expected Chunk message in the stream"),
-                    }
-                }
-
-                let metadata_blob = EncryptedMetadataBlob {
-                    encrypted_data_blob: Some(
-                        EncryptedDataBlob::decode(&*full_blob)
-                            .context("decoding EncryptedMetadataBlob")?,
-                    ),
-                    version,
-                };
-                Ok(Some(metadata_blob))
+            .await;
+        let mut response_stream = match response {
+            Ok(response) => response.into_inner(),
+            Err(status) if status.code() == Code::NotFound => {
+                return Ok(MetadataBlobRead::NotFound);
             }
-            Err(status) => {
-                if status.code() == Code::NotFound {
-                    Ok(None)
-                } else {
-                    Err(status.into())
+            Err(status) => return Err(status.into()),
+        };
+
+        let first_response = match response_stream.next().await {
+            Some(res) => res?,
+            None => return Ok(MetadataBlobRead::NotFound),
+        };
+
+        let mut full_blob = Vec::new();
+        let version = match first_response.response {
+            Some(read_metadata_blob_stream_response::Response::MetadataBlob(metadata)) => {
+                if let Some(data_blob) = metadata.data_blob {
+                    full_blob.extend_from_slice(&data_blob.blob);
                 }
+                metadata.version
+            }
+            Some(read_metadata_blob_stream_response::Response::NotModified(_)) => {
+                if known_version.is_empty() {
+                    anyhow::bail!("Got not_modified without a known version");
+                }
+                if let Some(next) = response_stream.next().await {
+                    next?;
+                    anyhow::bail!("Expected no messages after not_modified in the stream");
+                }
+                return Ok(MetadataBlobRead::NotModified);
+            }
+            _ => anyhow::bail!(
+                "Expected MetadataBlob or NotModified as the first message in the stream"
+            ),
+        };
+
+        while let Some(response) = response_stream.next().await {
+            let response = response?;
+            match response.response {
+                Some(read_metadata_blob_stream_response::Response::Chunk(chunk)) => {
+                    full_blob.extend_from_slice(&chunk);
+                }
+                _ => anyhow::bail!("Expected Chunk message in the stream"),
             }
         }
+
+        let metadata_blob = EncryptedMetadataBlob {
+            encrypted_data_blob: Some(
+                EncryptedDataBlob::decode(&*full_blob).context("decoding EncryptedMetadataBlob")?,
+            ),
+            version,
+        };
+        Ok(MetadataBlobRead::Blob(metadata_blob))
     }
 
     async fn get_blobs(

@@ -117,6 +117,10 @@ pub struct Metrics {
     // Failure counting distributions
     icing_num_previous_init_failures: Histogram<u64>,
     icing_num_failed_reindexed_documents: Histogram<u64>,
+
+    // Number of database syncs that skipped downloading the database because
+    // its stored version hadn't changed.
+    db_pull_skipped_count: Counter<u64>,
 }
 
 /// The possible metrics request types.
@@ -481,6 +485,18 @@ impl Metrics {
         orphaned_blob_deletes.add(0, &[]);
         db_resource_exhausted_retries.add(0, &[]);
 
+        // Created last: the host OTel->streamz bridge drops every instrument
+        // after the first one that fails to export, so a new instrument that
+        // the host doesn't allowlist yet can't take down the others.
+        let db_pull_skipped_count = meter
+            .u64_counter("db_pull_skipped_count")
+            .with_description(
+                "Number of database syncs that skipped downloading the database because it was \
+                 unchanged.",
+            )
+            .build();
+        db_pull_skipped_count.add(0, &[]);
+
         Self {
             rpc_count,
             rpc_failure_count,
@@ -522,6 +538,7 @@ impl Metrics {
             icing_recovery_latency_ms,
             icing_num_previous_init_failures,
             icing_num_failed_reindexed_documents,
+            db_pull_skipped_count,
         }
     }
 
@@ -699,6 +716,10 @@ impl Metrics {
 
     pub fn inc_orphaned_blob_deletes(&self, count: u64) {
         self.orphaned_blob_deletes.add(count, &[]);
+    }
+
+    pub fn inc_db_pull_skipped_count(&self) {
+        self.db_pull_skipped_count.add(1, &[]);
     }
 
     pub fn inc_session_rejected_low_memory(&self) {
@@ -1069,6 +1090,7 @@ mod value_tests {
         ("tls_receive_failures", Metrics::inc_tls_receive_failures),
         ("persistence_enqueue_failures", Metrics::inc_persistence_enqueue_failures),
         ("session_rejected_low_memory", Metrics::inc_session_rejected_low_memory),
+        ("db_pull_skipped_count", Metrics::inc_db_pull_skipped_count),
     ];
 
     /// Counters that are incremented by a caller-provided amount.
@@ -1470,6 +1492,13 @@ mod value_tests {
                 "",
                 "Failed reindex count.",
                 Histogram(&default_bounds),
+            ),
+            (
+                "db_pull_skipped_count",
+                "",
+                "Number of database syncs that skipped downloading the database because it was \
+                 unchanged.",
+                Counter,
             ),
         ];
 

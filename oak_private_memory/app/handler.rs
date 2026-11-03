@@ -19,7 +19,7 @@ use std::{
 };
 
 use encryption::{decrypt, encrypt, generate_nonce};
-use external_db_client::{BlobId, DataBlobHandler};
+use external_db_client::{BlobId, DataBlobHandler, MetadataBlobRead};
 use log::{debug, info, warn};
 use metrics::RequestMetricName;
 use oak_private_memory_database::{
@@ -1015,10 +1015,21 @@ async fn get_or_create_db(
             clock.as_ref(),
             blanket_ttl_seconds,
         );
-    let metadata_blob = db_client
-        .get_metadata_blob_stream(uid, coarsened_expiration_timestamp)
+    let metadata_blob = match db_client
+        .get_metadata_blob_stream(
+            uid,
+            coarsened_expiration_timestamp,
+            /* known_version= */ None,
+        )
         .await
-        .into_internal_error("Failed to get metadata blob")?;
+        .into_internal_error("Failed to get metadata blob")?
+    {
+        MetadataBlobRead::Blob(blob) => Some(blob),
+        MetadataBlobRead::NotFound => None,
+        MetadataBlobRead::NotModified => {
+            return Err(tonic::Status::internal("unexpected not_modified without a known version"));
+        }
+    };
     let fetch_elapsed = fetch_start.elapsed().unwrap_or_default();
     metrics.record_key_sync_db_fetch_latency(fetch_elapsed.as_millis() as u64);
 
@@ -1076,7 +1087,7 @@ mod tests {
     use std::{
         collections::{BTreeMap, BTreeSet},
         net::{IpAddr, Ipv4Addr, SocketAddr},
-        sync::Arc,
+        sync::{Arc, atomic::Ordering},
         time::{Duration, SystemTime},
     };
 
@@ -1086,7 +1097,10 @@ mod tests {
         database::{MAX_DATABASE_SIZE, MAX_GRPC_DECODE_SIZE},
     };
     use private_memory_test_database_server_lib::service::SealedMemoryDatabaseServiceTestImpl;
-    use sealed_memory_rust_proto::oak::private_memory::SessionConfig;
+    use sealed_memory_rust_proto::oak::private_memory::{
+        MetadataBlobNotModified, ReadMetadataBlobStreamResponse, SessionConfig,
+        read_metadata_blob_stream_response,
+    };
     use tokio::{
         net::TcpListener,
         sync::{mpsc, oneshot},
@@ -1370,8 +1384,8 @@ mod tests {
 
     /// A sync with changes persists the database and records its size, save
     /// speed, the persist latency and the number of attempts. A sync without
-    /// changes loads and rebases onto the stored database, but skips the
-    /// write.
+    /// changes finds the stored database unchanged, so it neither loads it nor
+    /// writes.
     #[tokio::test(flavor = "multi_thread")]
     async fn sync_database_records_persist_metrics() {
         let harness = test_metrics();
@@ -1402,11 +1416,12 @@ mod tests {
         assert_eq!(histogram_count(&harness, "db_save_speed"), 1);
         assert!(!harness.collect().names().contains("db_load_speed"));
 
-        // A second sync with no changes loads the stored database, recording
-        // the load speed, and rebases onto it. The write is skipped, so it
-        // isn't recorded as a persist.
+        // A second sync with no changes sees that the stored database is the
+        // one this session wrote, so it skips loading it. The write is skipped
+        // too, so it isn't recorded as a persist.
         handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
-        assert_eq!(histogram_count(&harness, "db_load_speed"), 1);
+        assert!(!harness.collect().names().contains("db_load_speed"));
+        assert_eq!(unlabeled_counter(&harness, "db_pull_skipped_count"), 1);
         assert_eq!(histogram_count(&harness, "db_size"), 1);
         assert_eq!(histogram_count(&harness, "db_persist_latency"), 1);
         assert_eq!(histogram_count(&harness, "db_persist_latency_with_retries"), 1);
@@ -1417,6 +1432,242 @@ mod tests {
     /// Returns the value of the attribute-less counter `name`.
     fn unlabeled_counter(harness: &TestMetrics, name: &str) -> u64 {
         harness.collect().counter(name, &[])
+    }
+
+    /// Number of metadata blob reads for which `service` sent the blob.
+    fn downloads(service: &SealedMemoryDatabaseServiceTestImpl) -> usize {
+        service.metadata_blob_downloads.load(Ordering::SeqCst)
+    }
+
+    /// Number of metadata blob reads that `service` answered with
+    /// `not_modified`.
+    fn not_modified_replies(service: &SealedMemoryDatabaseServiceTestImpl) -> usize {
+        service.metadata_not_modified_replies.load(Ordering::SeqCst)
+    }
+
+    /// The `known_version` of every metadata blob read `service` got.
+    async fn known_versions(service: &SealedMemoryDatabaseServiceTestImpl) -> Vec<String> {
+        service.metadata_stream_known_versions.lock().await.clone()
+    }
+
+    /// The metadata version that `handler`'s session last read or wrote.
+    async fn session_version(handler: &SealedMemorySessionHandler) -> String {
+        handler.session_context().await.as_ref().unwrap().database_version.clone()
+    }
+
+    /// A sync tracks the version of its own write and sends it as the known
+    /// version, so later syncs without a remote change get `not_modified`:
+    /// they neither download nor rebase onto the database, and a later write
+    /// doesn't conflict. Key sync sends no known version.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn sync_database_without_remote_change_skips_download() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let harness = test_metrics();
+        let (handler, _persistence_rx) = connect_handler_with_metrics(
+            start_test_db_with_service(service.clone()).await,
+            harness.metrics.clone(),
+        );
+        start_session_with_changes(&handler, "skip_download_user").await;
+
+        // Nothing is stored yet, so there is nothing to pull. The push commits
+        // version "1", which the session now tracks.
+        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        assert_eq!(session_version(&handler).await, "1");
+
+        // Without remote changes, a sync skips the download.
+        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        assert_eq!(unlabeled_counter(&harness, "db_pull_skipped_count"), 1);
+
+        // A sync with local changes skips the download and pushes on the first
+        // attempt; the sync after it skips the download again.
+        add_memory(&handler).await;
+        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        assert_eq!(session_version(&handler).await, "11");
+        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+
+        assert_eq!(unlabeled_counter(&harness, "db_pull_skipped_count"), 3);
+        assert_eq!(not_modified_replies(&service), 3);
+        assert_eq!(downloads(&service), 0);
+        assert!(!harness.collect().names().contains("db_load_speed"));
+        assert_eq!(service.metadata_write_conflicts.load(Ordering::SeqCst), 0);
+        assert_eq!(histogram_count_and_sum(&harness, "db_persist_attempts", &[]), (2, 2));
+        // Key sync, then the 4 syncs.
+        assert_eq!(known_versions(&service).await, ["", "", "1", "1", "11"]);
+    }
+
+    /// A sync still pulls and rebases onto a database that another session
+    /// changed, in both directions.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn sync_database_pulls_remote_change() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let db_addr = start_test_db_with_service(service.clone()).await;
+        let pm_uid = "remote_change_user";
+        let harness = test_metrics();
+        let (writer, _writer_rx) = connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        let (reader, _reader_rx) = connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        let writer_memory = start_session_with_changes(&writer, pm_uid).await;
+        reader.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        writer.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+
+        reader.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        assert!(memory_is_readable(&reader, &writer_memory).await);
+        assert_eq!(session_version(&reader).await, "1");
+        assert_eq!(downloads(&service), 1);
+
+        let reader_memory = add_memory(&reader).await;
+        // The reader is now up to date, so its sync skips the download.
+        reader.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        assert_eq!(unlabeled_counter(&harness, "db_pull_skipped_count"), 1);
+        writer.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        assert!(memory_is_readable(&writer, &reader_memory).await);
+        assert_eq!(session_version(&writer).await, "11");
+        assert_eq!(downloads(&service), 2);
+        assert_eq!(unlabeled_counter(&harness, "db_pull_skipped_count"), 1);
+    }
+
+    /// A host that ignores the known version makes every sync download the
+    /// database, as before, and remote changes are still pulled.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn sync_database_downloads_when_host_ignores_known_version() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        service.ignore_known_version.store(true, Ordering::SeqCst);
+        let db_addr = start_test_db_with_service(service.clone()).await;
+        let pm_uid = "ignores_known_version_user";
+        let harness = test_metrics();
+        let (writer, _writer_rx) = connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        let (reader, _reader_rx) = connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        let memory_id = start_session_with_changes(&writer, pm_uid).await;
+        reader.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+
+        writer.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        writer.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        assert_eq!(session_version(&writer).await, "1");
+        assert_eq!(downloads(&service), 1);
+        reader.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+
+        assert!(memory_is_readable(&reader, &memory_id).await);
+        assert_eq!(downloads(&service), 2);
+        assert_eq!(not_modified_replies(&service), 0);
+        assert_eq!(unlabeled_counter(&harness, "db_pull_skipped_count"), 0);
+    }
+
+    /// A host that doesn't report the committed version leaves the session's
+    /// version unchanged, so the next sync pulls the session's own write back,
+    /// as before. The sync after that skips the download.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn sync_database_without_committed_version_pulls_own_write() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        service.omit_committed_version.store(true, Ordering::SeqCst);
+        let harness = test_metrics();
+        let (handler, _persistence_rx) = connect_handler_with_metrics(
+            start_test_db_with_service(service.clone()).await,
+            harness.metrics.clone(),
+        );
+        start_session_with_changes(&handler, "no_committed_version_user").await;
+
+        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        assert_eq!(session_version(&handler).await, "");
+
+        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        assert_eq!(session_version(&handler).await, "1");
+        assert_eq!(downloads(&service), 1);
+        assert_eq!(histogram_count(&harness, "db_load_speed"), 1);
+
+        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        assert_eq!(downloads(&service), 1);
+        assert_eq!(unlabeled_counter(&harness, "db_pull_skipped_count"), 1);
+    }
+
+    /// Persisting a session when it closes, after it already pushed with a
+    /// sync, writes on top of its own write without a version conflict.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn session_close_after_sync_persists_on_first_attempt() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let db_addr = start_test_db_with_service(service.clone()).await;
+        let pm_uid = "close_after_sync_user";
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        let synced_memory = start_session_with_changes(&handler, pm_uid).await;
+        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        let unsynced_memory = add_memory(&handler).await;
+
+        let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
+        persistence_tx.send(handler.session_context().await.take().unwrap()).unwrap();
+        drop(persistence_tx);
+        persistence_worker::run_persistence_service(persistence_rx, harness.metrics.clone()).await;
+
+        // Both the sync and the close persisted on their first attempt,
+        // without a conflict, so without reading the database to rebase.
+        assert_eq!(histogram_count_and_sum(&harness, "db_persist_attempts", &[]), (2, 2));
+        assert_eq!(service.metadata_write_conflicts.load(Ordering::SeqCst), 0);
+        assert_eq!(known_versions(&service).await.len(), 2);
+        assert_eq!(service.get_metdata_blob_inner(pm_uid).await.unwrap().version, "11");
+
+        let (fresh, _fresh_rx) = connect_handler(db_addr);
+        fresh.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        assert!(memory_is_readable(&fresh, &synced_memory).await);
+        assert!(memory_is_readable(&fresh, &unsynced_memory).await);
+    }
+
+    /// A `not_modified` reply when the session has no version yet is a
+    /// protocol violation: it fails the sync, and the changes stay in the
+    /// session.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn sync_database_fails_on_unsolicited_not_modified() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let harness = test_metrics();
+        let (handler, _persistence_rx) = connect_handler_with_metrics(
+            start_test_db_with_service(service.clone()).await,
+            harness.metrics.clone(),
+        );
+        let pm_uid = "unsolicited_not_modified_user";
+        start_session_with_changes(&handler, pm_uid).await;
+        let not_modified =
+            read_metadata_blob_stream_response::Response::NotModified(MetadataBlobNotModified {});
+        *service.next_metadata_stream_reply.lock().await =
+            Some(vec![ReadMetadataBlobStreamResponse { response: Some(not_modified) }]);
+
+        let error = handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap_err();
+        assert_eq!(error.code(), tonic::Code::Internal);
+        assert_eq!(unlabeled_counter(&harness, "db_pull_skipped_count"), 0);
+        assert!(service.get_metdata_blob_inner(pm_uid).await.is_none());
+        assert!(handler.session_context().await.as_ref().unwrap().database.changed());
+    }
+
+    /// A write that loses the version check downloads the latest database to
+    /// rebase onto without sending a known version: it is known to have
+    /// changed.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn conflicting_write_retries_without_known_version() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let db_addr = start_test_db_with_service(service.clone()).await;
+        let pm_uid = "conflict_retry_user";
+        let harness = test_metrics();
+        let (first, _first_rx) = connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        let (second, _second_rx) = connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        let first_memory = start_session_with_changes(&first, pm_uid).await;
+        second.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        let second_memory = add_memory(&second).await;
+        first.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        let reads_before = known_versions(&service).await.len();
+
+        // The session-close persist of `second` still holds the version from
+        // its key sync, so its first write conflicts.
+        let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
+        persistence_tx.send(second.session_context().await.take().unwrap()).unwrap();
+        drop(persistence_tx);
+        persistence_worker::run_persistence_service(persistence_rx, harness.metrics.clone()).await;
+
+        assert_eq!(service.metadata_write_conflicts.load(Ordering::SeqCst), 1);
+        assert_eq!(known_versions(&service).await[reads_before..], [""]);
+        assert_eq!(downloads(&service), 1);
+        let (fresh, _fresh_rx) = connect_handler(db_addr);
+        fresh.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        assert!(memory_is_readable(&fresh, &first_memory).await);
+        assert!(memory_is_readable(&fresh, &second_memory).await);
+        // Key syncs send no known version either.
+        assert!(known_versions(&service).await.iter().all(String::is_empty));
     }
 
     /// A key sync that finds a persisted database fetches, loads, decrypts
