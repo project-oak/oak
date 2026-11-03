@@ -207,11 +207,6 @@ impl Policy<[u8]> for TransparentLayer1Policy {
 ///
 /// NOTE: The ordering of the `binary_mpms` endorsements must match the ordering
 /// of the packages in the [`CbLayer2TransparentEvent`].
-///
-/// The order of the packages in the evidence is not deterministic, so the
-/// reference values are matched to the packages one-to-one rather than by
-/// index: every package must be appraised by a distinct reference value entry,
-/// and the two lists must have the same length.
 pub struct TransparentLayer2Policy {
     reference_values: CbLayer2TransparentReferenceValues,
 }
@@ -220,10 +215,15 @@ impl TransparentLayer2Policy {
     pub fn new(reference_values: &CbLayer2TransparentReferenceValues) -> Self {
         Self { reference_values: reference_values.clone() }
     }
-}
 
-impl Policy<[u8]> for TransparentLayer2Policy {
-    fn verify(
+    /// Verifies the layer 2 event by matching reference values to packages
+    /// one-to-one.
+    ///
+    /// The order of the packages in the evidence is not deterministic, so the
+    /// reference values are matched to the packages one-to-one rather than by
+    /// index: every package must be appraised by a distinct reference value
+    /// entry, and the two lists must have the same length.
+    pub fn verify_with_strict_ref_values(
         &self,
         verification_time: Instant,
         evidence: &[u8],
@@ -334,6 +334,108 @@ impl Policy<[u8]> for TransparentLayer2Policy {
                 .expect("assigned reference value must be a candidate");
             package_validities.push(validity);
             package_verifications.extend(tlog_record);
+        }
+
+        let validity = intersect_all_validity(package_validities);
+
+        let mut result = EventAttestationResults {
+            tlog_verifications: package_verifications,
+            ..Default::default()
+        };
+        if let Some(v) = validity {
+            set_validity(&mut result, v);
+        }
+        Ok(result)
+    }
+}
+
+impl Policy<[u8]> for TransparentLayer2Policy {
+    fn verify(
+        &self,
+        verification_time: Instant,
+        evidence: &[u8],
+        endorsement: &Variant,
+    ) -> anyhow::Result<EventAttestationResults> {
+        let event = decode_event_proto::<CbLayer2TransparentEvent>(
+            "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
+            evidence,
+        )?;
+        let endorsement: Option<CbLayer2TransparentEndorsement> =
+            endorsement.try_into().map_err(anyhow::Error::msg)?;
+
+        let endorsement = endorsement.unwrap_or_default();
+
+        // If binary_mpms is not specified in the reference values, fall back to the
+        // singular binary_mpm field in both the reference values and the endorsement.
+        #[allow(deprecated)]
+        let (ref_values, binary_mpms) = if self.reference_values.binary_mpms.is_empty() {
+            let ref_values = self
+                .reference_values
+                .binary_mpm
+                .as_ref()
+                .map(|rv| alloc::vec![rv.clone()])
+                .unwrap_or_default();
+            let binary_mpms = endorsement.binary_mpm.map(|e| alloc::vec![e]).unwrap_or_default();
+            (ref_values, binary_mpms)
+        } else {
+            (self.reference_values.binary_mpms.clone(), endorsement.binary_mpms)
+        };
+
+        anyhow::ensure!(
+            binary_mpms.len() <= event.packages.len(),
+            "number of endorsements ({}) exceeds number of packages ({})",
+            binary_mpms.len(),
+            event.packages.len()
+        );
+
+        // If fewer endorsements were provided than there are packages (e.g. because
+        // reference values include a Skip and the caller omitted endorsements), pad
+        // the list with empty SignedEndorsement defaults.
+        let mut binary_mpms = binary_mpms;
+        if binary_mpms.len() < event.packages.len() {
+            binary_mpms.resize_with(event.packages.len(), SignedEndorsement::default);
+        }
+
+        let mut package_validities: alloc::vec::Vec<Option<Validity>> =
+            alloc::vec::Vec::with_capacity(event.packages.len());
+        let mut package_verifications: alloc::vec::Vec<TLogVerificationResults> =
+            alloc::vec::Vec::new();
+
+        for (i, package) in event.packages.iter().enumerate() {
+            // The ordering of the endorsements must match the order of the packages in the
+            // attestation evidence.
+            let matching_endorsement = &binary_mpms[i];
+
+            if let Some(ref e) = matching_endorsement.endorsement {
+                let mpm_attachment = MpmAttachment::decode(e.subject.as_slice())
+                    .context("couldn't parse signed endorsement subject as an MpmAttachment")?;
+                anyhow::ensure!(
+                    mpm_attachment.package_version == package.mpm_version_id,
+                    "Endorsement at index {} (version {}) does not match measurement {}",
+                    i,
+                    mpm_attachment.package_version,
+                    package.mpm_version_id
+                );
+            }
+
+            // Iterate over reference values to validate the evidence.
+            let mut verified = false;
+            let mut matched_validity: Option<Validity> = None;
+            for ref_val in &ref_values {
+                if let Ok((expected, validity, tlog_record)) = acquire_mpm_expected_values(
+                    verification_time.into_unix_millis(),
+                    Some(matching_endorsement),
+                    ref_val,
+                ) && compare_text_value(&package.mpm_version_id, &expected).is_ok()
+                {
+                    verified = true;
+                    matched_validity = validity;
+                    package_verifications.extend(tlog_record);
+                    break;
+                }
+            }
+            anyhow::ensure!(verified, "package {} could not be verified", package.mpm_version_id);
+            package_validities.push(matched_validity);
         }
 
         let validity = intersect_all_validity(package_validities);
@@ -1221,7 +1323,8 @@ mod tests {
         };
         let policy = TransparentLayer2Policy::new(&reference_values);
 
-        let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
+        let result =
+            policy.verify_with_strict_ref_values(TEST_TIME, &evidence, &Variant::default());
 
         assert!(result.is_err(), "the pinned package must not be satisfied by the Skip entry");
     }
@@ -1260,7 +1363,8 @@ mod tests {
         };
         let policy = TransparentLayer2Policy::new(&reference_values);
 
-        let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
+        let result =
+            policy.verify_with_strict_ref_values(TEST_TIME, &evidence, &Variant::default());
 
         assert!(result.is_err(), "a missing package must not pass verification");
     }
@@ -1301,7 +1405,8 @@ mod tests {
         let policy = TransparentLayer2Policy::new(&reference_values);
         let evidence = layer2_evidence(&["pkg_b/2.0", "pkg_a/1.0"]);
 
-        let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
+        let result =
+            policy.verify_with_strict_ref_values(TEST_TIME, &evidence, &Variant::default());
 
         assert!(result.is_ok(), "out-of-order packages should verify: {result:?}");
     }
@@ -1325,8 +1430,68 @@ mod tests {
         let policy = TransparentLayer2Policy::new(&reference_values);
         let evidence = layer2_evidence(&["pkg_a/1.0", "pkg_b/2.0"]);
 
-        let result = policy.verify(TEST_TIME, &evidence, &Variant::default());
+        let result =
+            policy.verify_with_strict_ref_values(TEST_TIME, &evidence, &Variant::default());
 
         assert!(result.is_ok(), "a one-to-one matching exists: {result:?}");
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn transparent_layer2_verify_single_ref_value_covers_multiple_packages_succeeds() {
+        use oak_proto_rust::oak::attestation::v1::{
+            MpmReferenceValue, mpm_reference_value::Type as MrvType,
+        };
+
+        let not_before = make_instant!("2025-09-01T00:00:00Z");
+        let not_after = make_instant!("2025-12-01T00:00:00Z");
+        let verify_time = make_instant!("2025-10-15T00:00:00Z");
+        let (signing_key, public_key) = test_util::new_random_signing_keypair();
+
+        let end1 = test_util::make_signed_endorsement_for_contents(
+            &MpmAttachment {
+                package_name: "pkg_a".into(),
+                package_version: "pkg_a/1.0".into(),
+                ..Default::default()
+            }
+            .encode_to_vec(),
+            not_before,
+            not_after,
+            &signing_key,
+            vec![MPM_CLAIM_TYPE],
+        );
+        let end2 = test_util::make_signed_endorsement_for_contents(
+            &MpmAttachment {
+                package_name: "pkg_b".into(),
+                package_version: "pkg_b/2.0".into(),
+                ..Default::default()
+            }
+            .encode_to_vec(),
+            not_before,
+            not_after,
+            &signing_key,
+            vec![MPM_CLAIM_TYPE],
+        );
+
+        let evidence = layer2_evidence(&["pkg_a/1.0", "pkg_b/2.0"]);
+        let endorsement_variant: Variant =
+            CbLayer2TransparentEndorsement { binary_mpm: None, binary_mpms: vec![end1, end2] }
+                .into();
+
+        let reference_values = CbLayer2TransparentReferenceValues {
+            binary_mpm: None,
+            binary_mpms: vec![MpmReferenceValue {
+                r#type: Some(MrvType::Endorsement(test_util::endorsement_reference_value(
+                    public_key,
+                ))),
+            }],
+        };
+        let policy = TransparentLayer2Policy::new(&reference_values);
+
+        let result = policy.verify(verify_time, &evidence, &endorsement_variant);
+
+        let result = result.expect("verification should succeed");
+        let expected_validity = make_expected_validity(not_before, not_after);
+        assert_eq!(get_validity(&result), Some(&expected_validity));
     }
 }
