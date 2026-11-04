@@ -28,15 +28,14 @@ use sealed_memory_rust_proto::oak::private_memory::{
     AcquireUnencryptedDataBlobLockRequest, AcquireUnencryptedDataBlobLockResponse, DataBlob,
     DeleteBlobsRequest, DeleteBlobsResponse, ExtendUnencryptedDataBlobLockRequest,
     ExtendUnencryptedDataBlobLockResponse, MetadataBlob, ReadDataBlobRequest, ReadDataBlobResponse,
-    ReadDataBlobsRequest, ReadDataBlobsResponse, ReadMetadataBlobRequest, ReadMetadataBlobResponse,
-    ReadMetadataBlobStreamRequest, ReadMetadataBlobStreamResponse, ReadUnencryptedDataBlobRequest,
+    ReadDataBlobsRequest, ReadDataBlobsResponse, ReadMetadataBlobStreamRequest,
+    ReadMetadataBlobStreamResponse, ReadUnencryptedDataBlobRequest,
     ReadUnencryptedDataBlobResponse, ReleaseUnencryptedDataBlobLockRequest,
     ReleaseUnencryptedDataBlobLockResponse, ResetDatabaseRequest, ResetDatabaseResponse,
     WriteDataBlobRequest, WriteDataBlobResponse, WriteDataBlobsRequest, WriteDataBlobsResponse,
-    WriteMetadataBlobRequest, WriteMetadataBlobResponse, WriteMetadataBlobStreamRequest,
-    WriteMetadataBlobStreamResponse, WriteUnencryptedDataBlobRequest,
-    WriteUnencryptedDataBlobResponse, read_metadata_blob_stream_response,
-    write_metadata_blob_stream_request,
+    WriteMetadataBlobStreamRequest, WriteMetadataBlobStreamResponse,
+    WriteUnencryptedDataBlobRequest, WriteUnencryptedDataBlobResponse,
+    read_metadata_blob_stream_response, write_metadata_blob_stream_request,
 };
 use tokio::{
     net::TcpListener,
@@ -183,41 +182,6 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
 
         if let Some(blob) = blob {
             Ok(tonic::Response::new(ReadDataBlobResponse { data_blob: Some(blob) }))
-        } else {
-            Err(tonic::Status::not_found("Blob not found"))
-        }
-    }
-
-    async fn write_metadata_blob(
-        &self,
-        request: tonic::Request<WriteMetadataBlobRequest>,
-    ) -> Result<tonic::Response<WriteMetadataBlobResponse>, tonic::Status> {
-        tokio::time::sleep(Duration::from_millis(150)).await;
-        // TODO: b/443329966 - implement a fake opportunistic concurrency check here,
-        // matching the expected semantics (returning a failure if the provided version
-        // does not match the existing stored one)
-        let request = request.into_inner();
-        let metadata = request.metadata_blob.unwrap();
-        let added = self
-            .add_metadata_blob_inner(metadata.data_blob.as_ref().unwrap().id.clone(), metadata)
-            .await;
-        if !added {
-            Ok(tonic::Response::new(WriteMetadataBlobResponse { version_conflict: true }))
-        } else {
-            Ok(tonic::Response::new(WriteMetadataBlobResponse { version_conflict: false }))
-        }
-    }
-
-    async fn read_metadata_blob(
-        &self,
-        request: tonic::Request<ReadMetadataBlobRequest>,
-    ) -> Result<tonic::Response<ReadMetadataBlobResponse>, tonic::Status> {
-        let request = request.into_inner();
-        let blob = self.get_metdata_blob_inner(&request.id).await;
-        debug!("Read {:?}, blob {:?}", request, blob);
-
-        if let Some(blob) = blob {
-            Ok(tonic::Response::new(ReadMetadataBlobResponse { metadata_blob: Some(blob) }))
         } else {
             Err(tonic::Status::not_found("Blob not found"))
         }

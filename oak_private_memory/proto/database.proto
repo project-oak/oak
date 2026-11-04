@@ -45,8 +45,8 @@ message WriteUnencryptedDataBlobRequest {
   //
   // ABORTED means "somebody else owns this row, back off and retry later". It
   // is deliberately distinct from the FAILED_PRECONDITION / version_conflict
-  // that WriteMetadataBlob uses for an optimistic concurrency conflict, which
-  // instead means "re-read, rebase and retry now".
+  // that WriteMetadataBlobStream uses for an optimistic concurrency conflict,
+  // which instead means "re-read, rebase and retry now".
   string lock_token = 2;
 }
 
@@ -84,49 +84,8 @@ message MetadataBlob {
 
   // An opaque version string representing the version of this metadata blob.
   // The string should not be parsed or interpreted by the client. It should
-  // only be saved to pass back verbatim to calls to WriteMetadataBlob.
+  // only be saved to pass back verbatim to calls to WriteMetadataBlobStream.
   string version = 2;
-}
-
-message ReadMetadataBlobRequest {
-  string id = 1;
-  google.protobuf.Timestamp coarsened_expiration_timestamp = 2;
-}
-
-message ReadMetadataBlobResponse {
-  MetadataBlob metadata_blob = 1;
-}
-
-message WriteMetadataBlobRequest {
-  MetadataBlob metadata_blob = 1;
-  google.protobuf.Timestamp coarsened_expiration_timestamp = 2;
-
-  // The lock token returned by AcquireUnencryptedDataBlobLock, or empty if the
-  // caller does not hold a lock. The metadata blob lives in the same row as
-  // the unencrypted data blob, so it is covered by the same lock. See
-  // WriteUnencryptedDataBlobRequest.lock_token.
-  string lock_token = 3;
-
-  // Optional. If set, the unencrypted data blob is written in the same Spanner
-  // transaction as the metadata blob, so the two columns of the row are updated
-  // atomically. The id must match metadata_blob.data_blob.id.
-  //
-  // This exists for migrations that have to change the encryption key and the
-  // data it protects together. The wrapped DEK lives in this column while the
-  // ciphertext it decrypts is reachable through MetadataBlobRef, so writing
-  // them in two transactions leaves a window where a crash makes the user
-  // permanently undecryptable: whichever column landed first describes data
-  // encrypted under the other column's key.
-  //
-  // Callers that only update the metadata blob should leave this unset.
-  DataBlob unencrypted_data_blob = 4;
-}
-
-message WriteMetadataBlobResponse {
-  // If true, the write was rejected due to a version mismatch (optimistic
-  // concurrency conflict). The caller should re-fetch the current metadata,
-  // re-apply changes, and retry.
-  bool version_conflict = 1;
 }
 
 message ReadMetadataBlobStreamRequest {
@@ -164,13 +123,24 @@ message WriteMetadataBlobStreamRequest {
   google.protobuf.Timestamp coarsened_expiration_timestamp = 3;
 
   // The lock token returned by AcquireUnencryptedDataBlobLock, or empty if the
-  // caller does not hold a lock. Only read from the first message. See
-  // WriteUnencryptedDataBlobRequest.lock_token.
+  // caller does not hold a lock. Only read from the first message. The metadata
+  // blob lives in the same row as the unencrypted data blob, so it is covered
+  // by the same lock. See WriteUnencryptedDataBlobRequest.lock_token.
   string lock_token = 4;
 
   // Optional. Only read from the first message. If set, the unencrypted data
-  // blob is written in the same Spanner transaction as the metadata blob. See
-  // WriteMetadataBlobRequest.unencrypted_data_blob.
+  // blob is written in the same Spanner transaction as the metadata blob, so
+  // the two columns of the row are updated atomically. The id must match
+  // metadata_blob.data_blob.id.
+  //
+  // This exists for migrations that have to change the encryption key and the
+  // data it protects together. The wrapped DEK lives in this column while the
+  // ciphertext it decrypts is reachable through MetadataBlobRef, so writing
+  // them in two transactions leaves a window where a crash makes the user
+  // permanently undecryptable: whichever column landed first describes data
+  // encrypted under the other column's key.
+  //
+  // Callers that only update the metadata blob should leave this unset.
   DataBlob unencrypted_data_blob = 5;
 }
 
@@ -289,32 +259,18 @@ service SealedMemoryDatabaseService {
   // Reads a data blob from the database.
   rpc ReadDataBlob(ReadDataBlobRequest) returns (ReadDataBlobResponse) {}
 
-  // Write a metadata blob to the database.
-  //
-  // If the current version of the stored metadata blob does not match the
-  // version provided in the request, the write will be rejected and
-  // `version_conflict` will be set to `true` in the response.
-  //
-  // In this case, you should fetch the latest version using `ReadMetadataBlob`,
-  // apply your changes on the latest version, and re-attempt the write
-  // operation.
-  rpc WriteMetadataBlob(WriteMetadataBlobRequest)
-      returns (WriteMetadataBlobResponse) {}
-
-  // Read a metadatablob from the database.
-  //
-  // The returned metadatablob will include a version string; this version
-  // string should be provided verbatim in the call to WriteMetadataBlob if
-  // changes are to be committed.
-  rpc ReadMetadataBlob(ReadMetadataBlobRequest)
-      returns (ReadMetadataBlobResponse) {}
-
   // Write a metadata blob to the database using a stream.
   // The first request message must contain the metadata_blob.
   // Subsequent request messages should contain chunks of the blob.
   //
-  // There's no requirement on the chunk szies; they can very from
-  // request-to-request, and be of any size, as llong as it fits in the message
+  // If the current version of the stored metadata blob does not match the
+  // version provided in the request, the write will be rejected and
+  // `version_conflict` will be set to `true` in the response. In this case,
+  // the caller should fetch the latest version using `ReadMetadataBlobStream`,
+  // apply its changes on the latest version, and re-attempt the write.
+  //
+  // There's no requirement on the chunk sizes; they can vary from
+  // request-to-request, and be of any size, as long as it fits in the message
   // size limit.
   rpc WriteMetadataBlobStream(stream WriteMetadataBlobStreamRequest)
       returns (WriteMetadataBlobStreamResponse) {}
@@ -322,6 +278,10 @@ service SealedMemoryDatabaseService {
   // Read a metadata blob from the database using a stream.
   // The first response message will contain the metadata_blob.
   // Subsequent response messages will contain chunks of the blob.
+  //
+  // The returned metadata_blob will include a version string; this version
+  // string should be provided verbatim in the call to WriteMetadataBlobStream
+  // if changes are to be committed.
   //
   // The returned chunks can be of any size, and the size can vary from
   // response-to-response. The client should concatenate them in the order

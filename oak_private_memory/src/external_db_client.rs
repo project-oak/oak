@@ -22,11 +22,10 @@ use prost_types::Timestamp;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
     DataBlob, DeleteBlobsRequest, EncryptedDataBlob, EncryptedMetadataBlob, MetadataBlob,
-    ReadDataBlobRequest, ReadDataBlobsRequest, ReadMetadataBlobRequest, ReadMetadataBlobResponse,
-    ReadMetadataBlobStreamRequest, ReadUnencryptedDataBlobRequest, WriteDataBlobRequest,
-    WriteDataBlobsRequest, WriteMetadataBlobRequest, WriteMetadataBlobStreamRequest,
-    WriteUnencryptedDataBlobRequest, read_metadata_blob_stream_response,
-    write_metadata_blob_stream_request,
+    ReadDataBlobRequest, ReadDataBlobsRequest, ReadMetadataBlobStreamRequest,
+    ReadUnencryptedDataBlobRequest, WriteDataBlobRequest, WriteDataBlobsRequest,
+    WriteMetadataBlobStreamRequest, WriteUnencryptedDataBlobRequest,
+    read_metadata_blob_stream_response, write_metadata_blob_stream_request,
 };
 use tonic::{Code, transport::Channel};
 
@@ -60,19 +59,6 @@ pub trait DataBlobHandler {
     ) -> anyhow::Result<BlobId>;
 
     async fn get_blob(&mut self, id: &BlobId) -> anyhow::Result<Option<EncryptedDataBlob>>;
-    #[deprecated(note = "Use add_metadata_blob_stream instead")]
-    async fn add_metadata_blob(
-        &mut self,
-        id: &BlobId,
-        metadata_blob: EncryptedMetadataBlob,
-        coarsened_expiration_timestamp: Timestamp,
-    ) -> anyhow::Result<MetadataPersistResult>;
-    #[deprecated(note = "Use get_metadata_blob_stream instead")]
-    async fn get_metadata_blob(
-        &mut self,
-        id: &BlobId,
-        coarsened_expiration_timestamp: Timestamp,
-    ) -> anyhow::Result<Option<EncryptedMetadataBlob>>;
     /// Fails with the host's `tonic::Status` itself as the error (not wrapped
     /// in context), so that callers can retry host rejections such as
     /// `RESOURCE_EXHAUSTED`.
@@ -130,44 +116,6 @@ impl DataBlobHandler for ExternalDbClient {
         })
         .await?;
         Ok(id)
-    }
-
-    async fn add_metadata_blob(
-        &mut self,
-        id: &BlobId,
-        metadata_blob: EncryptedMetadataBlob,
-        coarsened_expiration_timestamp: Timestamp,
-    ) -> anyhow::Result<MetadataPersistResult> {
-        let blob =
-            metadata_blob.encrypted_data_blob.as_ref().context("no blob contents")?.encode_to_vec();
-        let data_blob = DataBlob { id: id.clone(), blob };
-        let write_result = self
-            .write_metadata_blob(WriteMetadataBlobRequest {
-                metadata_blob: Some(MetadataBlob {
-                    data_blob: Some(data_blob),
-                    version: metadata_blob.version,
-                }),
-                coarsened_expiration_timestamp: Some(coarsened_expiration_timestamp),
-                lock_token: String::new(),
-                unencrypted_data_blob: None,
-            })
-            .await;
-
-        match write_result {
-            Ok(response) => {
-                if response.into_inner().version_conflict {
-                    return Ok(MetadataPersistResult::RetryNeeded);
-                }
-            }
-            Err(ref status) if status.code() == Code::FailedPrecondition => {
-                // Backwards compatibility: old host returns FAILED_PRECONDITION
-                // as an RPC error. Remove this branch once host is updated.
-                return Ok(MetadataPersistResult::RetryNeeded);
-            }
-            Err(status) => return Err(status.into()),
-        }
-
-        Ok(MetadataPersistResult::Succeeded)
     }
 
     async fn add_metadata_blob_stream(
@@ -229,45 +177,6 @@ impl DataBlobHandler for ExternalDbClient {
                     let data_blob = EncryptedDataBlob::decode(&*data_blob.blob)
                         .context("decoding EncryptedDataBlob")?;
                     return Ok(Some(data_blob));
-                }
-                Ok(None)
-            }
-            Err(status) => {
-                if status.code() == Code::NotFound {
-                    Ok(None)
-                } else {
-                    Err(status.into())
-                }
-            }
-        }
-    }
-
-    async fn get_metadata_blob(
-        &mut self,
-        id: &BlobId,
-        coarsened_expiration_timestamp: Timestamp,
-    ) -> anyhow::Result<Option<EncryptedMetadataBlob>> {
-        match self
-            .read_metadata_blob(ReadMetadataBlobRequest {
-                id: id.clone(),
-                coarsened_expiration_timestamp: Some(coarsened_expiration_timestamp),
-            })
-            .await
-        {
-            Ok(response) => {
-                let db_response = response.into_inner();
-                if let ReadMetadataBlobResponse {
-                    metadata_blob: Some(MetadataBlob { data_blob: Some(data_blob), version }),
-                } = db_response
-                {
-                    let metadata_blob = EncryptedMetadataBlob {
-                        encrypted_data_blob: Some(
-                            EncryptedDataBlob::decode(&*data_blob.blob)
-                                .context("decoding EncryptedMetadataBlob")?,
-                        ),
-                        version,
-                    };
-                    return Ok(Some(metadata_blob));
                 }
                 Ok(None)
             }
