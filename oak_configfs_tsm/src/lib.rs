@@ -18,6 +18,8 @@ const QUOTE_CONFIGFS_PATH: &str = "/sys/kernel/config/tsm/report";
 const RTMRS_CONFIGFS_PATH: &str = "/sys/kernel/config/tsm/rtmrs";
 const MAX_READ_WAIT_MILLIS: u64 = 5000;
 const THROTTLING_DELAY_MILLIS: u64 = 100;
+/// Size in bytes of an RTMR value (SHA-384).
+const DIGEST_LEN: usize = 48;
 
 use std::{
     path::{Path, PathBuf},
@@ -133,24 +135,38 @@ async fn extend_at(rtmrs_path: &Path, index: RTMR, data: [u8; 48]) -> anyhow::Re
         if digest != initial {
             return Err(anyhow!("RTMR{} has an unexpected value after extend", index as usize));
         }
-        // The RTMR was not extended, retry.
+        // The RTMR still holds its initial value, so the write was ignored:
+        // most likely the TDCALL issued on close returned EBUSY. Wait and
+        // retry, as the TDCALL is not visible to us.
         tokio::time::sleep(Duration::from_millis(THROTTLING_DELAY_MILLIS)).await;
     }
     Err(anyhow!("failed to extend RTMR{}", index as usize))
 }
 
 /// Reads the current value of an RTMR from its `digest` file.
+///
+/// Fails if the value is not exactly 384 bits long, as anything else cannot be
+/// an RTMR value and would make the expected digest meaningless.
 async fn read_digest(digest_path: &Path) -> anyhow::Result<Vec<u8>> {
     // Set up timeout time.
     let read_time = tokio::time::Duration::from_millis(MAX_READ_WAIT_MILLIS);
 
     // Wait up to 5 seconds.
-    Ok(timeout(read_time, read(digest_path)).await??)
+    let digest = timeout(read_time, read(digest_path)).await??;
+    if digest.len() != DIGEST_LEN {
+        return Err(anyhow!(
+            "{} has {} bytes, expected {}",
+            digest_path.display(),
+            digest.len(),
+            DIGEST_LEN
+        ));
+    }
+    Ok(digest)
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{fs, os::unix::fs::symlink};
+    use std::fs;
 
     use googletest::prelude::*;
 
@@ -164,9 +180,21 @@ mod tests {
         let rtmrs = tempfile::tempdir()?;
         let rtmr_dir = rtmrs.path().join("rtmrs2");
         fs::create_dir(&rtmr_dir)?;
-        // Accepts the write but keeps its value, like an RTMR whose extend failed
-        // when configfs released the file.
-        symlink("/dev/null", rtmr_dir.join("digest"))?;
+        // Already holds the written data, so it keeps its value after the write,
+        // like an RTMR whose extend failed when configfs released the file.
+        fs::write(rtmr_dir.join("digest"), DATA)?;
+
+        expect_that!(extend_at(rtmrs.path(), RTMR::RTMR2, DATA).await, err(anything()));
+        Ok(())
+    }
+
+    #[googletest::gtest]
+    #[tokio::test]
+    async fn extend_fails_if_digest_has_wrong_length() -> anyhow::Result<()> {
+        let rtmrs = tempfile::tempdir()?;
+        let rtmr_dir = rtmrs.path().join("rtmrs2");
+        fs::create_dir(&rtmr_dir)?;
+        fs::write(rtmr_dir.join("digest"), [0u8; 47])?;
 
         expect_that!(extend_at(rtmrs.path(), RTMR::RTMR2, DATA).await, err(anything()));
         Ok(())
