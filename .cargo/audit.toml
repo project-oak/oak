@@ -9,5 +9,10 @@ ignore = [
   # b/531801238
   "RUSTSEC-2026-0194",
   "RUSTSEC-2026-0195",
+
+  # crypto-bigint 0.5.5 timing variability (fixed only in >= 0.7.6).
+  # Pulled in via elliptic-curve 0.13 (p256 0.13, p384 0.13, ecdsa 0.16, and
+  # x509-verify 0.4.8 which has no release supporting p256 0.14 / ecdsa 0.17).
+  "RUSTSEC-2026-0387",
 ]
 

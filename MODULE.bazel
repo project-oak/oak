@@ -1882,7 +1882,7 @@ crate.spec(
     ],
     package = "tokio",
     repositories = ALL_STD,
-    version = "1.41.0",
+    version = "1.54.1",
 )
 crate.annotation(
     crate = "tokio",
@@ -2091,21 +2091,21 @@ crate.spec(
     ],
     package = "wasmtime",
     repositories = ALL_STD,
-    version = "49.0.4",
+    version = "49.0.5",
 )
 crate.spec(
     default_features = True,
     features = [],
     package = "wasmtime-wasi",
     repositories = ALL_STD,
-    version = "49.0.4",
+    version = "49.0.5",
 )
 crate.spec(
     default_features = True,
     features = [],
     package = "wasmtime-wasi-http",
     repositories = ALL_STD,
-    version = "49.0.4",
+    version = "49.0.5",
 )
 crate.annotation(
     crate = "cranelift-codegen",
