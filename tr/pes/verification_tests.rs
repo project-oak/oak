@@ -23,16 +23,16 @@ use x509_cert::{
 
 use super::*;
 
-fn load_globalsign_token_der() -> Vec<u8> {
+pub(crate) fn load_globalsign_token_der() -> Vec<u8> {
     let token_b64 = include_str!("testdata/globalsign_token.b64").trim();
     STANDARD.decode(token_b64).expect("valid base64 in globalsign_token.b64")
 }
 
-fn make_attr(oid: ObjectIdentifier, values: Vec<Any>) -> Attribute {
+pub(crate) fn make_attr(oid: ObjectIdentifier, values: Vec<Any>) -> Attribute {
     Attribute { oid, values: SetOfVec::try_from(values).unwrap() }
 }
 
-fn encode_signed_data(sd: &SignedData<'_>) -> Vec<u8> {
+pub(crate) fn encode_signed_data(sd: &SignedData<'_>) -> Vec<u8> {
     let sd_der = sd.to_der().unwrap();
     ContentInfo {
         content_type: ID_SIGNED_DATA,

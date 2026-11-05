@@ -625,13 +625,10 @@ fn test_parse_pes_confirmation_json_file() {
 
 #[test]
 fn test_parse_tsa_root_certs() {
-    use base64::{Engine as _, engine::general_purpose::STANDARD};
-
     let empty: &[Vec<u8>] = &[];
     assert!(time_stamp_token::parse_tsa_root_certs(empty).unwrap().is_empty());
 
-    let token_b64 = include_str!("testdata/globalsign_token.b64").trim();
-    let token_der = STANDARD.decode(token_b64).expect("valid base64 in globalsign_token.b64");
+    let token_der = time_stamp_token::verification_tests::load_globalsign_token_der();
     let content_info =
         time_stamp_token::ContentInfo::from_der(&token_der).expect("should parse ContentInfo");
     let signed_data = content_info
@@ -657,4 +654,286 @@ fn test_parse_tsa_root_certs() {
 
     let invalid = time_stamp_token::parse_tsa_root_certs(&[b"not valid der".to_vec()]);
     assert!(matches!(invalid, Err(time_stamp_token::TimeStampTokenError::Der(_))));
+}
+
+struct TestPki {
+    root_cert: x509_cert::Certificate,
+    intermediate_cert: x509_cert::Certificate,
+    signer_cert: x509_cert::Certificate,
+    signer_key: p256::ecdsa::SigningKey,
+}
+
+fn build_test_tsa_pki() -> TestPki {
+    use oak_time::make_instant;
+    use x509_cert::{Version, der::asn1::OctetString, ext::pkix::SubjectKeyIdentifier};
+
+    use crate::time_stamp_token::chain_tests::{
+        CertSpec, build_cert, default_ca_extensions, default_signer_extensions, make_ext, p256_key,
+    };
+
+    let root_key = p256_key(0x11);
+    let interm_key = p256_key(0x22);
+    let signer_key = p256_key(0x33);
+
+    let root_cert = build_cert(&CertSpec {
+        version: Version::V3,
+        serial: 1,
+        issuer_cn: "Test TSA Root CA",
+        subject_cn: "Test TSA Root CA",
+        not_before: make_instant!("2020-01-01T00:00:00Z"),
+        not_after: make_instant!("2035-01-01T00:00:00Z"),
+        subject_key: &root_key,
+        issuer_key: &root_key,
+        extensions: default_ca_extensions(None),
+    });
+
+    let intermediate_cert = build_cert(&CertSpec {
+        version: Version::V3,
+        serial: 2,
+        issuer_cn: "Test TSA Root CA",
+        subject_cn: "Test TSA Intermediate CA",
+        not_before: make_instant!("2024-01-01T00:00:00Z"),
+        not_after: make_instant!("2030-01-01T00:00:00Z"),
+        subject_key: &interm_key,
+        issuer_key: &root_key,
+        extensions: default_ca_extensions(None),
+    });
+
+    let mut signer_exts = default_signer_extensions();
+    signer_exts.push(make_ext(
+        false,
+        &SubjectKeyIdentifier(OctetString::new([0xAA, 0xBB, 0xCC, 0xDD]).unwrap()),
+    ));
+    let signer_cert = build_cert(&CertSpec {
+        version: Version::V3,
+        serial: 3,
+        issuer_cn: "Test TSA Intermediate CA",
+        subject_cn: "Test TSA Signer",
+        not_before: make_instant!("2026-01-01T00:00:00Z"),
+        not_after: make_instant!("2028-01-01T00:00:00Z"),
+        subject_key: &signer_key,
+        issuer_key: &interm_key,
+        extensions: signer_exts,
+    });
+
+    TestPki { root_cert, intermediate_cert, signer_cert, signer_key }
+}
+
+fn create_test_pes_sig_and_cert() -> (Vec<u8>, x509_cert::Certificate) {
+    let (pes_confirmation_bytes, _, _) =
+        create_test_pes_confirmation_bytes(b"{\"artifact\":\"test\"}");
+    let pe = crate::parse_pes_confirmation(&pes_confirmation_bytes).unwrap();
+    let pes_sig = &pe.endorsement_signatures[0];
+    let cert_der =
+        crate::extract_raw_vm_bytes(pes_sig.verification_material.as_ref().unwrap()).unwrap();
+    let pes_cert = x509_cert::Certificate::from_der(cert_der).unwrap();
+    (pes_sig.signature.clone(), pes_cert)
+}
+
+fn build_test_time_stamp_token_der(
+    pes_signature: &[u8],
+    gen_time: Instant,
+    certs: &[&x509_cert::Certificate],
+    signer_issuer_cn: &str,
+    signer_serial: u32,
+    use_ski_sid: Option<&[u8]>,
+    signer_key: &p256::ecdsa::SigningKey,
+) -> Vec<u8> {
+    use const_oid::{
+        ObjectIdentifier,
+        db::{
+            rfc4519::CN,
+            rfc5911::{ID_CONTENT_TYPE, ID_MESSAGE_DIGEST},
+            rfc5912::{ECDSA_WITH_SHA_256, ID_SHA_256, ID_SHA_384},
+        },
+    };
+    use oak_digest::{Sha256, Sha384};
+    use p256::ecdsa::signature::Signer;
+    use x509_cert::{
+        attr::{AttributeTypeAndValue, Attributes},
+        der::{
+            Any,
+            asn1::{OctetString, OctetStringRef, SetOfVec, Utf8StringRef},
+        },
+        name::{RdnSequence, RelativeDistinguishedName},
+        serial_number::SerialNumber,
+        spki::AlgorithmIdentifierOwned,
+    };
+
+    use crate::time_stamp_token::verification_tests::{encode_signed_data, make_attr};
+
+    // 1. Build TSTInfo (using SHA-384 for messageImprint like PES SimpleTsaClient).
+    let imprint_hash = Sha384::from_contents(pes_signature);
+    let tst_info = time_stamp_token::TstInfo {
+        version: 1,
+        policy: ObjectIdentifier::new_unwrap("1.2.3.4.5"),
+        message_imprint: time_stamp_token::MessageImprint {
+            hash_algorithm: AlgorithmIdentifierOwned { oid: ID_SHA_384, parameters: None },
+            hashed_message: OctetString::new(imprint_hash.as_ref()).unwrap(),
+        },
+        serial_number: SerialNumber::from(42u32),
+        gen_time: time_stamp_token::Rfc3161GeneralizedTime(gen_time),
+        accuracy: None,
+        ordering: false,
+        nonce: None,
+        tsa: None,
+        extensions: None,
+    };
+    let tst_info_der = tst_info.to_der().unwrap();
+
+    // 2. Build SignedAttributes (content-type = id-ct-TSTInfo, message-digest =
+    //    SHA-256(tst_info_der), id-aa-signingCertificateV2 = SHA-256(signer_cert)).
+    let tst_digest = Sha256::from_contents(&tst_info_der);
+    let signer_cert_der = certs[0].to_der().unwrap();
+    let signer_cert_digest = Sha256::from_contents(&signer_cert_der);
+    let signing_cert_v2 = time_stamp_token::SigningCertificateV2 {
+        certs: vec![time_stamp_token::EssCertIdV2 {
+            hash_algorithm: AlgorithmIdentifierOwned { oid: ID_SHA_256, parameters: None },
+            cert_hash: OctetString::new(signer_cert_digest.as_ref()).unwrap(),
+            issuer_serial: None,
+        }],
+        policies: None,
+    };
+    let signing_cert_v2_der = signing_cert_v2.to_der().unwrap();
+    let mut signed_attrs = Attributes::new();
+    signed_attrs
+        .insert(make_attr(
+            ID_CONTENT_TYPE,
+            vec![Any::encode_from(&time_stamp_token::ID_CT_TST_INFO).unwrap()],
+        ))
+        .unwrap();
+    signed_attrs
+        .insert(make_attr(
+            ID_MESSAGE_DIGEST,
+            vec![Any::encode_from(&OctetString::new(tst_digest.as_ref()).unwrap()).unwrap()],
+        ))
+        .unwrap();
+    signed_attrs
+        .insert(make_attr(
+            time_stamp_token::ID_AA_SIGNING_CERTIFICATE_V2,
+            vec![Any::from_der(&signing_cert_v2_der).unwrap()],
+        ))
+        .unwrap();
+
+    let signed_attrs_der = signed_attrs.to_der().unwrap();
+    let cms_sig: p256::ecdsa::Signature = signer_key.sign(&signed_attrs_der);
+    let cms_sig_der = cms_sig.to_der();
+
+    // 3. Build SignerInfo.
+    let (si_version, sid) = if let Some(ski_bytes) = use_ski_sid {
+        (
+            3,
+            time_stamp_token::SignerIdentifier::SubjectKeyIdentifier(
+                OctetString::new(ski_bytes).unwrap(),
+            ),
+        )
+    } else {
+        (
+            1,
+            time_stamp_token::SignerIdentifier::IssuerAndSerialNumber(
+                time_stamp_token::IssuerAndSerialNumber {
+                    issuer: RdnSequence(vec![RelativeDistinguishedName(
+                        SetOfVec::try_from(vec![AttributeTypeAndValue {
+                            oid: CN,
+                            value: Any::from(Utf8StringRef::new(signer_issuer_cn).unwrap()),
+                        }])
+                        .unwrap(),
+                    )]),
+                    serial_number: SerialNumber::from(signer_serial),
+                },
+            ),
+        )
+    };
+
+    let sha256_alg = AlgorithmIdentifierOwned { oid: ID_SHA_256, parameters: None };
+    let signer_info = time_stamp_token::SignerInfo {
+        version: si_version,
+        sid,
+        digest_algorithm: sha256_alg.clone(),
+        signed_attrs: Some(signed_attrs),
+        signature_algorithm: AlgorithmIdentifierOwned { oid: ECDSA_WITH_SHA_256, parameters: None },
+        signature: OctetString::new(cms_sig_der.as_bytes()).unwrap(),
+        unsigned_attrs: None,
+    };
+
+    // 4. Build SignedData and ContentInfo.
+    let signed_data = time_stamp_token::SignedData {
+        version: 3,
+        digest_algorithms: SetOfVec::try_from(vec![sha256_alg]).unwrap(),
+        encap_content_info: time_stamp_token::EncapsulatedContentInfo {
+            econtent_type: time_stamp_token::ID_CT_TST_INFO,
+            econtent: Some(OctetStringRef::new(&tst_info_der).unwrap()),
+        },
+        certificates: Some(certs.iter().map(|c| (*c).clone()).collect()),
+        crls: None,
+        signer_infos: SetOfVec::try_from(vec![signer_info]).unwrap(),
+    };
+    encode_signed_data(&signed_data)
+}
+
+#[test]
+fn test_verify_time_stamp_token_subject_key_identifier_sid() {
+    use oak_time::make_instant;
+    use x509_cert::{Version, der::asn1::OctetString, ext::pkix::SubjectKeyIdentifier};
+
+    use crate::time_stamp_token::{
+        chain_tests::{CertSpec, build_cert, default_signer_extensions, make_ext, p256_key},
+        verification_tests::encode_signed_data,
+    };
+
+    let (pes_signature, pes_cert) = create_test_pes_sig_and_cert();
+    let pki = build_test_tsa_pki();
+
+    let base_token_der = build_test_time_stamp_token_der(
+        &pes_signature,
+        make_instant!("2026-06-15T12:00:00Z"),
+        &[&pki.signer_cert, &pki.intermediate_cert],
+        "Test TSA Intermediate CA",
+        3,
+        Some(&[0xAA, 0xBB, 0xCC, 0xDD]),
+        &pki.signer_key,
+    );
+    assert_eq!(
+        time_stamp_token::verify_time_stamp_token(
+            &base_token_der,
+            &pes_signature,
+            &pes_cert,
+            core::slice::from_ref(&pki.root_cert),
+        ),
+        Ok(())
+    );
+
+    // Even when an older/expired TSA signer certificate sharing the same SKI
+    // appears first in `SignedData.certificates`, SKI lookup tries all
+    // matching candidates and succeeds on the renewed certificate bound by
+    // `SigningCertificateV2`.
+    let mut signer_exts = default_signer_extensions();
+    signer_exts.push(make_ext(
+        false,
+        &SubjectKeyIdentifier(OctetString::new([0xAA, 0xBB, 0xCC, 0xDD]).unwrap()),
+    ));
+    let expired_same_ski_signer = build_cert(&CertSpec {
+        version: Version::V3,
+        serial: 29,
+        issuer_cn: "Test TSA Intermediate CA",
+        subject_cn: "Test TSA Signer",
+        not_before: make_instant!("2024-01-01T00:00:00Z"),
+        not_after: make_instant!("2025-01-01T00:00:00Z"),
+        subject_key: &pki.signer_key,
+        issuer_key: &p256_key(0x22),
+        extensions: signer_exts,
+    });
+    let base_ci = time_stamp_token::ContentInfo::from_der(&base_token_der).unwrap();
+    let mut sd = base_ci.content.decode_as::<time_stamp_token::SignedData<'_>>().unwrap();
+    sd.certificates.as_mut().unwrap().insert(0, expired_same_ski_signer);
+    let renewed_token_der = encode_signed_data(&sd);
+    assert_eq!(
+        time_stamp_token::verify_time_stamp_token(
+            &renewed_token_der,
+            &pes_signature,
+            &pes_cert,
+            core::slice::from_ref(&pki.root_cert),
+        ),
+        Ok(())
+    );
 }

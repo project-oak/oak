@@ -49,19 +49,19 @@ use super::{
     verify_certificate_chain, verify_signer_cert_extensions,
 };
 
-struct CertSpec<'a> {
-    version: Version,
-    serial: u32,
-    issuer_cn: &'a str,
-    subject_cn: &'a str,
-    not_before: Instant,
-    not_after: Instant,
-    subject_key: &'a p256::ecdsa::SigningKey,
-    issuer_key: &'a p256::ecdsa::SigningKey,
-    extensions: Vec<Extension>,
+pub(crate) struct CertSpec<'a> {
+    pub(crate) version: Version,
+    pub(crate) serial: u32,
+    pub(crate) issuer_cn: &'a str,
+    pub(crate) subject_cn: &'a str,
+    pub(crate) not_before: Instant,
+    pub(crate) not_after: Instant,
+    pub(crate) subject_key: &'a p256::ecdsa::SigningKey,
+    pub(crate) issuer_key: &'a p256::ecdsa::SigningKey,
+    pub(crate) extensions: Vec<Extension>,
 }
 
-fn p256_key(seed: u8) -> p256::ecdsa::SigningKey {
+pub(crate) fn p256_key(seed: u8) -> p256::ecdsa::SigningKey {
     p256::ecdsa::SigningKey::from_slice(&[seed; 32]).expect("valid P-256 secret scalar")
 }
 
@@ -71,7 +71,7 @@ fn instant_to_x509_time(instant: Instant) -> Time {
     Time::GeneralTime(GeneralizedTime::from_date_time(dt))
 }
 
-fn make_ext<T: AssociatedOid + Encode>(critical: bool, value: &T) -> Extension {
+pub(crate) fn make_ext<T: AssociatedOid + Encode>(critical: bool, value: &T) -> Extension {
     Extension {
         extn_id: T::OID,
         critical,
@@ -83,7 +83,7 @@ fn raw_ext(extn_id: ObjectIdentifier, critical: bool, raw_der: &[u8]) -> Extensi
     Extension { extn_id, critical, extn_value: OctetString::new(raw_der).unwrap() }
 }
 
-fn build_cert(spec: &CertSpec<'_>) -> Certificate {
+pub(crate) fn build_cert(spec: &CertSpec<'_>) -> Certificate {
     let sig_alg = AlgorithmIdentifierOwned { oid: ECDSA_WITH_SHA_256, parameters: None };
     let spki_der = spec.subject_key.verifying_key().to_public_key_der().unwrap();
     let tbs_certificate = TbsCertificate {
@@ -113,14 +113,14 @@ fn build_cert(spec: &CertSpec<'_>) -> Certificate {
     }
 }
 
-fn default_ca_extensions(path_len_constraint: Option<u8>) -> Vec<Extension> {
+pub(crate) fn default_ca_extensions(path_len_constraint: Option<u8>) -> Vec<Extension> {
     vec![
         make_ext(true, &BasicConstraints { ca: true, path_len_constraint }),
         make_ext(true, &KeyUsage(KeyUsages::KeyCertSign.into())),
     ]
 }
 
-fn default_signer_extensions() -> Vec<Extension> {
+pub(crate) fn default_signer_extensions() -> Vec<Extension> {
     vec![
         make_ext(true, &BasicConstraints { ca: false, path_len_constraint: None }),
         make_ext(true, &KeyUsage(KeyUsages::DigitalSignature.into())),

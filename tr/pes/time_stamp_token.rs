@@ -95,13 +95,13 @@ use x509_cert::{
 
 #[cfg(test)]
 #[path = "chain_tests.rs"]
-mod chain_tests;
+pub(crate) mod chain_tests;
 #[cfg(test)]
 #[path = "signature_tests.rs"]
 mod signature_tests;
 #[cfg(test)]
 #[path = "verification_tests.rs"]
-mod verification_tests;
+pub(crate) mod verification_tests;
 
 /// PKCS#9 `id-ct-TSTInfo` (`1.2.840.113549.1.9.16.1.4`), RFC 3161 Section
 /// 2.4.2.
