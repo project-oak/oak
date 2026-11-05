@@ -78,6 +78,126 @@ pub(crate) const ID_AA_SIGNING_CERTIFICATE_V2: ObjectIdentifier =
 pub(crate) const ID_AA_CMS_ALGORITHM_PROTECTION: ObjectIdentifier =
     ObjectIdentifier::new_unwrap("1.2.840.113549.1.9.52");
 
+/// Structured error returned when validating an RFC 3161 `TimeStampToken`.
+#[allow(dead_code)]
+#[derive(thiserror::Error, Debug, PartialEq, Eq)]
+pub enum TimeStampTokenError {
+    #[error("decoding ASN.1 DER: {0}")]
+    Der(x509_cert::der::Error),
+
+    #[error("empty trusted TSA root certificate list")]
+    EmptyTrustedRoots,
+
+    #[error("missing TimeStampToken in PES signature")]
+    MissingTimeStampToken,
+
+    #[error("unexpected CMS content type {0}, expected id-signedData")]
+    UnexpectedContentType(ObjectIdentifier),
+
+    #[error("unexpected encapsulated content type {0}, expected id-ct-TSTInfo")]
+    UnexpectedEncapsulatedContentType(ObjectIdentifier),
+
+    #[error("missing encapsulated TSTInfo content")]
+    MissingTstInfoContent,
+
+    #[error("unsupported TSTInfo version {0}, expected 1")]
+    UnsupportedTstInfoVersion(u8),
+
+    #[error("invalid TSTInfo accuracy: millis and micros must be in 1 to 999")]
+    InvalidTstInfoAccuracy,
+
+    #[error("unrecognized critical extension {0} in TSTInfo")]
+    UnhandledCriticalTstInfoExtension(ObjectIdentifier),
+
+    #[error("missing SignerInfo in SignedData")]
+    MissingSignerInfo,
+
+    #[error("multiple SignerInfo entries in SignedData are not supported")]
+    MultipleSignerInfos,
+
+    #[error("invalid SignerInfo version {0} for SignerIdentifier")]
+    InvalidSignerInfoVersion(u8),
+
+    #[error("signer digest algorithm {0} is not listed in SignedData.digestAlgorithms")]
+    DigestAlgorithmNotInSignedData(ObjectIdentifier),
+
+    #[error("missing signedAttrs in SignerInfo")]
+    MissingSignedAttrs,
+
+    #[error("missing or invalid content-type attribute in signedAttrs")]
+    InvalidSignedContentType,
+
+    #[error("missing message-digest attribute in signedAttrs")]
+    MissingMessageDigestAttr,
+
+    #[error("signedAttrs message-digest does not match TSTInfo digest")]
+    MessageDigestMismatch,
+
+    #[error("missing or invalid signing-certificate attribute in signedAttrs")]
+    InvalidSigningCertificateAttr,
+
+    #[error("signing-certificate certHash in signedAttrs does not match TSA signer certificate")]
+    SigningCertificateMismatch,
+
+    #[error("messageImprint digest in TSTInfo does not match PES signature digest")]
+    MessageImprintMismatch,
+
+    #[error("unsupported digest algorithm {0}")]
+    UnsupportedDigestAlgorithm(ObjectIdentifier),
+
+    #[error("unsupported signature algorithm {0}")]
+    UnsupportedSignatureAlgorithm(ObjectIdentifier),
+
+    #[error("digest algorithm {digest_alg} is incompatible with signature algorithm {sig_alg}")]
+    IncompatibleDigestAndSignatureAlgorithms {
+        digest_alg: ObjectIdentifier,
+        sig_alg: ObjectIdentifier,
+    },
+
+    #[error("no TSA signer certificate matching SignerIdentifier found in token")]
+    SignerCertificateNotFound,
+
+    #[error("signer certificate missing critical ExtendedKeyUsage with id-kp-timeStamping")]
+    MissingTimeStampingExtendedKeyUsage,
+
+    #[error("signer certificate must not be a CA certificate")]
+    SignerCertificateIsCa,
+
+    #[error("signer certificate KeyUsage does not permit digitalSignature")]
+    MissingSignerDigitalSignatureKeyUsage,
+
+    #[error("invalid cryptographic signature: {0}")]
+    SignatureVerification(String),
+
+    #[error("certificate is not valid at timestamp generation time")]
+    CertificateValidityPeriod,
+
+    #[error("timestamp generation time is outside PES certificate validity period")]
+    IssuanceTimeOutsidePesCertValidity,
+
+    #[error("issuer certificate missing BasicConstraints with cA=true")]
+    MissingCaBasicConstraints,
+
+    #[error("issuer certificate pathLenConstraint exceeded")]
+    PathLenConstraintExceeded,
+
+    #[error("issuer certificate KeyUsage does not permit keyCertSign")]
+    MissingKeyCertSignKeyUsage,
+
+    #[error("no valid certificate chain from TSA signer certificate to a trusted TSA root")]
+    UntrustedCertificateChain,
+}
+
+// `#[from]` cannot be used on `TimeStampTokenError::Der` because `#[from]`
+// implies `#[source]`, which requires `core::error::Error`, and `x509-cert`
+// (`der` 0.7) only implements `Error` for `der::Error` when its `std` feature
+// is enabled.
+impl From<x509_cert::der::Error> for TimeStampTokenError {
+    fn from(err: x509_cert::der::Error) -> Self {
+        Self::Der(err)
+    }
+}
+
 macro_rules! seq_len {
     ($($item:expr),* $(,)?) => {{
         let mut total = Length::ZERO;
