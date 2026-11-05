@@ -36,9 +36,10 @@
 //! - RFC 5754 (Using SHA2 Algorithms with CMS): <https://www.rfc-editor.org/rfc/rfc5754>
 //! - RFC 5758 (X.509 PKI Validation for DSA and ECDSA): <https://www.rfc-editor.org/rfc/rfc5758>
 
-// Helpers in this module are exercised by `parsing_tests` and `signature_tests`
-// in this commit; the non-test library entry point (`verify_time_stamp_token`)
-// is wired into `lib` in a follow-up commit, where this attribute is removed.
+// Helpers in this module are exercised by `parsing_tests`, `signature_tests`,
+// and `chain_tests` in this commit; the non-test library entry point
+// (`verify_time_stamp_token`) is wired into `lib` in a follow-up commit, where
+// this attribute is removed.
 #![cfg_attr(not(test), allow(dead_code))]
 
 use alloc::{
@@ -50,10 +51,16 @@ use alloc::{
 use chrono::{DateTime, Datelike, NaiveDateTime, Timelike, Utc};
 use const_oid::{
     ObjectIdentifier,
-    db::rfc5912::{
-        ECDSA_WITH_SHA_256, ECDSA_WITH_SHA_384, ECDSA_WITH_SHA_512, ID_EC_PUBLIC_KEY, ID_SHA_256,
-        ID_SHA_384, ID_SHA_512, RSA_ENCRYPTION, SECP_256_R_1, SHA_256_WITH_RSA_ENCRYPTION,
-        SHA_384_WITH_RSA_ENCRYPTION, SHA_512_WITH_RSA_ENCRYPTION,
+    db::{
+        rfc5280::{
+            ANY_EXTENDED_KEY_USAGE, ID_CE_BASIC_CONSTRAINTS, ID_CE_EXT_KEY_USAGE, ID_CE_KEY_USAGE,
+            ID_KP_TIME_STAMPING,
+        },
+        rfc5912::{
+            ECDSA_WITH_SHA_256, ECDSA_WITH_SHA_384, ECDSA_WITH_SHA_512, ID_EC_PUBLIC_KEY,
+            ID_SHA_256, ID_SHA_384, ID_SHA_512, RSA_ENCRYPTION, SECP_256_R_1,
+            SHA_256_WITH_RSA_ENCRYPTION, SHA_384_WITH_RSA_ENCRYPTION, SHA_512_WITH_RSA_ENCRYPTION,
+        },
     },
 };
 use ecdsa::signature::hazmat::PrehashVerifier as _;
@@ -61,7 +68,7 @@ use oak_digest::{Digest, Sha256, Sha384, Sha512};
 use oak_time::Instant;
 use rsa::{Pkcs1v15Sign, RsaPublicKey, traits::PublicKeyParts as _};
 use x509_cert::{
-    Certificate,
+    Certificate, Version,
     attr::Attributes,
     der::{
         self, AnyRef, Choice, Decode, DecodeValue, DerOrd, Encode, EncodeValue, FixedTag, Header,
@@ -74,6 +81,7 @@ use x509_cert::{
     ext::{
         Extensions,
         pkix::{
+            BasicConstraints, ExtendedKeyUsage, KeyUsage, SubjectKeyIdentifier,
             certpolicy::PolicyInformation,
             name::{GeneralName, GeneralNames},
         },
@@ -83,6 +91,9 @@ use x509_cert::{
     spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned},
 };
 
+#[cfg(test)]
+#[path = "chain_tests.rs"]
+mod chain_tests;
 #[cfg(test)]
 #[path = "signature_tests.rs"]
 mod signature_tests;
@@ -102,6 +113,15 @@ pub(crate) const ID_AA_SIGNING_CERTIFICATE_V2: ObjectIdentifier =
 #[cfg(test)]
 pub(crate) const ID_AA_CMS_ALGORITHM_PROTECTION: ObjectIdentifier =
     ObjectIdentifier::new_unwrap("1.2.840.113549.1.9.52");
+
+/// Maximum certificate chain length from leaf TSA signer to root CA
+/// (inclusive).
+const MAX_CHAIN_DEPTH: usize = 8;
+
+/// Maximum number of candidate issuer verifications attempted across a single
+/// [`verify_certificate_chain`] invocation to bound backtracking work on cyclic
+/// or duplicate certificate graphs.
+const MAX_CHAIN_VERIFICATIONS: usize = 32;
 
 /// Structured error returned when validating an RFC 3161 `TimeStampToken`.
 #[allow(dead_code)]
@@ -133,6 +153,12 @@ pub enum TimeStampTokenError {
 
     #[error("unrecognized critical extension {0} in TSTInfo")]
     UnhandledCriticalTstInfoExtension(ObjectIdentifier),
+
+    #[error("unsupported X.509 certificate version, expected v3")]
+    UnsupportedCertificateVersion,
+
+    #[error("unrecognized critical extension {0} in certificate")]
+    UnhandledCriticalCertificateExtension(ObjectIdentifier),
 
     #[error("missing SignerInfo in SignedData")]
     MissingSignerInfo,
@@ -214,6 +240,9 @@ pub enum TimeStampTokenError {
 
     #[error("issuer certificate KeyUsage does not permit keyCertSign")]
     MissingKeyCertSignKeyUsage,
+
+    #[error("issuer certificate ExtendedKeyUsage does not permit id-kp-timeStamping")]
+    InvalidCaExtendedKeyUsage,
 
     #[error("no valid certificate chain from TSA signer certificate to a trusted TSA root")]
     UntrustedCertificateChain,
@@ -1319,4 +1348,334 @@ pub fn parse_tsa_root_certs(
         .iter()
         .map(|der_bytes| Certificate::from_der(der_bytes).map_err(TimeStampTokenError::from))
         .collect()
+}
+
+/// Finds all candidate TSA signer certificates in `certificates` matching `sid`
+/// per RFC 5652 Section 5.3 (<https://www.rfc-editor.org/rfc/rfc5652#section-5.3>)
+/// and RFC 5280 Section 4.2.1.2
+/// (<https://www.rfc-editor.org/rfc/rfc5280#section-4.2.1.2>).
+///
+/// Multiple certificates may match when `sid` is
+/// [`SignerIdentifier::SubjectKeyIdentifier`] (for example, when a token
+/// bundles both an older and a renewed TSA signer certificate sharing the same
+/// public key). Returns [`TimeStampTokenError::SignerCertificateNotFound`] if
+/// no certificate matches `sid`.
+fn find_signer_certificates<'a>(
+    certificates: &'a [Certificate],
+    sid: &SignerIdentifier,
+) -> Result<Vec<&'a Certificate>, TimeStampTokenError> {
+    let mut matches = Vec::new();
+    for cert in certificates {
+        match sid {
+            SignerIdentifier::IssuerAndSerialNumber(iasn) => {
+                if cert.tbs_certificate.issuer == iasn.issuer
+                    && cert.tbs_certificate.serial_number == iasn.serial_number
+                {
+                    matches.push(cert);
+                }
+            }
+            SignerIdentifier::SubjectKeyIdentifier(expected_ski) => {
+                if let Some((_critical, SubjectKeyIdentifier(ski))) =
+                    cert.tbs_certificate.get::<SubjectKeyIdentifier>()?
+                    && &ski == expected_ski
+                {
+                    matches.push(cert);
+                }
+            }
+        }
+    }
+    if matches.is_empty() {
+        return Err(TimeStampTokenError::SignerCertificateNotFound);
+    }
+    Ok(matches)
+}
+
+/// Verifies that `cert` is an X.509 v3 certificate without duplicate extension
+/// OIDs or unrecognized critical extensions per:
+/// - RFC 5280 Section 4.1.2.1 (<https://www.rfc-editor.org/rfc/rfc5280#section-4.1.2.1>)
+/// - RFC 5280 Section 4.2 (<https://www.rfc-editor.org/rfc/rfc5280#section-4.2>)
+fn verify_v3_and_critical_extensions(
+    cert: &Certificate,
+    allowed_critical_oids: &[ObjectIdentifier],
+) -> Result<(), TimeStampTokenError> {
+    if cert.tbs_certificate.version != Version::V3 {
+        return Err(TimeStampTokenError::UnsupportedCertificateVersion);
+    }
+    if let Some(ref extensions) = cert.tbs_certificate.extensions {
+        for (i, ext) in extensions.iter().enumerate() {
+            if extensions[..i].iter().any(|prev| prev.extn_id == ext.extn_id) {
+                return Err(TimeStampTokenError::Der(der::ErrorKind::Failed.into()));
+            }
+            if ext.critical && !allowed_critical_oids.contains(&ext.extn_id) {
+                return Err(TimeStampTokenError::UnhandledCriticalCertificateExtension(
+                    ext.extn_id,
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Verifies version and extensions on the leaf TSA signer certificate per:
+/// - RFC 3161 Section 2.3 (<https://www.rfc-editor.org/rfc/rfc3161#section-2.3>)
+/// - RFC 5280 Section 4.2 (<https://www.rfc-editor.org/rfc/rfc5280#section-4.2>)
+/// - RFC 5280 Section 4.2.1.3 (<https://www.rfc-editor.org/rfc/rfc5280#section-4.2.1.3>)
+/// - RFC 5280 Section 4.2.1.9 (<https://www.rfc-editor.org/rfc/rfc5280#section-4.2.1.9>)
+/// - RFC 5280 Section 4.2.1.12 (<https://www.rfc-editor.org/rfc/rfc5280#section-4.2.1.12>)
+///
+/// Specifically:
+/// - Certificate `version` must be `v3` and no unrecognized critical extensions
+///   may be present.
+/// - `ExtendedKeyUsage` must be present, critical, and contain only
+///   `id-kp-timeStamping`.
+/// - `BasicConstraints` (if present) must not have `cA=true`.
+/// - `KeyUsage` (if present) must permit `digitalSignature` or
+///   `nonRepudiation`.
+fn verify_signer_cert_extensions(cert: &Certificate) -> Result<(), TimeStampTokenError> {
+    verify_v3_and_critical_extensions(
+        cert,
+        &[ID_CE_EXT_KEY_USAGE, ID_CE_BASIC_CONSTRAINTS, ID_CE_KEY_USAGE],
+    )?;
+
+    match cert.tbs_certificate.get::<ExtendedKeyUsage>()? {
+        Some((true, ExtendedKeyUsage(oids))) if oids.as_slice() == [ID_KP_TIME_STAMPING] => {}
+        _ => return Err(TimeStampTokenError::MissingTimeStampingExtendedKeyUsage),
+    }
+
+    if let Some((_critical, basic_constraints)) = cert.tbs_certificate.get::<BasicConstraints>()?
+        && basic_constraints.ca
+    {
+        return Err(TimeStampTokenError::SignerCertificateIsCa);
+    }
+
+    if let Some((_critical, key_usage)) = cert.tbs_certificate.get::<KeyUsage>()?
+        && !key_usage.digital_signature()
+        && !key_usage.non_repudiation()
+    {
+        return Err(TimeStampTokenError::MissingSignerDigitalSignatureKeyUsage);
+    }
+
+    Ok(())
+}
+
+/// Validates the X.509 certificate chain from `signer_cert` up to a trust
+/// anchor in `tsa_root_certs` at `validation_time` per:
+/// - RFC 3161 Section 2.3 (<https://www.rfc-editor.org/rfc/rfc3161#section-2.3>)
+/// - RFC 5280 Section 6.1 (<https://www.rfc-editor.org/rfc/rfc5280#section-6.1>)
+///
+/// Uses depth-first search with backtracking bounded by both
+/// [`MAX_CHAIN_DEPTH`] and [`MAX_CHAIN_VERIFICATIONS`] so that tokens bundling
+/// cross-signed or multiple candidate intermediate certificates resolve a valid
+/// path when one exists without risking exponential path-building blowup.
+fn verify_certificate_chain(
+    signer_cert: &Certificate,
+    token_certs: &[Certificate],
+    tsa_root_certs: &[Certificate],
+    validation_time: Instant,
+) -> Result<(), TimeStampTokenError> {
+    if tsa_root_certs.is_empty() {
+        return Err(TimeStampTokenError::EmptyTrustedRoots);
+    }
+    verify_cert_validity_contains(signer_cert, validation_time)?;
+    if tsa_root_certs.contains(signer_cert) {
+        return Ok(());
+    }
+
+    let mut visited: Vec<&Certificate> = Vec::with_capacity(MAX_CHAIN_DEPTH - 1);
+    visited.push(signer_cert);
+    let mut remaining_verifications = MAX_CHAIN_VERIFICATIONS;
+    verify_certificate_chain_recursive(
+        signer_cert,
+        token_certs,
+        tsa_root_certs,
+        validation_time,
+        0,
+        &mut visited,
+        &mut remaining_verifications,
+    )
+}
+
+fn record_direct_err(slot: &mut Option<TimeStampTokenError>, err: TimeStampTokenError) {
+    if slot.is_none() || !matches!(err, TimeStampTokenError::SignatureVerification(_)) {
+        *slot = Some(err);
+    }
+}
+
+fn record_branch_err(slot: &mut Option<TimeStampTokenError>, err: TimeStampTokenError) {
+    if slot.is_none() || !matches!(err, TimeStampTokenError::UntrustedCertificateChain) {
+        *slot = Some(err);
+    }
+}
+
+fn verify_certificate_chain_recursive<'a>(
+    current_cert: &'a Certificate,
+    token_certs: &'a [Certificate],
+    tsa_root_certs: &'a [Certificate],
+    validation_time: Instant,
+    non_self_issued_intermediates: usize,
+    visited: &mut Vec<&'a Certificate>,
+    remaining_verifications: &mut usize,
+) -> Result<(), TimeStampTokenError> {
+    // 1. Check if current_cert was directly issued and signed by a trusted root
+    //    anchor in tsa_root_certs.
+    let mut root_err: Option<TimeStampTokenError> = None;
+    for root in tsa_root_certs {
+        if root.tbs_certificate.subject != current_cert.tbs_certificate.issuer {
+            continue;
+        }
+        if *remaining_verifications == 0 {
+            break;
+        }
+        *remaining_verifications -= 1;
+        match verify_issuer(current_cert, root, validation_time, non_self_issued_intermediates) {
+            Ok(()) => return Ok(()),
+            Err(err) => record_direct_err(&mut root_err, err),
+        }
+    }
+
+    // Adding another intermediate requires at least `visited.len() + 2`
+    // certificates (`visited` + `candidate` + `root`), which would exceed
+    // `MAX_CHAIN_DEPTH`.
+    if visited.len() >= MAX_CHAIN_DEPTH - 1 {
+        return Err(root_err.unwrap_or(TimeStampTokenError::UntrustedCertificateChain));
+    }
+
+    // 2. Otherwise, try candidate intermediate issuers in token_certs with bounded
+    //    backtracking.
+    let mut verified_branch_err: Option<TimeStampTokenError> = None;
+    let mut candidate_err: Option<TimeStampTokenError> = None;
+    for candidate in token_certs {
+        if *remaining_verifications == 0 {
+            break;
+        }
+        if visited.contains(&candidate) || tsa_root_certs.contains(candidate) {
+            continue;
+        }
+        if candidate.tbs_certificate.subject != current_cert.tbs_certificate.issuer {
+            continue;
+        }
+        *remaining_verifications -= 1;
+        match verify_issuer(current_cert, candidate, validation_time, non_self_issued_intermediates)
+        {
+            Ok(()) => {
+                let next_intermediates =
+                    if candidate.tbs_certificate.subject != candidate.tbs_certificate.issuer {
+                        non_self_issued_intermediates + 1
+                    } else {
+                        non_self_issued_intermediates
+                    };
+                visited.push(candidate);
+                match verify_certificate_chain_recursive(
+                    candidate,
+                    token_certs,
+                    tsa_root_certs,
+                    validation_time,
+                    next_intermediates,
+                    visited,
+                    remaining_verifications,
+                ) {
+                    Ok(()) => return Ok(()),
+                    Err(err) => {
+                        visited.pop();
+                        record_branch_err(&mut verified_branch_err, err);
+                    }
+                }
+            }
+            Err(err) => record_direct_err(&mut candidate_err, err),
+        }
+    }
+
+    let err = match (verified_branch_err, root_err) {
+        (Some(branch_err), _)
+            if !matches!(branch_err, TimeStampTokenError::UntrustedCertificateChain) =>
+        {
+            branch_err
+        }
+        (_, Some(r_err)) if !matches!(r_err, TimeStampTokenError::SignatureVerification(_)) => {
+            r_err
+        }
+        (Some(branch_err), _) => branch_err,
+        (None, Some(r_err)) => r_err,
+        (None, None) => candidate_err.unwrap_or(TimeStampTokenError::UntrustedCertificateChain),
+    };
+    Err(err)
+}
+
+/// Verifies that `issuer` signed `subject`, is valid at `validation_time`, and
+/// satisfies CA constraints for `intermediates_below`.
+fn verify_issuer(
+    subject: &Certificate,
+    issuer: &Certificate,
+    validation_time: Instant,
+    intermediates_below: usize,
+) -> Result<(), TimeStampTokenError> {
+    verify_certificate_signature(subject, issuer)?;
+    verify_cert_validity_contains(issuer, validation_time)?;
+    verify_ca_constraints(issuer, intermediates_below)
+}
+
+/// Verifies that `cert`'s validity period (`not_before..=not_after`) contains
+/// `instant` per RFC 5280 Section 4.1.2.5
+/// (<https://www.rfc-editor.org/rfc/rfc5280#section-4.1.2.5>).
+fn verify_cert_validity_contains(
+    cert: &Certificate,
+    instant: Instant,
+) -> Result<(), TimeStampTokenError> {
+    let validity = &cert.tbs_certificate.validity;
+    let not_before =
+        Instant::from_unix_nanos(validity.not_before.to_unix_duration().as_nanos() as i128);
+    let not_after =
+        Instant::from_unix_nanos(validity.not_after.to_unix_duration().as_nanos() as i128);
+
+    if instant < not_before || instant > not_after {
+        return Err(TimeStampTokenError::CertificateValidityPeriod);
+    }
+    Ok(())
+}
+
+/// Verifies version and CA extensions (`BasicConstraints`, `KeyUsage`,
+/// `ExtendedKeyUsage`, and critical extensions) on a CA certificate per:
+/// - RFC 5280 Section 4.2 (<https://www.rfc-editor.org/rfc/rfc5280#section-4.2>)
+/// - RFC 5280 Section 4.2.1.3 (<https://www.rfc-editor.org/rfc/rfc5280#section-4.2.1.3>)
+/// - RFC 5280 Section 4.2.1.9 (<https://www.rfc-editor.org/rfc/rfc5280#section-4.2.1.9>)
+/// - RFC 5280 Section 4.2.1.12 (<https://www.rfc-editor.org/rfc/rfc5280#section-4.2.1.12>)
+/// - RFC 5280 Section 6.1.4(k)-(o) (<https://www.rfc-editor.org/rfc/rfc5280#section-6.1.4>)
+fn verify_ca_constraints(
+    ca_cert: &Certificate,
+    intermediates_below: usize,
+) -> Result<(), TimeStampTokenError> {
+    verify_v3_and_critical_extensions(
+        ca_cert,
+        &[ID_CE_BASIC_CONSTRAINTS, ID_CE_KEY_USAGE, ID_CE_EXT_KEY_USAGE],
+    )?;
+
+    let Some((_critical, basic_constraints)) = ca_cert.tbs_certificate.get::<BasicConstraints>()?
+    else {
+        return Err(TimeStampTokenError::MissingCaBasicConstraints);
+    };
+
+    if !basic_constraints.ca {
+        return Err(TimeStampTokenError::MissingCaBasicConstraints);
+    }
+    if let Some(max_len) = basic_constraints.path_len_constraint
+        && intermediates_below > usize::from(max_len)
+    {
+        return Err(TimeStampTokenError::PathLenConstraintExceeded);
+    }
+
+    if let Some((_critical, key_usage)) = ca_cert.tbs_certificate.get::<KeyUsage>()?
+        && !key_usage.key_cert_sign()
+    {
+        return Err(TimeStampTokenError::MissingKeyCertSignKeyUsage);
+    }
+
+    if let Some((_critical, ExtendedKeyUsage(oids))) =
+        ca_cert.tbs_certificate.get::<ExtendedKeyUsage>()?
+        && !oids.contains(&ID_KP_TIME_STAMPING)
+        && !oids.contains(&ANY_EXTENDED_KEY_USAGE)
+    {
+        return Err(TimeStampTokenError::InvalidCaExtendedKeyUsage);
+    }
+
+    Ok(())
 }
