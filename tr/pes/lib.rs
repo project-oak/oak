@@ -38,7 +38,8 @@ use oak_proto_rust::{
         verification_material::VerificationMaterial,
     },
     oak::attestation::v1::{
-        Claim, Endorsement, KeyType, PesEndorsementReferenceValue, VerifyingKey, VerifyingKeySet,
+        Claim, Endorsement, KeyType, PesEndorsementReferenceValue, TsaReferenceValue, VerifyingKey,
+        VerifyingKeySet, tsa_reference_value,
     },
 };
 use oak_time::Instant;
@@ -49,6 +50,58 @@ use x509_cert::der::{Decode, Encode};
 /// Authoritative source:
 /// <https://github.com/private-compute-infra-toolkit/public-endorsement-service/blob/main/docs/claims/publisher.md>
 const PUBLISHER_CLAIM_TYPE: &str = "https://github.com/private-compute-infra-toolkit/public-endorsement-service/blob/main/docs/claims/publisher.md";
+
+// Wired into `verify_pes_confirmation` in a follow-up commit, where
+// this attribute is removed.
+#[cfg_attr(not(test), allow(dead_code))]
+#[derive(Debug, PartialEq)]
+enum TsaRoots {
+    Disabled,
+    Roots(Vec<x509_cert::Certificate>),
+}
+
+/// Extracts and parses the trusted TSA root certificates from an optional
+/// [`TsaReferenceValue`].
+///
+/// Returns [`TsaRoots::Disabled`] when `tsa_ref_value` is `None` or
+/// [`tsa_reference_value::Type::Skip`], indicating that timestamp token
+/// verification is disabled.
+// Wired into `verify_pes_confirmation` in a follow-up commit, where
+// this attribute is removed.
+#[cfg_attr(not(test), allow(dead_code))]
+fn extract_tsa_root_certs(tsa_ref_value: Option<&TsaReferenceValue>) -> anyhow::Result<TsaRoots> {
+    match tsa_ref_value {
+        // TODO: b/571449442 - Require an explicit TsaReferenceValue once all
+        // clients are migrated.
+        None | Some(TsaReferenceValue { r#type: Some(tsa_reference_value::Type::Skip(_)) }) => {
+            Ok(TsaRoots::Disabled)
+        }
+        Some(TsaReferenceValue { r#type: None }) => {
+            anyhow::bail!("empty TSA reference value");
+        }
+        Some(TsaReferenceValue {
+            r#type: Some(tsa_reference_value::Type::TimeStampToken(chain_set)),
+        }) => {
+            if chain_set.reference_values.is_empty() {
+                return Err(time_stamp_token::TimeStampTokenError::EmptyTrustedRoots)
+                    .context("parsing trusted TSA root certificates");
+            }
+            let mut certs = Vec::with_capacity(chain_set.reference_values.len());
+            for chain_ref_value in &chain_set.reference_values {
+                if chain_ref_value.trusted_certificate_der.is_empty() {
+                    return Err(time_stamp_token::TimeStampTokenError::EmptyTrustedRoots)
+                        .context("parsing trusted TSA root certificates");
+                }
+                let roots = time_stamp_token::parse_tsa_root_certs(core::slice::from_ref(
+                    &chain_ref_value.trusted_certificate_der,
+                ))
+                .context("parsing trusted TSA root certificates")?;
+                certs.extend(roots);
+            }
+            Ok(TsaRoots::Roots(certs))
+        }
+    }
+}
 
 /// Verifies a PES confirmation (serialized PublicEndorsement) against a PES
 /// public key set.

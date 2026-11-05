@@ -26,6 +26,7 @@ use oak_proto_rust::{
         HexDigest,
         attestation::v1::{
             Claim, ClaimReferenceValue, Endorsement, KeyType, PesEndorsementReferenceValue,
+            SkipVerification, TimeStampTokenReferenceValue, TimeStampTokenReferenceValueSet,
             VerifyingKey, VerifyingKeySet, endorsement::Format as EndorsementFormat,
         },
     },
@@ -1453,4 +1454,93 @@ fn test_verify_time_stamp_token_backtracks_across_cross_signed_intermediate() {
         core::slice::from_ref(&pki.root_cert),
     );
     assert_eq!(res, Ok(()));
+}
+
+fn make_tsa_ref_value(trusted_certificate_der: Vec<u8>) -> TsaReferenceValue {
+    TsaReferenceValue {
+        r#type: Some(tsa_reference_value::Type::TimeStampToken(TimeStampTokenReferenceValueSet {
+            reference_values: vec![TimeStampTokenReferenceValue { trusted_certificate_der }],
+        })),
+    }
+}
+
+#[test]
+fn test_extract_tsa_root_certs() {
+    let pki = build_test_tsa_pki();
+    let root_der = pki.root_cert.to_der().unwrap();
+
+    // None and Skip both return TsaRoots::Disabled.
+    assert_eq!(extract_tsa_root_certs(None).unwrap(), TsaRoots::Disabled);
+    let skip_ref =
+        TsaReferenceValue { r#type: Some(tsa_reference_value::Type::Skip(SkipVerification {})) };
+    assert_eq!(extract_tsa_root_certs(Some(&skip_ref)).unwrap(), TsaRoots::Disabled);
+
+    // Empty TsaReferenceValue (no `type` oneof variant set) fails.
+    let unset_err = extract_tsa_root_certs(Some(&TsaReferenceValue { r#type: None }))
+        .expect_err("expected failure when TsaReferenceValue.type is None");
+    assert!(unset_err.to_string().contains("empty TSA reference value"));
+
+    // Empty reference_values or empty trusted_certificate_der fails with
+    // EmptyTrustedRoots.
+    let empty_set_err = extract_tsa_root_certs(Some(&TsaReferenceValue {
+        r#type: Some(tsa_reference_value::Type::TimeStampToken(TimeStampTokenReferenceValueSet {
+            reference_values: vec![],
+        })),
+    }))
+    .expect_err("expected failure with empty TimeStampTokenReferenceValueSet");
+    assert_eq!(
+        empty_set_err.downcast_ref::<time_stamp_token::TimeStampTokenError>(),
+        Some(&time_stamp_token::TimeStampTokenError::EmptyTrustedRoots)
+    );
+
+    let empty_der_err = extract_tsa_root_certs(Some(&make_tsa_ref_value(vec![])))
+        .expect_err("expected failure with empty trusted_certificate_der");
+    assert_eq!(
+        empty_der_err.downcast_ref::<time_stamp_token::TimeStampTokenError>(),
+        Some(&time_stamp_token::TimeStampTokenError::EmptyTrustedRoots)
+    );
+
+    // Malformed DER bytes fail with TimeStampTokenError::Der.
+    let malformed_err =
+        extract_tsa_root_certs(Some(&make_tsa_ref_value(b"not valid der".to_vec())))
+            .expect_err("expected failure with malformed TSA root cert DER");
+    assert!(matches!(
+        malformed_err.downcast_ref::<time_stamp_token::TimeStampTokenError>(),
+        Some(time_stamp_token::TimeStampTokenError::Der(_))
+    ));
+
+    // Valid DER parses into the expected certificate(s), including across
+    // multiple TimeStampTokenReferenceValue entries.
+    assert_eq!(
+        extract_tsa_root_certs(Some(&make_tsa_ref_value(root_der.clone()))).unwrap(),
+        TsaRoots::Roots(vec![pki.root_cert.clone()])
+    );
+
+    let intermediate_der = pki.intermediate_cert.to_der().unwrap();
+    let multi_ref = TsaReferenceValue {
+        r#type: Some(tsa_reference_value::Type::TimeStampToken(TimeStampTokenReferenceValueSet {
+            reference_values: vec![
+                TimeStampTokenReferenceValue { trusted_certificate_der: root_der.clone() },
+                TimeStampTokenReferenceValue { trusted_certificate_der: intermediate_der },
+            ],
+        })),
+    };
+    assert_eq!(
+        extract_tsa_root_certs(Some(&multi_ref)).unwrap(),
+        TsaRoots::Roots(vec![pki.root_cert, pki.intermediate_cert])
+    );
+
+    let trailing_empty_der_err = extract_tsa_root_certs(Some(&TsaReferenceValue {
+        r#type: Some(tsa_reference_value::Type::TimeStampToken(TimeStampTokenReferenceValueSet {
+            reference_values: vec![
+                TimeStampTokenReferenceValue { trusted_certificate_der: root_der },
+                TimeStampTokenReferenceValue { trusted_certificate_der: vec![] },
+            ],
+        })),
+    }))
+    .expect_err("expected failure when any entry has empty trusted_certificate_der");
+    assert_eq!(
+        trailing_empty_der_err.downcast_ref::<time_stamp_token::TimeStampTokenError>(),
+        Some(&time_stamp_token::TimeStampTokenError::EmptyTrustedRoots)
+    );
 }
