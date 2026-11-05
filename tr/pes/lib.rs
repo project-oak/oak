@@ -26,7 +26,11 @@ mod parsing_tests;
 #[cfg(test)]
 mod tests;
 
-use alloc::{format, string::ToString, vec::Vec};
+use alloc::{
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
 
 use anyhow::Context;
 use intoto::statement::{DefaultStatement, parse_statement};
@@ -51,9 +55,6 @@ use x509_cert::der::{Decode, Encode};
 /// <https://github.com/private-compute-infra-toolkit/public-endorsement-service/blob/main/docs/claims/publisher.md>
 const PUBLISHER_CLAIM_TYPE: &str = "https://github.com/private-compute-infra-toolkit/public-endorsement-service/blob/main/docs/claims/publisher.md";
 
-// Wired into `verify_pes_confirmation` in a follow-up commit, where
-// this attribute is removed.
-#[cfg_attr(not(test), allow(dead_code))]
 #[derive(Debug, PartialEq)]
 enum TsaRoots {
     Disabled,
@@ -66,9 +67,6 @@ enum TsaRoots {
 /// Returns [`TsaRoots::Disabled`] when `tsa_ref_value` is `None` or
 /// [`tsa_reference_value::Type::Skip`], indicating that timestamp token
 /// verification is disabled.
-// Wired into `verify_pes_confirmation` in a follow-up commit, where
-// this attribute is removed.
-#[cfg_attr(not(test), allow(dead_code))]
 fn extract_tsa_root_certs(tsa_ref_value: Option<&TsaReferenceValue>) -> anyhow::Result<TsaRoots> {
     match tsa_ref_value {
         // TODO: b/571449442 - Require an explicit TsaReferenceValue once all
@@ -103,17 +101,26 @@ fn extract_tsa_root_certs(tsa_ref_value: Option<&TsaReferenceValue>) -> anyhow::
     }
 }
 
-/// Verifies a PES confirmation (serialized PublicEndorsement) against a PES
-/// public key set.
+/// Verifies a PES confirmation (serialized `PublicEndorsement`) against a PES
+/// public key set and an optional Time-Stamp Authority (TSA) reference value.
 ///
 /// Verification succeeds if at least one signature in
 /// `PublicEndorsement.endorsement_signatures` matches a trusted key in
-/// `pes_key_set` and verifies cryptographically.
+/// `pes_key_set`, verifies cryptographically, and — when `tsa_ref_value`
+/// selects [`tsa_reference_value::Type::TimeStampToken`] — carries at least one
+/// RFC 3161 `TimeStampToken` (<https://www.rfc-editor.org/rfc/rfc3161>) whose
+/// CMS signature, message imprint, TSA certificate chain against a trusted root
+/// CA in `tsa_ref_value`, and issuance time within the PES X.509 certificate
+/// validity window are all valid.
+///
+/// If `tsa_ref_value` is `None` or `Some` with
+/// [`tsa_reference_value::Type::Skip`] selected, TSA timestamp verification is
+/// skipped and only the PES confirmation signature is verified. If
+/// `tsa_ref_value` is `Some` with `type` unset (`None`), verification fails.
 ///
 /// # Arguments
 ///
-/// * `pes_confirmation_bytes`: The serialized `PublicEndorsement` proto from
-///   PES.
+/// * `pes_confirmation_bytes`: The serialized `PublicEndorsement` from PES.
 /// * `pes_key_set`: The trusted public keys for verifying the PES signature.
 /// * `expected_endorsement_bytes`: The expected serialized endorsement that
 ///   should match the one in the confirmation.
@@ -121,6 +128,10 @@ fn extract_tsa_root_certs(tsa_ref_value: Option<&TsaReferenceValue>) -> anyhow::
 ///   endorser key in the PES confirmation is verified to match this key. When
 ///   `None`, endorser key matching is skipped (trust is established via PES
 ///   signature and publisher ID).
+/// * `tsa_ref_value`: Optional TSA reference value (see
+///   `oak.attestation.v1.TsaReferenceValue` in
+///   `proto/attestation/reference_value.proto`) controlling validation of RFC
+///   3161 timestamp tokens attached to PES signatures.
 ///
 /// # Returns
 ///
@@ -130,7 +141,10 @@ pub fn verify_pes_confirmation(
     pes_key_set: &VerifyingKeySet,
     expected_endorsement_bytes: &[u8],
     trusted_endorser_key: Option<&VerifyingKey>,
+    tsa_ref_value: Option<&TsaReferenceValue>,
 ) -> anyhow::Result<()> {
+    let tsa_roots = extract_tsa_root_certs(tsa_ref_value)?;
+
     let public_endorsement = parse_pes_confirmation(pes_confirmation_bytes)?;
 
     let endorsement = public_endorsement
@@ -190,23 +204,23 @@ pub fn verify_pes_confirmation(
     let mut errors = Vec::new();
     let mut verified = false;
     for (idx, pes_signature) in public_endorsement.endorsement_signatures.iter().enumerate() {
-        match verify_single_pes_signature(pes_signature, pes_key_set, &pae_bytes) {
+        match verify_single_pes_signature(pes_signature, pes_key_set, &pae_bytes, &tsa_roots) {
             Ok(()) => {
                 verified = true;
                 break;
             }
             Err(err) => {
-                errors.push(format!("signature[{idx}]: {err:#}"));
+                errors.push((idx, err));
             }
         }
     }
 
     if !verified {
-        anyhow::bail!(
-            "failed to verify any PES endorsement signature ({} tried): {}",
-            errors.len(),
-            errors.join("; ")
-        );
+        return Err(join_indexed_errors(
+            "verifying PES endorsement signatures",
+            "signature",
+            errors,
+        ));
     }
 
     let actual_digest = Sha256::from_contents(&endorsement.serialized);
@@ -222,17 +236,31 @@ pub fn verify_pes_confirmation(
     Ok(())
 }
 
+fn join_indexed_errors(
+    action: &str,
+    item_label: &str,
+    mut errors: Vec<(usize, anyhow::Error)>,
+) -> anyhow::Error {
+    let total = errors.len();
+    let (last_idx, last_err) = errors.pop().expect("errors must not be empty");
+    let mut details: Vec<String> =
+        errors.iter().map(|(idx, err)| format!("{item_label}[{idx}]: {err:#}")).collect();
+    details.push(format!("{item_label}[{last_idx}]"));
+    last_err.context(format!("{action} ({total} tried): {}", details.join("; ")))
+}
+
 fn verify_single_pes_signature(
     pes_signature: &PesSignature,
     pes_key_set: &VerifyingKeySet,
     pae_bytes: &[u8],
+    tsa_roots: &TsaRoots,
 ) -> anyhow::Result<()> {
     let pes_vm = pes_signature
         .verification_material
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("missing PES verification_material"))?;
 
-    let pes_public_key_der = extract_public_key_der(pes_vm)?;
+    let (pes_public_key_der, pes_cert) = extract_public_key_and_cert(pes_vm)?;
 
     let trusted_key =
         pes_key_set.keys.iter().find(|k| k.raw == pes_public_key_der).ok_or_else(|| {
@@ -268,21 +296,58 @@ fn verify_single_pes_signature(
         }
     }
 
+    if let TsaRoots::Roots(tsa_root_certs) = tsa_roots {
+        anyhow::ensure!(
+            !pes_signature.time_stamp_token.is_empty(),
+            time_stamp_token::TimeStampTokenError::MissingTimeStampToken
+        );
+        let pes_cert = pes_cert.as_ref().ok_or_else(|| {
+            anyhow::anyhow!(
+                "verification material for PES signature must be an X.509 certificate when timestamp token is present"
+            )
+        })?;
+        let mut token_errors = Vec::new();
+        let mut token_verified = false;
+        for (idx, token) in pes_signature.time_stamp_token.iter().enumerate() {
+            match time_stamp_token::verify_time_stamp_token(
+                &token.der_bytes,
+                &pes_signature.signature,
+                pes_cert,
+                tsa_root_certs,
+            ) {
+                Ok(()) => {
+                    token_verified = true;
+                    break;
+                }
+                Err(err) => {
+                    token_errors.push((idx, anyhow::Error::new(err)));
+                }
+            }
+        }
+        if !token_verified {
+            return Err(join_indexed_errors(
+                "verifying RFC 3161 timestamp tokens",
+                "time_stamp_token",
+                token_errors,
+            ));
+        }
+    }
+
     Ok(())
 }
 
 /// Verifies a PES signed endorsement against a reference value.
 ///
-/// Validates the PES confirmation signature, publisher ID, required claims,
-/// validity period, and subject digest.
+/// Validates the PES confirmation signature, optional RFC 3161 TSA timestamp
+/// tokens, publisher ID, required claims, validity period, and subject digest.
 ///
 /// # Arguments
 ///
 /// * `current_time`: Current UTC time as an [`Instant`].
 /// * `endorsement`: Endorsement containing the serialized in-toto statement.
-/// * `pes_confirmation`: Serialized `PublicEndorsement` proto from PES.
-/// * `ref_value`: Trusted PES key set, publisher ID, and additional required
-///   claims.
+/// * `pes_confirmation`: Serialized `PublicEndorsement` from PES.
+/// * `ref_value`: Trusted PES key set, optional TSA reference value, publisher
+///   ID, and additional required claims.
 pub fn verify_pes_endorsement(
     current_time: Instant,
     endorsement: &Endorsement,
@@ -306,12 +371,13 @@ pub fn verify_pes_endorsement(
         );
     }
 
-    // 2. Verify PES signature exactly as it is done for TLog.
+    // 2. Verify PES signature and optional RFC 3161 TSA timestamp tokens.
     verify_pes_confirmation(
         pes_confirmation,
         key_set,
         &endorsement.serialized,
-        None, // No trusted_endorser_key provided, we rely on PES signature and publisher_id.
+        None,
+        ref_value.tsa.as_ref(),
     )
     .context("verifying PES confirmation")?;
 
@@ -367,6 +433,12 @@ fn extract_raw_vm_bytes(vm: &ProtoVerificationMaterial) -> anyhow::Result<&[u8]>
 }
 
 fn extract_public_key_der(vm: &ProtoVerificationMaterial) -> anyhow::Result<Vec<u8>> {
+    extract_public_key_and_cert(vm).map(|(spki_der, _)| spki_der)
+}
+
+fn extract_public_key_and_cert(
+    vm: &ProtoVerificationMaterial,
+) -> anyhow::Result<(Vec<u8>, Option<x509_cert::Certificate>)> {
     let vm_oneof = vm
         .verification_material
         .as_ref()
@@ -381,9 +453,9 @@ fn extract_public_key_der(vm: &ProtoVerificationMaterial) -> anyhow::Result<Vec<
                 .subject_public_key_info
                 .to_der()
                 .map_err(|e| anyhow::anyhow!("failed to serialize SPKI: {e}"))?;
-            Ok(spki_der)
+            Ok((spki_der, Some(parsed_cert)))
         }
-        VerificationMaterial::EcdsaP256Sha256(pubkey) => Ok(pubkey.der_bytes.to_vec()),
+        VerificationMaterial::EcdsaP256Sha256(pubkey) => Ok((pubkey.der_bytes.to_vec(), None)),
     }
 }
 

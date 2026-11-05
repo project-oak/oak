@@ -37,12 +37,6 @@
 //! - RFC 5758 (X.509 PKI Validation for DSA and ECDSA): <https://www.rfc-editor.org/rfc/rfc5758>
 //! - RFC 6211 (CMS Algorithm Identifier Protection Attribute): <https://www.rfc-editor.org/rfc/rfc6211>
 
-// Helpers in this module are exercised by `chain_tests`, `signature_tests`,
-// and `verification_tests`; the non-test library entry point
-// (`verify_time_stamp_token`) is wired into `lib` in a follow-up commit, where
-// this attribute is removed.
-#![cfg_attr(not(test), allow(dead_code))]
-
 use alloc::{
     format,
     string::{String, ToString},
@@ -134,7 +128,6 @@ const MAX_CHAIN_DEPTH: usize = 8;
 const MAX_CHAIN_VERIFICATIONS: usize = 32;
 
 /// Structured error returned when validating an RFC 3161 `TimeStampToken`.
-#[allow(dead_code)]
 #[derive(thiserror::Error, Debug, PartialEq, Eq)]
 pub enum TimeStampTokenError {
     #[error("decoding ASN.1 DER: {0}")]

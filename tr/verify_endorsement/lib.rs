@@ -329,6 +329,7 @@ fn verify_tlog(
                 pes.key_set.as_ref().context("missing PES key set")?,
                 &endorsement.serialized,
                 Some(trusted_endorser_key),
+                None,
             )
             .context("verifying PES confirmation"),
         ),

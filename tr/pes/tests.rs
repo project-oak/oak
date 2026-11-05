@@ -207,6 +207,7 @@ fn test_verify_pes_confirmation_success() {
         &pes_key_set,
         endorsement_bytes,
         Some(&trusted_endorser_key),
+        None,
     );
     assert!(result.is_ok(), "Verification failed: {:?}", result.err());
 }
@@ -250,6 +251,7 @@ fn test_verify_pes_confirmation_multiple_signatures_first_valid_second_untrusted
         &pes_key_set,
         endorsement_bytes,
         Some(&trusted_endorser_key),
+        None,
     );
     assert!(result.is_ok(), "Verification failed: {:?}", result.err());
 }
@@ -275,6 +277,7 @@ fn test_verify_pes_confirmation_multiple_signatures_first_untrusted_second_valid
         &pes_key_set,
         endorsement_bytes,
         Some(&trusted_endorser_key),
+        None,
     );
     assert!(result.is_ok(), "Verification failed: {:?}", result.err());
 }
@@ -296,6 +299,7 @@ fn test_verify_pes_confirmation_multiple_signatures_first_corrupted_second_valid
         &pes_key_set,
         endorsement_bytes,
         Some(&trusted_endorser_key),
+        None,
     );
     assert!(result.is_ok(), "Verification failed: {:?}", result.err());
 }
@@ -328,6 +332,7 @@ fn test_verify_pes_confirmation_multiple_signatures_and_multiple_keys_in_key_set
         &pes_key_set,
         endorsement_bytes,
         Some(&trusted_endorser_key),
+        None,
     );
     assert!(result.is_ok(), "Verification failed: {:?}", result.err());
 }
@@ -350,6 +355,7 @@ fn test_verify_pes_confirmation_multiple_signatures_all_invalid_fails() {
         &pes_key_set,
         endorsement_bytes,
         Some(&trusted_endorser_key),
+        None,
     );
     assert!(result.is_err());
     let err_msg = result.unwrap_err().to_string();
@@ -371,6 +377,7 @@ fn test_verify_pes_confirmation_empty_signatures_fails() {
         &pes_key_set,
         endorsement_bytes,
         Some(&trusted_endorser_key),
+        None,
     );
     assert!(result.is_err());
     let err_msg = result.unwrap_err().to_string();
@@ -1543,4 +1550,157 @@ fn test_extract_tsa_root_certs() {
         trailing_empty_der_err.downcast_ref::<time_stamp_token::TimeStampTokenError>(),
         Some(&time_stamp_token::TimeStampTokenError::EmptyTrustedRoots)
     );
+}
+
+fn extract_pes_signature_bytes(pes_confirmation_bytes: &[u8]) -> Vec<u8> {
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    let json_val: serde_json::Value = serde_json::from_slice(pes_confirmation_bytes).unwrap();
+    let sig_b64 = json_val["endorsementSignatures"][0]["signature"].as_str().unwrap();
+    STANDARD.decode(sig_b64).unwrap()
+}
+
+fn attach_time_stamp_tokens(pes_confirmation_bytes: &[u8], tokens_der: &[&[u8]]) -> Vec<u8> {
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    let mut json_val: serde_json::Value = serde_json::from_slice(pes_confirmation_bytes).unwrap();
+    json_val["endorsementSignatures"][0]["timeStampToken"] = serde_json::Value::Array(
+        tokens_der
+            .iter()
+            .map(|der| serde_json::json!({ "derBytes": STANDARD.encode(der) }))
+            .collect(),
+    );
+    serde_json::to_vec(&json_val).unwrap()
+}
+
+fn build_valid_test_token_der(pes_signature: &[u8], pki: &TestPki) -> Vec<u8> {
+    use oak_time::make_instant;
+    // PES cert validity is 2026-05-07T15:52:37Z .. 2027-05-07T15:52:37Z.
+    // Use a fractional-second RFC 3161 genTime inside that window.
+    build_test_time_stamp_token_der(
+        pes_signature,
+        make_instant!("2026-06-15T12:00:00.25Z"),
+        &[&pki.signer_cert, &pki.intermediate_cert],
+        "Test TSA Intermediate CA",
+        3,
+        None,
+        &pki.signer_key,
+    )
+}
+
+#[test]
+fn test_verify_pes_endorsement_with_valid_time_stamp_token_succeeds() {
+    let endorsement_bytes = make_test_endorsement_statement();
+    let (pes_confirmation_bytes, pes_key_set, _) =
+        create_test_pes_confirmation_bytes(&endorsement_bytes);
+    let pki = build_test_tsa_pki();
+
+    let pes_sig_bytes = extract_pes_signature_bytes(&pes_confirmation_bytes);
+    let token_der = build_valid_test_token_der(&pes_sig_bytes, &pki);
+    let confirmation_with_token = attach_time_stamp_tokens(&pes_confirmation_bytes, &[&token_der]);
+
+    let endorsement = Endorsement {
+        format: EndorsementFormat::EndorsementFormatJsonIntoto.into(),
+        serialized: endorsement_bytes,
+        subject: vec![],
+    };
+    let ref_value = PesEndorsementReferenceValue {
+        key_set: Some(pes_key_set),
+        publisher_id: "test-publisher@google.com".to_string(),
+        tsa: Some(make_tsa_ref_value(pki.root_cert.to_der().unwrap())),
+        ..Default::default()
+    };
+
+    let result = verify_pes_endorsement(
+        Instant::from_unix_millis(1000),
+        &endorsement,
+        &confirmation_with_token,
+        &ref_value,
+    );
+    assert!(result.is_ok(), "verify_pes_endorsement failed: {:?}", result.err());
+
+    // Without a timestamp token on the confirmation, `verify_pes_endorsement`
+    // rejects the endorsement when `ref_value.tsa` requires `time_stamp_token`.
+    let missing_token_err = verify_pes_endorsement(
+        Instant::from_unix_millis(1000),
+        &endorsement,
+        &pes_confirmation_bytes,
+        &ref_value,
+    )
+    .expect_err("expected verify_pes_endorsement to fail when timeStampToken is missing");
+    assert_eq!(
+        missing_token_err.downcast_ref::<time_stamp_token::TimeStampTokenError>(),
+        Some(&time_stamp_token::TimeStampTokenError::MissingTimeStampToken),
+        "unexpected error chain: {missing_token_err:#}"
+    );
+
+    // If the PES signature carries a raw public key (`ecdsaP256Sha256`) instead
+    // of an X.509 certificate (`x509Certificate`), TSA verification fails
+    // because the PES certificate validity window cannot be checked.
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    let mut raw_key_json: serde_json::Value =
+        serde_json::from_slice(&confirmation_with_token).unwrap();
+    let pub_key_b64 = STANDARD.encode(&ref_value.key_set.as_ref().unwrap().keys[0].raw);
+    raw_key_json["endorsementSignatures"][0]["verificationMaterial"] =
+        serde_json::json!({ "ecdsaP256Sha256": { "derBytes": pub_key_b64 } });
+    let raw_key_confirmation = serde_json::to_vec(&raw_key_json).unwrap();
+    let raw_key_err = verify_pes_endorsement(
+        Instant::from_unix_millis(1000),
+        &endorsement,
+        &raw_key_confirmation,
+        &ref_value,
+    )
+    .expect_err("expected failure when PES signature uses raw public key instead of X.509 cert");
+    assert!(
+        format!("{raw_key_err:#}").contains("must be an X.509 certificate"),
+        "unexpected error chain: {raw_key_err:#}"
+    );
+}
+
+#[test]
+fn test_verify_pes_confirmation_multiple_time_stamp_tokens_first_invalid_second_valid() {
+    use oak_time::make_instant;
+
+    let endorsement_bytes = b"{\"artifact\":\"test\"}";
+    let (pes_confirmation_bytes, pes_key_set, trusted_endorser_key) =
+        create_test_pes_confirmation_bytes(endorsement_bytes);
+    let pki = build_test_tsa_pki();
+    let tsa_ref_value = make_tsa_ref_value(pki.root_cert.to_der().unwrap());
+
+    let pes_sig_bytes = extract_pes_signature_bytes(&pes_confirmation_bytes);
+    let invalid_token_der = build_test_time_stamp_token_der(
+        b"wrong signature bytes",
+        make_instant!("2026-06-15T12:00:00Z"),
+        &[&pki.signer_cert, &pki.intermediate_cert],
+        "Test TSA Intermediate CA",
+        3,
+        None,
+        &pki.signer_key,
+    );
+    let invalid_only_bytes =
+        attach_time_stamp_tokens(&pes_confirmation_bytes, &[&invalid_token_der]);
+    let invalid_only_err = verify_pes_confirmation(
+        &invalid_only_bytes,
+        &pes_key_set,
+        endorsement_bytes,
+        Some(&trusted_endorser_key),
+        Some(&tsa_ref_value),
+    )
+    .expect_err("expected failure when only the invalid timestamp token is present");
+    assert_eq!(
+        invalid_only_err.downcast_ref::<time_stamp_token::TimeStampTokenError>(),
+        Some(&time_stamp_token::TimeStampTokenError::MessageImprintMismatch),
+        "unexpected error chain: {invalid_only_err:#}"
+    );
+
+    let valid_token_der = build_valid_test_token_der(&pes_sig_bytes, &pki);
+    let updated_confirmation_bytes =
+        attach_time_stamp_tokens(&pes_confirmation_bytes, &[&invalid_token_der, &valid_token_der]);
+
+    let result = verify_pes_confirmation(
+        &updated_confirmation_bytes,
+        &pes_key_set,
+        endorsement_bytes,
+        Some(&trusted_endorser_key),
+        Some(&tsa_ref_value),
+    );
+    assert!(result.is_ok(), "expected success when second token is valid, got: {:?}", result.err());
 }
