@@ -20,8 +20,8 @@
 //! `SignerInfo` whose `signedAttrs` include `SigningCertificateV2`
 //! (`id-aa-signingCertificateV2`). The outer layers (`ContentInfo.content` and
 //! `EncapsulatedContentInfo.econtent`) borrow raw DER slices so that
-//! `verify_time_stamp_token` (introduced in the follow-up verification commit)
-//! can hash the exact `TSTInfo` DER octets before decoding them.
+//! [`verify_time_stamp_token`] can hash the exact `TSTInfo` DER octets before
+//! decoding them.
 //!
 //! Authoritative specifications:
 //! - RFC 3161 (Time-Stamp Protocol): <https://www.rfc-editor.org/rfc/rfc3161>
@@ -35,12 +35,11 @@
 //! - RFC 5753 (Use of ECC Algorithms in CMS): <https://www.rfc-editor.org/rfc/rfc5753>
 //! - RFC 5754 (Using SHA2 Algorithms with CMS): <https://www.rfc-editor.org/rfc/rfc5754>
 //! - RFC 5758 (X.509 PKI Validation for DSA and ECDSA): <https://www.rfc-editor.org/rfc/rfc5758>
+//! - RFC 6211 (CMS Algorithm Identifier Protection Attribute): <https://www.rfc-editor.org/rfc/rfc6211>
 
-// Helpers in this module are exercised by `parsing_tests`, `signature_tests`,
-// and `chain_tests` in this commit; the non-test library entry point
-// (`verify_time_stamp_token`) is wired into `lib` in a follow-up commit, where
-// this attribute is removed.
-#![cfg_attr(not(test), allow(dead_code))]
+// Verification helpers in this module are wired into `verification_tests` and
+// `lib` in follow-up commits in this stack, where this attribute is removed.
+#![allow(dead_code)]
 
 use alloc::{
     format,
@@ -54,8 +53,9 @@ use const_oid::{
     db::{
         rfc5280::{
             ANY_EXTENDED_KEY_USAGE, ID_CE_BASIC_CONSTRAINTS, ID_CE_EXT_KEY_USAGE, ID_CE_KEY_USAGE,
-            ID_KP_TIME_STAMPING,
+            ID_CE_SUBJECT_ALT_NAME, ID_KP_TIME_STAMPING,
         },
+        rfc5911::{ID_CONTENT_TYPE, ID_MESSAGE_DIGEST, ID_SIGNED_DATA},
         rfc5912::{
             ECDSA_WITH_SHA_256, ECDSA_WITH_SHA_384, ECDSA_WITH_SHA_512, ID_EC_PUBLIC_KEY,
             ID_SHA_256, ID_SHA_384, ID_SHA_512, RSA_ENCRYPTION, SECP_256_R_1,
@@ -69,7 +69,7 @@ use oak_time::Instant;
 use rsa::{Pkcs1v15Sign, RsaPublicKey, traits::PublicKeyParts as _};
 use x509_cert::{
     Certificate, Version,
-    attr::Attributes,
+    attr::{Attribute, Attributes},
     der::{
         self, AnyRef, Choice, Decode, DecodeValue, DerOrd, Encode, EncodeValue, FixedTag, Header,
         Length, Reader, Tag, TagMode, TagNumber, Tagged, Writer,
@@ -81,7 +81,7 @@ use x509_cert::{
     ext::{
         Extensions,
         pkix::{
-            BasicConstraints, ExtendedKeyUsage, KeyUsage, SubjectKeyIdentifier,
+            BasicConstraints, ExtendedKeyUsage, KeyUsage, SubjectAltName, SubjectKeyIdentifier,
             certpolicy::PolicyInformation,
             name::{GeneralName, GeneralNames},
         },
@@ -103,6 +103,12 @@ mod signature_tests;
 pub(crate) const ID_CT_TST_INFO: ObjectIdentifier =
     ObjectIdentifier::new_unwrap("1.2.840.113549.1.9.16.1.4");
 
+/// S/MIME `id-aa-signingCertificate` (`1.2.840.113549.1.9.16.2.12`), RFC 3161
+/// Section 2.4.2 (<https://www.rfc-editor.org/rfc/rfc3161#section-2.4.2>) and
+/// RFC 2634 Section 5.4 (<https://www.rfc-editor.org/rfc/rfc2634#section-5.4>).
+pub(crate) const ID_AA_SIGNING_CERTIFICATE: ObjectIdentifier =
+    ObjectIdentifier::new_unwrap("1.2.840.113549.1.9.16.2.12");
+
 /// S/MIME `id-aa-signingCertificateV2` (`1.2.840.113549.1.9.16.2.47`), RFC 5816
 /// Section 2.2 (updating RFC 3161 Section 2.4.2) and RFC 5035 Section 3.
 pub(crate) const ID_AA_SIGNING_CERTIFICATE_V2: ObjectIdentifier =
@@ -110,7 +116,6 @@ pub(crate) const ID_AA_SIGNING_CERTIFICATE_V2: ObjectIdentifier =
 
 /// CMS `id-aa-CMSAlgorithmProtection` (`1.2.840.113549.1.9.52`), RFC 6211
 /// Section 2.
-#[cfg(test)]
 pub(crate) const ID_AA_CMS_ALGORITHM_PROTECTION: ObjectIdentifier =
     ObjectIdentifier::new_unwrap("1.2.840.113549.1.9.52");
 
@@ -139,6 +144,9 @@ pub enum TimeStampTokenError {
     #[error("unexpected CMS content type {0}, expected id-signedData")]
     UnexpectedContentType(ObjectIdentifier),
 
+    #[error("unsupported SignedData version {0}, expected 3")]
+    UnsupportedSignedDataVersion(u8),
+
     #[error("unexpected encapsulated content type {0}, expected id-ct-TSTInfo")]
     UnexpectedEncapsulatedContentType(ObjectIdentifier),
 
@@ -153,6 +161,9 @@ pub enum TimeStampTokenError {
 
     #[error("unrecognized critical extension {0} in TSTInfo")]
     UnhandledCriticalTstInfoExtension(ObjectIdentifier),
+
+    #[error("tsa name in TSTInfo does not match TSA signer certificate subject")]
+    TsaNameMismatch,
 
     #[error("unsupported X.509 certificate version, expected v3")]
     UnsupportedCertificateVersion,
@@ -178,8 +189,8 @@ pub enum TimeStampTokenError {
     #[error("missing or invalid content-type attribute in signedAttrs")]
     InvalidSignedContentType,
 
-    #[error("missing message-digest attribute in signedAttrs")]
-    MissingMessageDigestAttr,
+    #[error("missing or invalid message-digest attribute in signedAttrs")]
+    InvalidMessageDigestAttr,
 
     #[error("signedAttrs message-digest does not match TSTInfo digest")]
     MessageDigestMismatch,
@@ -187,8 +198,11 @@ pub enum TimeStampTokenError {
     #[error("missing or invalid signing-certificate attribute in signedAttrs")]
     InvalidSigningCertificateAttr,
 
-    #[error("signing-certificate certHash in signedAttrs does not match TSA signer certificate")]
+    #[error("signing-certificate attribute in signedAttrs does not match TSA signer certificate")]
     SigningCertificateMismatch,
+
+    #[error("invalid or mismatched cmsAlgorithmProtection attribute in signedAttrs")]
+    InvalidCmsAlgorithmProtection,
 
     #[error("messageImprint digest in TSTInfo does not match PES signature digest")]
     MessageImprintMismatch,
@@ -772,7 +786,6 @@ impl EncodeValue for EssCertIdV2 {
 }
 
 /// RFC 6211 `CMSAlgorithmProtection` attribute structure (RFC 6211 Section 2).
-#[cfg(test)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct CmsAlgorithmProtection {
     pub digest_algorithm: AlgorithmIdentifierOwned,
@@ -780,12 +793,10 @@ pub(crate) struct CmsAlgorithmProtection {
     pub mac_algorithm: Option<AlgorithmIdentifierOwned>,
 }
 
-#[cfg(test)]
 impl FixedTag for CmsAlgorithmProtection {
     const TAG: Tag = Tag::Sequence;
 }
 
-#[cfg(test)]
 impl<'a> DecodeValue<'a> for CmsAlgorithmProtection {
     fn decode_value<R: Reader<'a>>(reader: &mut R, header: Header) -> der::Result<Self> {
         reader.read_nested(header.length, |reader| {
@@ -798,7 +809,6 @@ impl<'a> DecodeValue<'a> for CmsAlgorithmProtection {
     }
 }
 
-#[cfg(test)]
 impl EncodeValue for CmsAlgorithmProtection {
     fn value_len(&self) -> der::Result<Length> {
         seq_len!(
@@ -1350,6 +1360,407 @@ pub fn parse_tsa_root_certs(
         .collect()
 }
 
+/// Validates a DER-encoded RFC 3161 `TimeStampToken` from a PES
+/// `PublicEndorsement`.
+///
+/// Validation performs the following checks:
+/// 1. Parses the CMS `ContentInfo` (`id-signedData`), `SignedData` (`version ==
+///    5` when `crls` contains `OtherRevocationInfoFormat`, or `3` otherwise),
+///    and encapsulated `TSTInfo` (`id-ct-TSTInfo`, `version == 1`, valid
+///    `accuracy`, and no unrecognized critical or duplicate extensions) per
+///    <https://www.rfc-editor.org/rfc/rfc3161#section-2.4.2> and
+///    <https://www.rfc-editor.org/rfc/rfc5652#section-5.1>.
+/// 2. Validates the single `SignerInfo` (`version` matching `sid`, supported
+///    `digestAlgorithm` present in `SignedData.digestAlgorithms`, and
+///    compatible `signatureAlgorithm`) and verifies that
+///    `SignerInfo.signedAttrs` contains single-valued `content-type` equal to
+///    `id-ct-TSTInfo`, `message-digest` equal to the digest of the raw
+///    `TSTInfo` DER bytes, `id-aa-signingCertificateV2` (`ESSCertIDv2`), and
+///    (when present) matching `id-aa-CMSAlgorithmProtection` per
+///    <https://www.rfc-editor.org/rfc/rfc3161#section-2.4.2>,
+///    <https://www.rfc-editor.org/rfc/rfc5816#section-2.2>, and
+///    <https://www.rfc-editor.org/rfc/rfc6211#section-2>.
+/// 3. Locates candidate TSA signer certificates in `SignedData.certificates`
+///    matching `SignerInfo.sid`, resolves the signer certificate matching the
+///    `ESSCertIDv2` (`certHash` and optional `issuerSerial`), verifies that it
+///    matches `TSTInfo.tsa` (when present, against `tbsCertificate.subject` or
+///    `SubjectAltName`), and checks that the signer certificate is an X.509 v3
+///    end-entity certificate (`BasicConstraints.ca != true`) without
+///    unrecognized critical extensions, whose `KeyUsage` (if present) permits
+///    `digitalSignature` or `nonRepudiation`, and that it contains a critical
+///    `ExtendedKeyUsage` extension with only `id-kp-timeStamping`
+///    (`1.3.6.1.5.5.7.3.8`) per
+///    <https://www.rfc-editor.org/rfc/rfc3161#section-2.3>.
+/// 4. Verifies the CMS signature over `SignerInfo.signedAttrs` using the TSA
+///    signer certificate's public key.
+/// 5. Validates the X.509 certificate chain from the TSA signer certificate to
+///    one of the provided `tsa_root_certs` at the timestamp's `genTime`
+///    (checking signatures, validity periods, `BasicConstraints`, `KeyUsage`,
+///    `ExtendedKeyUsage`, and critical extensions).
+/// 6. Verifies that the timestamp issuance time (`TSTInfo.genTime`) falls
+///    within the validity period of `pes_cert`.
+/// 7. Verifies that the `TSTInfo.messageImprint` hash matches the digest of
+///    `pes_signature`.
+pub fn verify_time_stamp_token(
+    token_der: &[u8],
+    pes_signature: &[u8],
+    pes_cert: &Certificate,
+    tsa_root_certs: &[Certificate],
+) -> Result<(), TimeStampTokenError> {
+    if tsa_root_certs.is_empty() {
+        return Err(TimeStampTokenError::EmptyTrustedRoots);
+    }
+
+    // 1. Parse CMS ContentInfo -> SignedData -> TSTInfo per RFC 3161 Section 2.4.2.
+    let content_info = ContentInfo::from_der(token_der)?;
+    if content_info.content_type != ID_SIGNED_DATA {
+        return Err(TimeStampTokenError::UnexpectedContentType(content_info.content_type));
+    }
+    let signed_data = content_info.content.decode_as::<SignedData<'_>>()?;
+    // RFC 3161 Section 2.4.2 & RFC 5652 Section 5.1: SignedData.version must be
+    // 5 when SignedData.crls contains any [1] IMPLICIT OtherRevocationInfoFormat
+    // entry, and 3 otherwise (because eContentType is id-ct-TSTInfo, other than
+    // id-data, and only X.509 certificates are permitted).
+    const OTHER_REVOCATION_INFO_TAG: Tag =
+        Tag::ContextSpecific { constructed: true, number: TagNumber::N1 };
+    let has_other_crl = signed_data
+        .crls
+        .as_ref()
+        .is_some_and(|crls| crls.iter().any(|crl| crl.tag() == OTHER_REVOCATION_INFO_TAG));
+    let expected_sd_version = if has_other_crl { 5 } else { 3 };
+    if signed_data.version != expected_sd_version {
+        return Err(TimeStampTokenError::UnsupportedSignedDataVersion(signed_data.version));
+    }
+    if signed_data.encap_content_info.econtent_type != ID_CT_TST_INFO {
+        return Err(TimeStampTokenError::UnexpectedEncapsulatedContentType(
+            signed_data.encap_content_info.econtent_type,
+        ));
+    }
+    let tst_info_der = signed_data
+        .encap_content_info
+        .econtent
+        .ok_or(TimeStampTokenError::MissingTstInfoContent)?
+        .as_bytes();
+    let tst_info = TstInfo::from_der(tst_info_der)?;
+    // RFC 3161 Section 2.4.2: `version INTEGER { v1(1) }`.
+    if tst_info.version != 1 {
+        return Err(TimeStampTokenError::UnsupportedTstInfoVersion(tst_info.version));
+    }
+    // RFC 3161 Section 2.4.2: `millis [0] INTEGER (1..999) OPTIONAL`,
+    // `micros [1] INTEGER (1..999) OPTIONAL`.
+    if let Some(ref accuracy) = tst_info.accuracy
+        && (accuracy.millis.is_some_and(|m| !(1..=999).contains(&m))
+            || accuracy.micros.is_some_and(|u| !(1..=999).contains(&u)))
+    {
+        return Err(TimeStampTokenError::InvalidTstInfoAccuracy);
+    }
+    // RFC 3161 Section 2.4.2 & RFC 5280 Section 4.2: Extensions (when present)
+    // is `SEQUENCE SIZE (1..MAX) OF Extension` without duplicate extension OIDs,
+    // and any unrecognized critical extension in TSTInfo must be rejected.
+    if let Some(ref extensions) = tst_info.extensions {
+        if extensions.is_empty() {
+            return Err(TimeStampTokenError::Der(der::ErrorKind::Failed.into()));
+        }
+        for (i, ext) in extensions.iter().enumerate() {
+            if extensions[..i].iter().any(|prev| prev.extn_id == ext.extn_id) {
+                return Err(TimeStampTokenError::Der(der::ErrorKind::Failed.into()));
+            }
+            if ext.critical {
+                return Err(TimeStampTokenError::UnhandledCriticalTstInfoExtension(ext.extn_id));
+            }
+        }
+    }
+
+    // 2. Validate SignerInfo and signedAttrs (independent of candidate signer
+    //    certificates).
+    let signer_info = match signed_data.signer_infos.as_slice() {
+        [] => return Err(TimeStampTokenError::MissingSignerInfo),
+        [single] => single,
+        _ => return Err(TimeStampTokenError::MultipleSignerInfos),
+    };
+
+    // RFC 3161 Section 2.4.2 & RFC 5652 Section 5.3: SignerInfo.version must be
+    // 1 when SignerIdentifier is IssuerAndSerialNumber and 3 when it is
+    // SubjectKeyIdentifier.
+    let expected_si_version = match signer_info.sid {
+        SignerIdentifier::IssuerAndSerialNumber(_) => 1,
+        SignerIdentifier::SubjectKeyIdentifier(_) => 3,
+    };
+    if signer_info.version != expected_si_version {
+        return Err(TimeStampTokenError::InvalidSignerInfoVersion(signer_info.version));
+    }
+
+    let signer_digest_alg = DigestAlgorithm::from_algorithm(&signer_info.digest_algorithm)?;
+    // RFC 3161 Section 2.4.2 & RFC 5652 Section 5.1: SignerInfo.digestAlgorithm
+    // must be included among SignedData.digestAlgorithms.
+    if !signed_data
+        .digest_algorithms
+        .iter()
+        .any(|alg| alg.oid == signer_info.digest_algorithm.oid && has_absent_or_null_params(alg))
+    {
+        return Err(TimeStampTokenError::DigestAlgorithmNotInSignedData(
+            signer_info.digest_algorithm.oid,
+        ));
+    }
+
+    let cms_sig_alg = SignatureAlgorithm::from_cms_algorithms(
+        &signer_info.digest_algorithm,
+        &signer_info.signature_algorithm,
+    )?;
+
+    let signed_attrs =
+        signer_info.signed_attrs.as_ref().ok_or(TimeStampTokenError::MissingSignedAttrs)?;
+    let (ess_cert_id, cert_digest_alg) = verify_signed_attrs(
+        signed_attrs,
+        signer_digest_alg,
+        &signer_info.digest_algorithm,
+        &signer_info.signature_algorithm,
+        tst_info_der,
+    )?;
+    let signed_attrs_der = signed_attrs.to_der()?;
+
+    // 3a. Locate candidate TSA signer certificates matching SignerInfo.sid and
+    //     resolve the single certificate matching ESSCertIDv2 in signedAttrs
+    //     (certHash and optional IssuerSerial) per RFC 5816 Section 2.2 and RFC
+    //     5035 Sections 3–4.
+    let certificates = signed_data.certificates.as_deref().unwrap_or(&[]);
+    let signer_candidates = find_signer_certificates(certificates, &signer_info.sid)?;
+    let signer_cert = signer_candidates
+        .into_iter()
+        .find_map(|cert| match verify_ess_cert_id(&ess_cert_id, cert_digest_alg, cert) {
+            Ok(()) => Some(Ok(cert)),
+            Err(TimeStampTokenError::SigningCertificateMismatch) => None,
+            Err(err) => Some(Err(err)),
+        })
+        .transpose()?
+        .ok_or(TimeStampTokenError::SigningCertificateMismatch)?;
+
+    // 3b. If TSTInfo.tsa is present, verify that it matches one of the TSA
+    //     signer certificate's subject names per RFC 3161 Section 2.4.2.
+    if let Some(ref tsa_name) = tst_info.tsa {
+        verify_tsa_name(tsa_name, signer_cert)?;
+    }
+
+    // 3c. Validate TSA signer certificate extensions per RFC 3161 Section 2.3
+    //     and RFC 5280 Sections 4.2, 4.2.1.3, 4.2.1.6, 4.2.1.9, 4.2.1.12.
+    verify_signer_cert_extensions(signer_cert)?;
+
+    // 4. Verify CMS signature over DER-encoded signedAttrs (encoded as SET OF
+    //    Attribute per RFC 5652 Section 5.4).
+    verify_spki_signature(
+        &signer_cert.tbs_certificate.subject_public_key_info,
+        cms_sig_alg,
+        &signed_attrs_der,
+        signer_info.signature.as_bytes(),
+    )?;
+
+    // 5. Verify TSA certificate chain against tsa_root_certs at tst_info.gen_time.
+    let gen_time = tst_info.gen_time.0;
+    verify_certificate_chain(signer_cert, certificates, tsa_root_certs, gen_time)?;
+
+    // 6. Verify that tst_info.gen_time is within the PES certificate's validity
+    //    period.
+    // Note: This check should be performed on the PES root certificate and
+    // replaced in a follow-up change.
+    verify_cert_validity_contains(pes_cert, gen_time)
+        .map_err(|_| TimeStampTokenError::IssuanceTimeOutsidePesCertValidity)?;
+
+    // 7. Verify TSTInfo.messageImprint against the PES signature bytes per RFC 3161
+    //    Section 2.4.2.
+    let imprint_digest_alg =
+        DigestAlgorithm::from_algorithm(&tst_info.message_imprint.hash_algorithm)?;
+    let expected_imprint = imprint_digest_alg.digest(pes_signature);
+    if tst_info.message_imprint.hashed_message.as_bytes() != expected_imprint.as_ref() {
+        return Err(TimeStampTokenError::MessageImprintMismatch);
+    }
+
+    Ok(())
+}
+
+fn decode_single_attr_value<'a, T: DecodeValue<'a> + FixedTag>(
+    attr: &'a Attribute,
+    is_duplicate: bool,
+    err: TimeStampTokenError,
+) -> Result<T, TimeStampTokenError> {
+    let [raw] = attr.values.as_slice() else {
+        return Err(err);
+    };
+    if is_duplicate {
+        return Err(err);
+    }
+    raw.decode_as::<T>().map_err(|_| err)
+}
+
+/// Validates CMS `SignedAttributes` on the `TimeStampToken` `SignerInfo` (RFC
+/// 3161 Section 2.4.2, RFC 5816 Section 2.2, RFC 5035 Sections 3–4, RFC 5652
+/// Sections 5.3 and 11.1–11.2, and RFC 6211 Section 2):
+/// - No attribute OID may appear more than once, and every attribute must have
+///   at least one value (`SET SIZE (1..MAX) OF AttributeValue`).
+/// - `content-type` (`id-contentType`) must be single-valued and equal
+///   `id-ct-TSTInfo`.
+/// - `message-digest` (`id-messageDigest`) must be single-valued and match the
+///   digest of `tst_info_der`.
+/// - `signing-certificate-v2` (`id-aa-signingCertificateV2`) must be present
+///   and single-valued, and its first `ESSCertIDv2` entry must have a supported
+///   hash algorithm.
+/// - If `id-aa-signingCertificate` is present, it must be single-valued.
+/// - If `id-aa-CMSAlgorithmProtection` is present, it must be single-valued,
+///   omit `macAlgorithm`, and match `signer_digest_alg_id` and
+///   `signer_sig_alg_id`.
+///
+/// Returns the first [`EssCertIdV2`] and its resolved [`DigestAlgorithm`] for
+/// matching against candidate TSA signer certificates via
+/// [`verify_ess_cert_id`].
+fn verify_signed_attrs(
+    attrs: &Attributes,
+    signer_digest_alg: DigestAlgorithm,
+    signer_digest_alg_id: &AlgorithmIdentifierOwned,
+    signer_sig_alg_id: &AlgorithmIdentifierOwned,
+    tst_info_der: &[u8],
+) -> Result<(EssCertIdV2, DigestAlgorithm), TimeStampTokenError> {
+    let mut found_content_type = false;
+    let mut message_digest: Option<OctetString> = None;
+    let mut signing_cert_v2: Option<SigningCertificateV2> = None;
+
+    let attrs_slice = attrs.as_slice();
+    for (i, attr) in attrs_slice.iter().enumerate() {
+        let is_duplicate = attrs_slice[..i].iter().any(|prev| prev.oid == attr.oid);
+        if attr.oid == ID_CONTENT_TYPE {
+            let content_type: ObjectIdentifier = decode_single_attr_value(
+                attr,
+                is_duplicate,
+                TimeStampTokenError::InvalidSignedContentType,
+            )?;
+            if content_type != ID_CT_TST_INFO {
+                return Err(TimeStampTokenError::InvalidSignedContentType);
+            }
+            found_content_type = true;
+        } else if attr.oid == ID_MESSAGE_DIGEST {
+            message_digest = Some(decode_single_attr_value(
+                attr,
+                is_duplicate,
+                TimeStampTokenError::InvalidMessageDigestAttr,
+            )?);
+        } else if attr.oid == ID_AA_SIGNING_CERTIFICATE_V2 {
+            // RFC 5816 Section 2.2 (updating RFC 3161 Section 2.4.2) & RFC 5035
+            // Section 3: SigningCertificateV2 is a single-valued signed
+            // attribute binding the TSA signer certificate hash.
+            signing_cert_v2 = Some(decode_single_attr_value(
+                attr,
+                is_duplicate,
+                TimeStampTokenError::InvalidSigningCertificateAttr,
+            )?);
+        } else if attr.oid == ID_AA_SIGNING_CERTIFICATE {
+            // RFC 3161 Section 2.4.2 allows legacy SigningCertificate alongside
+            // SigningCertificateV2, but it must be single-valued if present.
+            if is_duplicate || attr.values.len() != 1 {
+                return Err(TimeStampTokenError::InvalidSigningCertificateAttr);
+            }
+        } else if attr.oid == ID_AA_CMS_ALGORITHM_PROTECTION {
+            // RFC 6211 Section 2: cmsAlgorithmProtection is a single-valued
+            // attribute whose digestAlgorithm and signatureAlgorithm must match
+            // SignerInfo (and macAlgorithm must be absent for SignedData).
+            let cap: CmsAlgorithmProtection = decode_single_attr_value(
+                attr,
+                is_duplicate,
+                TimeStampTokenError::InvalidCmsAlgorithmProtection,
+            )?;
+            if &cap.digest_algorithm != signer_digest_alg_id
+                || cap.signature_algorithm.as_ref() != Some(signer_sig_alg_id)
+                || cap.mac_algorithm.is_some()
+            {
+                return Err(TimeStampTokenError::InvalidCmsAlgorithmProtection);
+            }
+        } else if is_duplicate || attr.values.is_empty() {
+            // RFC 5652 Section 5.3: SignedAttributes must not contain multiple
+            // instances of the same attribute type, and each Attribute must
+            // carry a non-empty SET OF AttributeValue.
+            return Err(TimeStampTokenError::Der(der::ErrorKind::Failed.into()));
+        }
+    }
+
+    if !found_content_type {
+        return Err(TimeStampTokenError::InvalidSignedContentType);
+    }
+    let message_digest_attr =
+        message_digest.ok_or(TimeStampTokenError::InvalidMessageDigestAttr)?;
+    let expected_tst_digest = signer_digest_alg.digest(tst_info_der);
+    if message_digest_attr.as_bytes() != expected_tst_digest.as_ref() {
+        return Err(TimeStampTokenError::MessageDigestMismatch);
+    }
+
+    let signing_cert_v2 =
+        signing_cert_v2.ok_or(TimeStampTokenError::InvalidSigningCertificateAttr)?;
+    // RFC 5035 Section 3: "The first certificate identified in the sequence of
+    // certificate identifiers MUST be the certificate used to verify the
+    // signature."
+    let ess_cert_id = signing_cert_v2
+        .certs
+        .into_iter()
+        .next()
+        .ok_or(TimeStampTokenError::InvalidSigningCertificateAttr)?;
+    let cert_digest_alg = DigestAlgorithm::from_algorithm(&ess_cert_id.hash_algorithm)?;
+
+    Ok((ess_cert_id, cert_digest_alg))
+}
+
+/// Verifies that `ess_cert_id` (`ESSCertIDv2`) matches `signer_cert`'s DER
+/// bytes and optional `IssuerSerial` per RFC 3161 Section 2.4.2, RFC 5816
+/// Section 2.2, and RFC 5035 Sections 3–4.
+fn verify_ess_cert_id(
+    ess_cert_id: &EssCertIdV2,
+    cert_digest_alg: DigestAlgorithm,
+    signer_cert: &Certificate,
+) -> Result<(), TimeStampTokenError> {
+    let signer_cert_der = signer_cert.to_der()?;
+    let expected_cert_hash = cert_digest_alg.digest(&signer_cert_der);
+    if ess_cert_id.cert_hash.as_bytes() != expected_cert_hash.as_ref() {
+        return Err(TimeStampTokenError::SigningCertificateMismatch);
+    }
+    // RFC 5035 Section 4: "If present, the issuerSerial field MUST match the
+    // issuer and serialNumber fields of the certificate."
+    if let Some(ref issuer_serial) = ess_cert_id.issuer_serial {
+        let issuer_matches = match issuer_serial.issuer.as_slice() {
+            [GeneralName::DirectoryName(dir_name)] => {
+                dir_name == &signer_cert.tbs_certificate.issuer
+            }
+            _ => false,
+        };
+        if !issuer_matches
+            || issuer_serial.serial_number != signer_cert.tbs_certificate.serial_number
+        {
+            return Err(TimeStampTokenError::SigningCertificateMismatch);
+        }
+    }
+
+    Ok(())
+}
+
+/// Verifies that `TSTInfo.tsa` matches one of the subject names (`subject` or
+/// `SubjectAltName`) in the TSA signer certificate per:
+/// - RFC 3161 Section 2.4.2 (<https://www.rfc-editor.org/rfc/rfc3161#section-2.4.2>)
+/// - RFC 5280 Section 4.2.1.6 (<https://www.rfc-editor.org/rfc/rfc5280#section-4.2.1.6>)
+fn verify_tsa_name(
+    tsa_name: &GeneralName,
+    signer_cert: &Certificate,
+) -> Result<(), TimeStampTokenError> {
+    if matches!(tsa_name, GeneralName::DirectoryName(dir_name) if dir_name.0.is_empty()) {
+        return Err(TimeStampTokenError::TsaNameMismatch);
+    }
+    if let GeneralName::DirectoryName(dir_name) = tsa_name
+        && dir_name == &signer_cert.tbs_certificate.subject
+    {
+        return Ok(());
+    }
+    if let Some((_critical, SubjectAltName(alt_names))) =
+        signer_cert.tbs_certificate.get::<SubjectAltName>()?
+        && alt_names.iter().any(|alt_name| alt_name == tsa_name)
+    {
+        return Ok(());
+    }
+    Err(TimeStampTokenError::TsaNameMismatch)
+}
+
 /// Finds all candidate TSA signer certificates in `certificates` matching `sid`
 /// per RFC 5652 Section 5.3 (<https://www.rfc-editor.org/rfc/rfc5652#section-5.3>)
 /// and RFC 5280 Section 4.2.1.2
@@ -1420,6 +1831,7 @@ fn verify_v3_and_critical_extensions(
 /// - RFC 3161 Section 2.3 (<https://www.rfc-editor.org/rfc/rfc3161#section-2.3>)
 /// - RFC 5280 Section 4.2 (<https://www.rfc-editor.org/rfc/rfc5280#section-4.2>)
 /// - RFC 5280 Section 4.2.1.3 (<https://www.rfc-editor.org/rfc/rfc5280#section-4.2.1.3>)
+/// - RFC 5280 Section 4.2.1.6 (<https://www.rfc-editor.org/rfc/rfc5280#section-4.2.1.6>)
 /// - RFC 5280 Section 4.2.1.9 (<https://www.rfc-editor.org/rfc/rfc5280#section-4.2.1.9>)
 /// - RFC 5280 Section 4.2.1.12 (<https://www.rfc-editor.org/rfc/rfc5280#section-4.2.1.12>)
 ///
@@ -1434,7 +1846,7 @@ fn verify_v3_and_critical_extensions(
 fn verify_signer_cert_extensions(cert: &Certificate) -> Result<(), TimeStampTokenError> {
     verify_v3_and_critical_extensions(
         cert,
-        &[ID_CE_EXT_KEY_USAGE, ID_CE_BASIC_CONSTRAINTS, ID_CE_KEY_USAGE],
+        &[ID_CE_EXT_KEY_USAGE, ID_CE_BASIC_CONSTRAINTS, ID_CE_KEY_USAGE, ID_CE_SUBJECT_ALT_NAME],
     )?;
 
     match cert.tbs_certificate.get::<ExtendedKeyUsage>()? {
