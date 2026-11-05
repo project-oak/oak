@@ -937,3 +937,271 @@ fn test_verify_time_stamp_token_subject_key_identifier_sid() {
         Ok(())
     );
 }
+
+#[test]
+fn test_verify_time_stamp_token_fails_gen_time_before_pes_cert_validity() {
+    use oak_time::make_instant;
+
+    let (pes_signature, pes_cert) = create_test_pes_sig_and_cert();
+    let pki = build_test_tsa_pki();
+    // PES cert not_before is 2026-05-07T15:52:37Z; TSA certs are valid over
+    // 2026..2028.
+    let at_not_before = build_test_time_stamp_token_der(
+        &pes_signature,
+        make_instant!("2026-05-07T15:52:37Z"),
+        &[&pki.signer_cert, &pki.intermediate_cert],
+        "Test TSA Intermediate CA",
+        3,
+        None,
+        &pki.signer_key,
+    );
+    assert_eq!(
+        time_stamp_token::verify_time_stamp_token(
+            &at_not_before,
+            &pes_signature,
+            &pes_cert,
+            core::slice::from_ref(&pki.root_cert),
+        ),
+        Ok(())
+    );
+
+    for gen_time in
+        [make_instant!("2026-05-07T15:52:36.999999999Z"), make_instant!("2026-02-01T00:00:00Z")]
+    {
+        let token_der = build_test_time_stamp_token_der(
+            &pes_signature,
+            gen_time,
+            &[&pki.signer_cert, &pki.intermediate_cert],
+            "Test TSA Intermediate CA",
+            3,
+            None,
+            &pki.signer_key,
+        );
+        let res = time_stamp_token::verify_time_stamp_token(
+            &token_der,
+            &pes_signature,
+            &pes_cert,
+            core::slice::from_ref(&pki.root_cert),
+        );
+        assert_eq!(
+            res,
+            Err(time_stamp_token::TimeStampTokenError::IssuanceTimeOutsidePesCertValidity)
+        );
+    }
+}
+
+#[test]
+fn test_verify_time_stamp_token_fails_gen_time_after_pes_cert_validity() {
+    use oak_time::make_instant;
+
+    let (pes_signature, pes_cert) = create_test_pes_sig_and_cert();
+    let pki = build_test_tsa_pki();
+    // PES cert not_after is 2027-05-07T15:52:37Z; TSA certs are valid over
+    // 2026..2028.
+    let at_not_after = build_test_time_stamp_token_der(
+        &pes_signature,
+        make_instant!("2027-05-07T15:52:37Z"),
+        &[&pki.signer_cert, &pki.intermediate_cert],
+        "Test TSA Intermediate CA",
+        3,
+        None,
+        &pki.signer_key,
+    );
+    assert_eq!(
+        time_stamp_token::verify_time_stamp_token(
+            &at_not_after,
+            &pes_signature,
+            &pes_cert,
+            core::slice::from_ref(&pki.root_cert),
+        ),
+        Ok(())
+    );
+
+    for gen_time in
+        [make_instant!("2027-05-07T15:52:37.000000001Z"), make_instant!("2027-08-01T00:00:00Z")]
+    {
+        let token_der = build_test_time_stamp_token_der(
+            &pes_signature,
+            gen_time,
+            &[&pki.signer_cert, &pki.intermediate_cert],
+            "Test TSA Intermediate CA",
+            3,
+            None,
+            &pki.signer_key,
+        );
+        let res = time_stamp_token::verify_time_stamp_token(
+            &token_der,
+            &pes_signature,
+            &pes_cert,
+            core::slice::from_ref(&pki.root_cert),
+        );
+        assert_eq!(
+            res,
+            Err(time_stamp_token::TimeStampTokenError::IssuanceTimeOutsidePesCertValidity)
+        );
+    }
+}
+
+#[test]
+fn test_verify_time_stamp_token_fails_gen_time_outside_tsa_cert_validity() {
+    use oak_time::make_instant;
+    use x509_cert::Version;
+
+    use crate::time_stamp_token::chain_tests::{
+        CertSpec, build_cert, default_signer_extensions, p256_key,
+    };
+
+    let (pes_signature, pes_cert) = create_test_pes_sig_and_cert();
+    let pki = build_test_tsa_pki();
+
+    // Signer cert whose validity window (2026-06-01 .. 2026-07-01) lies
+    // strictly inside PES cert validity (2026-05-07 .. 2027-05-07).
+    let signer_cert = build_cert(&CertSpec {
+        version: Version::V3,
+        serial: 3,
+        issuer_cn: "Test TSA Root CA",
+        subject_cn: "Test TSA Signer",
+        not_before: make_instant!("2026-06-01T00:00:00Z"),
+        not_after: make_instant!("2026-07-01T00:00:00Z"),
+        subject_key: &pki.signer_key,
+        issuer_key: &p256_key(0x11),
+        extensions: default_signer_extensions(),
+    });
+
+    for valid_gen_time in
+        [make_instant!("2026-06-01T00:00:00Z"), make_instant!("2026-07-01T00:00:00Z")]
+    {
+        let valid_token_der = build_test_time_stamp_token_der(
+            &pes_signature,
+            valid_gen_time,
+            &[&signer_cert],
+            "Test TSA Root CA",
+            3,
+            None,
+            &pki.signer_key,
+        );
+        assert_eq!(
+            time_stamp_token::verify_time_stamp_token(
+                &valid_token_der,
+                &pes_signature,
+                &pes_cert,
+                core::slice::from_ref(&pki.root_cert),
+            ),
+            Ok(())
+        );
+    }
+
+    for out_of_range_gen_time in [
+        make_instant!("2026-05-31T23:59:59.999999999Z"),
+        make_instant!("2026-07-01T00:00:00.000000001Z"),
+    ] {
+        let token_der = build_test_time_stamp_token_der(
+            &pes_signature,
+            out_of_range_gen_time,
+            &[&signer_cert],
+            "Test TSA Root CA",
+            3,
+            None,
+            &pki.signer_key,
+        );
+        let res = time_stamp_token::verify_time_stamp_token(
+            &token_der,
+            &pes_signature,
+            &pes_cert,
+            core::slice::from_ref(&pki.root_cert),
+        );
+        assert_eq!(res, Err(time_stamp_token::TimeStampTokenError::CertificateValidityPeriod));
+    }
+}
+
+#[test]
+fn test_verify_time_stamp_token_fails_message_imprint_mismatch() {
+    use oak_time::make_instant;
+
+    let (pes_signature, pes_cert) = create_test_pes_sig_and_cert();
+    let pki = build_test_tsa_pki();
+    let other_sig = b"wrong signature bytes";
+    let token_der = build_test_time_stamp_token_der(
+        other_sig,
+        make_instant!("2026-06-15T12:00:00Z"),
+        &[&pki.signer_cert, &pki.intermediate_cert],
+        "Test TSA Intermediate CA",
+        3,
+        None,
+        &pki.signer_key,
+    );
+
+    assert_eq!(
+        time_stamp_token::verify_time_stamp_token(
+            &token_der,
+            other_sig,
+            &pes_cert,
+            core::slice::from_ref(&pki.root_cert),
+        ),
+        Ok(())
+    );
+
+    let res = time_stamp_token::verify_time_stamp_token(
+        &token_der,
+        &pes_signature,
+        &pes_cert,
+        core::slice::from_ref(&pki.root_cert),
+    );
+    assert_eq!(res, Err(time_stamp_token::TimeStampTokenError::MessageImprintMismatch));
+}
+
+#[test]
+fn test_verify_time_stamp_token_fails_invalid_cms_signature() {
+    use oak_time::make_instant;
+
+    use crate::time_stamp_token::chain_tests::p256_key;
+
+    let (pes_signature, pes_cert) = create_test_pes_sig_and_cert();
+    let pki = build_test_tsa_pki();
+
+    let token_der = build_test_time_stamp_token_der(
+        &pes_signature,
+        make_instant!("2026-06-15T12:00:00Z"),
+        &[&pki.signer_cert, &pki.intermediate_cert],
+        "Test TSA Intermediate CA",
+        3,
+        None,
+        &p256_key(0x99),
+    );
+
+    let res = time_stamp_token::verify_time_stamp_token(
+        &token_der,
+        &pes_signature,
+        &pes_cert,
+        core::slice::from_ref(&pki.root_cert),
+    );
+    assert!(matches!(res, Err(time_stamp_token::TimeStampTokenError::SignatureVerification(_))));
+}
+
+#[test]
+fn test_verify_time_stamp_token_fails_mismatched_signing_certificate_v2() {
+    use oak_time::make_instant;
+
+    let (pes_signature, pes_cert) = create_test_pes_sig_and_cert();
+    let pki = build_test_tsa_pki();
+    // Put intermediate_cert first so build_test_time_stamp_token_der hashes the
+    // wrong certificate into SigningCertificateV2 while SignerIdentifier still
+    // selects signer_cert (serial 3).
+    let token_der = build_test_time_stamp_token_der(
+        &pes_signature,
+        make_instant!("2026-06-15T12:00:00Z"),
+        &[&pki.intermediate_cert, &pki.signer_cert],
+        "Test TSA Intermediate CA",
+        3,
+        None,
+        &pki.signer_key,
+    );
+
+    let res = time_stamp_token::verify_time_stamp_token(
+        &token_der,
+        &pes_signature,
+        &pes_cert,
+        core::slice::from_ref(&pki.root_cert),
+    );
+    assert_eq!(res, Err(time_stamp_token::TimeStampTokenError::SigningCertificateMismatch));
+}
