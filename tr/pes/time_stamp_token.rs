@@ -29,17 +29,34 @@
 //! - RFC 5035 (ESS Update: Adding CertID Algorithm Agility): <https://www.rfc-editor.org/rfc/rfc5035>
 //! - RFC 5652 (Cryptographic Message Syntax): <https://www.rfc-editor.org/rfc/rfc5652>
 //! - RFC 5280 (Internet X.509 PKI Certificate and CRL Profile): <https://www.rfc-editor.org/rfc/rfc5280>
+//! - RFC 3279 (Algorithms and Identifiers for X.509 PKI): <https://www.rfc-editor.org/rfc/rfc3279>
+//! - RFC 4055 (Additional Algorithms and Identifiers for RSA PKCS #1): <https://www.rfc-editor.org/rfc/rfc4055>
+//! - RFC 5754 (Using SHA2 Algorithms with CMS): <https://www.rfc-editor.org/rfc/rfc5754>
+//! - RFC 5758 (X.509 PKI Validation for DSA and ECDSA): <https://www.rfc-editor.org/rfc/rfc5758>
 
-// All items in this module are `pub(crate)` and exercised by `parsing_tests` in
-// this commit; the non-test library entry point (`verify_time_stamp_token`) is
-// added in the follow-up commit, where this attribute is removed.
-#![cfg_attr(not(test), allow(dead_code))]
+// Verification helpers in this module are wired into `tests` and `lib` in
+// follow-up commits in this stack, where this attribute is removed.
+#![allow(dead_code)]
 
-use alloc::{format, string::String, vec::Vec};
+use alloc::{
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
 
 use chrono::{DateTime, Datelike, NaiveDateTime, Timelike, Utc};
-use const_oid::{ObjectIdentifier, db::rfc5912::ID_SHA_256};
+use const_oid::{
+    ObjectIdentifier,
+    db::rfc5912::{
+        ECDSA_WITH_SHA_256, ECDSA_WITH_SHA_384, ECDSA_WITH_SHA_512, ID_EC_PUBLIC_KEY, ID_SHA_256,
+        ID_SHA_384, ID_SHA_512, RSA_ENCRYPTION, SECP_256_R_1, SHA_256_WITH_RSA_ENCRYPTION,
+        SHA_384_WITH_RSA_ENCRYPTION, SHA_512_WITH_RSA_ENCRYPTION,
+    },
+};
+use ecdsa::signature::hazmat::PrehashVerifier as _;
+use oak_digest::{Digest, Sha256, Sha384, Sha512};
 use oak_time::Instant;
+use rsa::{Pkcs1v15Sign, RsaPublicKey, traits::PublicKeyParts as _};
 use x509_cert::{
     Certificate,
     attr::Attributes,
@@ -49,6 +66,7 @@ use x509_cert::{
         asn1::{
             ContextSpecific, ContextSpecificRef, IntRef, OctetString, OctetStringRef, SetOfVec,
         },
+        referenced::OwnedToRef as _,
     },
     ext::{
         Extensions,
@@ -59,7 +77,7 @@ use x509_cert::{
     },
     name::Name,
     serial_number::SerialNumber,
-    spki::AlgorithmIdentifierOwned,
+    spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned},
 };
 
 /// PKCS#9 `id-ct-TSTInfo` (`1.2.840.113549.1.9.16.1.4`), RFC 3161 Section
@@ -144,6 +162,9 @@ pub enum TimeStampTokenError {
 
     #[error("unsupported digest algorithm {0}")]
     UnsupportedDigestAlgorithm(ObjectIdentifier),
+
+    #[error("invalid parameters for digest algorithm {0}, expected absent or NULL")]
+    InvalidDigestAlgorithmParameters(ObjectIdentifier),
 
     #[error("unsupported signature algorithm {0}")]
     UnsupportedSignatureAlgorithm(ObjectIdentifier),
@@ -1017,6 +1038,239 @@ impl EncodeValue for Rfc3161GeneralizedTime {
         let encoded = self.to_generalized_time_string()?;
         writer.write(encoded.as_bytes())
     }
+}
+
+/// Minimum accepted RSA public key modulus length in bits (256 bytes), per
+/// NIST SP 800-57 Part 1 Rev. 5
+/// (<https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final>).
+const MIN_RSA_MODULUS_BITS: usize = 2048;
+
+/// Supported hash algorithms for RFC 3161 digests.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DigestAlgorithm {
+    Sha256,
+    Sha384,
+    Sha512,
+}
+
+impl DigestAlgorithm {
+    /// Parses and validates a SHA-2 `AlgorithmIdentifier` per RFC 5754 Section
+    /// 2 (<https://www.rfc-editor.org/rfc/rfc5754#section-2>), accepting only
+    /// absent or ASN.1 `NULL` parameters.
+    fn from_algorithm(alg: &AlgorithmIdentifierOwned) -> Result<Self, TimeStampTokenError> {
+        let digest_alg = match alg.oid {
+            ID_SHA_256 => Self::Sha256,
+            ID_SHA_384 => Self::Sha384,
+            ID_SHA_512 => Self::Sha512,
+            oid => return Err(TimeStampTokenError::UnsupportedDigestAlgorithm(oid)),
+        };
+        if let Some(ref params) = alg.parameters
+            && !params.is_null()
+        {
+            return Err(TimeStampTokenError::InvalidDigestAlgorithmParameters(alg.oid));
+        }
+        Ok(digest_alg)
+    }
+
+    fn digest(self, data: &[u8]) -> Digest {
+        match self {
+            Self::Sha256 => Digest::Sha256(Sha256::from_contents(data)),
+            Self::Sha384 => Digest::Sha384(Sha384::from_contents(data)),
+            Self::Sha512 => Digest::Sha512(Sha512::from_contents(data)),
+        }
+    }
+}
+
+/// Resolves a CMS `(digestAlgorithm, signatureAlgorithm)` pair into a combined
+/// X.509 signature `AlgorithmIdentifierOwned` per RFC 5652 Section 5.3
+/// (<https://www.rfc-editor.org/rfc/rfc5652#section-5.3>).
+fn resolve_cms_signature_algorithm(
+    digest_alg_id: &AlgorithmIdentifierOwned,
+    sig_alg: &AlgorithmIdentifierOwned,
+) -> Result<AlgorithmIdentifierOwned, TimeStampTokenError> {
+    let digest_alg = DigestAlgorithm::from_algorithm(digest_alg_id)?;
+    let sig_oid = sig_alg.oid;
+
+    match sig_oid {
+        RSA_ENCRYPTION => {
+            let resolved_oid = match digest_alg {
+                DigestAlgorithm::Sha256 => SHA_256_WITH_RSA_ENCRYPTION,
+                DigestAlgorithm::Sha384 => SHA_384_WITH_RSA_ENCRYPTION,
+                DigestAlgorithm::Sha512 => SHA_512_WITH_RSA_ENCRYPTION,
+            };
+            Ok(AlgorithmIdentifierOwned {
+                oid: resolved_oid,
+                parameters: sig_alg.parameters.clone(),
+            })
+        }
+        ID_EC_PUBLIC_KEY => {
+            if let Some(ref params) = sig_alg.parameters
+                && !params.is_null()
+            {
+                return Err(TimeStampTokenError::SignatureVerification(
+                    "invalid ECDSA CMS signature algorithm parameters".to_string(),
+                ));
+            }
+            let resolved_oid = match digest_alg {
+                DigestAlgorithm::Sha256 => ECDSA_WITH_SHA_256,
+                DigestAlgorithm::Sha384 => ECDSA_WITH_SHA_384,
+                DigestAlgorithm::Sha512 => ECDSA_WITH_SHA_512,
+            };
+            Ok(AlgorithmIdentifierOwned { oid: resolved_oid, parameters: None })
+        }
+        _ => {
+            let expected_digest = match sig_oid {
+                SHA_256_WITH_RSA_ENCRYPTION | ECDSA_WITH_SHA_256 => DigestAlgorithm::Sha256,
+                SHA_384_WITH_RSA_ENCRYPTION | ECDSA_WITH_SHA_384 => DigestAlgorithm::Sha384,
+                SHA_512_WITH_RSA_ENCRYPTION | ECDSA_WITH_SHA_512 => DigestAlgorithm::Sha512,
+                _ => return Err(TimeStampTokenError::UnsupportedSignatureAlgorithm(sig_oid)),
+            };
+
+            if expected_digest != digest_alg {
+                return Err(TimeStampTokenError::IncompatibleDigestAndSignatureAlgorithms {
+                    digest_alg: digest_alg_id.oid,
+                    sig_alg: sig_oid,
+                });
+            }
+
+            Ok(AlgorithmIdentifierOwned { oid: sig_oid, parameters: sig_alg.parameters.clone() })
+        }
+    }
+}
+
+/// Verifies a signature over `message` against an X.509
+/// `SubjectPublicKeyInfoOwned` for RSA PKCS#1 v1.5 (SHA-256/384/512) and ECDSA
+/// P-256 (SHA-256/384/512) per:
+/// - RFC 3279 (<https://www.rfc-editor.org/rfc/rfc3279>)
+/// - RFC 4055 (<https://www.rfc-editor.org/rfc/rfc4055>)
+/// - RFC 5758 (<https://www.rfc-editor.org/rfc/rfc5758>)
+fn verify_spki_signature(
+    spki: &SubjectPublicKeyInfoOwned,
+    sig_alg: &AlgorithmIdentifierOwned,
+    message: &[u8],
+    signature_bytes: &[u8],
+) -> Result<(), TimeStampTokenError> {
+    let sig_oid = sig_alg.oid;
+    let spki_ref = spki.owned_to_ref();
+
+    match sig_oid {
+        SHA_256_WITH_RSA_ENCRYPTION | SHA_384_WITH_RSA_ENCRYPTION | SHA_512_WITH_RSA_ENCRYPTION => {
+            if let Some(ref params) = sig_alg.parameters
+                && !params.is_null()
+            {
+                return Err(TimeStampTokenError::SignatureVerification(
+                    "invalid RSA signature algorithm parameters".to_string(),
+                ));
+            }
+            if spki.algorithm.oid != RSA_ENCRYPTION {
+                return Err(TimeStampTokenError::SignatureVerification(
+                    "expected rsaEncryption SPKI algorithm".to_string(),
+                ));
+            }
+            let rsa_key = RsaPublicKey::try_from(spki_ref)
+                .map_err(|e| TimeStampTokenError::SignatureVerification(format!("{e}")))?;
+            if rsa_key.n().bits() < MIN_RSA_MODULUS_BITS {
+                return Err(TimeStampTokenError::SignatureVerification(format!(
+                    "RSA modulus too small: {} bits, minimum is {MIN_RSA_MODULUS_BITS}",
+                    rsa_key.n().bits()
+                )));
+            }
+            let verify_res = match sig_oid {
+                SHA_256_WITH_RSA_ENCRYPTION => rsa_key.verify(
+                    Pkcs1v15Sign::new::<sha2::Sha256>(),
+                    Sha256::from_contents(message).as_ref(),
+                    signature_bytes,
+                ),
+                SHA_384_WITH_RSA_ENCRYPTION => rsa_key.verify(
+                    Pkcs1v15Sign::new::<sha2::Sha384>(),
+                    Sha384::from_contents(message).as_ref(),
+                    signature_bytes,
+                ),
+                _ => rsa_key.verify(
+                    Pkcs1v15Sign::new::<sha2::Sha512>(),
+                    Sha512::from_contents(message).as_ref(),
+                    signature_bytes,
+                ),
+            };
+            verify_res.map_err(|e| TimeStampTokenError::SignatureVerification(format!("{e}")))
+        }
+        ECDSA_WITH_SHA_256 | ECDSA_WITH_SHA_384 | ECDSA_WITH_SHA_512 => {
+            if sig_alg.parameters.is_some() {
+                return Err(TimeStampTokenError::SignatureVerification(
+                    "unexpected parameters in ECDSA signature algorithm".to_string(),
+                ));
+            }
+            if spki.algorithm.oid != ID_EC_PUBLIC_KEY {
+                return Err(TimeStampTokenError::SignatureVerification(
+                    "expected id-ecPublicKey SPKI algorithm".to_string(),
+                ));
+            }
+            let curve_oid = spki
+                .algorithm
+                .parameters
+                .as_ref()
+                .ok_or_else(|| {
+                    TimeStampTokenError::SignatureVerification(
+                        "missing EC curve parameters".to_string(),
+                    )
+                })?
+                .decode_as::<ObjectIdentifier>()
+                .map_err(|e| TimeStampTokenError::SignatureVerification(format!("{e}")))?;
+            let digest = match sig_oid {
+                ECDSA_WITH_SHA_256 => DigestAlgorithm::Sha256.digest(message),
+                ECDSA_WITH_SHA_384 => DigestAlgorithm::Sha384.digest(message),
+                _ => DigestAlgorithm::Sha512.digest(message),
+            };
+            // `ecdsa::VerifyingKey::verify_prehash` converts `digest` to a field
+            // element via `ecdsa::hazmat::bits2field` per RFC 6979 Section 2.3.2
+            // (<https://www.rfc-editor.org/rfc/rfc6979#section-2.3.2>), truncating
+            // digests wider than the curve's field (e.g. SHA-384 or SHA-512 with
+            // P-256).
+            //
+            // Note: P-384 (`secp384r1`) is intentionally omitted for now to avoid
+            // adding a `p384` crate dependency to `pes`.
+            match curve_oid {
+                SECP_256_R_1 => {
+                    let vk = p256::ecdsa::VerifyingKey::try_from(spki_ref)
+                        .map_err(|e| TimeStampTokenError::SignatureVerification(format!("{e}")))?;
+                    let sig = p256::ecdsa::Signature::from_der(signature_bytes)
+                        .map_err(|e| TimeStampTokenError::SignatureVerification(format!("{e}")))?;
+                    vk.verify_prehash(digest.as_ref(), &sig)
+                        .map_err(|e| TimeStampTokenError::SignatureVerification(format!("{e}")))
+                }
+                _ => Err(TimeStampTokenError::SignatureVerification(format!(
+                    "unsupported EC curve {curve_oid}"
+                ))),
+            }
+        }
+        _ => Err(TimeStampTokenError::UnsupportedSignatureAlgorithm(sig_oid)),
+    }
+}
+
+/// Verifies that `subject` was cryptographically signed by `issuer`'s public
+/// key per RFC 5280 Section 4.1.1.2
+/// (<https://www.rfc-editor.org/rfc/rfc5280#section-4.1.1.2>).
+fn verify_certificate_signature(
+    subject: &Certificate,
+    issuer: &Certificate,
+) -> Result<(), TimeStampTokenError> {
+    if subject.tbs_certificate.signature != subject.signature_algorithm {
+        return Err(TimeStampTokenError::SignatureVerification(
+            "certificate tbsCertificate.signature does not match signatureAlgorithm".to_string(),
+        ));
+    }
+    if subject.signature.unused_bits() != 0 {
+        return Err(TimeStampTokenError::SignatureVerification(
+            "certificate signature BIT STRING has non-zero unused bits".to_string(),
+        ));
+    }
+    let tbs_der = subject.tbs_certificate.to_der()?;
+    verify_spki_signature(
+        &issuer.tbs_certificate.subject_public_key_info,
+        &subject.signature_algorithm,
+        &tbs_der,
+        subject.signature.raw_bytes(),
+    )
 }
 
 /// Parses DER-encoded X.509 certificates for use as trusted TSA root anchors.
