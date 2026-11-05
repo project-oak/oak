@@ -1205,3 +1205,252 @@ fn test_verify_time_stamp_token_fails_mismatched_signing_certificate_v2() {
     );
     assert_eq!(res, Err(time_stamp_token::TimeStampTokenError::SigningCertificateMismatch));
 }
+
+#[test]
+fn test_verify_time_stamp_token_fails_missing_time_stamping_eku() {
+    use const_oid::db::rfc5280::ID_KP_TIME_STAMPING;
+    use oak_time::make_instant;
+    use x509_cert::{
+        Version,
+        ext::{
+            Extension,
+            pkix::{BasicConstraints, ExtendedKeyUsage},
+        },
+    };
+
+    use crate::time_stamp_token::chain_tests::{CertSpec, build_cert, make_ext, p256_key};
+
+    let (pes_signature, pes_cert) = create_test_pes_sig_and_cert();
+    let pki = build_test_tsa_pki();
+    let base_bc_ext = make_ext(true, &BasicConstraints { ca: false, path_len_constraint: None });
+    let make_signer_with_exts = |extensions: Vec<Extension>| {
+        build_cert(&CertSpec {
+            version: Version::V3,
+            serial: 3,
+            issuer_cn: "Test TSA Root CA",
+            subject_cn: "Test TSA Signer",
+            not_before: make_instant!("2026-01-01T00:00:00Z"),
+            not_after: make_instant!("2028-01-01T00:00:00Z"),
+            subject_key: &pki.signer_key,
+            issuer_key: &p256_key(0x11),
+            extensions,
+        })
+    };
+
+    // Baseline with critical id-kp-timeStamping EKU succeeds.
+    let valid_signer = make_signer_with_exts(vec![
+        base_bc_ext.clone(),
+        make_ext(true, &ExtendedKeyUsage(vec![ID_KP_TIME_STAMPING])),
+    ]);
+    let valid_token_der = build_test_time_stamp_token_der(
+        &pes_signature,
+        make_instant!("2026-06-15T12:00:00Z"),
+        &[&valid_signer],
+        "Test TSA Root CA",
+        3,
+        None,
+        &pki.signer_key,
+    );
+    assert_eq!(
+        time_stamp_token::verify_time_stamp_token(
+            &valid_token_der,
+            &pes_signature,
+            &pes_cert,
+            core::slice::from_ref(&pki.root_cert),
+        ),
+        Ok(())
+    );
+
+    // Signer cert without ExtendedKeyUsage or with non-critical ExtendedKeyUsage
+    // fails per RFC 3161 Section 2.3.
+    for bad_exts in [
+        vec![base_bc_ext.clone()],
+        vec![base_bc_ext, make_ext(false, &ExtendedKeyUsage(vec![ID_KP_TIME_STAMPING]))],
+    ] {
+        let bad_signer = make_signer_with_exts(bad_exts);
+        let token_der = build_test_time_stamp_token_der(
+            &pes_signature,
+            make_instant!("2026-06-15T12:00:00Z"),
+            &[&bad_signer],
+            "Test TSA Root CA",
+            3,
+            None,
+            &pki.signer_key,
+        );
+        let res = time_stamp_token::verify_time_stamp_token(
+            &token_der,
+            &pes_signature,
+            &pes_cert,
+            core::slice::from_ref(&pki.root_cert),
+        );
+        assert_eq!(
+            res,
+            Err(time_stamp_token::TimeStampTokenError::MissingTimeStampingExtendedKeyUsage)
+        );
+    }
+}
+
+#[test]
+fn test_verify_time_stamp_token_fails_non_ca_intermediate() {
+    use oak_time::make_instant;
+    use x509_cert::{
+        Version,
+        ext::pkix::{BasicConstraints, KeyUsage, KeyUsages},
+    };
+
+    use crate::time_stamp_token::chain_tests::{CertSpec, build_cert, make_ext, p256_key};
+
+    let (pes_signature, pes_cert) = create_test_pes_sig_and_cert();
+    let pki = build_test_tsa_pki();
+
+    // Intermediate cert with cA = false!
+    let bad_intermediate_cert = build_cert(&CertSpec {
+        version: Version::V3,
+        serial: 2,
+        issuer_cn: "Test TSA Root CA",
+        subject_cn: "Test TSA Intermediate CA",
+        not_before: make_instant!("2024-01-01T00:00:00Z"),
+        not_after: make_instant!("2030-01-01T00:00:00Z"),
+        subject_key: &p256_key(0x22),
+        issuer_key: &p256_key(0x11),
+        extensions: vec![
+            make_ext(true, &BasicConstraints { ca: false, path_len_constraint: None }),
+            make_ext(true, &KeyUsage(KeyUsages::KeyCertSign.into())),
+        ],
+    });
+
+    let token_der = build_test_time_stamp_token_der(
+        &pes_signature,
+        make_instant!("2026-06-15T12:00:00Z"),
+        &[&pki.signer_cert, &bad_intermediate_cert],
+        "Test TSA Intermediate CA",
+        3,
+        None,
+        &pki.signer_key,
+    );
+
+    let res = time_stamp_token::verify_time_stamp_token(
+        &token_der,
+        &pes_signature,
+        &pes_cert,
+        core::slice::from_ref(&pki.root_cert),
+    );
+    assert_eq!(res, Err(time_stamp_token::TimeStampTokenError::MissingCaBasicConstraints));
+}
+
+#[test]
+fn test_verify_time_stamp_token_fails_signer_is_ca() {
+    use const_oid::db::rfc5280::ID_KP_TIME_STAMPING;
+    use oak_time::make_instant;
+    use x509_cert::{
+        Version,
+        ext::pkix::{BasicConstraints, ExtendedKeyUsage},
+    };
+
+    use crate::time_stamp_token::chain_tests::{CertSpec, build_cert, make_ext, p256_key};
+
+    let (pes_signature, pes_cert) = create_test_pes_sig_and_cert();
+    let pki = build_test_tsa_pki();
+
+    // Signer cert with cA = true!
+    let ca_signer_cert = build_cert(&CertSpec {
+        version: Version::V3,
+        serial: 3,
+        issuer_cn: "Test TSA Root CA",
+        subject_cn: "Test TSA Signer",
+        not_before: make_instant!("2026-01-01T00:00:00Z"),
+        not_after: make_instant!("2028-01-01T00:00:00Z"),
+        subject_key: &pki.signer_key,
+        issuer_key: &p256_key(0x11),
+        extensions: vec![
+            make_ext(true, &BasicConstraints { ca: true, path_len_constraint: None }),
+            make_ext(true, &ExtendedKeyUsage(vec![ID_KP_TIME_STAMPING])),
+        ],
+    });
+
+    let token_der = build_test_time_stamp_token_der(
+        &pes_signature,
+        make_instant!("2026-06-15T12:00:00Z"),
+        &[&ca_signer_cert],
+        "Test TSA Root CA",
+        3,
+        None,
+        &pki.signer_key,
+    );
+
+    let res = time_stamp_token::verify_time_stamp_token(
+        &token_der,
+        &pes_signature,
+        &pes_cert,
+        core::slice::from_ref(&pki.root_cert),
+    );
+    assert_eq!(res, Err(time_stamp_token::TimeStampTokenError::SignerCertificateIsCa));
+}
+
+#[test]
+fn test_verify_time_stamp_token_backtracks_across_cross_signed_intermediate() {
+    use oak_time::make_instant;
+    use x509_cert::Version;
+
+    use crate::time_stamp_token::chain_tests::{
+        CertSpec, build_cert, default_ca_extensions, p256_key,
+    };
+
+    let (pes_signature, pes_cert) = create_test_pes_sig_and_cert();
+    let pki = build_test_tsa_pki();
+
+    // Cross-signed intermediate with the same subject and public key as
+    // pki.intermediate_cert, but issued by an untrusted root CA.
+    let cross_signed_intermediate = build_cert(&CertSpec {
+        version: Version::V3,
+        serial: 20,
+        issuer_cn: "Untrusted Legacy Root CA",
+        subject_cn: "Test TSA Intermediate CA",
+        not_before: make_instant!("2024-01-01T00:00:00Z"),
+        not_after: make_instant!("2030-01-01T00:00:00Z"),
+        subject_key: &p256_key(0x22),
+        issuer_key: &p256_key(0x77),
+        extensions: default_ca_extensions(None),
+    });
+
+    // With only the cross-signed intermediate, chain building fails because its
+    // issuer is not in trusted_roots.
+    let untrusted_only_token_der = build_test_time_stamp_token_der(
+        &pes_signature,
+        make_instant!("2026-06-15T12:00:00Z"),
+        &[&pki.signer_cert, &cross_signed_intermediate],
+        "Test TSA Intermediate CA",
+        3,
+        None,
+        &pki.signer_key,
+    );
+    assert_eq!(
+        time_stamp_token::verify_time_stamp_token(
+            &untrusted_only_token_der,
+            &pes_signature,
+            &pes_cert,
+            core::slice::from_ref(&pki.root_cert),
+        ),
+        Err(time_stamp_token::TimeStampTokenError::UntrustedCertificateChain)
+    );
+
+    // Place the dead-end cross-signed intermediate before the valid intermediate;
+    // chain discovery backtracks and succeeds via pki.intermediate_cert.
+    let token_der = build_test_time_stamp_token_der(
+        &pes_signature,
+        make_instant!("2026-06-15T12:00:00Z"),
+        &[&pki.signer_cert, &cross_signed_intermediate, &pki.intermediate_cert],
+        "Test TSA Intermediate CA",
+        3,
+        None,
+        &pki.signer_key,
+    );
+
+    let res = time_stamp_token::verify_time_stamp_token(
+        &token_der,
+        &pes_signature,
+        &pes_cert,
+        core::slice::from_ref(&pki.root_cert),
+    );
+    assert_eq!(res, Ok(()));
+}
