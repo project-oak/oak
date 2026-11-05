@@ -621,3 +621,39 @@ fn test_parse_pes_confirmation_json_file() {
         "entries/1b71272824ca62894647e6c009304f4d7366b7d9026b652791581a11dc8c4beb_afad48fc-5056-4cd9-b2ec-b11f1976f249"
     );
 }
+
+#[test]
+fn test_parse_tsa_root_certs() {
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+
+    let empty: &[Vec<u8>] = &[];
+    assert!(time_stamp_token::parse_tsa_root_certs(empty).unwrap().is_empty());
+
+    let token_b64 = include_str!("testdata/globalsign_token.b64").trim();
+    let token_der = STANDARD.decode(token_b64).expect("valid base64 in globalsign_token.b64");
+    let content_info =
+        time_stamp_token::ContentInfo::from_der(&token_der).expect("should parse ContentInfo");
+    let signed_data = content_info
+        .content
+        .decode_as::<time_stamp_token::SignedData<'_>>()
+        .expect("should parse SignedData");
+    let certs = signed_data.certificates.expect("expected certificates");
+    // The certificates embedded in the token are not actually root CA
+    // certificates, but they are valid X.509 certificates and therefore
+    // sufficient for testing DER certificate parsing.
+    let cert0 = &certs[0];
+    let cert1 = &certs[1];
+    let cert0_der = cert0.to_der().expect("should encode first cert");
+    let cert1_der = cert1.to_der().expect("should encode second cert");
+
+    let parsed = time_stamp_token::parse_tsa_root_certs(core::slice::from_ref(&cert0_der))
+        .expect("should parse DER cert");
+    assert_eq!(parsed, vec![cert0.clone()]);
+
+    let parsed_multiple = time_stamp_token::parse_tsa_root_certs(&[cert0_der, cert1_der])
+        .expect("should parse multiple DER certs");
+    assert_eq!(parsed_multiple, vec![cert0.clone(), cert1.clone()]);
+
+    let invalid = time_stamp_token::parse_tsa_root_certs(&[b"not valid der".to_vec()]);
+    assert!(matches!(invalid, Err(time_stamp_token::TimeStampTokenError::Der(_))));
+}

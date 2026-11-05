@@ -1018,3 +1018,13 @@ impl EncodeValue for Rfc3161GeneralizedTime {
         writer.write(encoded.as_bytes())
     }
 }
+
+/// Parses DER-encoded X.509 certificates for use as trusted TSA root anchors.
+pub fn parse_tsa_root_certs(
+    tsa_root_certs_der: &[Vec<u8>],
+) -> Result<Vec<Certificate>, TimeStampTokenError> {
+    tsa_root_certs_der
+        .iter()
+        .map(|der_bytes| Certificate::from_der(der_bytes).map_err(TimeStampTokenError::from))
+        .collect()
+}
