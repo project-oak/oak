@@ -35,6 +35,30 @@ use rsa::{Pkcs1v15Sign, RsaPrivateKey, pkcs8::EncodePublicKey};
 
 use super::*;
 
+pub(crate) const TEST_RSA_2048_PKCS8_DER_B64: &str = "\
+MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCuLvnJf0gAqeKPn6NQrLBJWKd+\
+quDFw5jrCmWRseXqAdgkpluhp0wnnxieqzK/0Z6eelVkSogJwggkTkMU1y4vc/K2BsaABj7+sCcC\
+h0DlTJHWaE1P6VHsH0gVHQX7y1MB6KT5lqTnIfV4IeMpkrvUZVyF5knwJGTXZxpSKi1iMpec95Gs\
+0ellgq1kcHFyi/tNYwlcH/tRLlgWPNoHZjeZJH0LHJWOROLwacPW7odFYRvShIv2mtGHz2Yl0T0W\
+EJaV9a63gl5mczc/Ust9MA1NG6odXExHaXGBVSYewt6tv+7CdCboq4LKNUG/BU6jowBmWlFJNIsa\
+fPEzRgEuASLPAgMBAAECggEACS5rtz3Qz0wlJ5nsE2AO6MbWCVy7fWEqidUh9nSQoG2ZdZEZSmOV\
+pY8CzrZKdgb4G/Vp0+AD3LPQFw3TBmGzSwgLFqIzy2LI5kblv4Hen1eSZmFYFerACTi65XYCrzuP\
+9A1NyOQybAaDuGHc5f+YjAENx/cUFabtc9c48XTMsJzQ0hnGXLl8JVzCU6c5x5qd2myHXyrEHO8O\
+hX1pgKcNNIvGZ5y841dwGB7Np35l87zrAkXbH/TKz+cblmj675JqEXajeJbcO3p4tg2sN35MrE+7\
+u1TCQDAOV7GhZKsOsM8dBU57rStaLbzM/ddVVHKMxmdBhnOlGCmqC/xHSfsJ1QKBgQDXGiOU/130\
+i6CLMq/o/vfieq8Gbp86dToZCUExmZiOyReaVZJwELaVxsrPT62g+98R9m9paGgsfr8HcmMxNit0\
+pfXum+/sJQzLj3bCDrxU7P06wFBAtPdBSXq+nvtPaEh5G444rsb0JHalFkfMlLT3qcOSQ4KbouH1\
+o+hL0K0RYwKBgQDPTSsHDW6OaRnF+cLMWG0eyR160S8kQgXZjwted1JuaOVagp46rc/aZ55OEE8h\
+yMuImrGeLbe4NueTPauHZ+QfKuXt43L24WraXN5/10YraswQDt2ckJuTDrBqqeAi5qALnKJY0RFB\
+Kae7svra9woamYjITqPaEJQcv59FqtG6pQKBgHcqOPorew6mZ9uVyhSHZCapFtu2XyoQlY4XLXHg\
+CL9ZsmTC8Wx6JdzWE7dECgm8X7lg0BoSSFwWH5hti3xQ6UQnSRbWdtVZNTx0jzM03Ksj26o3rn4a\
+gzw9C+4cv1cfi77kQCcw1HGe3cfZjw9MdvEZsIoQMoQseYgPNPsDcU3HAoGATOOedfsxanjpKlk9\
+O3YA405NNOSpy5UBfnRkDyHK3VDi4PNZpQIa+jM8sE+0Sh+j/oMCJl1mq1kSA7b4DD0oi7bpmZan\
+aZKqg1u220wJpsjx73LUF+I7Egx8utNPYyKPcj8iqDbDY5wDrsbv7I98m+keps0kURmdFhytArYd\
+HFECgYBGFRe4tFnyyvQOwHNruVU6K9gMZbpafMY8mVQlagVzVsAbTZHAbztmDHBxrimEJk3PbYea\
+6Oc1tkGAVKRUqRUP+Il2H8cISU+hjqg/uBKs685h10SXOs8hJy86XwaPLtfYzCQlLBZLmiAIwKjg\
+A1edf0NSAidb4q69a5aAcE+c+w==";
+
 fn create_test_pes_confirmation_bytes(
     endorsement_bytes: &[u8],
 ) -> (Vec<u8>, VerifyingKeySet, VerifyingKey) {
@@ -58,35 +82,12 @@ s3rndIOZ92m4mUuXtzj9VOu0eiKL3bi0xT/w7Dp5hmD71tOrpndZA3b29fqEifFGDc/XatIvC2qq\
 8gTeitcgOOHOroQkOUG4lK113g4wK4FcR2SqwbRrHr9OX679LIkSypOOZUVdloS+NEBa6wTQmQm2\
 2blmc9Vg3UOS6wVt9ACd16BzcxM5u1mDueaWhT8xvuEv7MrGjrTHFt4OFFg=";
 
-    let priv_key_base64 = "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCuLvnJf0gAqeKPn6NQrLBJWKd+\
-quDFw5jrCmWRseXqAdgkpluhp0wnnxieqzK/0Z6eelVkSogJwggkTkMU1y4vc/K2BsaABj7+sCcC\
-h0DlTJHWaE1P6VHsH0gVHQX7y1MB6KT5lqTnIfV4IeMpkrvUZVyF5knwJGTXZxpSKi1iMpec95Gs\
-0ellgq1kcHFyi/tNYwlcH/tRLlgWPNoHZjeZJH0LHJWOROLwacPW7odFYRvShIv2mtGHz2Yl0T0W\
-EJaV9a63gl5mczc/Ust9MA1NG6odXExHaXGBVSYewt6tv+7CdCboq4LKNUG/BU6jowBmWlFJNIsa\
-fPEzRgEuASLPAgMBAAECggEACS5rtz3Qz0wlJ5nsE2AO6MbWCVy7fWEqidUh9nSQoG2ZdZEZSmOV\
-pY8CzrZKdgb4G/Vp0+AD3LPQFw3TBmGzSwgLFqIzy2LI5kblv4Hen1eSZmFYFerACTi65XYCrzuP\
-9A1NyOQybAaDuGHc5f+YjAENx/cUFabtc9c48XTMsJzQ0hnGXLl8JVzCU6c5x5qd2myHXyrEHO8O\
-hX1pgKcNNIvGZ5y841dwGB7Np35l87zrAkXbH/TKz+cblmj675JqEXajeJbcO3p4tg2sN35MrE+7\
-u1TCQDAOV7GhZKsOsM8dBU57rStaLbzM/ddVVHKMxmdBhnOlGCmqC/xHSfsJ1QKBgQDXGiOU/130\
-i6CLMq/o/vfieq8Gbp86dToZCUExmZiOyReaVZJwELaVxsrPT62g+98R9m9paGgsfr8HcmMxNit0\
-pfXum+/sJQzLj3bCDrxU7P06wFBAtPdBSXq+nvtPaEh5G444rsb0JHalFkfMlLT3qcOSQ4KbouH1\
-o+hL0K0RYwKBgQDPTSsHDW6OaRnF+cLMWG0eyR160S8kQgXZjwted1JuaOVagp46rc/aZ55OEE8h\
-yMuImrGeLbe4NueTPauHZ+QfKuXt43L24WraXN5/10YraswQDt2ckJuTDrBqqeAi5qALnKJY0RFB\
-Kae7svra9woamYjITqPaEJQcv59FqtG6pQKBgHcqOPorew6mZ9uVyhSHZCapFtu2XyoQlY4XLXHg\
-CL9ZsmTC8Wx6JdzWE7dECgm8X7lg0BoSSFwWH5hti3xQ6UQnSRbWdtVZNTx0jzM03Ksj26o3rn4a\
-gzw9C+4cv1cfi77kQCcw1HGe3cfZjw9MdvEZsIoQMoQseYgPNPsDcU3HAoGATOOedfsxanjpKlk9\
-O3YA405NNOSpy5UBfnRkDyHK3VDi4PNZpQIa+jM8sE+0Sh+j/oMCJl1mq1kSA7b4DD0oi7bpmZan\
-aZKqg1u220wJpsjx73LUF+I7Egx8utNPYyKPcj8iqDbDY5wDrsbv7I98m+keps0kURmdFhytArYd\
-HFECgYBGFRe4tFnyyvQOwHNruVU6K9gMZbpafMY8mVQlagVzVsAbTZHAbztmDHBxrimEJk3PbYea\
-6Oc1tkGAVKRUqRUP+Il2H8cISU+hjqg/uBKs685h10SXOs8hJy86XwaPLtfYzCQlLBZLmiAIwKjg\
-A1edf0NSAidb4q69a5aAcE+c+w==";
-
     let cert_der = base64::engine::general_purpose::STANDARD
         .decode(cert_base64)
         .expect("failed to decode certificate base64");
 
     let priv_key_der = base64::engine::general_purpose::STANDARD
-        .decode(priv_key_base64)
+        .decode(TEST_RSA_2048_PKCS8_DER_B64)
         .expect("failed to decode private key base64");
 
     let priv_key = RsaPrivateKey::from_pkcs8_der(&priv_key_der).expect("failed to parse key");
