@@ -411,6 +411,7 @@ maven.install(
     ],
     repositories = [
         "https://maven.google.com",
+        "https://maven-central.storage-download.googleapis.com/maven2",
         "https://repo1.maven.org/maven2",
     ],
 )
@@ -418,6 +419,25 @@ use_repo(
     maven,
     "maven",
 )
+
+# Redirect the unpinned maven groups declared by rules_android 0.6.1 through
+# Google's public GCS Maven Central mirror before falling back to repo1.maven.org,
+# which rate-limits ephemeral Kokoro containers with HTTP 429 (see b/579650708).
+[
+    maven.install(
+        name = name,
+        repositories = [
+            "https://maven.google.com",
+            "https://maven-central.storage-download.googleapis.com/maven2",
+            "https://repo1.maven.org/maven2",
+        ],
+    )
+    for name in [
+        "android_ide_common_30_1_3",
+        "bazel_worker_maven",
+        "rules_android_maven",
+    ]
+]
 
 # https://github.com/bazelbuild/rules_java
 bazel_dep(name = "rules_java", version = "8.14.0")
