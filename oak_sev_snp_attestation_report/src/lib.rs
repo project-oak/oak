@@ -196,6 +196,7 @@ pub enum AmdProduct {
     /// Any model that does not support SEV-SNP, or is not explicitly listed.
     Unsupported = 0,
     Milan = 1,
+    /// Genoa, including the Zen 4c Bergamo and Siena (EPYC 8004) models.
     Genoa = 2,
     Turin = 3,
 }
@@ -217,7 +218,8 @@ impl AttestationReportData {
         } else if self.cpuid_fam_id == 0x19 {
             if self.cpuid_mod_id == 0x01 {
                 AmdProduct::Milan
-            } else if self.cpuid_mod_id == 0x11 {
+            } else if self.cpuid_mod_id == 0x11 || self.cpuid_mod_id == 0xa0 {
+                // Bergamo and Siena (model 0xa0) chain to the Genoa ASK/ARK.
                 AmdProduct::Genoa
             } else {
                 AmdProduct::Unsupported

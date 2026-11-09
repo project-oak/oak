@@ -26,7 +26,7 @@ use x509_cert::{
     certificate::{CertificateInner, Version},
     der::{Decode, DecodePem},
 };
-use zerocopy::FromBytes;
+use zerocopy::{FromBytes, FromZeros};
 
 use crate::{
     amd::{AmdProduct, get_product},
@@ -300,6 +300,16 @@ fn test_product_from_report_milan() {
 #[test]
 fn test_product_from_report_turin() {
     assert_eq!(get_product_from_report(&AttestationData::load_turin_oc()), AmdProduct::Turin);
+}
+
+#[test]
+fn test_product_from_report_siena() {
+    // CPUID fields of an AMD EPYC 8124P (Siena) attestation report.
+    let mut report = AttestationReport::new_zeroed();
+    report.data.cpuid_fam_id = 0x19;
+    report.data.cpuid_mod_id = 0xa0;
+    report.data.cpuid_step = 0x02;
+    assert_eq!(report.data.get_product(), AmdProduct::Genoa);
 }
 
 #[test]
