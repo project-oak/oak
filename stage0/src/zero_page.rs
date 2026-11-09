@@ -158,13 +158,7 @@ impl ZeroPage {
 
         self.inner.e820_entries = e820_entries as u8;
         self.validate_e820_table();
-
-        // We leave a gap in the region [0xA0000,0xF0000) since historically this
-        // contained hardware-related regions such as the VGA bios rom.
-        self.ensure_e820_gap(0xA_0000, 0x5_0000);
-        // Reserve [0xF0000,0x100000) as Stage0 initializes this memory to handle legacy
-        // scans of the SMBIOS range.
-        self.insert_e820_entry(BootE820Entry::new(0xF_0000, 0x1_0000, E820EntryType::RESERVED));
+        self.apply_legacy_memory_layout();
 
         for entry in self.inner.e820_table() {
             log::debug!(
@@ -175,6 +169,22 @@ impl ZeroPage {
                 entry.entry_type().unwrap()
             );
         }
+    }
+
+    /// Overrides the layout of the legacy region [0xA0000,0x100000), whatever
+    /// the VMM put there.
+    fn apply_legacy_memory_layout(&mut self) {
+        // We leave a gap in the region [0xA0000,0xC0000) since historically this
+        // contained the VGA frame buffer.
+        self.ensure_e820_gap(0xA_0000, 0x2_0000);
+        // Reserve [0xC0000,0x100000) (the option ROM area and the SMBIOS range) as
+        // Stage0 initializes this memory to handle legacy scans of it. Besides the
+        // SMBIOS entry point search, Linux scans [0x80000,0x100000) minus the VGA
+        // window for an iBFT on every non-EFI boot (`reserve_ibft_region()`,
+        // <https://github.com/torvalds/linux/blob/master/drivers/firmware/iscsi_ibft_find.c>).
+        // Left unvalidated under SEV-SNP, that read of 0xC0000 kills the kernel
+        // with "Unsupported exit-code 0x404 in early #VC exception".
+        self.insert_e820_entry(BootE820Entry::new(0xC_0000, 0x4_0000, E820EntryType::RESERVED));
     }
 
     /// Returns a reference to the E820 table inside the zero page.
@@ -611,6 +621,41 @@ mod tests {
         zero_page.inner.append_e820_entry(BootE820Entry::new(0, 300, E820EntryType::RAM));
 
         zero_page.ensure_e820_gap(140, 30);
+
+        assert_eq!(zero_page.e820_table(), &expected[..]);
+    }
+
+    #[test]
+    pub fn legacy_memory_layout() {
+        let expected = [
+            BootE820Entry::new(0, 0xA_0000, E820EntryType::RAM),
+            BootE820Entry::new(0xC_0000, 0x4_0000, E820EntryType::RESERVED),
+            BootE820Entry::new(0x10_0000, 0xFF0_0000, E820EntryType::RAM),
+        ];
+        let mut zero_page = ZeroPage::new();
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0, 0xA_0000, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(
+            0x10_0000,
+            0xFF0_0000,
+            E820EntryType::RAM,
+        ));
+
+        zero_page.apply_legacy_memory_layout();
+
+        assert_eq!(zero_page.e820_table(), &expected[..]);
+    }
+
+    #[test]
+    pub fn legacy_memory_layout_overrides_vmm_ram() {
+        let expected = [
+            BootE820Entry::new(0, 0xA_0000, E820EntryType::RAM),
+            BootE820Entry::new(0xC_0000, 0x4_0000, E820EntryType::RESERVED),
+            BootE820Entry::new(0x10_0000, 0xFF0_0000, E820EntryType::RAM),
+        ];
+        let mut zero_page = ZeroPage::new();
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0, 0x1000_0000, E820EntryType::RAM));
+
+        zero_page.apply_legacy_memory_layout();
 
         assert_eq!(zero_page.e820_table(), &expected[..]);
     }

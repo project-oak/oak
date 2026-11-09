@@ -212,16 +212,17 @@ fn accept_tdx_memory(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
 }
 
 fn handle_legacy_smbios(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
-    // Locate the legacy SMBIOS range [0xF_0000, 0x10_0000) in the E820 table.
-    // Unwrap() will panic if entry not found with expected start, size, and type.
-    let legacy_smbios_range_entry = e820_table
-        .iter()
-        .find(|entry| {
-            entry.addr() == 0xF_0000
-                && entry.size() == 0x1_0000
+    // The legacy SMBIOS range [0xF_0000, 0x10_0000) is the tail of the reserved
+    // E820 entry [0xC_0000, 0x10_0000). Panic if that entry is not in the table.
+    let legacy_smbios_range_entry = BootE820Entry::new(0xF_0000, 0x1_0000, E820EntryType::RESERVED);
+    assert!(
+        e820_table.iter().any(|entry| {
+            entry.addr() <= legacy_smbios_range_entry.addr()
+                && entry.end() >= legacy_smbios_range_entry.end()
                 && entry.entry_type() == Some(E820EntryType::RESERVED)
-        })
-        .expect("couldn't find legacy SMBIOS memory range");
+        }),
+        "couldn't find legacy SMBIOS memory range"
+    );
 
     // Accept the legacy SMBIOS range since legacy code may scan this range for
     // the SMBIOS entry point table, even if the range is marked as reserved.

@@ -74,8 +74,8 @@ Stage0 maps the first 1 GiB of physical memory using identity mapping before
 handing control over to the kernel. The stage0 binary itself is mapped into
 memory just below the end of 4 GiB address space, like any other BIOS ROM.
 
-We explicitly reserve the SMBIOS entry table memory range (0xF0000-0xFFFFF) to
-indicate that Stage0 initializes this range.
+We explicitly reserve the legacy option ROM and SMBIOS entry table memory range
+(0xC0000-0xFFFFF) to indicate that Stage0 initializes this range.
 
 ```text
                |                      ...                       |
@@ -100,7 +100,9 @@ indicate that Stage0 initializes this range.
      0x10_0000 +------------------------------------------------+ 1MiB
                |    Reserved SMBIOS entry point table memory    |
       0xF_0000 +------------------------------------------------+ 960KiB
-               |                    BIOS Hole                   |
+               |        Reserved legacy option ROM memory       |
+      0xC_0000 +------------------------------------------------+ 768KiB
+               |                    VGA Hole                    |
       0xA_0000 +------------------------------------------------+ 640KiB
                |     Extended BIOS Data Area (ACPI Tables)      |
       0x8_0000 +------------------------------------------------+ 512KiB
@@ -117,8 +119,10 @@ The Linux kernel and the Oak restricted kernel both assume that the firmware
 will validate all (or at least most) of the guest-physical memory before jumping
 into the kernel (by calling the PVALIDATE instruction).
 
-Because legacy code may scan the SMBIOS region (even if marked as reserved in
-the E820 table), we pvalidate this region to prevent crashes.
+Because legacy code may scan the option ROM and SMBIOS regions (even if marked
+as reserved in the E820 table), we pvalidate these regions to prevent crashes.
+For example, Linux searches 0xC0000-0xFFFFF for an iBFT on every non-EFI boot,
+before it can handle a #VC exception for an unvalidated page.
 
 We don't have to PVALIDATE the Stage 0 ROM image range, since that memory was
 already set in the appropriate validated state by the Secure Processor before
@@ -133,7 +137,9 @@ launching the guest VM.
      0x10_0000 +------------------------------------------------+ 1MiB
                |   PVALIDATEd SMBIOS entry point table memory   |
       0xF_0000 +------------------------------------------------+ 960KiB
-               |                    BIOS Hole                   |
+               |       PVALIDATEd legacy option ROM memory      |
+      0xC_0000 +------------------------------------------------+ 768KiB
+               |                    VGA Hole                    |
       0xA_0000 +------------------------------------------------+ 640KiB
                |      PVALIDATEd by bootstrap assembly code     |
            0x0 +------------------------------------------------+
