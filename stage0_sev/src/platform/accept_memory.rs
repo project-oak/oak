@@ -513,7 +513,24 @@ pub fn invalidate_page(page: Page<Size4KiB>) -> Result<(), &'static str> {
             SevPageSize::Page4KiB,
             Validation::Unvalidated,
         ) {
-            Ok(()) | Err(InstructionError::ValidationStatusNotUpdated) => {}
+            Ok(()) => {}
+            Err(InstructionError::ValidationStatusNotUpdated) => {
+                // SECURITY: CF=1 when rescinding validation means the frame the
+                // hypervisor currently presents for this GPA is already
+                // Validated=0, i.e. it is not the frame we validated at boot.
+                // Ignoring it leaves the original frame Validated=1, and the
+                // subsequent revalidation of the substituted frame succeeds with
+                // CF=0, so the hypervisor ends up with two validated frames for
+                // one GPA (page aliasing). Every page reaching this function is
+                // Validated=1 beforehand, so CF=1 is never benign here. Must be
+                // fatal, matching revalidate_page below and the first-touch
+                // policy at lines 207-218.
+                panic!(
+                    "PVALIDATE CF=1 (unexpected unvalidated state) on share at GPA {:#x}; \
+                     possible hypervisor page-aliasing attack",
+                    page.start_address().as_u64()
+                );
+            }
             Err(_) => return Err("shared page invalidation failed"),
         }
     }
