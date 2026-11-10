@@ -19,7 +19,7 @@ use std::{
 };
 
 use external_db_client::{BlobId, DataBlobHandler, MetadataBlobRead};
-use log::{debug, info, warn};
+use log::{debug, error, info, warn};
 use metrics::RequestMetricName;
 use oak_private_memory_database::{
     IcingTempDir, MemoryId,
@@ -540,6 +540,7 @@ impl SealedMemorySessionHandler {
         &self,
         uid: String,
         dek: Zeroizing<Vec<u8>>,
+        kek: Zeroizing<Vec<u8>>,
         key_derivation_info: KeyDerivationInfo,
         mut db_client: SealedMemoryDatabaseServiceClient<Channel>,
         disable_persistence_on_close: bool,
@@ -569,6 +570,7 @@ impl SealedMemorySessionHandler {
 
         *mutex_guard = Some(UserSessionContext {
             dek,
+            kek,
             uid,
             database_service_client: db_client,
             database_version,
@@ -747,6 +749,7 @@ impl SealedMemorySessionHandler {
         self.setup_user_session_context(
             uid,
             dek,
+            key,
             key_derivation_info,
             db_client,
             disable_persistence_on_close,
@@ -1040,8 +1043,11 @@ async fn get_or_create_db(
         metrics.record_db_size(encrypted_data_blob.data.len() as u64);
 
         let decrypt_start = clock.now();
-        let encrypted_info = decrypt_database(encrypted_data_blob, dek)
-            .inspect_err(|_| metrics.inc_db_decryption_failures())
+        let encrypted_info = decrypt_database(&encrypted_data_blob, dek)
+            .inspect_err(|e| {
+                error!("Failed to decrypt database: {e:?}");
+                metrics.inc_db_decryption_failures();
+            })
             .into_internal_error("failed to decrypt database")?;
         metrics.record_key_sync_decrypt_latency(
             decrypt_start.elapsed().unwrap_or_default().as_millis() as u64,

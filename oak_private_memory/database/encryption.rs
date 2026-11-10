@@ -15,7 +15,6 @@
 
 use anyhow::Context;
 use encryption::{decrypt, encrypt, generate_nonce};
-use log::error;
 use prost::Message;
 use sealed_memory_rust_proto::prelude::v1::*;
 
@@ -31,24 +30,19 @@ pub fn encrypt_database(
 }
 
 pub fn decrypt_database(
-    datablob: EncryptedDataBlob,
+    datablob: &EncryptedDataBlob,
     key: &[u8],
 ) -> anyhow::Result<EncryptedUserInfo> {
-    let nonce = datablob.nonce;
-    let data = datablob.data;
-    let decrypted_data = match decrypt(key, &nonce, &data, b"") {
-        Ok(data) => data,
-        Err(err) => {
-            error!(
-                "Failed to decrypt database: key_len={}, nonce_len={}, data_len={}, error={:?}",
-                key.len(),
-                nonce.len(),
-                data.len(),
-                err
-            );
-            return Err(err);
-        }
-    };
+    let nonce = &datablob.nonce;
+    let data = &datablob.data;
+    let decrypted_data = decrypt(key, nonce, data, b"").with_context(|| {
+        format!(
+            "decrypting database: key_len={}, nonce_len={}, data_len={}",
+            key.len(),
+            nonce.len(),
+            data.len()
+        )
+    })?;
     let user_db = EncryptedUserInfo::decode(decrypted_data.as_slice())
         .context("decoding EncryptedUserInfo")?;
     Ok(user_db)

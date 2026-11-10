@@ -159,3 +159,22 @@ pub(crate) fn memory_with_tag(tag: &str) -> Memory {
         ..Default::default()
     }
 }
+
+/// Adds a [`memory_with_tag`] memory through `handler` and returns its ID.
+pub(crate) async fn add_tagged(handler: &SealedMemorySessionHandler, tag: &str) -> String {
+    handler
+        .add_memory_handler(AddMemoryRequest { memory: Some(memory_with_tag(tag)) })
+        .await
+        .unwrap()
+        .id
+}
+
+/// Returns the tags of memory `id` as `handler` reads it, or `None` if it isn't
+/// found.
+pub(crate) async fn tags_of(handler: &SealedMemorySessionHandler, id: &str) -> Option<Vec<String>> {
+    let response = handler
+        .get_memory_by_id_handler(GetMemoryByIdRequest { id: id.to_string(), result_mask: None })
+        .await
+        .unwrap();
+    response.success.then(|| response.memory.unwrap().tags)
+}

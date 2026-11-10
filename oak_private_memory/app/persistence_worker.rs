@@ -81,6 +81,14 @@ const SYNC_DATABASE_RETRY_POLICY: ResourceExhaustedRetryPolicy = ResourceExhaust
     total_budget: Duration::from_secs(30),
 };
 
+/// A [`ResourceExhaustedRetryPolicy`] with millisecond backoffs, for tests.
+#[cfg(test)]
+pub(crate) const TEST_RETRY_POLICY: ResourceExhaustedRetryPolicy = ResourceExhaustedRetryPolicy {
+    initial_backoff: Duration::from_millis(2),
+    max_backoff: Duration::from_millis(10),
+    total_budget: Duration::from_secs(10),
+};
+
 /// A bounded, jittered exponential backoff policy for retrying database calls
 /// that the host rejects with `RESOURCE_EXHAUSTED`.
 ///
@@ -93,7 +101,7 @@ const SYNC_DATABASE_RETRY_POLICY: ResourceExhaustedRetryPolicy = ResourceExhaust
 /// Each database call (e.g. one metadata blob read or write) gets its own
 /// budget.
 #[derive(Clone, Copy, Debug)]
-struct ResourceExhaustedRetryPolicy {
+pub(crate) struct ResourceExhaustedRetryPolicy {
     /// The upper bound of the first sleep. Each further sleep doubles it, up
     /// to `max_backoff`. Each sleep is jittered between half its bound and its
     /// bound, so that sessions rejected at the same time don't retry in
@@ -109,7 +117,7 @@ struct ResourceExhaustedRetryPolicy {
 
 /// The state of retrying one database call that the host rejects with
 /// `RESOURCE_EXHAUSTED`.
-struct ResourceExhaustedBackoff {
+pub(crate) struct ResourceExhaustedBackoff {
     policy: ResourceExhaustedRetryPolicy,
     /// When the first rejection was seen, if any.
     first_rejection: Option<Instant>,
@@ -120,7 +128,7 @@ struct ResourceExhaustedBackoff {
 }
 
 impl ResourceExhaustedBackoff {
-    fn new(policy: ResourceExhaustedRetryPolicy) -> Self {
+    pub(crate) fn new(policy: ResourceExhaustedRetryPolicy) -> Self {
         Self { policy, first_rejection: None, next_backoff: policy.initial_backoff, retries: 0 }
     }
 
@@ -129,7 +137,7 @@ impl ResourceExhaustedBackoff {
     /// If the host rejected the call with `RESOURCE_EXHAUSTED`, and the budget
     /// allows another attempt, sleeps and returns `Ok`: the caller should
     /// retry the call. Otherwise returns the error.
-    async fn wait_to_retry(
+    pub(crate) async fn wait_to_retry(
         &mut self,
         error: anyhow::Error,
         operation: &str,
@@ -372,7 +380,10 @@ impl RowLocked {
 /// check, and Optimize (~1s) is only called when this threshold is exceeded.
 pub(crate) const OPTIMIZE_DOC_THRESHOLD: i64 = 100;
 
-use crate::context::UserSessionContext;
+use crate::{
+    context::UserSessionContext,
+    dek::{DekNotRotated, switch_to_stored_dek},
+};
 
 // Attempt to persist the database once.
 // If there is a failure due to a version mismatch,
@@ -438,6 +449,13 @@ async fn try_persist_database(
     Ok(result)
 }
 
+/// How many times [`pull_and_rebase`] fetches the metadata blob again after
+/// moving the session onto a rotated DEK that the fetched blob still doesn't
+/// decrypt under. That happens when another rotation commits between fetching
+/// the blob and reading the stored DEK; each re-fetch follows one more
+/// rotation.
+const MAX_ROTATED_BLOB_REFETCHES: usize = 3;
+
 /// Fetch the latest remote blob and rebase the local database onto it.
 ///
 /// If `require_blob` is true, a missing blob is an error (used on CAS retry,
@@ -446,8 +464,13 @@ async fn try_persist_database(
 /// any persisted data yet), and the host skips sending the blob if it still has
 /// the session's `database_version`.
 ///
-/// Retries the fetch while the host rejects it with `RESOURCE_EXHAUSTED`, as
-/// far as `policy` allows.
+/// If the blob doesn't decrypt under the session DEK because another session
+/// rotated the DEK, moves the session onto the stored DEK (see
+/// [`switch_to_stored_dek`]) first, fetching the blob again if it predates the
+/// stored DEK.
+///
+/// Retries the fetch, and the database calls of a DEK switch, while the host
+/// rejects them with `RESOURCE_EXHAUSTED`, as far as `policy` allows.
 async fn pull_and_rebase(
     user_context: &mut UserSessionContext,
     require_blob: bool,
@@ -457,49 +480,82 @@ async fn pull_and_rebase(
     let coarsened_expiration_timestamp = user_context.database.calculate_coarsened_blanket_ttl();
     // Send the session's version, so that an unchanged blob isn't downloaded
     // again. On CAS retry the blob is known to have changed, so don't.
-    let known_version = (!require_blob && !user_context.database_version.is_empty())
-        .then_some(user_context.database_version.as_str());
-    let mut backoff = ResourceExhaustedBackoff::new(policy);
-    let (refreshed_blob, fetch_elapsed) = loop {
-        let fetch_start = Instant::now();
-        match user_context
-            .database_service_client
-            .get_metadata_blob_stream(
-                &user_context.uid,
-                coarsened_expiration_timestamp,
-                known_version,
-            )
-            .await
-        {
-            Ok(blob) => break (blob, fetch_start.elapsed()),
-            Err(e) => backoff.wait_to_retry(e, "metadata blob read", metrics).await?,
-        }
-    };
+    let mut known_version = (!require_blob && !user_context.database_version.is_empty())
+        .then(|| user_context.database_version.clone());
+    let mut refetches = 0;
+    let (version, decrypted) = loop {
+        let mut backoff = ResourceExhaustedBackoff::new(policy);
+        let (refreshed_blob, fetch_elapsed) = loop {
+            let fetch_start = Instant::now();
+            match user_context
+                .database_service_client
+                .get_metadata_blob_stream(
+                    &user_context.uid,
+                    coarsened_expiration_timestamp,
+                    known_version.as_deref(),
+                )
+                .await
+            {
+                Ok(blob) => break (blob, fetch_start.elapsed()),
+                Err(e) => backoff.wait_to_retry(e, "metadata blob read", metrics).await?,
+            }
+        };
 
-    let refreshed_blob = match refreshed_blob {
-        MetadataBlobRead::Blob(blob) => blob,
-        MetadataBlobRead::NotModified => {
-            metrics.inc_db_pull_skipped_count();
+        let refreshed_blob = match refreshed_blob {
+            MetadataBlobRead::Blob(blob) => blob,
+            MetadataBlobRead::NotModified => {
+                metrics.inc_db_pull_skipped_count();
+                return Ok(());
+            }
+            MetadataBlobRead::NotFound if require_blob => anyhow::bail!("no blob found"),
+            MetadataBlobRead::NotFound => return Ok(()),
+        };
+        if let Some(encrypted_data_blob) = &refreshed_blob.encrypted_data_blob {
+            metrics.record_db_load_speed(metrics::transfer_speed_kb_per_ms(
+                encrypted_data_blob.encoded_len(),
+                fetch_elapsed,
+            ));
+        }
+
+        if refreshed_blob.version == user_context.database_version {
             return Ok(());
         }
-        MetadataBlobRead::NotFound if require_blob => anyhow::bail!("no blob found"),
-        MetadataBlobRead::NotFound => return Ok(()),
+
+        let encrypted_data_blob =
+            refreshed_blob.encrypted_data_blob.context("missing encrypted data blob")?;
+        // If decryption fails, check whether another session rotated the DEK
+        // before counting a decryption failure.
+        let decrypt_error = match decrypt_database(&encrypted_data_blob, &user_context.dek) {
+            Ok(decrypted) => break (refreshed_blob.version, decrypted),
+            Err(decrypt_error) => decrypt_error,
+        };
+        info!("metadata blob does not decrypt under the session DEK, checking for a rotation");
+        if let Err(e) = switch_to_stored_dek(user_context, metrics, policy).await {
+            if e.is::<DekNotRotated>() {
+                error!("decrypting metadata blob under the stored DEK: {decrypt_error:?}");
+                metrics.inc_db_decryption_failures();
+            }
+            return Err(e.context(format!("metadata blob undecryptable: {decrypt_error:?}")));
+        }
+        match decrypt_database(&encrypted_data_blob, &user_context.dek) {
+            Ok(decrypted) => break (refreshed_blob.version, decrypted),
+            // Another rotation committed after the blob was fetched, so the
+            // blob predates the stored DEK the session just moved onto. Fetch
+            // the blob again: it is encrypted under the stored DEK, unless it
+            // is corrupt, which the next pass detects (the stored DEK is then
+            // the session's DEK, so the switch fails with `DekNotRotated`).
+            Err(e) if refetches < MAX_ROTATED_BLOB_REFETCHES => {
+                info!("metadata blob predates the stored DEK, fetching it again: {e:?}");
+                refetches += 1;
+                known_version = None;
+            }
+            Err(e) => {
+                return Err(e.context(format!(
+                    "metadata blob still predates the stored DEK after {refetches} re-fetches"
+                )));
+            }
+        }
     };
-    if let Some(encrypted_data_blob) = &refreshed_blob.encrypted_data_blob {
-        metrics.record_db_load_speed(metrics::transfer_speed_kb_per_ms(
-            encrypted_data_blob.encoded_len(),
-            fetch_elapsed,
-        ));
-    }
-
-    if refreshed_blob.version == user_context.database_version {
-        return Ok(());
-    }
-
-    let encrypted_data_blob =
-        refreshed_blob.encrypted_data_blob.context("missing encrypted data blob")?;
-    let decrypted = decrypt_database(encrypted_data_blob, &user_context.dek)
-        .inspect_err(|_| metrics.inc_db_decryption_failures())?;
     let new_icing_db = decrypted.icing_db.context("missing icing_db in refreshed blob")?;
     let failed_operations =
         user_context.database.rebase(new_icing_db.encode_to_vec().as_slice())?;
@@ -511,7 +567,7 @@ async fn pull_and_rebase(
         // hook to trigger that.
         metrics.inc_db_rebase_operation_failures(failed_operations as u64);
     }
-    user_context.database_version = refreshed_blob.version;
+    user_context.database_version = version;
     Ok(())
 }
 
@@ -790,27 +846,32 @@ async fn recv_when_slot_free(
 mod tests {
     use std::{net::SocketAddr, sync::atomic::Ordering};
 
+    use external_db_client::BlobId;
     use private_memory_test_database_server_lib::service::{
         LockState, SealedMemoryDatabaseServiceTestImpl,
     };
-    use sealed_memory_rust_proto::oak::private_memory::{AddMemoryRequest, GetMemoryByIdRequest};
+    use sealed_memory_rust_proto::oak::private_memory::{
+        AddMemoryRequest, DataBlob, DeleteMemoryRequest, GetMemoryByIdRequest, Memory,
+        ReadMetadataBlobStreamResponse, read_metadata_blob_stream_response,
+    };
     use tonic::Code;
+    use zeroize::Zeroizing;
 
     use super::*;
-    use crate::test_util::{
-        connect_handler, connect_handler_with_metrics, key_sync_request, memory_with_tag,
-        registration_request, start_test_db_with_lock_state, start_test_db_with_service,
+    use crate::{
+        dek::{create_plain_text_user_info, generate_dek, reencrypt_into_copies, wrap_dek},
+        test_util::{
+            add_tagged, connect_handler, connect_handler_with_metrics, key_sync_request,
+            memory_with_tag, registration_request, start_test_db, start_test_db_with_lock_state,
+            start_test_db_with_service, tags_of,
+        },
     };
 
     type TestMetrics = metrics_testing::TestMetrics<Metrics>;
 
     /// A `RESOURCE_EXHAUSTED` retry policy that retries quickly, so that tests
     /// don't wait for long.
-    const FAST_RETRY_POLICY: ResourceExhaustedRetryPolicy = ResourceExhaustedRetryPolicy {
-        initial_backoff: Duration::from_millis(2),
-        max_backoff: Duration::from_millis(10),
-        total_budget: Duration::from_secs(10),
-    };
+    const FAST_RETRY_POLICY: ResourceExhaustedRetryPolicy = TEST_RETRY_POLICY;
 
     fn test_metrics() -> TestMetrics {
         TestMetrics::new(Metrics::new)
@@ -1292,6 +1353,304 @@ mod tests {
         assert!(waited_ms >= 1_000, "recorded wait {waited_ms}ms");
         assert_eq!(histogram_count_and_sum(&harness, "db_persist_attempts"), (1, 1));
         assert_eq!(harness.collect().gauge("db_persist_queue_size", &[]), 0);
+    }
+
+    async fn rotate_dek_externally(db_addr: SocketAddr, pm_uid: &str) -> Zeroizing<Vec<u8>> {
+        let (rotator, _persistence_rx) = connect_handler(db_addr);
+        rotator.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        let mut guard = rotator.session_context().await;
+        let ctx = guard.as_mut().unwrap();
+
+        let dek_new = generate_dek();
+        let blobs = ctx.database.get_all_memory_and_blob_ids().unwrap();
+        let reencryption =
+            reencrypt_into_copies(&mut ctx.database, &blobs, &dek_new, || Ok(())).await.unwrap();
+        reencryption.repoint(&mut ctx.database).unwrap();
+        let encrypted_info = ctx.database.export().unwrap().encrypted_info.unwrap();
+        let metadata = encrypt_database(&encrypted_info, &dek_new).unwrap();
+        let wrapped = wrap_dek(&dek_new, &ctx.kek).unwrap();
+        let plain_text_info =
+            create_plain_text_user_info(Some(ctx.database.key_derivation_info().clone()), wrapped);
+        let result = ctx
+            .database_service_client
+            .add_metadata_blob_stream_with_lock(
+                &ctx.uid,
+                &EncryptedMetadataBlob {
+                    encrypted_data_blob: Some(metadata),
+                    version: ctx.database_version.clone(),
+                },
+                ctx.database.calculate_coarsened_blanket_ttl(),
+                "",
+                Some(DataBlob { id: ctx.uid.clone(), blob: plain_text_info.encode_to_vec() }),
+            )
+            .await
+            .unwrap();
+        assert!(matches!(result, MetadataPersistResult::Succeeded { .. }), "{result:?}");
+        *guard = None;
+        dek_new
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn persist_after_external_dek_rotation_keeps_pending_changes() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let db_addr = start_test_db_with_service(service.clone()).await;
+        let pm_uid = "clean_rebase_user";
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        let untouched = add_tagged(&handler, "untouched").await;
+        let upserted = add_tagged(&handler, "before-upsert").await;
+        let deleted = add_tagged(&handler, "to-delete").await;
+        {
+            let mut guard = handler.session_context().await;
+            persist_database(guard.as_mut().unwrap(), &harness.metrics, FAST_RETRY_POLICY)
+                .await
+                .unwrap();
+        }
+
+        let added = add_tagged(&handler, "added-after").await;
+        {
+            let mut guard = handler.session_context().await;
+            let ctx = guard.as_mut().unwrap();
+            ctx.database
+                .add_memory(Memory { id: upserted.clone(), ..memory_with_tag("after-upsert") })
+                .await
+                .unwrap();
+        }
+        handler
+            .delete_memory_handler(DeleteMemoryRequest { ids: vec![deleted.clone()] })
+            .await
+            .unwrap();
+
+        let dek_new = rotate_dek_externally(db_addr, pm_uid).await;
+
+        {
+            let mut guard = handler.session_context().await;
+            let ctx = guard.as_mut().unwrap();
+            let pending_before: Vec<BlobId> = ctx
+                .database
+                .get_pending_add_memory_blob_ids()
+                .unwrap()
+                .into_iter()
+                .map(|(_, blob_id)| blob_id)
+                .collect();
+            assert!(!pending_before.is_empty());
+            persist_database(ctx, &harness.metrics, FAST_RETRY_POLICY)
+                .await
+                .expect("persist should move onto the rotated DEK");
+            assert_eq!(*ctx.dek, *dek_new);
+            let blobs = service.database.lock().await;
+            for blob_id in &pending_before {
+                assert!(!blobs.contains_key(blob_id), "old pending blob {blob_id} was kept");
+            }
+        }
+        assert_eq!(harness.collect().counter("db_decryption_failures", &[]), 0);
+
+        let (reader, _persistence_rx) = connect_handler(db_addr);
+        reader.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        assert_eq!(tags_of(&reader, &untouched).await, Some(vec!["untouched".to_string()]));
+        assert_eq!(tags_of(&reader, &upserted).await, Some(vec!["after-upsert".to_string()]));
+        assert_eq!(tags_of(&reader, &added).await, Some(vec!["added-after".to_string()]));
+        assert_eq!(tags_of(&reader, &deleted).await, None);
+    }
+
+    /// A rebase that fetched the blob just before another rotation committed
+    /// moves the session onto the newest DEK and fetches the blob again,
+    /// instead of counting a decryption failure and failing the persist.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn rebase_refetches_a_blob_that_predates_the_stored_dek() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let db_addr = start_test_db_with_service(service.clone()).await;
+        let pm_uid = "two_rotations_user";
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        let persisted = add_tagged(&handler, "persisted").await;
+        {
+            let mut guard = handler.session_context().await;
+            persist_database(guard.as_mut().unwrap(), &harness.metrics, FAST_RETRY_POLICY)
+                .await
+                .unwrap();
+        }
+        let pending = add_tagged(&handler, "pending").await;
+
+        rotate_dek_externally(db_addr, pm_uid).await;
+        let stale_blob = service.get_metdata_blob_inner(pm_uid).await.unwrap();
+        let dek_newest = rotate_dek_externally(db_addr, pm_uid).await;
+        // The session's first fetch gets the first rotation's blob, as if the
+        // second rotation committed right after that fetch.
+        *service.next_metadata_stream_reply.lock().await =
+            Some(vec![ReadMetadataBlobStreamResponse {
+                response: Some(read_metadata_blob_stream_response::Response::MetadataBlob(
+                    stale_blob,
+                )),
+            }]);
+
+        {
+            let mut guard = handler.session_context().await;
+            let ctx = guard.as_mut().unwrap();
+            persist_database(ctx, &harness.metrics, FAST_RETRY_POLICY)
+                .await
+                .expect("persist should follow both rotations");
+            assert_eq!(*ctx.dek, *dek_newest);
+        }
+        assert!(service.next_metadata_stream_reply.lock().await.is_none());
+        assert_eq!(harness.collect().counter("db_decryption_failures", &[]), 0);
+
+        let (reader, _persistence_rx) = connect_handler(db_addr);
+        reader.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        assert_eq!(tags_of(&reader, &persisted).await, Some(vec!["persisted".to_string()]));
+        assert_eq!(tags_of(&reader, &pending).await, Some(vec!["pending".to_string()]));
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn failed_switch_discards_its_copies_and_keeps_the_session() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let db_addr = start_test_db_with_service(service.clone()).await;
+        let pm_uid = "failed_switch_user";
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        add_tagged(&handler, "persisted").await;
+        {
+            let mut guard = handler.session_context().await;
+            persist_database(guard.as_mut().unwrap(), &harness.metrics, FAST_RETRY_POLICY)
+                .await
+                .unwrap();
+        }
+        add_tagged(&handler, "pending-kept").await;
+        let lost = add_tagged(&handler, "pending-lost").await;
+        rotate_dek_externally(db_addr, pm_uid).await;
+
+        let mut guard = handler.session_context().await;
+        let ctx = guard.as_mut().unwrap();
+        let lost_blob = ctx
+            .database
+            .get_pending_add_memory_blob_ids()
+            .unwrap()
+            .into_iter()
+            .find(|(memory_id, _)| *memory_id == lost)
+            .unwrap()
+            .1;
+        service.database.lock().await.remove(&lost_blob).unwrap();
+        let blobs_before: std::collections::BTreeSet<String> =
+            service.database.lock().await.keys().cloned().collect();
+        let dek_before = ctx.dek.clone();
+        let version_before = ctx.database_version.clone();
+        let pending_before = ctx.database.get_pending_add_memory_blob_ids().unwrap();
+
+        let error = persist_database(ctx, &harness.metrics, FAST_RETRY_POLICY)
+            .await
+            .expect_err("switch must fail");
+
+        assert!(format!("{error:?}").contains("disappeared"), "{error:?}");
+        assert_eq!(*ctx.dek, *dek_before);
+        assert_eq!(ctx.database_version, version_before);
+        assert_eq!(ctx.database.get_pending_add_memory_blob_ids().unwrap(), pending_before);
+        let blobs_after: std::collections::BTreeSet<String> =
+            service.database.lock().await.keys().cloned().collect();
+        assert_eq!(blobs_after, blobs_before, "the copy of the surviving pending blob was kept");
+        assert_eq!(harness.collect().counter("db_decryption_failures", &[]), 0);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn undecryptable_blob_under_the_same_dek_fails_without_touching_the_session() {
+        let db_addr = start_test_db().await;
+        let pm_uid = "undecryptable_blob_user";
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        add_tagged(&handler, "persisted").await;
+        {
+            let mut guard = handler.session_context().await;
+            persist_database(guard.as_mut().unwrap(), &harness.metrics, FAST_RETRY_POLICY)
+                .await
+                .unwrap();
+        }
+        add_tagged(&handler, "pending").await;
+
+        {
+            let (other, _persistence_rx) = connect_handler(db_addr);
+            other.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+            let mut guard = other.session_context().await;
+            let ctx = guard.as_mut().unwrap();
+            let encrypted_info = ctx.database.export().unwrap().encrypted_info.unwrap();
+            let garbage = encrypt_database(&encrypted_info, &generate_dek()).unwrap();
+            let result = ctx
+                .database_service_client
+                .add_metadata_blob_stream(
+                    &ctx.uid,
+                    &EncryptedMetadataBlob {
+                        encrypted_data_blob: Some(garbage),
+                        version: ctx.database_version.clone(),
+                    },
+                    ctx.database.calculate_coarsened_blanket_ttl(),
+                )
+                .await
+                .unwrap();
+            assert!(matches!(result, MetadataPersistResult::Succeeded { .. }), "{result:?}");
+            *guard = None;
+        }
+
+        let mut guard = handler.session_context().await;
+        let ctx = guard.as_mut().unwrap();
+        let dek_before = ctx.dek.clone();
+        let version_before = ctx.database_version.clone();
+        let pending_before = ctx.database.get_pending_add_memory_blob_ids().unwrap();
+
+        let error = persist_database(ctx, &harness.metrics, FAST_RETRY_POLICY)
+            .await
+            .expect_err("corrupt blob must not be rebased onto");
+
+        assert!(format!("{error:?}").contains("stored DEK is the session DEK"), "{error:?}");
+        assert_eq!(*ctx.dek, *dek_before);
+        assert_eq!(ctx.database_version, version_before);
+        assert_eq!(ctx.database.get_pending_add_memory_blob_ids().unwrap(), pending_before);
+        assert!(ctx.database.changed());
+        assert_eq!(harness.collect().counter("db_decryption_failures", &[]), 1);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn blob_undecryptable_under_the_rotated_dek_counts_a_decryption_failure() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let db_addr = start_test_db_with_service(service.clone()).await;
+        let pm_uid = "undecryptable_after_rotation_user";
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        add_tagged(&handler, "persisted").await;
+        {
+            let mut guard = handler.session_context().await;
+            persist_database(guard.as_mut().unwrap(), &harness.metrics, FAST_RETRY_POLICY)
+                .await
+                .unwrap();
+        }
+        add_tagged(&handler, "pending").await;
+
+        let dek_new = rotate_dek_externally(db_addr, pm_uid).await;
+        let mut guard = handler.session_context().await;
+        let ctx = guard.as_mut().unwrap();
+        let encrypted_info = ctx.database.export().unwrap().encrypted_info.unwrap();
+        let garbage = encrypt_database(&encrypted_info, &generate_dek()).unwrap();
+        service.metadata_database.lock().await.get_mut(pm_uid).unwrap().data_blob =
+            Some(DataBlob { id: pm_uid.to_string(), blob: garbage.encode_to_vec() });
+
+        persist_database(ctx, &harness.metrics, FAST_RETRY_POLICY)
+            .await
+            .expect_err("a blob that is corrupt under the stored DEK must not be rebased onto");
+
+        assert_eq!(*ctx.dek, *dek_new);
+        assert_eq!(harness.collect().counter("db_decryption_failures", &[]), 1);
     }
 
     /// Only a `RESOURCE_EXHAUSTED` status is a host rejection.

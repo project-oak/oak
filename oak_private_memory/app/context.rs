@@ -24,6 +24,9 @@ use crate::admission::ActiveSessionGuard;
 /// The state for each client connection.
 pub struct UserSessionContext {
     pub dek: Zeroizing<Vec<u8>>,
+    /// Key-encryption key from `KeySync`, kept in session RAM to unwrap a
+    /// rotated DEK on rebase or wrap a new DEK during `RotateDek`.
+    pub kek: Zeroizing<Vec<u8>>,
     pub uid: String,
 
     pub database: Database,

@@ -105,6 +105,12 @@ pub struct SealedMemoryDatabaseServiceTestImpl {
     pub blob_expirations: Mutex<HashMap<String, prost_types::Timestamp>>,
     /// If set, the next `ReadDataBlobs` call fails with `UNAVAILABLE`.
     pub fail_next_read_data_blobs: AtomicBool,
+    /// Statuses that the next `ReadDataBlobs` calls fail with, in order. See
+    /// [`Self::fail_next_data_blobs_reads`].
+    pub data_blobs_read_failures: Mutex<VecDeque<tonic::Status>>,
+    /// Statuses that the next `ReadUnencryptedDataBlob` calls fail with, in
+    /// order. See [`Self::fail_next_unencrypted_reads`].
+    pub unencrypted_read_failures: Mutex<VecDeque<tonic::Status>>,
     pub lock_state: Arc<LockState>,
 }
 
@@ -135,6 +141,8 @@ impl Default for SealedMemoryDatabaseServiceTestImpl {
             metadata_write_conflicts: AtomicUsize::new(0),
             blob_expirations: Mutex::new(HashMap::new()),
             fail_next_read_data_blobs: AtomicBool::new(false),
+            data_blobs_read_failures: Mutex::new(VecDeque::new()),
+            unencrypted_read_failures: Mutex::new(VecDeque::new()),
             lock_state: LockState::new(),
         }
     }
@@ -177,6 +185,26 @@ impl SealedMemoryDatabaseServiceTestImpl {
     /// call under memory pressure (`RESOURCE_EXHAUSTED`).
     pub async fn fail_next_metadata_reads(&self, code: tonic::Code, count: usize) {
         self.metadata_read_failures
+            .lock()
+            .await
+            .extend((0..count).map(|_| tonic::Status::new(code, "injected read failure")));
+    }
+
+    /// Makes the next `count` `ReadDataBlobs` calls fail with `code` before
+    /// reading anything, like the real host does when it rejects a call under
+    /// memory pressure (`RESOURCE_EXHAUSTED`).
+    pub async fn fail_next_data_blobs_reads(&self, code: tonic::Code, count: usize) {
+        self.data_blobs_read_failures
+            .lock()
+            .await
+            .extend((0..count).map(|_| tonic::Status::new(code, "injected read failure")));
+    }
+
+    /// Makes the next `count` `ReadUnencryptedDataBlob` calls fail with `code`
+    /// before reading anything, like the real host does when it rejects a call
+    /// under memory pressure (`RESOURCE_EXHAUSTED`).
+    pub async fn fail_next_unencrypted_reads(&self, code: tonic::Code, count: usize) {
+        self.unencrypted_read_failures
             .lock()
             .await
             .extend((0..count).map(|_| tonic::Status::new(code, "injected read failure")));
@@ -414,6 +442,9 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
         &self,
         request: tonic::Request<ReadUnencryptedDataBlobRequest>,
     ) -> Result<tonic::Response<ReadUnencryptedDataBlobResponse>, tonic::Status> {
+        if let Some(status) = self.unencrypted_read_failures.lock().await.pop_front() {
+            return Err(status);
+        }
         let request = request.into_inner();
         let blob = self.unencrypted_database.lock().await.get(&request.id).cloned();
         if let Some(blob) = blob {
@@ -454,6 +485,9 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
     ) -> Result<tonic::Response<ReadDataBlobsResponse>, tonic::Status> {
         if self.fail_next_read_data_blobs.swap(false, Ordering::SeqCst) {
             return Err(tonic::Status::unavailable("injected ReadDataBlobs failure"));
+        }
+        if let Some(status) = self.data_blobs_read_failures.lock().await.pop_front() {
+            return Err(status);
         }
         let request = request.into_inner();
         let db = self.database.lock().await;
