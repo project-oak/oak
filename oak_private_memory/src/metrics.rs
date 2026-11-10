@@ -125,6 +125,16 @@ pub struct Metrics {
     // Number of database syncs that skipped downloading the database because
     // its stored version hadn't changed.
     db_pull_skipped_count: Counter<u64>,
+
+    // DEK rotation.
+    dek_rotation_count: Counter<u64>,
+    dek_rotation_blobs_reencrypted_total: Counter<u64>,
+    dek_rotation_bytes_reencrypted_total: Counter<u64>,
+    dek_rotation_lock_extend_failures: Counter<u64>,
+    dek_rotation_blobs_per_run: Histogram<u64>,
+    dek_rotation_bytes_per_run: Histogram<u64>,
+    dek_rotation_throughput_bytes_per_sec: Histogram<u64>,
+    dek_rotation_latency_ms: Histogram<u64>,
 }
 
 /// The possible metrics request types.
@@ -239,6 +249,53 @@ const SPEED_KB_PER_MS_BOUNDARIES: &[f64] = &[
     0., 1., 2., 3., //
     // OpenTelemetry defaults.
     5., 10., 25., 50., 75., 100., 250., 500., 750., 1_000., 2_500., 5_000., 7_500., 10_000.,
+];
+
+/// `response_type` label for `dek_rotation_count`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DekRotationResponseType {
+    Ok,
+    /// A retryable failure (`ABORTED`, `UNAVAILABLE`, `DEADLINE_EXCEEDED` or
+    /// `RESOURCE_EXHAUSTED`).
+    RetryError,
+    /// The session can't rotate yet: `UNAUTHENTICATED`, or
+    /// `FAILED_PRECONDITION`, e.g. because KeySync hasn't run.
+    Unauthenticated,
+    InternalError,
+    InvalidArgument,
+}
+
+impl DekRotationResponseType {
+    pub const ALL: [DekRotationResponseType; 5] = [
+        DekRotationResponseType::Ok,
+        DekRotationResponseType::RetryError,
+        DekRotationResponseType::Unauthenticated,
+        DekRotationResponseType::InternalError,
+        DekRotationResponseType::InvalidArgument,
+    ];
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            DekRotationResponseType::Ok => "ok",
+            DekRotationResponseType::RetryError => "retry_error",
+            DekRotationResponseType::Unauthenticated => "unauthenticated",
+            DekRotationResponseType::InternalError => "internal_error",
+            DekRotationResponseType::InvalidArgument => "invalid_argument",
+        }
+    }
+}
+
+/// Byte-rate boundaries in bytes/s (64 KiB/s to 1 GiB/s in powers of 4).
+const BYTES_PER_SEC_BOUNDARIES: &[f64] = &[
+    0.,
+    (64 * KB) as f64,
+    (256 * KB) as f64,
+    MB as f64,
+    (4 * MB) as f64,
+    (16 * MB) as f64,
+    (64 * MB) as f64,
+    (256 * MB) as f64,
+    (1_024 * MB) as f64,
 ];
 
 impl Metrics {
@@ -520,6 +577,68 @@ impl Metrics {
             .build();
         db_persist_lock_conflict_count.add(0, &[]);
 
+        // DEK rotation: not allowlisted by the host until http://cl/1007520661,
+        // so also created last, for the same reason as db_pull_skipped_count.
+        let dek_rotation_count = meter
+            .u64_counter("dek_rotation_count")
+            .with_description(
+                "Total number of DEK rotation requests handled, by response_type. Requests \
+                 rejected by admission control are only counted in rpc_failure_count.",
+            )
+            .build();
+        let dek_rotation_blobs_reencrypted_total = meter
+            .u64_counter("dek_rotation_blobs_reencrypted_total")
+            .with_description(
+                "Cumulative count of memory blobs re-encrypted by successful DEK rotations.",
+            )
+            .build();
+        let dek_rotation_bytes_reencrypted_total = meter
+            .u64_counter("dek_rotation_bytes_reencrypted_total")
+            .with_description("Cumulative ciphertext bytes written by successful DEK rotations.")
+            .with_unit("By")
+            .build();
+        let dek_rotation_lock_extend_failures = meter
+            .u64_counter("dek_rotation_lock_extend_failures")
+            .with_description("Number of times a DEK rotation lost its row lock lease.")
+            .build();
+        let dek_rotation_blobs_per_run = meter
+            .u64_histogram("dek_rotation_blobs_per_run")
+            .with_description("Memory blobs re-encrypted by a single successful DEK rotation.")
+            .with_boundaries(COUNT_BOUNDARIES.to_vec())
+            .build();
+        let dek_rotation_bytes_per_run = meter
+            .u64_histogram("dek_rotation_bytes_per_run")
+            .with_description("Ciphertext bytes written by a single successful DEK rotation.")
+            .with_unit("By")
+            .with_boundaries(DB_SIZE_BYTES_BOUNDARIES.to_vec())
+            .build();
+        let dek_rotation_throughput_bytes_per_sec = meter
+            .u64_histogram("dek_rotation_throughput_bytes_per_sec")
+            .with_description("Ciphertext bytes per second of a successful DEK rotation.")
+            .with_unit("By/s")
+            .with_boundaries(BYTES_PER_SEC_BOUNDARIES.to_vec())
+            .build();
+        let dek_rotation_latency_ms = meter
+            .u64_histogram("dek_rotation_latency_ms")
+            .with_description("End-to-end latency of DEK rotation, by status and size tiers.")
+            .with_unit("ms")
+            .with_boundaries(LATENCY_MS_BOUNDARIES.to_vec())
+            .build();
+        for response_type in DekRotationResponseType::ALL {
+            dek_rotation_count.add(0, &[KeyValue::new("response_type", response_type.as_str())]);
+        }
+        dek_rotation_blobs_reencrypted_total.add(0, &[]);
+        dek_rotation_bytes_reencrypted_total.add(0, &[]);
+        dek_rotation_lock_extend_failures.add(0, &[]);
+        dek_rotation_latency_ms.record(
+            1,
+            &[
+                KeyValue::new("status", "test"),
+                KeyValue::new("bytes_tier", "test"),
+                KeyValue::new("blobs_tier", "test"),
+            ],
+        );
+
         Self {
             rpc_count,
             rpc_failure_count,
@@ -564,6 +683,14 @@ impl Metrics {
             icing_num_previous_init_failures,
             icing_num_failed_reindexed_documents,
             db_pull_skipped_count,
+            dek_rotation_count,
+            dek_rotation_blobs_reencrypted_total,
+            dek_rotation_bytes_reencrypted_total,
+            dek_rotation_lock_extend_failures,
+            dek_rotation_blobs_per_run,
+            dek_rotation_bytes_per_run,
+            dek_rotation_throughput_bytes_per_sec,
+            dek_rotation_latency_ms,
         }
     }
 
@@ -843,6 +970,85 @@ impl Metrics {
             }
         }
     }
+
+    /// Counts one handled RotateDek request.
+    pub fn inc_dek_rotation_count(&self, response_type: DekRotationResponseType) {
+        self.dek_rotation_count.add(1, &[KeyValue::new("response_type", response_type.as_str())]);
+    }
+
+    /// Counts a DEK rotation losing its row lock lease.
+    pub fn inc_dek_rotation_lock_extend_failures(&self) {
+        self.dek_rotation_lock_extend_failures.add(1, &[]);
+    }
+
+    /// Records one DEK rotation that took `elapsed_ms`. A successful run
+    /// updates the re-encryption totals, the per-run blob, byte and
+    /// throughput histograms, and the latency histogram labeled with its
+    /// size tiers; a failed run only records latency, with `unknown` tiers.
+    /// `elapsed_ms` is raised to at least 1 so throughput is always
+    /// defined.
+    pub fn record_dek_rotation_run(&self, run: DekRotationRun, elapsed_ms: u64) {
+        let elapsed_ms = elapsed_ms.max(1);
+        let (status, bytes_tier, blobs_tier) = match run {
+            DekRotationRun::Succeeded { blobs, ciphertext_bytes } => {
+                self.dek_rotation_blobs_reencrypted_total.add(blobs, &[]);
+                self.dek_rotation_bytes_reencrypted_total.add(ciphertext_bytes, &[]);
+                self.dek_rotation_blobs_per_run.record(blobs, &[]);
+                self.dek_rotation_bytes_per_run.record(ciphertext_bytes, &[]);
+                self.dek_rotation_throughput_bytes_per_sec
+                    .record(ciphertext_bytes.saturating_mul(1000) / elapsed_ms, &[]);
+                (
+                    "success",
+                    bucket_dek_rotation_bytes(ciphertext_bytes),
+                    bucket_dek_rotation_blobs(blobs),
+                )
+            }
+            DekRotationRun::Failed => ("failure", "unknown", "unknown"),
+        };
+        self.dek_rotation_latency_ms.record(
+            elapsed_ms,
+            &[
+                KeyValue::new("status", status),
+                KeyValue::new("bytes_tier", bytes_tier),
+                KeyValue::new("blobs_tier", blobs_tier),
+            ],
+        );
+    }
+}
+
+/// Outcome of one DEK rotation, as recorded by
+/// [`Metrics::record_dek_rotation_run`].
+#[derive(Clone, Copy, Debug)]
+pub enum DekRotationRun {
+    Succeeded { blobs: u64, ciphertext_bytes: u64 },
+    Failed,
+}
+
+/// Buckets the ciphertext bytes of a rotation into the `bytes_tier` label of
+/// `dek_rotation_latency_ms`. Every tier includes its lower bound and excludes
+/// its upper bound, except `100-250MB`, which also includes 250 MiB.
+fn bucket_dek_rotation_bytes(bytes: u64) -> &'static str {
+    let mb = MB as u64;
+    match bytes {
+        b if b < mb => "<1MB",
+        b if b < 10 * mb => "1-10MB",
+        b if b < 50 * mb => "10-50MB",
+        b if b < 100 * mb => "50-100MB",
+        b if b <= 250 * mb => "100-250MB",
+        _ => "250MB+",
+    }
+}
+
+/// Buckets the re-encrypted blob count of a rotation into the `blobs_tier`
+/// label of `dek_rotation_latency_ms`.
+fn bucket_dek_rotation_blobs(blobs: u64) -> &'static str {
+    match blobs {
+        0..10 => "<10",
+        10..50 => "10-50",
+        50..200 => "50-200",
+        200..1000 => "200-1000",
+        _ => "1000+",
+    }
 }
 
 /// Buckets a database size (in bytes) into a human-readable label for use as
@@ -1040,6 +1246,44 @@ mod tests {
     use super::*;
 
     #[test]
+    fn dek_rotation_tiers_bucket_by_size() {
+        let mb = MB as u64;
+        let byte_cases = [
+            (0, "<1MB"),
+            (mb - 1, "<1MB"),
+            (mb, "1-10MB"),
+            (10 * mb - 1, "1-10MB"),
+            (10 * mb, "10-50MB"),
+            (50 * mb - 1, "10-50MB"),
+            (50 * mb, "50-100MB"),
+            (100 * mb - 1, "50-100MB"),
+            (100 * mb, "100-250MB"),
+            (250 * mb, "100-250MB"),
+            (250 * mb + 1, "250MB+"),
+            (u64::MAX, "250MB+"),
+        ];
+        for (bytes, tier) in byte_cases {
+            assert_eq!(bucket_dek_rotation_bytes(bytes), tier, "{bytes} bytes");
+        }
+
+        let blob_cases = [
+            (0, "<10"),
+            (9, "<10"),
+            (10, "10-50"),
+            (49, "10-50"),
+            (50, "50-200"),
+            (199, "50-200"),
+            (200, "200-1000"),
+            (999, "200-1000"),
+            (1000, "1000+"),
+            (u64::MAX, "1000+"),
+        ];
+        for (blobs, tier) in blob_cases {
+            assert_eq!(bucket_dek_rotation_blobs(blobs), tier, "{blobs} blobs");
+        }
+    }
+
+    #[test]
     fn test_record_icing_initialization_stats() {
         let (_observer, metrics) = create_metrics();
         let result_proto = icing::InitializeResultProto {
@@ -1126,6 +1370,7 @@ mod value_tests {
         ("persistence_enqueue_failures", Metrics::inc_persistence_enqueue_failures),
         ("session_rejected_low_memory", Metrics::inc_session_rejected_low_memory),
         ("db_pull_skipped_count", Metrics::inc_db_pull_skipped_count),
+        ("dek_rotation_lock_extend_failures", Metrics::inc_dek_rotation_lock_extend_failures),
     ];
 
     /// Counters that are incremented by a caller-provided amount.
@@ -1226,6 +1471,23 @@ mod value_tests {
         {
             assert_eq!(snapshot.gauge_points(name), &BTreeMap::from([(attrs(empty), 0)]), "{name}");
         }
+        // Every DEK rotation outcome has a series, and the rotation totals
+        // start at zero.
+        assert_eq!(
+            snapshot.counter_points("dek_rotation_count"),
+            &DekRotationResponseType::ALL
+                .iter()
+                .map(|response_type| (attrs(&[("response_type", response_type.as_str())]), 0))
+                .collect::<BTreeMap<_, _>>()
+        );
+        for name in ["dek_rotation_blobs_reencrypted_total", "dek_rotation_bytes_reencrypted_total"]
+        {
+            assert_eq!(
+                snapshot.counter_points(name),
+                &BTreeMap::from([(attrs(empty), 0)]),
+                "{name}"
+            );
+        }
         // Every admission-control rejection reason has a series.
         assert_eq!(
             snapshot.counter_points("session_rejected"),
@@ -1243,6 +1505,10 @@ mod value_tests {
         let startup_histograms: &[(&str, Pairs)] = &[
             ("rpc_latency", &[("request_type", "test")]),
             ("db_init_latency", &[("db_size_bucket", "test")]),
+            (
+                "dek_rotation_latency_ms",
+                &[("status", "test"), ("bytes_tier", "test"), ("blobs_tier", "test")],
+            ),
         ];
         for (name, pairs) in startup_histograms {
             let points = snapshot.histogram_points(name);
@@ -1260,6 +1526,9 @@ mod value_tests {
             "active_sessions",
             "max_active_sessions",
             "process_map_count",
+            "dek_rotation_count",
+            "dek_rotation_blobs_reencrypted_total",
+            "dek_rotation_bytes_reencrypted_total",
         ]
         .into_iter()
         .chain(UNIT_COUNTERS.iter().map(|(metric_name, _)| *metric_name))
@@ -1280,6 +1549,9 @@ mod value_tests {
             "icing_recovery_latency_ms",
             "icing_num_previous_init_failures",
             "icing_num_failed_reindexed_documents",
+            "dek_rotation_blobs_per_run",
+            "dek_rotation_bytes_per_run",
+            "dek_rotation_throughput_bytes_per_sec",
         ]
         .into_iter()
         .chain(LATENCY_HISTOGRAMS.iter().map(|(metric_name, _)| *metric_name))
@@ -1329,6 +1601,10 @@ mod value_tests {
             ..Default::default()
         };
         metrics.record_icing_initialization_stats(&init);
+        metrics.record_dek_rotation_run(
+            DekRotationRun::Succeeded { blobs: 1, ciphertext_bytes: 1 },
+            1,
+        );
         let snapshot = harness.collect();
 
         let default_bounds = otel_default_histogram_boundaries();
@@ -1548,6 +1824,55 @@ mod value_tests {
                 "Number of database syncs that skipped downloading the database because it was \
                  unchanged.",
                 Counter,
+            ),
+            (
+                "dek_rotation_count",
+                "",
+                "Total number of DEK rotation requests handled, by response_type. Requests \
+                 rejected by admission control are only counted in rpc_failure_count.",
+                Counter,
+            ),
+            (
+                "dek_rotation_blobs_reencrypted_total",
+                "",
+                "Cumulative count of memory blobs re-encrypted by successful DEK rotations.",
+                Counter,
+            ),
+            (
+                "dek_rotation_bytes_reencrypted_total",
+                "By",
+                "Cumulative ciphertext bytes written by successful DEK rotations.",
+                Counter,
+            ),
+            (
+                "dek_rotation_lock_extend_failures",
+                "",
+                "Number of times a DEK rotation lost its row lock lease.",
+                Counter,
+            ),
+            (
+                "dek_rotation_blobs_per_run",
+                "",
+                "Memory blobs re-encrypted by a single successful DEK rotation.",
+                Histogram(COUNT_BOUNDARIES),
+            ),
+            (
+                "dek_rotation_bytes_per_run",
+                "By",
+                "Ciphertext bytes written by a single successful DEK rotation.",
+                Histogram(DB_SIZE_BYTES_BOUNDARIES),
+            ),
+            (
+                "dek_rotation_throughput_bytes_per_sec",
+                "By/s",
+                "Ciphertext bytes per second of a successful DEK rotation.",
+                Histogram(BYTES_PER_SEC_BOUNDARIES),
+            ),
+            (
+                "dek_rotation_latency_ms",
+                "ms",
+                "End-to-end latency of DEK rotation, by status and size tiers.",
+                Histogram(LATENCY_MS_BOUNDARIES),
             ),
         ];
 
@@ -2205,6 +2530,136 @@ mod value_tests {
         ] {
             assert!(!snapshot.names().contains(name), "{name}");
         }
+    }
+
+    #[test]
+    fn inc_dek_rotation_count_counts_each_response_type() {
+        assert_eq!(
+            DekRotationResponseType::ALL.map(|response_type| response_type.as_str()),
+            ["ok", "retry_error", "unauthenticated", "internal_error", "invalid_argument"]
+        );
+        let harness = test_metrics();
+        for (i, response_type) in DekRotationResponseType::ALL.into_iter().enumerate() {
+            for _ in 0..=i {
+                harness.metrics.inc_dek_rotation_count(response_type);
+            }
+        }
+
+        let snapshot = harness.collect();
+        for (i, response_type) in DekRotationResponseType::ALL.into_iter().enumerate() {
+            assert_eq!(
+                snapshot
+                    .counter("dek_rotation_count", &[("response_type", response_type.as_str())]),
+                i as u64 + 1,
+                "{response_type:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn record_dek_rotation_run_records_successful_run() {
+        let harness = test_metrics();
+        let mb = MB as u64;
+        harness.metrics.record_dek_rotation_run(
+            DekRotationRun::Succeeded { blobs: 12, ciphertext_bytes: 2 * mb },
+            500,
+        );
+
+        let snapshot = harness.collect();
+        assert_eq!(snapshot.counter("dek_rotation_blobs_reencrypted_total", &[]), 12);
+        assert_eq!(snapshot.counter("dek_rotation_bytes_reencrypted_total", &[]), 2 * mb);
+        let blobs = snapshot.histogram("dek_rotation_blobs_per_run", &[]);
+        assert_eq!((blobs.count, blobs.sum), (1, 12));
+        let bytes = snapshot.histogram("dek_rotation_bytes_per_run", &[]);
+        assert_eq!((bytes.count, bytes.sum), (1, 2 * mb));
+        let throughput = snapshot.histogram("dek_rotation_throughput_bytes_per_sec", &[]);
+        assert_eq!((throughput.count, throughput.sum), (1, 4 * mb));
+        let latency = snapshot.histogram(
+            "dek_rotation_latency_ms",
+            &[("status", "success"), ("bytes_tier", "1-10MB"), ("blobs_tier", "10-50")],
+        );
+        assert_eq!((latency.count, latency.sum), (1, 500));
+    }
+
+    #[test]
+    fn record_dek_rotation_run_adds_up_totals_across_runs() {
+        let harness = test_metrics();
+        harness.metrics.record_dek_rotation_run(
+            DekRotationRun::Succeeded { blobs: 3, ciphertext_bytes: 300 },
+            10,
+        );
+        harness.metrics.record_dek_rotation_run(
+            DekRotationRun::Succeeded { blobs: 4, ciphertext_bytes: 400 },
+            20,
+        );
+
+        let snapshot = harness.collect();
+        assert_eq!(snapshot.counter("dek_rotation_blobs_reencrypted_total", &[]), 7);
+        assert_eq!(snapshot.counter("dek_rotation_bytes_reencrypted_total", &[]), 700);
+        let blobs = snapshot.histogram("dek_rotation_blobs_per_run", &[]);
+        assert_eq!((blobs.count, blobs.sum), (2, 7));
+        let bytes = snapshot.histogram("dek_rotation_bytes_per_run", &[]);
+        assert_eq!((bytes.count, bytes.sum), (2, 700));
+        let throughput = snapshot.histogram("dek_rotation_throughput_bytes_per_sec", &[]);
+        assert_eq!((throughput.count, throughput.sum), (2, 30_000 + 20_000));
+        let latency = snapshot.histogram(
+            "dek_rotation_latency_ms",
+            &[("status", "success"), ("bytes_tier", "<1MB"), ("blobs_tier", "<10")],
+        );
+        assert_eq!((latency.count, latency.sum), (2, 30));
+    }
+
+    #[test]
+    fn record_dek_rotation_run_counts_a_zero_ms_run_as_one_ms() {
+        let harness = test_metrics();
+        harness.metrics.record_dek_rotation_run(
+            DekRotationRun::Succeeded { blobs: 1, ciphertext_bytes: 10 },
+            0,
+        );
+
+        let snapshot = harness.collect();
+        let throughput = snapshot.histogram("dek_rotation_throughput_bytes_per_sec", &[]);
+        assert_eq!((throughput.count, throughput.sum), (1, 10_000));
+        let latency = snapshot.histogram(
+            "dek_rotation_latency_ms",
+            &[("status", "success"), ("bytes_tier", "<1MB"), ("blobs_tier", "<10")],
+        );
+        assert_eq!((latency.count, latency.sum), (1, 1));
+    }
+
+    #[test]
+    fn record_dek_rotation_run_saturates_throughput() {
+        let harness = test_metrics();
+        harness.metrics.record_dek_rotation_run(
+            DekRotationRun::Succeeded { blobs: 1, ciphertext_bytes: u64::MAX / 2 },
+            1,
+        );
+
+        let snapshot = harness.collect();
+        let throughput = snapshot.histogram("dek_rotation_throughput_bytes_per_sec", &[]);
+        assert_eq!((throughput.count, throughput.sum), (1, u64::MAX));
+    }
+
+    #[test]
+    fn record_dek_rotation_run_records_only_latency_for_failed_run() {
+        let harness = test_metrics();
+        harness.metrics.record_dek_rotation_run(DekRotationRun::Failed, 0);
+
+        let snapshot = harness.collect();
+        assert_eq!(snapshot.counter("dek_rotation_blobs_reencrypted_total", &[]), 0);
+        assert_eq!(snapshot.counter("dek_rotation_bytes_reencrypted_total", &[]), 0);
+        for name in [
+            "dek_rotation_blobs_per_run",
+            "dek_rotation_bytes_per_run",
+            "dek_rotation_throughput_bytes_per_sec",
+        ] {
+            assert!(!snapshot.names().contains(name), "{name}");
+        }
+        let latency = snapshot.histogram(
+            "dek_rotation_latency_ms",
+            &[("status", "failure"), ("bytes_tier", "unknown"), ("blobs_tier", "unknown")],
+        );
+        assert_eq!((latency.count, latency.sum), (1, 1));
     }
 
     #[test]
