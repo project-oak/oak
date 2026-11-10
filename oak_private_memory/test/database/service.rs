@@ -46,7 +46,23 @@ use tokio::{
 };
 use tokio_stream::{StreamExt, wrappers::TcpListenerStream};
 
-pub use crate::lock_state::{CLOCK_SKEW_MARGIN, LockError, LockState};
+use crate::lock_state::LockError;
+pub use crate::lock_state::{CLOCK_SKEW_MARGIN, LockState};
+
+impl From<LockError> for tonic::Status {
+    fn from(error: LockError) -> Self {
+        match error {
+            LockError::InvalidArgument(message) => tonic::Status::invalid_argument(message),
+            LockError::NotFound => {
+                tonic::Status::not_found("UnencryptedDataBlob row does not exist")
+            }
+            LockError::Conflict => tonic::Status::aborted(
+                "UnencryptedDataBlob row is locked by another writer, or the lock is no longer \
+                 held by the given token",
+            ),
+        }
+    }
+}
 
 pub struct SealedMemoryDatabaseServiceTestImpl {
     pub database: Mutex<HashMap<String, DataBlob>>,
@@ -267,6 +283,7 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
             .await
             .ok_or_else(|| tonic::Status::invalid_argument("empty WriteMetadataBlobStream"))??;
         let lock_token = first.lock_token;
+        let unencrypted_data_blob = first.unencrypted_data_blob;
         let Some(write_metadata_blob_stream_request::Request::MetadataBlob(metadata)) =
             first.request
         else {
@@ -286,6 +303,8 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
             return Err(status);
         }
 
+        check_unencrypted_blob_id(unencrypted_data_blob.as_ref(), &id)?;
+
         let held = self.held_metadata_write.lock().await.take();
         if let Some(HeldWrite { arrived, release }) = held {
             let _ = arrived.send(());
@@ -304,14 +323,18 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
                 MetadataBlob { data_blob: Some(DataBlob { id, blob: full_blob }), version },
             )
             .await;
-        Ok(tonic::Response::new(match committed_version {
-            Some(version) => WriteMetadataBlobStreamResponse {
-                version_conflict: false,
-                committed_version: self.reported_committed_version(version),
-            },
-            None => {
-                WriteMetadataBlobStreamResponse { version_conflict: true, ..Default::default() }
-            }
+        let Some(version) = committed_version else {
+            return Ok(tonic::Response::new(WriteMetadataBlobStreamResponse {
+                version_conflict: true,
+                ..Default::default()
+            }));
+        };
+        if let Some(unencrypted) = unencrypted_data_blob {
+            self.unencrypted_database.lock().await.insert(unencrypted.id.clone(), unencrypted);
+        }
+        Ok(tonic::Response::new(WriteMetadataBlobStreamResponse {
+            version_conflict: false,
+            committed_version: self.reported_committed_version(version),
         }))
     }
 
@@ -361,9 +384,15 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
             let _ = arrived.send(());
             let _ = release.await;
         }
+        if let Some(status) = self.lock_conflict(&data_blob.id, &request.lock_token).await {
+            return Err(status);
+        }
         let mut unencrypted_db = self.unencrypted_database.lock().await;
-        if unencrypted_db.contains_key(&data_blob.id)
-            || self.metadata_database.lock().await.contains_key(&data_blob.id)
+        // Without a lock token, WriteUnencryptedDataBlob only inserts new rows
+        // and rejects existing ones.
+        if request.lock_token.is_empty()
+            && (unencrypted_db.contains_key(&data_blob.id)
+                || self.metadata_database.lock().await.contains_key(&data_blob.id))
         {
             return Err(tonic::Status::already_exists(format!(
                 "UnencryptedDataBlob row {} already exists",
@@ -393,7 +422,9 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
         _request: tonic::Request<ResetDatabaseRequest>,
     ) -> Result<tonic::Response<ResetDatabaseResponse>, tonic::Status> {
         self.database.lock().await.clear();
+        self.metadata_database.lock().await.clear();
         self.unencrypted_database.lock().await.clear();
+        self.lock_state.clear().await;
         Ok(tonic::Response::new(ResetDatabaseResponse {}))
     }
 
@@ -443,23 +474,56 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
 
     async fn acquire_unencrypted_data_blob_lock(
         &self,
-        _request: tonic::Request<AcquireUnencryptedDataBlobLockRequest>,
+        request: tonic::Request<AcquireUnencryptedDataBlobLockRequest>,
     ) -> Result<tonic::Response<AcquireUnencryptedDataBlobLockResponse>, tonic::Status> {
-        Err(tonic::Status::unimplemented("row locks are not simulated"))
+        let request = request.into_inner();
+        let duration = LockState::lease_duration(request.lock_duration)?;
+        let row_exists = self.row_exists(&request.id).await;
+        let (lock_token, expires_at) =
+            self.lock_state.acquire(&request.id, duration, row_exists).await?;
+        Ok(tonic::Response::new(AcquireUnencryptedDataBlobLockResponse {
+            lock_token,
+            lock_expire_time: Some(expires_at.into()),
+        }))
     }
 
     async fn extend_unencrypted_data_blob_lock(
         &self,
-        _request: tonic::Request<ExtendUnencryptedDataBlobLockRequest>,
+        request: tonic::Request<ExtendUnencryptedDataBlobLockRequest>,
     ) -> Result<tonic::Response<ExtendUnencryptedDataBlobLockResponse>, tonic::Status> {
-        Err(tonic::Status::unimplemented("row locks are not simulated"))
+        let request = request.into_inner();
+        let duration = LockState::lease_duration(request.lock_duration)?;
+        let row_exists = self.row_exists(&request.id).await;
+        let expires_at =
+            self.lock_state.extend(&request.id, &request.lock_token, duration, row_exists).await?;
+        Ok(tonic::Response::new(ExtendUnencryptedDataBlobLockResponse {
+            lock_expire_time: Some(expires_at.into()),
+        }))
     }
 
     async fn release_unencrypted_data_blob_lock(
         &self,
-        _request: tonic::Request<ReleaseUnencryptedDataBlobLockRequest>,
+        request: tonic::Request<ReleaseUnencryptedDataBlobLockRequest>,
     ) -> Result<tonic::Response<ReleaseUnencryptedDataBlobLockResponse>, tonic::Status> {
-        Err(tonic::Status::unimplemented("row locks are not simulated"))
+        let request = request.into_inner();
+        let row_exists = self.row_exists(&request.id).await;
+        self.lock_state.release(&request.id, &request.lock_token, row_exists).await?;
+        Ok(tonic::Response::new(ReleaseUnencryptedDataBlobLockResponse {}))
+    }
+}
+
+fn check_unencrypted_blob_id(
+    unencrypted_data_blob: Option<&DataBlob>,
+    metadata_id: &str,
+) -> Result<(), tonic::Status> {
+    match unencrypted_data_blob {
+        Some(unencrypted) if unencrypted.id != metadata_id => {
+            Err(tonic::Status::invalid_argument(format!(
+                "unencrypted_data_blob id {} does not match metadata blob id {metadata_id}",
+                unencrypted.id
+            )))
+        }
+        _ => Ok(()),
     }
 }
 

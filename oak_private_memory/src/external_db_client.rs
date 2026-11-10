@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::time::Duration;
+
 use anyhow::Context;
 use async_trait::async_trait;
 use futures::StreamExt;
@@ -21,10 +23,12 @@ use prost::Message;
 use prost_types::Timestamp;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
-    DataBlob, DeleteBlobsRequest, EncryptedDataBlob, EncryptedMetadataBlob, MetadataBlob,
+    AcquireUnencryptedDataBlobLockRequest, AcquireUnencryptedDataBlobLockResponse, DataBlob,
+    DeleteBlobsRequest, EncryptedDataBlob, EncryptedMetadataBlob,
+    ExtendUnencryptedDataBlobLockRequest, ExtendUnencryptedDataBlobLockResponse, MetadataBlob,
     ReadDataBlobRequest, ReadDataBlobsRequest, ReadMetadataBlobStreamRequest,
-    ReadUnencryptedDataBlobRequest, WriteDataBlobRequest, WriteDataBlobsRequest,
-    WriteMetadataBlobStreamRequest, WriteUnencryptedDataBlobRequest,
+    ReadUnencryptedDataBlobRequest, ReleaseUnencryptedDataBlobLockRequest, WriteDataBlobRequest,
+    WriteDataBlobsRequest, WriteMetadataBlobStreamRequest, WriteUnencryptedDataBlobRequest,
     read_metadata_blob_stream_response, write_metadata_blob_stream_request,
 };
 use tonic::{Code, transport::Channel};
@@ -97,6 +101,19 @@ pub trait DataBlobHandler {
         metadata_blob: &EncryptedMetadataBlob,
         coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<MetadataPersistResult>;
+    /// Like [`Self::add_metadata_blob_stream`], but fenced by the row lock
+    /// `lock_token` (empty for none), optionally writing
+    /// `unencrypted_data_blob` in the same transaction. Fails with the
+    /// host's `tonic::Status` itself as the error, like
+    /// `add_metadata_blob_stream`.
+    async fn add_metadata_blob_stream_with_lock(
+        &mut self,
+        id: &BlobId,
+        metadata_blob: &EncryptedMetadataBlob,
+        coarsened_expiration_timestamp: Timestamp,
+        lock_token: &str,
+        unencrypted_data_blob: Option<DataBlob>,
+    ) -> anyhow::Result<MetadataPersistResult>;
     /// Reads the metadata blob `id`.
     ///
     /// If `known_version` is set (and not empty), the host skips sending the
@@ -133,6 +150,22 @@ pub trait DataBlobHandler {
     ) -> anyhow::Result<Option<DataBlob>>;
 
     async fn delete_blobs(&mut self, ids: &[BlobId]) -> anyhow::Result<()>;
+    async fn acquire_unencrypted_blob_lock(
+        &mut self,
+        id: &BlobId,
+        lock_duration: Duration,
+    ) -> anyhow::Result<AcquireUnencryptedDataBlobLockResponse>;
+    async fn extend_unencrypted_blob_lock(
+        &mut self,
+        id: &BlobId,
+        lock_token: &str,
+        lock_duration: Duration,
+    ) -> anyhow::Result<ExtendUnencryptedDataBlobLockResponse>;
+    async fn release_unencrypted_blob_lock(
+        &mut self,
+        id: &BlobId,
+        lock_token: &str,
+    ) -> anyhow::Result<()>;
 }
 
 #[async_trait]
@@ -160,6 +193,24 @@ impl DataBlobHandler for ExternalDbClient {
         metadata_blob: &EncryptedMetadataBlob,
         coarsened_expiration_timestamp: Timestamp,
     ) -> anyhow::Result<MetadataPersistResult> {
+        self.add_metadata_blob_stream_with_lock(
+            id,
+            metadata_blob,
+            coarsened_expiration_timestamp,
+            "",
+            None,
+        )
+        .await
+    }
+
+    async fn add_metadata_blob_stream_with_lock(
+        &mut self,
+        id: &BlobId,
+        metadata_blob: &EncryptedMetadataBlob,
+        coarsened_expiration_timestamp: Timestamp,
+        lock_token: &str,
+        unencrypted_data_blob: Option<DataBlob>,
+    ) -> anyhow::Result<MetadataPersistResult> {
         let blob =
             metadata_blob.encrypted_data_blob.as_ref().context("no blob contents")?.encode_to_vec();
 
@@ -173,8 +224,8 @@ impl DataBlobHandler for ExternalDbClient {
                 },
             )),
             coarsened_expiration_timestamp: Some(coarsened_expiration_timestamp),
-            lock_token: String::new(),
-            unencrypted_data_blob: None,
+            lock_token: lock_token.to_string(),
+            unencrypted_data_blob,
         }];
 
         for chunk in chunks {
@@ -197,7 +248,7 @@ impl DataBlobHandler for ExternalDbClient {
                 Ok(MetadataPersistResult::succeeded(response.committed_version))
             }
             Err(ref status) if status.code() == Code::Aborted => {
-                return Ok(MetadataPersistResult::LockConflict);
+                Ok(MetadataPersistResult::LockConflict)
             }
             Err(ref status) if status.code() == Code::FailedPrecondition => {
                 // Backwards compatibility: old host returns FAILED_PRECONDITION
@@ -380,6 +431,49 @@ impl DataBlobHandler for ExternalDbClient {
 
     async fn delete_blobs(&mut self, ids: &[BlobId]) -> anyhow::Result<()> {
         self.delete_blobs(DeleteBlobsRequest { ids: ids.to_vec() }).await?;
+        Ok(())
+    }
+
+    async fn acquire_unencrypted_blob_lock(
+        &mut self,
+        id: &BlobId,
+        lock_duration: Duration,
+    ) -> anyhow::Result<AcquireUnencryptedDataBlobLockResponse> {
+        Ok(self
+            .acquire_unencrypted_data_blob_lock(AcquireUnencryptedDataBlobLockRequest {
+                id: id.clone(),
+                lock_duration: Some(prost_types::Duration::try_from(lock_duration)?),
+            })
+            .await?
+            .into_inner())
+    }
+
+    async fn extend_unencrypted_blob_lock(
+        &mut self,
+        id: &BlobId,
+        lock_token: &str,
+        lock_duration: Duration,
+    ) -> anyhow::Result<ExtendUnencryptedDataBlobLockResponse> {
+        Ok(self
+            .extend_unencrypted_data_blob_lock(ExtendUnencryptedDataBlobLockRequest {
+                id: id.clone(),
+                lock_token: lock_token.to_string(),
+                lock_duration: Some(prost_types::Duration::try_from(lock_duration)?),
+            })
+            .await?
+            .into_inner())
+    }
+
+    async fn release_unencrypted_blob_lock(
+        &mut self,
+        id: &BlobId,
+        lock_token: &str,
+    ) -> anyhow::Result<()> {
+        self.release_unencrypted_data_blob_lock(ReleaseUnencryptedDataBlobLockRequest {
+            id: id.clone(),
+            lock_token: lock_token.to_string(),
+        })
+        .await?;
         Ok(())
     }
 }

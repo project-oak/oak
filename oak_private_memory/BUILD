@@ -408,6 +408,7 @@ rust_test(
         ":external_db_client",
         ":private_memory_test_database_server_lib",
         "//proto:sealed_memory_rust_proto",
+        "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",
