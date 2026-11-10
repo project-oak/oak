@@ -569,6 +569,17 @@ message SyncDatabaseRequest {}
 
 message SyncDatabaseResponse {}
 
+// Request sent inside an authenticated Oak Session to initiate DEK rotation.
+message RotateDekRequest {
+  // Reserved for future operational parameters (e.g. max_batch_size).
+}
+
+message RotateDekResponse {
+  // Operational statistics about the completed rotation.
+  int64 reencrypted_memories_count = 1;
+  int64 reencrypted_bytes = 2;
+}
+
 message SealedMemoryRequest {
   oneof request {
     KeySyncRequest key_sync_request = 6;

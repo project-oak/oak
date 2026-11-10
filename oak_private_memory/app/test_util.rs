@@ -188,3 +188,12 @@ pub(crate) async fn tags_of(handler: &SealedMemorySessionHandler, id: &str) -> O
         .unwrap();
     response.success.then(|| response.memory.unwrap().tags)
 }
+
+/// The IDs of every data blob in `service`, sorted.
+pub(crate) async fn sorted_stored_blob_ids(
+    service: &SealedMemoryDatabaseServiceTestImpl,
+) -> Vec<String> {
+    let mut ids: Vec<String> = service.database.lock().await.keys().cloned().collect();
+    ids.sort();
+    ids
+}

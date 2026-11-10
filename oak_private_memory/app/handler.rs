@@ -679,21 +679,11 @@ impl SealedMemorySessionHandler {
         // User does not exist.
         info!("Registering new user: {}", uid);
 
-        // Generate a 256-bit key for the user.
-        let dek = crate::dek::generate_dek();
-        let wrapped_dek =
-            crate::dek::wrap_dek(&dek, &key).into_internal_error("failed to encrypt data blob")?;
+        let (_dek, user_info_blob) =
+            crate::dek::generate_wrapped_dek_blob(&uid, &key, boot_strap_info.clone())
+                .into_internal_error("failed to encrypt data blob")?;
 
-        let new_plain_text_info =
-            crate::dek::create_plain_text_user_info(Some(boot_strap_info.clone()), wrapped_dek);
-
-        if let Err(err) = db_client
-            .add_unencrypted_blob(
-                DataBlob { id: uid.clone(), blob: new_plain_text_info.encode_to_vec() },
-                None,
-            )
-            .await
-        {
+        if let Err(err) = db_client.add_unencrypted_blob(user_info_blob, None).await {
             // Another concurrent UserRegistration may have inserted the row
             // between our initial read and this insert-only write (returning
             // ALREADY_EXISTS, or ABORTED if the row was subsequently locked).

@@ -112,6 +112,9 @@ pub struct SealedMemoryDatabaseServiceTestImpl {
     /// order. See [`Self::fail_next_unencrypted_reads`].
     pub unencrypted_read_failures: Mutex<VecDeque<tonic::Status>>,
     pub lock_state: Arc<LockState>,
+    /// When set, `DeleteBlobs` leaves the blobs readable, like the host, which
+    /// only marks them to expire later.
+    pub soft_delete_blobs: AtomicBool,
 }
 
 pub struct HeldWrite {
@@ -144,6 +147,7 @@ impl Default for SealedMemoryDatabaseServiceTestImpl {
             data_blobs_read_failures: Mutex::new(VecDeque::new()),
             unencrypted_read_failures: Mutex::new(VecDeque::new()),
             lock_state: LockState::new(),
+            soft_delete_blobs: AtomicBool::new(false),
         }
     }
 }
@@ -470,9 +474,11 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
         request: tonic::Request<DeleteBlobsRequest>,
     ) -> Result<tonic::Response<DeleteBlobsResponse>, tonic::Status> {
         let request = request.into_inner();
+        let soft_delete = self.soft_delete_blobs.load(Ordering::SeqCst);
         let mut db = self.database.lock().await;
         for id in request.ids {
-            if db.remove(&id).is_none() {
+            let found = if soft_delete { db.contains_key(&id) } else { db.remove(&id).is_some() };
+            if !found {
                 return Err(tonic::Status::not_found(format!("Blob {} not found", id)));
             }
         }

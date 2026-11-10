@@ -68,6 +68,20 @@ pub(crate) fn create_plain_text_user_info(
     }
 }
 
+/// Generates a fresh DEK, wraps it under `kek`, and encodes the user's
+/// `PlainTextUserInfo` into a [`DataBlob`] keyed by `uid`.
+pub(crate) fn generate_wrapped_dek_blob(
+    uid: &str,
+    kek: &[u8],
+    key_derivation_info: KeyDerivationInfo,
+) -> anyhow::Result<(Zeroizing<Vec<u8>>, DataBlob)> {
+    let dek = generate_dek();
+    let wrapped_dek = wrap_dek(&dek, kek)?;
+    let plain_text_info = create_plain_text_user_info(Some(key_derivation_info), wrapped_dek);
+    let data_blob = DataBlob { id: uid.to_string(), blob: plain_text_info.encode_to_vec() };
+    Ok((dek, data_blob))
+}
+
 pub(crate) fn wrapped_dek(
     plain_text_info: &PlainTextUserInfo,
 ) -> anyhow::Result<&EncryptedDataBlob> {
@@ -116,6 +130,13 @@ impl std::fmt::Display for DekNotRotated {
 
 impl std::error::Error for DekNotRotated {}
 
+#[cfg(test)]
+tokio::task_local! {
+    /// While set for a task, [`Reencryption::undo_repoint`] fails, so tests can
+    /// reach the path where a failed rotation can't restore the session.
+    pub(crate) static FAIL_UNDO_REPOINT: ();
+}
+
 /// Copies of memory blobs under a new DEK that the index doesn't reference yet.
 #[derive(Debug, Default)]
 pub(crate) struct Reencryption {
@@ -139,6 +160,10 @@ impl Reencryption {
 
     /// Points the index and pending mutation log back at the original blobs.
     pub(crate) fn undo_repoint(&self, database: &mut Database) -> anyhow::Result<()> {
+        #[cfg(test)]
+        if FAIL_UNDO_REPOINT.try_with(|_| ()).is_ok() {
+            anyhow::bail!("injected undo_repoint failure");
+        }
         let reversed: Vec<_> = self
             .repoints
             .iter()

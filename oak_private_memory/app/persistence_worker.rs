@@ -29,7 +29,8 @@ use oak_private_memory_database::encryption::{decrypt_database, encrypt_database
 use prost::Message;
 use rand::Rng;
 use sealed_memory_rust_proto::{
-    oak::private_memory::EncryptedMetadataBlob, prelude::v1::SyncDatabaseResponse,
+    oak::private_memory::{DataBlob, EncryptedDataBlob, EncryptedMetadataBlob},
+    prelude::v1::SyncDatabaseResponse,
 };
 use tokio::{
     sync::{OwnedSemaphorePermit, Semaphore, mpsc, watch},
@@ -523,6 +524,37 @@ impl Drop for PersistTicket {
     }
 }
 
+/// Exports `database` and encrypts its metadata payload under `dek`.
+pub(crate) fn export_and_encrypt_database(
+    database: &oak_private_memory_database::Database,
+    dek: &[u8],
+) -> anyhow::Result<EncryptedDataBlob> {
+    let exported_db = database.export()?;
+    let encrypted_info = exported_db.encrypted_info.context("encrypted info is empty")?;
+    encrypt_database(&encrypted_info, dek)
+}
+
+/// Writes `metadata_blob` (and optional `unencrypted_data_blob`) at the
+/// session's coarsened blanket TTL, fenced by `lock_token`.
+pub(crate) async fn write_metadata_blob(
+    user_context: &mut UserSessionContext,
+    metadata_blob: &EncryptedMetadataBlob,
+    lock_token: &str,
+    unencrypted_data_blob: Option<DataBlob>,
+) -> anyhow::Result<MetadataPersistResult> {
+    let coarsened_expiration_timestamp = user_context.database.calculate_coarsened_blanket_ttl();
+    user_context
+        .database_service_client
+        .add_metadata_blob_stream_with_lock(
+            &user_context.uid,
+            metadata_blob,
+            coarsened_expiration_timestamp,
+            lock_token,
+            unencrypted_data_blob,
+        )
+        .await
+}
+
 /// Attempts to persist the database once, if it changed, presenting
 /// `lock_token` for the row (empty if the caller holds no lock).
 ///
@@ -545,9 +577,7 @@ async fn try_persist_database(
         info!("Database is not changed, skip saving");
         return Ok(MetadataPersistResult::Succeeded { committed_version: None });
     }
-    let exported_db = user_context.database.export()?;
-    let encrypted_info = exported_db.encrypted_info.context("encrypted info is empty")?;
-    let database = encrypt_database(&encrypted_info, &user_context.dek)?;
+    let database = export_and_encrypt_database(&user_context.database, &user_context.dek)?;
 
     let db_size = database.data.len();
     let max_database_size = user_context.database.max_size();
@@ -564,20 +594,16 @@ async fn try_persist_database(
         encrypted_data_blob: Some(database),
         version: user_context.database_version.clone(),
     };
-    let coarsened_expiration_timestamp = user_context.database.calculate_coarsened_blanket_ttl();
     let mut backoff = ResourceExhaustedBackoff::new(policy);
     let (result, elapsed) = loop {
         let now = Instant::now();
-        match user_context
-            .database_service_client
-            .add_metadata_blob_stream_with_lock(
-                &user_context.uid,
-                &metadata_blob,
-                coarsened_expiration_timestamp,
-                lock_token,
-                /* unencrypted_data_blob= */ None,
-            )
-            .await
+        match write_metadata_blob(
+            user_context,
+            &metadata_blob,
+            lock_token,
+            /* unencrypted_data_blob= */ None,
+        )
+        .await
         {
             Ok(result) => break (result, now.elapsed()),
             Err(e) => backoff.wait_to_retry(e, "metadata blob write", metrics).await?,
