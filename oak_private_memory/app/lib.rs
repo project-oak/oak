@@ -21,6 +21,9 @@ pub mod admission;
 mod context;
 mod db_client;
 mod dek;
+// Only reachable from tests until the RotateDek handler lands.
+#[cfg_attr(not(test), allow(dead_code))]
+mod dek_rotation;
 mod handler;
 pub mod meminfo;
 mod packing;
