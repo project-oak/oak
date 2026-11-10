@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use std::time::SystemTime;
+use std::{collections::HashSet, time::SystemTime};
 
 use anyhow::{Context, bail, ensure};
 use external_db_client::BlobId;
@@ -270,6 +270,14 @@ impl PendingMetadata {
             .first()
             .map(|s| s.as_str())
     }
+
+    fn update_blob_id(&mut self, new_blob_id: &BlobId) -> anyhow::Result<()> {
+        ensure!(
+            set_blob_id(&mut self.icing_document, new_blob_id),
+            "pending memory document has no blobId property"
+        );
+        Ok(())
+    }
 }
 
 /// The generated metadata for an LlmView.
@@ -351,6 +359,24 @@ impl PendingLlmViewMetadata {
     pub fn document(&self) -> &DocumentProto {
         &self.icing_document
     }
+
+    fn update_blob_id(&mut self, new_blob_id: &BlobId) -> anyhow::Result<()> {
+        ensure!(
+            set_blob_id(&mut self.icing_document, new_blob_id),
+            "pending LLM view document has no blobId property"
+        );
+        Ok(())
+    }
+}
+
+fn set_blob_id(document: &mut DocumentProto, new_blob_id: &BlobId) -> bool {
+    match document.properties.iter_mut().find(|prop| prop.name.as_deref() == Some(BLOB_ID_NAME)) {
+        Some(prop) => {
+            prop.string_values = vec![new_blob_id.clone()];
+            true
+        }
+        None => false,
+    }
 }
 
 /// The generated metadata for a TextView.
@@ -421,6 +447,14 @@ impl PendingTextViewMetadata {
 
     pub fn document(&self) -> &DocumentProto {
         &self.icing_document
+    }
+
+    fn update_blob_id(&mut self, new_blob_id: &BlobId) -> anyhow::Result<()> {
+        ensure!(
+            set_blob_id(&mut self.icing_document, new_blob_id),
+            "pending text view document has no blobId property"
+        );
+        Ok(())
     }
 }
 
@@ -1431,6 +1465,76 @@ impl IcingMetaDatabase {
         Ok(all_memory_ids)
     }
 
+    pub fn get_all_memory_and_blob_ids(&self) -> anyhow::Result<Vec<(MemoryId, BlobId)>> {
+        let memory_ids = self.get_all_memory_ids()?;
+        let mut pairs = Vec::with_capacity(memory_ids.len());
+        for memory_id in memory_ids {
+            if let Some(blob_id) = self.get_blob_id_by_memory_id_point_lookup(&memory_id)? {
+                pairs.push((memory_id, blob_id));
+            }
+        }
+        Ok(pairs)
+    }
+
+    /// Moves a memory and its views from `old_blob_id` to `new_blob_id` in the
+    /// index and in matching pending `AddMemory` log entries.
+    pub fn repoint_blob(
+        &mut self,
+        memory_id: &MemoryId,
+        old_blob_id: &BlobId,
+        new_blob_id: &BlobId,
+    ) -> anyhow::Result<()> {
+        self.set_document_blob_id(NAMESPACE_NAME, memory_id, new_blob_id)?;
+        for (namespace, view_id) in self.get_views_by_memory_id(memory_id.clone())? {
+            self.set_document_blob_id(&namespace, &view_id, new_blob_id)?;
+        }
+
+        for op in &mut self.applied_operations {
+            if let MutationOperation::AddMemory { metadata, views, text_views } = op
+                && metadata.memory_id() == Some(memory_id.as_str())
+                && Self::extract_blob_id_from_document(metadata.document()).as_ref()
+                    == Some(old_blob_id)
+            {
+                metadata.update_blob_id(new_blob_id)?;
+                for view in views.iter_mut() {
+                    view.update_blob_id(new_blob_id)?;
+                }
+                for text_view in text_views.iter_mut() {
+                    text_view.update_blob_id(new_blob_id)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn set_document_blob_id(
+        &mut self,
+        namespace: &str,
+        id: &str,
+        new_blob_id: &BlobId,
+    ) -> anyhow::Result<()> {
+        let get_result = self.icing_search_engine.get(
+            namespace.as_bytes(),
+            id.as_bytes(),
+            &icing::GetResultSpecProto::default(),
+        )?;
+        let code = get_result.status.as_ref().context("get returned no status")?.code;
+        ensure!(
+            code == Some(icing::status_proto::Code::Ok.into()),
+            "icing get failed for {id}: {:?}",
+            get_result.status
+        );
+        let mut doc = get_result.document.context("get returned ok status but no document")?;
+        ensure!(set_blob_id(&mut doc, new_blob_id), "document {id} has no blobId property");
+        let put_result = self.icing_search_engine.put(&doc)?;
+        ensure!(
+            put_result.status.context("put returned no status")?.code
+                == Some(icing::status_proto::Code::Ok.into()),
+            "icing put failed for {id}"
+        );
+        Ok(())
+    }
+
     pub fn get_expired_memories_ids(
         &self,
         page_size: i32,
@@ -2175,6 +2279,28 @@ impl IcingMetaDatabase {
                 _ => None,
             })
             .collect()
+    }
+
+    /// Returns `(memory_id, blob_id)` pairs for pending `AddMemory` ops whose
+    /// blob ID is still live in the index.
+    pub fn get_pending_add_memory_blob_ids(&self) -> anyhow::Result<Vec<(MemoryId, BlobId)>> {
+        let mut pairs = Vec::new();
+        let mut seen = HashSet::new();
+        for op in &self.applied_operations {
+            let MutationOperation::AddMemory { metadata, .. } = op else { continue };
+            let (Some(memory_id), Some(blob_id)) =
+                (metadata.memory_id(), Self::extract_blob_id_from_document(metadata.document()))
+            else {
+                continue;
+            };
+            let memory_id = memory_id.to_string();
+            if self.get_blob_id_by_memory_id_point_lookup(&memory_id)?.as_ref() == Some(&blob_id)
+                && seen.insert(blob_id.clone())
+            {
+                pairs.push((memory_id, blob_id));
+            }
+        }
+        Ok(pairs)
     }
 
     /// Returns true if this instance was created fresh, without any previously
@@ -4560,6 +4686,155 @@ mod tests {
 
         // The existing memory should have been deleted.
         assert_that!(db.get_all_memory_ids()?, is_empty());
+        Ok(())
+    }
+
+    #[gtest]
+    fn repoint_blob_updates_blob_id_and_preserves_memory() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        let (mem_id, old_blob_id) = add_test_memory(&mut db, "1");
+
+        let pairs = db.get_all_memory_and_blob_ids()?;
+        assert_that!(pairs, elements_are![eq(&(mem_id.clone(), old_blob_id.clone()))]);
+
+        let new_blob_id = "repointed_blob_id".to_string();
+        db.repoint_blob(&mem_id, &old_blob_id, &new_blob_id)?;
+
+        let resolved = db.get_blob_id_by_memory_id(mem_id.clone())?;
+        assert_that!(resolved, some(eq(&new_blob_id)));
+
+        let pairs_after = db.get_all_memory_and_blob_ids()?;
+        assert_that!(pairs_after, elements_are![eq(&(mem_id.clone(), new_blob_id.clone()))]);
+
+        let point_lookup = db.get_blob_id_by_memory_id_point_lookup(&mem_id)?;
+        assert_that!(point_lookup, some(eq(&new_blob_id)));
+        Ok(())
+    }
+
+    fn session_db() -> anyhow::Result<IcingMetaDatabase> {
+        let base = IcingMetaDatabase::new(test_config())?;
+        IcingMetaDatabase::import(base.export()?.encode_to_vec().as_slice(), test_config())
+    }
+
+    fn sorted(mut pairs: Vec<(MemoryId, BlobId)>) -> Vec<(MemoryId, BlobId)> {
+        pairs.sort();
+        pairs
+    }
+
+    fn pair(memory_id: &str, blob_id: &str) -> (MemoryId, BlobId) {
+        (memory_id.to_string(), blob_id.to_string())
+    }
+
+    #[gtest]
+    fn pending_add_blob_ids_skip_deleted_and_replaced_adds() -> anyhow::Result<()> {
+        let mut db = session_db()?;
+        let memory = |id: &str| Memory { id: id.to_string(), ..Default::default() };
+        db.add_memory(&memory("kept"), "blob_kept".into())?;
+        db.add_memory(&memory("deleted"), "blob_deleted".into())?;
+        db.delete_memories(&["deleted".to_string()])?;
+        db.add_memory(&memory("upserted"), "blob_v1".into())?;
+        db.add_memory(&memory("upserted"), "blob_v2".into())?;
+
+        assert_eq!(
+            sorted(db.get_pending_add_memory_blob_ids()?),
+            vec![pair("kept", "blob_kept"), pair("upserted", "blob_v2")]
+        );
+        Ok(())
+    }
+
+    #[gtest]
+    fn repoint_blob_then_reverse_restores_index_and_log() -> anyhow::Result<()> {
+        let mut db = session_db()?;
+        db.add_memory(&mem_with_view("a", &["t"], "a_view", &[1.0, 0.0, 0.0]), "blob_a".into())?;
+        db.add_memory(&mem_with_view("b", &["t"], "b_view", &[0.0, 1.0, 0.0]), "blob_b".into())?;
+        let original = vec![pair("a", "blob_a"), pair("b", "blob_b")];
+        let repoints = [
+            ("a".to_string(), "blob_a".to_string(), "blob_a2".to_string()),
+            ("b".to_string(), "blob_b".to_string(), "blob_b2".to_string()),
+        ];
+
+        for (memory_id, old, new) in &repoints {
+            db.repoint_blob(memory_id, old, new)?;
+        }
+        let repointed = vec![pair("a", "blob_a2"), pair("b", "blob_b2")];
+        assert_eq!(sorted(db.get_all_memory_and_blob_ids()?), repointed);
+        assert_eq!(sorted(db.get_pending_add_memory_blob_ids()?), repointed);
+
+        for (memory_id, old, new) in &repoints {
+            db.repoint_blob(memory_id, new, old)?;
+        }
+        assert_eq!(sorted(db.get_all_memory_and_blob_ids()?), original);
+        assert_eq!(sorted(db.get_pending_add_memory_blob_ids()?), original);
+        Ok(())
+    }
+
+    fn view_blob_ids(db: &IcingMetaDatabase, memory_id: &str) -> anyhow::Result<Vec<BlobId>> {
+        let mut blob_ids = Vec::new();
+        for (namespace, view_id) in db.get_views_by_memory_id(memory_id.to_string())? {
+            let doc = db
+                .icing_search_engine
+                .get(
+                    namespace.as_bytes(),
+                    view_id.as_bytes(),
+                    &icing::GetResultSpecProto::default(),
+                )?
+                .document
+                .context("view document missing")?;
+            blob_ids.push(
+                IcingMetaDatabase::extract_blob_id_from_document(&doc).context("no blob ID")?,
+            );
+        }
+        Ok(blob_ids)
+    }
+
+    #[gtest]
+    fn repoint_blob_moves_llm_and_text_views() -> anyhow::Result<()> {
+        let base = IcingMetaDatabase::new(test_config())?;
+        let base_exported = base.export()?.encode_to_vec();
+        let mut db = IcingMetaDatabase::import(base_exported.as_slice(), test_config())?;
+        let mut memory = mem_with_text_view("mem", "src", &["apple pie"]);
+        memory.views = mem_with_view("mem", &[], "mem_llm_view", &[1.0, 0.0, 0.0]).views;
+        db.add_memory(&memory, "blob_old".into())?;
+        assert_eq!(view_blob_ids(&db, "mem")?, vec!["blob_old".to_string(); 2]);
+
+        db.repoint_blob(&memory.id, &"blob_old".to_string(), &"blob_new".to_string())?;
+
+        assert_eq!(view_blob_ids(&db, "mem")?, vec!["blob_new".to_string(); 2]);
+        let (rebased, failed) =
+            IcingMetaDatabase::import_with_changes(tempdir(), base_exported.as_slice(), &db)?;
+        assert_eq!(failed, 0);
+        assert_eq!(view_blob_ids(&rebased, "mem")?, vec!["blob_new".to_string(); 2]);
+        Ok(())
+    }
+
+    #[gtest]
+    fn repoint_blob_after_upsert_keeps_live_blob_on_rebase() -> anyhow::Result<()> {
+        let base = IcingMetaDatabase::new(test_config())?;
+        let base_exported = base.export()?.encode_to_vec();
+
+        let mut db = IcingMetaDatabase::import(base_exported.as_slice(), test_config())?;
+        let memory = Memory { id: "memory_id_1".to_string(), ..Default::default() };
+        let (blob_a, blob_b, blob_c) =
+            ("blob_a".to_string(), "blob_b".to_string(), "blob_c".to_string());
+        db.add_memory(&memory, blob_a.clone())?;
+        db.add_memory(&memory, blob_b.clone())?;
+        db.repoint_blob(&memory.id, &blob_b, &blob_c)?;
+
+        let (rebased, failed) =
+            IcingMetaDatabase::import_with_changes(tempdir(), base_exported.as_slice(), &db)?;
+        assert_eq!(failed, 0);
+        assert_that!(rebased.get_blob_id_by_memory_id(memory.id.clone())?, some(eq(&blob_c)));
+        assert_that!(rebased.pending_blob_deletes(), elements_are![eq(&blob_a)]);
+        Ok(())
+    }
+
+    #[gtest]
+    fn repoint_blob_missing_document_is_an_error() -> anyhow::Result<()> {
+        let mut db = IcingMetaDatabase::new(test_config())?;
+        assert!(
+            db.repoint_blob(&"missing".to_string(), &"old".to_string(), &"new".to_string())
+                .is_err()
+        );
         Ok(())
     }
 }

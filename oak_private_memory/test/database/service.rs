@@ -101,6 +101,10 @@ pub struct SealedMemoryDatabaseServiceTestImpl {
     pub metadata_not_modified_replies: AtomicUsize,
     /// Number of metadata blob writes rejected for a version conflict.
     pub metadata_write_conflicts: AtomicUsize,
+    /// The coarsened expiration each data blob was last written with.
+    pub blob_expirations: Mutex<HashMap<String, prost_types::Timestamp>>,
+    /// If set, the next `ReadDataBlobs` call fails with `UNAVAILABLE`.
+    pub fail_next_read_data_blobs: AtomicBool,
     pub lock_state: Arc<LockState>,
 }
 
@@ -129,6 +133,8 @@ impl Default for SealedMemoryDatabaseServiceTestImpl {
             metadata_blob_downloads: AtomicUsize::new(0),
             metadata_not_modified_replies: AtomicUsize::new(0),
             metadata_write_conflicts: AtomicUsize::new(0),
+            blob_expirations: Mutex::new(HashMap::new()),
+            fail_next_read_data_blobs: AtomicBool::new(false),
             lock_state: LockState::new(),
         }
     }
@@ -241,11 +247,11 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
     ) -> Result<tonic::Response<WriteDataBlobResponse>, tonic::Status> {
         tokio::time::sleep(Duration::from_millis(150)).await;
         let request = request.into_inner();
-        self.add_blob_inner(
-            request.data_blob.as_ref().unwrap().id.clone(),
-            request.data_blob.unwrap(),
-        )
-        .await;
+        let id = request.data_blob.as_ref().unwrap().id.clone();
+        if let Some(expiration) = request.coarsened_expiration_timestamp {
+            self.blob_expirations.lock().await.insert(id.clone(), expiration);
+        }
+        self.add_blob_inner(id, request.data_blob.unwrap()).await;
         Ok(tonic::Response::new(WriteDataBlobResponse {}))
     }
 
@@ -446,13 +452,17 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
         &self,
         request: tonic::Request<ReadDataBlobsRequest>,
     ) -> Result<tonic::Response<ReadDataBlobsResponse>, tonic::Status> {
+        if self.fail_next_read_data_blobs.swap(false, Ordering::SeqCst) {
+            return Err(tonic::Status::unavailable("injected ReadDataBlobs failure"));
+        }
         let request = request.into_inner();
         let db = self.database.lock().await;
         let mut data_blobs = std::collections::HashMap::new();
         for id in request.ids {
-            if let Some(blob) = db.get(&id) {
-                data_blobs.insert(id, blob.clone());
-            }
+            let blob = db
+                .get(&id)
+                .ok_or_else(|| tonic::Status::not_found(format!("Blob {id} not found")))?;
+            data_blobs.insert(id, blob.clone());
         }
         Ok(tonic::Response::new(ReadDataBlobsResponse {
             data_blobs,
@@ -466,7 +476,11 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
     ) -> Result<tonic::Response<WriteDataBlobsResponse>, tonic::Status> {
         let request = request.into_inner();
         let mut db = self.database.lock().await;
+        let mut expirations = self.blob_expirations.lock().await;
         for data_blob in request.data_blobs {
+            if let Some(expiration) = request.coarsened_expiration_timestamp {
+                expirations.insert(data_blob.id.clone(), expiration);
+            }
             db.insert(data_blob.id.clone(), data_blob);
         }
         Ok(tonic::Response::new(WriteDataBlobsResponse { failed_ids: Default::default() }))

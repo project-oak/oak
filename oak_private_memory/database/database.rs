@@ -28,7 +28,7 @@ use crate::{
     IcingTempDir, MemoryId,
     clock::{Clock, SystemClock, system_time_to_timestamp},
     icing::{IcingMetaDatabase, PageToken},
-    memory_blob_store::MemoryBlobStore,
+    memory_blob_store::{MemoryBlobStore, ReencryptedMemories},
 };
 
 // Maximum size of the database (metadata blob). This can exceed the gRPC
@@ -86,6 +86,51 @@ impl Database {
 
     pub fn meta_db(&mut self) -> &mut IcingMetaDatabase {
         &mut self.database
+    }
+
+    pub fn get_all_memory_and_blob_ids(&self) -> anyhow::Result<Vec<(MemoryId, BlobId)>> {
+        self.database.get_all_memory_and_blob_ids()
+    }
+
+    pub fn get_pending_add_memory_blob_ids(&self) -> anyhow::Result<Vec<(MemoryId, BlobId)>> {
+        self.database.get_pending_add_memory_blob_ids()
+    }
+
+    /// Copies `blob_ids` into new blobs encrypted under `new_dek` without
+    /// modifying the index or source blobs.
+    pub async fn reencrypt_blobs(
+        &self,
+        blob_ids: &[BlobId],
+        new_dek: &[u8],
+    ) -> anyhow::Result<ReencryptedMemories> {
+        self.blob_store.reencrypt_memories(blob_ids, new_dek).await
+    }
+
+    /// Repoints each `(memory_id, old_blob_id, new_blob_id)`, attempting all
+    /// entries even if some fail so a reversed call can undo partial progress.
+    pub fn repoint_blobs(&mut self, repoints: &[(MemoryId, BlobId, BlobId)]) -> anyhow::Result<()> {
+        let mut errors = Vec::new();
+        for (memory_id, old_blob_id, new_blob_id) in repoints {
+            if let Err(e) = self.database.repoint_blob(memory_id, old_blob_id, new_blob_id) {
+                errors.push(format!("{memory_id} ({old_blob_id} -> {new_blob_id}): {e:#}"));
+            }
+        }
+        if !errors.is_empty() {
+            bail!("repoint_blobs failed for {} memory(s): {}", errors.len(), errors.join("; "));
+        }
+        Ok(())
+    }
+
+    pub async fn delete_blobs(&mut self, blob_ids: &[BlobId]) -> anyhow::Result<()> {
+        self.blob_store.delete_memories(blob_ids).await
+    }
+
+    pub fn set_dek(&mut self, new_dek: Zeroizing<Vec<u8>>) {
+        self.blob_store.set_dek(new_dek);
+    }
+
+    pub fn key_derivation_info(&self) -> &KeyDerivationInfo {
+        &self.key_derivation_info
     }
 
     pub fn export(&self) -> anyhow::Result<UserDb> {
@@ -634,5 +679,40 @@ mod tests {
         assert!(memory.expiration_timestamp.is_none());
         assert!(memory.views.is_none());
         assert!(memory.text_views.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_repoint_blobs_attempts_all_and_reports_all_errors() {
+        use crate::icing::IcingDatabaseConfig;
+        let icing_db = IcingMetaDatabase::new(IcingDatabaseConfig {
+            base_dir: IcingTempDir::new("repoint-test-"),
+            enable_int8_embedding: true,
+        })
+        .unwrap();
+        let channel = tonic::transport::Channel::from_static("http://[::1]:50051").connect_lazy();
+        let mut db = Database::new(
+            icing_db,
+            Zeroizing::new(vec![0u8; 32]),
+            ExternalDbClient::new(channel),
+            KeyDerivationInfo::default(),
+            0,
+            0,
+        );
+        db.meta_db()
+            .add_memory(&Memory { id: "valid".to_string(), ..Default::default() }, "b1".into())
+            .unwrap();
+
+        let err = db
+            .repoint_blobs(&[
+                ("missing_1".into(), "x".into(), "y".into()),
+                ("valid".into(), "b1".into(), "b2".into()),
+                ("missing_2".into(), "x".into(), "y".into()),
+            ])
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("missing_1"), "{err}");
+        assert!(err.contains("missing_2"), "{err}");
+        assert_eq!(db.get_all_memory_and_blob_ids().unwrap(), vec![("valid".into(), "b2".into())]);
     }
 }

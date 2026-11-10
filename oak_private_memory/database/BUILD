@@ -79,6 +79,7 @@ rust_test(
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//:metrics_testing",
+        "//:private_memory_test_database_server_lib",
         "@oak_crates_index//:googletest",
         "@rules_rust//tools/runfiles",
     ],
