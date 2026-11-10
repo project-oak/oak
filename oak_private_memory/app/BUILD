@@ -33,6 +33,7 @@ rust_library(
         "packing.rs",
         "persistence_worker.rs",
         "service.rs",
+        "test_util.rs",
     ],
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",

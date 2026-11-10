@@ -1086,132 +1086,25 @@ async fn get_or_create_db(
 mod tests {
     use std::{
         collections::{BTreeMap, BTreeSet},
-        net::{IpAddr, Ipv4Addr, SocketAddr},
+        net::SocketAddr,
         sync::{Arc, atomic::Ordering},
         time::{Duration, SystemTime},
     };
 
     use metrics_testing::{Attrs, attrs};
-    use oak_private_memory_database::{
-        clock::{SystemClock, system_time_to_timestamp},
-        database::{MAX_DATABASE_SIZE, MAX_GRPC_DECODE_SIZE},
-    };
+    use oak_private_memory_database::clock::system_time_to_timestamp;
     use private_memory_test_database_server_lib::service::SealedMemoryDatabaseServiceTestImpl;
     use sealed_memory_rust_proto::oak::private_memory::{
         MetadataBlobNotModified, ReadMetadataBlobStreamResponse, SessionConfig,
         read_metadata_blob_stream_response,
     };
     use tokio::{
-        net::TcpListener,
         sync::{mpsc, oneshot},
         task::JoinHandle,
     };
 
     use super::*;
-    use crate::{MAX_MEMORY_TTL_SECONDS, METADATA_BLANKET_TTL_SECONDS};
-
-    /// A valid 256-bit key encryption key shared across all requests in a test.
-    const TEST_KEK: &[u8; 32] = b"aaaabbbbccccddddeeeeffffgggghhhh";
-
-    /// Starts an in-process test database service and returns its address.
-    ///
-    /// The service persists blobs in memory for the lifetime of the test, so
-    /// multiple handlers ("connections") built against the same address share
-    /// the same underlying storage, mirroring the real deployment where the DB
-    /// is a separate long-lived service.
-    async fn start_test_db() -> SocketAddr {
-        let listener =
-            TcpListener::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0)).await.unwrap();
-        let db_addr = listener.local_addr().unwrap();
-        tokio::spawn(async move {
-            let _ = private_memory_test_database_server_lib::service::create(listener).await;
-        });
-        db_addr
-    }
-
-    async fn start_test_db_with_service(
-        service: Arc<
-            private_memory_test_database_server_lib::service::SealedMemoryDatabaseServiceTestImpl,
-        >,
-    ) -> SocketAddr {
-        let listener =
-            TcpListener::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0)).await.unwrap();
-        let db_addr = listener.local_addr().unwrap();
-        tokio::spawn(async move {
-            let _ =
-                private_memory_test_database_server_lib::service::serve(listener, service).await;
-        });
-        db_addr
-    }
-
-    /// Builds a handler ("connection") against an already-running test DB.
-    ///
-    /// The returned `mpsc::UnboundedReceiver` must be held for the duration of
-    /// the test: dropping it would close the persistence channel that the
-    /// handler sends to when a session is dropped.
-    fn connect_handler(
-        db_addr: SocketAddr,
-    ) -> (SealedMemorySessionHandler, mpsc::UnboundedReceiver<UserSessionContext>) {
-        connect_handler_with_metrics(db_addr, metrics::get_global_metrics())
-    }
-
-    /// Like [`connect_handler`], but records into `metrics`.
-    fn connect_handler_with_metrics(
-        db_addr: SocketAddr,
-        metrics: Arc<metrics::Metrics>,
-    ) -> (SealedMemorySessionHandler, mpsc::UnboundedReceiver<UserSessionContext>) {
-        let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
-        (connect_handler_with_persistence_tx(db_addr, metrics, persistence_tx), persistence_rx)
-    }
-
-    /// Like [`connect_handler_with_metrics`], but sends the session to
-    /// `persistence_tx` when the handler is dropped.
-    fn connect_handler_with_persistence_tx(
-        db_addr: SocketAddr,
-        metrics: Arc<metrics::Metrics>,
-        persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
-    ) -> SealedMemorySessionHandler {
-        let db_client =
-            Arc::new(SharedDbClient::new(db_addr, MAX_GRPC_DECODE_SIZE, metrics.clone()));
-        SealedMemorySessionHandler::new(
-            metrics,
-            persistence_tx,
-            db_client,
-            Arc::new(SystemClock),
-            MAX_DATABASE_SIZE,
-            METADATA_BLANKET_TTL_SECONDS,
-            MAX_MEMORY_TTL_SECONDS,
-            false,
-            vec![],
-        )
-    }
-
-    /// Wires up a handler backed by a freshly started in-process test database
-    /// service (a single "connection" against a private DB).
-    async fn setup_handler()
-    -> (SealedMemorySessionHandler, mpsc::UnboundedReceiver<UserSessionContext>) {
-        connect_handler(start_test_db().await)
-    }
-
-    fn boot_strap_info() -> KeyDerivationInfo {
-        KeyDerivationInfo { kek_salt: b"test_salt".to_vec(), kek_version: 1 }
-    }
-
-    fn registration_request(pm_uid: &str) -> UserRegistrationRequest {
-        UserRegistrationRequest {
-            pm_uid: pm_uid.to_string(),
-            key_encryption_key: TEST_KEK.to_vec(),
-            boot_strap_info: Some(boot_strap_info()),
-        }
-    }
-
-    fn key_sync_request(pm_uid: &str, session_config: Option<SessionConfig>) -> KeySyncRequest {
-        KeySyncRequest {
-            pm_uid: pm_uid.to_string(),
-            key_encryption_key: TEST_KEK.to_vec(),
-            session_config,
-        }
-    }
+    use crate::test_util::*;
 
     /// Registering the same `pm_uid` (with the same KEK) twice returns
     /// `UserAlreadyExists` on the second call, echoing back the stored key

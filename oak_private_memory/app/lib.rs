@@ -25,6 +25,8 @@ pub mod meminfo;
 mod packing;
 mod persistence_worker;
 pub mod service;
+#[cfg(test)]
+mod test_util;
 
 pub use persistence_worker::run_persistence_service;
 
