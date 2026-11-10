@@ -37,9 +37,11 @@
 //! - RFC 5758 (X.509 PKI Validation for DSA and ECDSA): <https://www.rfc-editor.org/rfc/rfc5758>
 //! - RFC 6211 (CMS Algorithm Identifier Protection Attribute): <https://www.rfc-editor.org/rfc/rfc6211>
 
-// Verification helpers in this module are wired into `verification_tests` and
-// `lib` in follow-up commits in this stack, where this attribute is removed.
-#![allow(dead_code)]
+// Helpers in this module are exercised by `chain_tests`, `signature_tests`,
+// and `verification_tests`; the non-test library entry point
+// (`verify_time_stamp_token`) is wired into `lib` in a follow-up commit, where
+// this attribute is removed.
+#![cfg_attr(not(test), allow(dead_code))]
 
 use alloc::{
     format,
@@ -97,6 +99,9 @@ mod chain_tests;
 #[cfg(test)]
 #[path = "signature_tests.rs"]
 mod signature_tests;
+#[cfg(test)]
+#[path = "verification_tests.rs"]
+mod verification_tests;
 
 /// PKCS#9 `id-ct-TSTInfo` (`1.2.840.113549.1.9.16.1.4`), RFC 3161 Section
 /// 2.4.2.
