@@ -33,7 +33,11 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_servic
 use tokio::time::Instant;
 use tonic::{Code, transport::Channel};
 
-use crate::{IntoTonicResult, context::UserSessionContext};
+use crate::{
+    IntoTonicResult,
+    context::UserSessionContext,
+    persistence_worker::{RowLockLost, persist_under_lock, rebase_onto_storage},
+};
 
 /// Converts the `anyhow` errors of rotation steps into a `tonic::Status` whose
 /// code tells the client whether to retry.
@@ -54,9 +58,13 @@ impl<T> IntoRotationError<T> for anyhow::Result<T> {
     }
 }
 
-/// Preserves retryable host status codes (`UNAVAILABLE`, `DEADLINE_EXCEEDED`,
-/// `ABORTED`, `RESOURCE_EXHAUSTED`) and maps everything else to `INTERNAL`.
+/// Maps [`RowLockLost`] to `ABORTED`, preserves retryable host status codes
+/// (`UNAVAILABLE`, `DEADLINE_EXCEEDED`, `ABORTED`, `RESOURCE_EXHAUSTED`), and
+/// maps everything else to `INTERNAL`.
 fn rotation_error_code(error: &anyhow::Error) -> Code {
+    if error.chain().any(|cause| cause.is::<RowLockLost>()) {
+        return Code::Aborted;
+    }
     error
         .chain()
         .find_map(|cause| cause.downcast_ref::<tonic::Status>())
@@ -268,19 +276,51 @@ async fn acquire_row_lock(
     Ok((lock.lock_token, heartbeat))
 }
 
+/// Brings the session up to date with storage under the lock: rebases onto the
+/// latest stored metadata blob, purges expired memories so their blobs aren't
+/// re-encrypted, and persists pending changes with `lock_token`. Afterwards the
+/// session's index matches storage, so every live memory blob gets
+/// re-encrypted and the commit's version check passes.
+async fn catch_up_with_storage(
+    user_context: &mut UserSessionContext,
+    metrics: &Metrics,
+    lock_token: &str,
+) -> tonic::Result<()> {
+    rebase_onto_storage(user_context, metrics)
+        .await
+        .into_rotation_error("failed to rebase onto storage")?;
+    let cleanup_start_time = Instant::now();
+    let purged = user_context
+        .database
+        .clean_expired_memories()
+        .await
+        .into_rotation_error("failed to purge expired memories")?;
+    metrics.record_db_cleanup_latency(cleanup_start_time.elapsed().as_millis() as u64);
+    metrics.record_db_cleanup_count(purged);
+    if purged > 0 {
+        info!("Purged {purged} expired memories before rotating");
+    }
+    persist_under_lock(user_context, metrics, lock_token)
+        .await
+        .into_rotation_error("failed to persist pending changes under the lock")
+}
+
 #[cfg(test)]
 mod tests {
-    use std::net::SocketAddr;
+    use std::{net::SocketAddr, time::SystemTime};
 
+    use oak_private_memory_database::clock::system_time_to_timestamp;
     use private_memory_test_database_server_lib::service::SealedMemoryDatabaseServiceTestImpl;
+    use sealed_memory_rust_proto::oak::private_memory::Memory;
     use tokio::sync::mpsc;
 
     use super::*;
     use crate::{
         handler::SealedMemorySessionHandler,
+        persistence_worker::sync_persist_database,
         test_util::{
-            connect_handler, connect_handler_with_metrics, key_sync_request, registration_request,
-            start_test_db_with_service,
+            add_tagged, connect_handler, connect_handler_with_metrics, key_sync_request,
+            registration_request, start_test_db_with_service, tags_of,
         },
     };
 
@@ -303,6 +343,26 @@ mod tests {
         handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
         handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
         Setup { service, db_addr, handler, harness, _persistence_rx }
+    }
+
+    fn memory_expiring_at(tag: &str, expiration: SystemTime) -> Memory {
+        Memory {
+            tags: vec![tag.to_string()],
+            expiration_timestamp: Some(system_time_to_timestamp(expiration)),
+            ..Default::default()
+        }
+    }
+
+    async fn assert_fresh_session_reads(
+        db_addr: SocketAddr,
+        pm_uid: &str,
+        memories: &[(String, &str)],
+    ) {
+        let (reader, _persistence_rx) = connect_handler(db_addr);
+        reader.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        for (id, tag) in memories {
+            assert_eq!(tags_of(&reader, id).await, Some(vec![tag.to_string()]), "memory {id}");
+        }
     }
 
     async fn wait_for_abort(guard: &HeartbeatGuard, timeout: Duration) {
@@ -475,5 +535,58 @@ mod tests {
         wait_for_abort(&heartbeat, Duration::from_secs(10)).await;
         assert!(started.elapsed() >= timing.lease - 2 * timing.heartbeat_interval);
         assert_eq!(harness.collect().counter("dek_rotation_lock_extend_failures", &[]), 1);
+    }
+
+    #[test]
+    fn into_rotation_error_maps_a_lost_row_lock_to_aborted() {
+        let result: anyhow::Result<()> =
+            Err(anyhow::Error::from(RowLockLost).context("persisting"));
+        assert_eq!(result.into_rotation_error("test").unwrap_err().code(), Code::Aborted);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn catch_up_with_storage_rebases_purges_and_persists_under_the_lock() {
+        let pm_uid = "catch_up_user";
+        let Setup { service, db_addr, handler, harness, _persistence_rx: _rx } =
+            setup(pm_uid).await;
+        let expired = {
+            let mut guard = handler.session_context().await;
+            let ctx = guard.as_mut().unwrap();
+            let expired = ctx
+                .database
+                .add_memory(memory_expiring_at(
+                    "expired",
+                    SystemTime::now() - Duration::from_secs(60),
+                ))
+                .await
+                .unwrap();
+            sync_persist_database(ctx, &harness.metrics).await.unwrap();
+            expired
+        };
+        let (writer, _writer_rx) = connect_handler(db_addr);
+        writer.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        let remote = add_tagged(&writer, "remote").await;
+        sync_persist_database(writer.session_context().await.as_mut().unwrap(), &harness.metrics)
+            .await
+            .unwrap();
+        let pending = add_tagged(&handler, "pending").await;
+
+        {
+            let mut guard = handler.session_context().await;
+            let ctx = guard.as_mut().unwrap();
+            let (token, _heartbeat) =
+                acquire_row_lock(ctx, &harness.metrics, LockTiming::default()).await.unwrap();
+
+            catch_up_with_storage(ctx, &harness.metrics, &token).await.unwrap();
+
+            assert!(!ctx.database.changed());
+            let stored_version = service.metadata_database.lock().await[pm_uid].version.clone();
+            assert_eq!(ctx.database_version, stored_version);
+            let ids = ctx.database.get_all_memory_and_blob_ids().unwrap();
+            assert!(ids.iter().all(|(memory_id, _)| *memory_id != expired), "expired kept");
+            assert_eq!(service.lock_state.held_token(pm_uid).await, Some(token));
+        }
+        assert_fresh_session_reads(db_addr, pm_uid, &[(remote, "remote"), (pending, "pending")])
+            .await;
     }
 }

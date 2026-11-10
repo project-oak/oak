@@ -81,6 +81,15 @@ const SYNC_DATABASE_RETRY_POLICY: ResourceExhaustedRetryPolicy = ResourceExhaust
     total_budget: Duration::from_secs(30),
 };
 
+/// Retry policy of the rebase pull and the persist write that DEK rotation
+/// makes under its row lock.
+///
+/// Like SyncDatabase, the RotateDek RPC has a client waiting, so each database
+/// call rides out up to 30 seconds of host memory pressure. Beyond that, the
+/// rejection is returned, and the RotateDek caller sees `RESOURCE_EXHAUSTED`
+/// and may retry. The rotation's heartbeat keeps the row lock alive meanwhile.
+const LOCKED_PERSIST_RETRY_POLICY: ResourceExhaustedRetryPolicy = SYNC_DATABASE_RETRY_POLICY;
+
 /// A [`ResourceExhaustedRetryPolicy`] with millisecond backoffs, for tests.
 #[cfg(test)]
 pub(crate) const TEST_RETRY_POLICY: ResourceExhaustedRetryPolicy = ResourceExhaustedRetryPolicy {
@@ -375,6 +384,19 @@ impl RowLocked {
     }
 }
 
+/// Returned when a write under the row lock finds that the lock lapsed (storage
+/// refused the lock token or the row version changed).
+#[derive(Debug)]
+pub(crate) struct RowLockLost;
+
+impl std::fmt::Display for RowLockLost {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "the row lock was lost while writing under it")
+    }
+}
+
+impl std::error::Error for RowLockLost {}
+
 /// Minimum number of optimizable (deleted/expired) documents before calling
 /// Icing.Optimize. GetOptimizeInfo (~0.16ms) is called on every persist to
 /// check, and Optimize (~1s) is only called when this threshold is exceeded.
@@ -385,18 +407,23 @@ use crate::{
     dek::{DekNotRotated, switch_to_stored_dek},
 };
 
-// Attempt to persist the database once.
-// If there is a failure due to a version mismatch,
-// Ok(MetadataPersistResult::RetryNeeded) will be returned. The caller should
-// re-fetch the latest metadatablob and rebase the icing database and try again.
-//
-// The database is exported and encrypted once. If the host rejects the write
-// with RESOURCE_EXHAUSTED, the same encrypted database is sent again, as far
-// as `policy` allows.
+/// Attempts to persist the database once, if it changed, presenting
+/// `lock_token` for the row (empty if the caller holds no lock).
+///
+/// If the write hits a version mismatch, returns
+/// `Ok(MetadataPersistResult::RetryNeeded)` so the caller can re-fetch the
+/// latest metadata blob, rebase the icing database, and try again. If another
+/// writer holds the row lock, returns
+/// `Ok(MetadataPersistResult::LockConflict)`.
+///
+/// The database is exported and encrypted once. If the host rejects the write
+/// with `RESOURCE_EXHAUSTED`, the same encrypted database is sent again, as far
+/// as `policy` allows.
 async fn try_persist_database(
     user_context: &mut UserSessionContext,
     metrics: &Metrics,
     policy: ResourceExhaustedRetryPolicy,
+    lock_token: &str,
 ) -> anyhow::Result<MetadataPersistResult> {
     if !user_context.database.changed() {
         info!("Database is not changed, skip saving");
@@ -427,10 +454,12 @@ async fn try_persist_database(
         let now = Instant::now();
         match user_context
             .database_service_client
-            .add_metadata_blob_stream(
+            .add_metadata_blob_stream_with_lock(
                 &user_context.uid,
                 &metadata_blob,
                 coarsened_expiration_timestamp,
+                lock_token,
+                /* unencrypted_data_blob= */ None,
             )
             .await
         {
@@ -656,6 +685,67 @@ async fn persist_one_session(
     }
 }
 
+async fn finish_persist(user_context: &mut UserSessionContext, metrics: &Metrics) {
+    // Flush deferred blob soft-deletes now that the index is durably
+    // persisted. Orphaned blobs are tracked in metrics and can be cleaned by
+    // GC.
+    let pending_count = user_context.database.meta_db().pending_blob_deletes().len();
+    if let Err(e) = user_context.database.flush_pending_blob_deletes().await {
+        metrics.inc_orphaned_blob_deletes(pending_count as u64);
+        error!("{e}");
+    }
+    user_context.database.mark_persisted();
+}
+
+/// Fetches the latest stored metadata blob, if any, and rebases the session
+/// onto it.
+///
+/// A read that the host rejects with `RESOURCE_EXHAUSTED` is retried according
+/// to [`LOCKED_PERSIST_RETRY_POLICY`].
+pub(crate) async fn rebase_onto_storage(
+    user_context: &mut UserSessionContext,
+    metrics: &Metrics,
+) -> anyhow::Result<()> {
+    pull_and_rebase(
+        user_context,
+        /* require_blob= */ false,
+        metrics,
+        LOCKED_PERSIST_RETRY_POLICY,
+    )
+    .await
+}
+
+/// Persists pending changes under `lock_token` and adopts the version the host
+/// reports for the write. Fails with [`RowLockLost`] if storage refuses the
+/// lock token or reports a version conflict (while the lock is held, only
+/// another writer after a lapsed lock can move the version).
+///
+/// A write that the host rejects with `RESOURCE_EXHAUSTED` is retried according
+/// to [`LOCKED_PERSIST_RETRY_POLICY`].
+pub(crate) async fn persist_under_lock(
+    user_context: &mut UserSessionContext,
+    metrics: &Metrics,
+    lock_token: &str,
+) -> anyhow::Result<()> {
+    if !user_context.database.changed() {
+        return Ok(());
+    }
+    match try_persist_database(user_context, metrics, LOCKED_PERSIST_RETRY_POLICY, lock_token)
+        .await?
+    {
+        MetadataPersistResult::Succeeded { committed_version } => {
+            if let Some(committed_version) = committed_version {
+                user_context.database_version = committed_version;
+            }
+            finish_persist(user_context, metrics).await;
+            Ok(())
+        }
+        MetadataPersistResult::LockConflict | MetadataPersistResult::RetryNeeded => {
+            Err(RowLockLost.into())
+        }
+    }
+}
+
 /// Persists the session, retrying version conflicts up to
 /// `MAX_RETRY_ATTEMPTS` times.
 ///
@@ -693,7 +783,7 @@ async fn persist_with_retries(
     let mut attempt: u64 = 1;
     let now = Instant::now();
     while attempt < MAX_RETRY_ATTEMPTS {
-        match try_persist_database(user_context, metrics, policy).await? {
+        match try_persist_database(user_context, metrics, policy, /* lock_token= */ "").await? {
             MetadataPersistResult::Succeeded { committed_version } => {
                 // Track our own write, so that the next sync doesn't mistake
                 // it for a remote change. Without a version from the host,
@@ -708,15 +798,7 @@ async fn persist_with_retries(
                     metrics.record_db_persist_latency_with_retries(elapsed.as_millis() as u64);
                     metrics.record_db_persist_attempts(attempt);
                 }
-                // Flush deferred blob soft-deletes now that the index is
-                // durably persisted. Orphaned blobs are tracked in metrics
-                // and can be cleaned by GC.
-                let pending_count = user_context.database.meta_db().pending_blob_deletes().len();
-                if let Err(e) = user_context.database.flush_pending_blob_deletes().await {
-                    metrics.inc_orphaned_blob_deletes(pending_count as u64);
-                    error!("{e}");
-                }
-                user_context.database.mark_persisted();
+                finish_persist(user_context, metrics).await;
                 return Ok(());
             }
             MetadataPersistResult::RetryNeeded => {
@@ -860,6 +942,7 @@ mod tests {
     use super::*;
     use crate::{
         dek::{create_plain_text_user_info, generate_dek, reencrypt_into_copies, wrap_dek},
+        handler::SealedMemorySessionHandler,
         test_util::{
             add_tagged, connect_handler, connect_handler_with_metrics, key_sync_request,
             memory_with_tag, registration_request, start_test_db, start_test_db_with_lock_state,
@@ -1842,5 +1925,106 @@ mod tests {
         assert_eq!(resource_exhausted_retries(&harness), 2);
         assert_eq!(harness.collect().counter("db_persist_failures", &[]), 0);
         assert!(service.get_metdata_blob_inner(pm_uid).await.is_some());
+    }
+
+    /// A registered, key-synced session against `service`.
+    struct LockTestSession {
+        db_addr: SocketAddr,
+        handler: SealedMemorySessionHandler,
+        harness: TestMetrics,
+        _persistence_rx: mpsc::UnboundedReceiver<UserSessionContext>,
+    }
+
+    async fn registered_session(
+        service: &Arc<SealedMemoryDatabaseServiceTestImpl>,
+        pm_uid: &str,
+    ) -> LockTestSession {
+        let db_addr = start_test_db_with_service(service.clone()).await;
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        LockTestSession { db_addr, handler, harness, _persistence_rx }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn persist_under_lock_commits_and_adopts_the_new_version() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let pm_uid = "persist_under_lock_user";
+        let LockTestSession { db_addr, handler, harness, _persistence_rx: _rx } =
+            registered_session(&service, pm_uid).await;
+        let memory = add_tagged(&handler, "locked").await;
+
+        {
+            let mut guard = handler.session_context().await;
+            let ctx = guard.as_mut().unwrap();
+            let lock = ctx
+                .database_service_client
+                .acquire_unencrypted_blob_lock(&ctx.uid, Duration::from_secs(60))
+                .await
+                .unwrap();
+
+            let reads_before = service.metadata_read_calls.load(Ordering::SeqCst);
+
+            persist_under_lock(ctx, &harness.metrics, &lock.lock_token).await.unwrap();
+
+            assert!(!ctx.database.changed());
+            let stored_version = service.metadata_database.lock().await[pm_uid].version.clone();
+            assert_eq!(ctx.database_version, stored_version);
+            // The host reported the committed version, so it wasn't read back.
+            assert_eq!(service.metadata_read_calls.load(Ordering::SeqCst), reads_before);
+            assert_eq!(service.lock_state.held_token(pm_uid).await, Some(lock.lock_token));
+        }
+        let (reader, _reader_rx) = connect_handler(db_addr);
+        reader.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        assert_eq!(tags_of(&reader, &memory).await, Some(vec!["locked".to_string()]));
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn persist_under_a_lock_held_by_someone_else_fails_with_row_lock_lost() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let pm_uid = "persist_under_lost_lock_user";
+        let LockTestSession { handler, harness, _persistence_rx: _rx, .. } =
+            registered_session(&service, pm_uid).await;
+        add_tagged(&handler, "unsaved").await;
+        service.lock_state.lock(pm_uid).await;
+
+        let mut guard = handler.session_context().await;
+        let ctx = guard.as_mut().unwrap();
+        let error = persist_under_lock(ctx, &harness.metrics, "stale-token").await.unwrap_err();
+
+        assert!(error.is::<RowLockLost>(), "{error:?}");
+        assert!(ctx.database.changed());
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn version_conflict_under_the_lock_fails_with_row_lock_lost() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let pm_uid = "persist_under_lock_conflict_user";
+        let LockTestSession { handler, harness, _persistence_rx: _rx, .. } =
+            registered_session(&service, pm_uid).await;
+        add_tagged(&handler, "persisted").await;
+        persist_database(
+            handler.session_context().await.as_mut().unwrap(),
+            &harness.metrics,
+            FAST_RETRY_POLICY,
+        )
+        .await
+        .unwrap();
+        add_tagged(&handler, "unsaved").await;
+
+        let mut guard = handler.session_context().await;
+        let ctx = guard.as_mut().unwrap();
+        let lock = ctx
+            .database_service_client
+            .acquire_unencrypted_blob_lock(&ctx.uid, Duration::from_secs(60))
+            .await
+            .unwrap();
+        ctx.database_version = "a version another writer replaced".to_string();
+        let error = persist_under_lock(ctx, &harness.metrics, &lock.lock_token).await.unwrap_err();
+
+        assert!(error.is::<RowLockLost>(), "{error:?}");
+        assert!(ctx.database.changed());
     }
 }
