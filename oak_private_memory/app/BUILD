@@ -27,6 +27,7 @@ rust_library(
         "config.rs",
         "context.rs",
         "db_client.rs",
+        "dek.rs",
         "handler.rs",
         "lib.rs",
         "meminfo.rs",

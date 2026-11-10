@@ -18,7 +18,6 @@ use std::{
     sync::Arc,
 };
 
-use encryption::{decrypt, encrypt, generate_nonce};
 use external_db_client::{BlobId, DataBlobHandler, MetadataBlobRead};
 use log::{debug, info, warn};
 use metrics::RequestMetricName;
@@ -30,7 +29,6 @@ use oak_private_memory_database::{
     icing::{DuplicateMemoryName, IcingDatabaseConfig, IcingMetaDatabase, PageToken},
 };
 use prost::Message;
-use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::{
@@ -628,19 +626,12 @@ impl SealedMemorySessionHandler {
         info!("Registering new user: {}", uid);
 
         // Generate a 256-bit key for the user.
-        let mut dek = Zeroizing::new(vec![0u8; 32]);
-        rand::rng().fill(dek.as_mut_slice());
-        let nonce = generate_nonce();
-        let wrapped_key = EncryptedDataBlob {
-            data: encrypt(&key, &nonce, &dek, b"")
-                .into_internal_error("failed to encrypt data blob")?,
-            nonce,
-        };
+        let dek = crate::dek::generate_dek();
+        let wrapped_dek =
+            crate::dek::wrap_dek(&dek, &key).into_internal_error("failed to encrypt data blob")?;
 
-        let new_plain_text_info = PlainTextUserInfo {
-            key_derivation_info: Some(boot_strap_info.clone()),
-            wrapped_dek: Some(WrappedDataEncryptionKey { wrapped_key: Some(wrapped_key) }),
-        };
+        let new_plain_text_info =
+            crate::dek::create_plain_text_user_info(Some(boot_strap_info.clone()), wrapped_dek);
 
         if let Err(err) = db_client
             .add_unencrypted_blob(
@@ -738,21 +729,17 @@ impl SealedMemorySessionHandler {
                 .key_derivation_info
                 .clone()
                 .into_internal_error("Empty key derivation info")?;
-            let wrapped_dek = plain_text_info
-                .wrapped_dek
-                .clone()
-                .into_internal_error("Empty wrapped dek")?
-                .wrapped_key
-                .clone()
+            let wrapped_dek = crate::dek::wrapped_dek(&plain_text_info)
                 .into_internal_error("Empty wrapped dek")?;
-            dek = if let Ok(dek) = decrypt(&key, &wrapped_dek.nonce, &wrapped_dek.data, b"") {
-                Zeroizing::new(dek)
-            } else {
-                self.metrics.inc_decrypt_dek_failures();
-                return Ok(KeySyncResponse {
-                    status: key_sync_response::Status::InvalidKey.into(),
-                });
-            }
+            dek = match crate::dek::unwrap_dek(wrapped_dek, &key) {
+                Ok(dek) => dek,
+                Err(_) => {
+                    self.metrics.inc_decrypt_dek_failures();
+                    return Ok(KeySyncResponse {
+                        status: key_sync_response::Status::InvalidKey.into(),
+                    });
+                }
+            };
         } else {
             return Ok(KeySyncResponse { status: key_sync_response::Status::InvalidPmUid.into() });
         }
@@ -1100,6 +1087,7 @@ mod tests {
         time::{Duration, SystemTime},
     };
 
+    use encryption::generate_nonce;
     use metrics_testing::{Attrs, attrs};
     use oak_private_memory_database::clock::system_time_to_timestamp;
     use private_memory_test_database_server_lib::service::SealedMemoryDatabaseServiceTestImpl;

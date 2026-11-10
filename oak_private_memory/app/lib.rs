@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 pub mod admission;
 mod context;
 mod db_client;
+mod dek;
 mod handler;
 pub mod meminfo;
 mod packing;
