@@ -52,7 +52,21 @@ impl<S: NotGiantPageSize + oak_tdx_guest::tdcall::TdxSize> TdAcceptPage for Phys
                     Ok(()) => {
                         counters::ACCEPTED_2M.fetch_add(1, Ordering::SeqCst);
                     }
-                    Err(AcceptMemoryError::AlreadyAccepted) => continue,
+                    Err(AcceptMemoryError::AlreadyAccepted) => {
+                        // SECURITY: TDX_PAGE_ALREADY_ACCEPTED during first-touch acceptance
+                        // means the Secure EPT leaf for this GPA is already MAPPED, i.e. the
+                        // untrusted host made us "accept" memory that is already in use (for
+                        // example the firmware's own BFV, merged into a 2 MiB leaf with
+                        // TDH.MEM.PAGE.PROMOTE). The TDX module does not zero such a page,
+                        // so it must never be handed out as fresh RAM. Treat it as fatal,
+                        // exactly like the 4 KiB path above and like the SEV-SNP PVALIDATE
+                        // CF=1 (double-validation) handling in stage0_sev.
+                        panic!(
+                            "TDG.MEM.PAGE.ACCEPT returned ALREADY_ACCEPTED for the 2 MiB page at GPA \
+                             {:#x}; possible hypervisor memory-map attack",
+                            frame.start_address().as_u64()
+                        );
+                    }
                     Err(AcceptMemoryError::PageSizeMisMatch) => {
                         // cannot accept as 2MiB. let's try 4KiB
                         counters::ERROR_FAIL_SIZE_MISMATCH.fetch_add(1, Ordering::SeqCst);
