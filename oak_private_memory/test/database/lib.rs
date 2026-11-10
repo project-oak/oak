@@ -16,4 +16,5 @@
 /// A database rpc server mainly for the test purpose.
 /// The private memory server needs to talk to a database
 /// service to persist the encrypted data.
+mod lock_state;
 pub mod service;

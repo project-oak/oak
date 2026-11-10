@@ -15,7 +15,10 @@
 
 use std::{
     collections::{HashMap, VecDeque},
-    sync::atomic::{AtomicBool, AtomicUsize, Ordering},
+    sync::{
+        Arc,
+        atomic::{AtomicBool, AtomicUsize, Ordering},
+    },
     time::Duration,
 };
 
@@ -42,6 +45,8 @@ use tokio::{
     sync::{Mutex, oneshot},
 };
 use tokio_stream::{StreamExt, wrappers::TcpListenerStream};
+
+pub use crate::lock_state::{CLOCK_SKEW_MARGIN, LockError, LockState};
 
 pub struct SealedMemoryDatabaseServiceTestImpl {
     pub database: Mutex<HashMap<String, DataBlob>>,
@@ -80,6 +85,7 @@ pub struct SealedMemoryDatabaseServiceTestImpl {
     pub metadata_not_modified_replies: AtomicUsize,
     /// Number of metadata blob writes rejected for a version conflict.
     pub metadata_write_conflicts: AtomicUsize,
+    pub lock_state: Arc<LockState>,
 }
 
 pub struct HeldWrite {
@@ -107,6 +113,7 @@ impl Default for SealedMemoryDatabaseServiceTestImpl {
             metadata_blob_downloads: AtomicUsize::new(0),
             metadata_not_modified_replies: AtomicUsize::new(0),
             metadata_write_conflicts: AtomicUsize::new(0),
+            lock_state: LockState::new(),
         }
     }
 }
@@ -192,6 +199,22 @@ impl SealedMemoryDatabaseServiceTestImpl {
     pub async fn get_metdata_blob_inner(&self, id: &str) -> Option<MetadataBlob> {
         self.metadata_database.lock().await.get(id).cloned()
     }
+
+    async fn row_exists(&self, id: &str) -> bool {
+        self.unencrypted_database.lock().await.contains_key(id)
+            || self.metadata_database.lock().await.contains_key(id)
+    }
+
+    async fn lock_conflict(&self, id: &str, lock_token: &str) -> Option<tonic::Status> {
+        let row_exists = self.row_exists(id).await;
+        if self.lock_state.rejects_write(id, lock_token, row_exists).await {
+            Some(tonic::Status::aborted(format!(
+                "UnencryptedDataBlob row {id} is locked by another writer"
+            )))
+        } else {
+            None
+        }
+    }
 }
 
 #[tonic::async_trait]
@@ -239,25 +262,24 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
     ) -> Result<tonic::Response<WriteMetadataBlobStreamResponse>, tonic::Status> {
         self.metadata_write_calls.fetch_add(1, Ordering::SeqCst);
         let mut stream = request.into_inner();
-        let mut full_blob = Vec::new();
-        let mut version = String::new();
-        let mut id = String::new();
-
+        let first = stream
+            .next()
+            .await
+            .ok_or_else(|| tonic::Status::invalid_argument("empty WriteMetadataBlobStream"))??;
+        let lock_token = first.lock_token;
+        let Some(write_metadata_blob_stream_request::Request::MetadataBlob(metadata)) =
+            first.request
+        else {
+            return Err(tonic::Status::invalid_argument("first message must be a metadata blob"));
+        };
+        let version = metadata.version;
+        let DataBlob { id, blob: mut full_blob } = metadata.data_blob.unwrap_or_default();
         while let Some(request) = stream.next().await {
-            let request = request?;
-            match request.request {
-                Some(write_metadata_blob_stream_request::Request::MetadataBlob(metadata)) => {
-                    version = metadata.version;
-                    if let Some(data_blob) = metadata.data_blob {
-                        id = data_blob.id;
-                        full_blob.extend_from_slice(&data_blob.blob);
-                    }
-                }
-                Some(write_metadata_blob_stream_request::Request::Chunk(chunk)) => {
-                    full_blob.extend_from_slice(&chunk);
-                }
-                None => {}
-            }
+            let Some(write_metadata_blob_stream_request::Request::Chunk(chunk)) = request?.request
+            else {
+                return Err(tonic::Status::invalid_argument("subsequent messages must be chunks"));
+            };
+            full_blob.extend_from_slice(&chunk);
         }
         self.metadata_write_payloads.lock().await.push(full_blob.clone());
         if let Some(status) = self.metadata_write_failures.lock().await.pop_front() {
@@ -268,6 +290,12 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
         if let Some(HeldWrite { arrived, release }) = held {
             let _ = arrived.send(());
             let _ = release.await;
+        }
+
+        // Like the host, check the lock at commit time, so a lock taken while
+        // this write was in flight is still detected.
+        if let Some(status) = self.lock_conflict(&id, &lock_token).await {
+            return Err(status);
         }
 
         let committed_version = self
@@ -436,12 +464,23 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
 }
 
 pub async fn create(listener: TcpListener) -> Result<(), anyhow::Error> {
-    serve(listener, std::sync::Arc::new(SealedMemoryDatabaseServiceTestImpl::default())).await
+    create_with_lock_state(listener, LockState::new()).await
+}
+
+pub async fn create_with_lock_state(
+    listener: TcpListener,
+    lock_state: Arc<LockState>,
+) -> Result<(), anyhow::Error> {
+    serve(
+        listener,
+        Arc::new(SealedMemoryDatabaseServiceTestImpl { lock_state, ..Default::default() }),
+    )
+    .await
 }
 
 pub async fn serve(
     listener: TcpListener,
-    service: std::sync::Arc<SealedMemoryDatabaseServiceTestImpl>,
+    service: Arc<SealedMemoryDatabaseServiceTestImpl>,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
         .add_service(SealedMemoryDatabaseServiceServer::from_arc(service))

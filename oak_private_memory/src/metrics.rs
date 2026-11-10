@@ -59,6 +59,10 @@ pub struct Metrics {
     // Number of database calls retried because the host rejected them with
     // RESOURCE_EXHAUSTED (host memory pressure).
     db_resource_exhausted_retries: Counter<u64>,
+    // Number of persist attempts rejected with ABORTED due to a held row lock.
+    db_persist_lock_conflict_count: Counter<u64>,
+    // Time a persist spent waiting for a held row lock.
+    db_persist_lock_wait_latency: Histogram<u64>,
     // Number of failures when syncing keys.
     decrypt_dek_failures: Counter<u64>,
     // Number of failures when deserializing user info.
@@ -485,9 +489,10 @@ impl Metrics {
         orphaned_blob_deletes.add(0, &[]);
         db_resource_exhausted_retries.add(0, &[]);
 
-        // Created last: the host OTel->streamz bridge drops every instrument
-        // after the first one that fails to export, so a new instrument that
-        // the host doesn't allowlist yet can't take down the others.
+        // Created after the instruments above: the host OTel->streamz bridge
+        // drops every instrument after the first one that fails to export, so
+        // a new instrument that the host doesn't allowlist yet can't take down
+        // the others.
         let db_pull_skipped_count = meter
             .u64_counter("db_pull_skipped_count")
             .with_description(
@@ -496,6 +501,24 @@ impl Metrics {
             )
             .build();
         db_pull_skipped_count.add(0, &[]);
+
+        // Row locks: not allowlisted by the host until http://cl/1007520661, so
+        // also created last, for the same reason as db_pull_skipped_count.
+        let db_persist_lock_conflict_count = meter
+            .u64_counter("db_persist_lock_conflict_count")
+            .with_description(
+                "Number of persist attempts rejected with ABORTED because the user's row was \
+                 locked by a concurrent holder.",
+            )
+            .build();
+
+        let db_persist_lock_wait_latency = meter
+            .u64_histogram("db_persist_lock_wait_latency")
+            .with_description("Time a persist spent waiting for a held row lock to be released.")
+            .with_unit("ms")
+            .with_boundaries(LATENCY_MS_BOUNDARIES.to_vec())
+            .build();
+        db_persist_lock_conflict_count.add(0, &[]);
 
         Self {
             rpc_count,
@@ -511,6 +534,8 @@ impl Metrics {
             db_connect_retries,
             db_persist_failures,
             db_resource_exhausted_retries,
+            db_persist_lock_conflict_count,
+            db_persist_lock_wait_latency,
             decrypt_dek_failures,
             user_info_deserialization_failures,
             db_decryption_failures,
@@ -648,6 +673,14 @@ impl Metrics {
         self.db_resource_exhausted_retries.add(1, &[]);
     }
 
+    pub fn inc_db_persist_lock_conflicts(&self) {
+        self.db_persist_lock_conflict_count.add(1, &[]);
+    }
+
+    pub fn record_db_persist_lock_wait_latency(&self, latency_ms: u64) {
+        self.db_persist_lock_wait_latency.record(latency_ms, &[]);
+    }
+
     pub fn inc_decrypt_dek_failures(&self) {
         self.decrypt_dek_failures.add(1, &[]);
     }
@@ -660,9 +693,10 @@ impl Metrics {
         self.db_decryption_failures.add(1, &[]);
     }
 
-    /// Records the number of sessions in the database persist queue, as read
-    /// from the queue by the persistence worker. This also resets the count
-    /// that [`Self::inc_db_persist_queue_size`] and
+    /// Records the number of sessions waiting to be persisted, as counted by
+    /// the persistence worker: the sessions in its queue plus the ones it took
+    /// off the queue that are waiting for a slot or out a row lock. This also
+    /// resets the count that [`Self::inc_db_persist_queue_size`] and
     /// [`Self::dec_db_persist_queue_size`] update, so that it can't drift.
     pub fn record_db_persist_queue_size(&self, size: u64) {
         self.update_db_persist_queue_size(|_| size);
@@ -1082,6 +1116,7 @@ mod value_tests {
         ("db_connect_retries", Metrics::inc_db_connect_retries),
         ("db_persist_failures", Metrics::inc_db_persist_failures),
         ("db_resource_exhausted_retries", Metrics::inc_db_resource_exhausted_retries),
+        ("db_persist_lock_conflict_count", Metrics::inc_db_persist_lock_conflicts),
         ("decrypt_dek_failures", Metrics::inc_decrypt_dek_failures),
         ("user_info_deserialization_failures", Metrics::inc_user_info_deserialization_failures),
         ("db_decryption_failures", Metrics::inc_db_decryption_failures),
@@ -1104,6 +1139,7 @@ mod value_tests {
         ("db_cleanup_latency", Metrics::record_db_cleanup_latency),
         ("db_persist_latency", Metrics::record_db_persist_latency),
         ("db_persist_latency_with_retries", Metrics::record_db_persist_latency_with_retries),
+        ("db_persist_lock_wait_latency", Metrics::record_db_persist_lock_wait_latency),
         ("db_optimize_latency", Metrics::record_db_optimize_latency),
         ("key_sync_db_fetch_latency", Metrics::record_key_sync_db_fetch_latency),
         ("key_sync_decrypt_latency", Metrics::record_key_sync_decrypt_latency),
@@ -1366,6 +1402,19 @@ mod value_tests {
                 "",
                 "Number of failures when persisting the database.",
                 Counter,
+            ),
+            (
+                "db_persist_lock_conflict_count",
+                "",
+                "Number of persist attempts rejected with ABORTED because the user's row was \
+                 locked by a concurrent holder.",
+                Counter,
+            ),
+            (
+                "db_persist_lock_wait_latency",
+                "ms",
+                "Time a persist spent waiting for a held row lock to be released.",
+                Histogram(LATENCY_MS_BOUNDARIES),
             ),
             (
                 "db_decryption_failures",
@@ -2180,5 +2229,21 @@ mod value_tests {
         for (size, expected) in cases {
             assert_eq!(bucket_db_size(size), expected, "{size}");
         }
+    }
+
+    #[test]
+    fn db_persist_lock_metrics_record_conflicts_and_wait_latency() {
+        let harness = test_metrics();
+        let metrics = &harness.metrics;
+        metrics.inc_db_persist_lock_conflicts();
+        metrics.inc_db_persist_lock_conflicts();
+        metrics.record_db_persist_lock_wait_latency(250);
+        metrics.record_db_persist_lock_wait_latency(2_500);
+
+        let snapshot = harness.collect();
+        assert_eq!(snapshot.counter("db_persist_lock_conflict_count", &[]), 2);
+        let wait = snapshot.histogram("db_persist_lock_wait_latency", &[]);
+        assert_eq!((wait.count, wait.sum), (2, 2_750));
+        assert_eq!(wait.nonzero_buckets(), vec![(250., 1), (2_500., 1)]);
     }
 }

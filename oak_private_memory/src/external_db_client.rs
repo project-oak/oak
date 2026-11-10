@@ -49,6 +49,9 @@ pub enum MetadataPersistResult {
     // The current metadata db is stale; fetch a new one, re-apply your changes,
     // and try persisting again.
     RetryNeeded,
+
+    // The row is locked by another writer; wait and retry without rebasing.
+    LockConflict,
 }
 
 impl MetadataPersistResult {
@@ -192,6 +195,9 @@ impl DataBlobHandler for ExternalDbClient {
                     return Ok(MetadataPersistResult::RetryNeeded);
                 }
                 Ok(MetadataPersistResult::succeeded(response.committed_version))
+            }
+            Err(ref status) if status.code() == Code::Aborted => {
+                return Ok(MetadataPersistResult::LockConflict);
             }
             Err(ref status) if status.code() == Code::FailedPrecondition => {
                 // Backwards compatibility: old host returns FAILED_PRECONDITION

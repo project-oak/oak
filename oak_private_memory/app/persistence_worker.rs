@@ -13,7 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{Arc, Mutex, PoisonError},
+    time::Duration,
+};
 
 use anyhow::Context;
 use external_db_client::{DataBlobHandler, MetadataBlobRead, MetadataPersistResult};
@@ -21,15 +24,22 @@ use log::{error, info, warn};
 use metrics::Metrics;
 use oak_private_memory_database::encryption::{decrypt_database, encrypt_database};
 use prost::Message;
+use rand::Rng;
 use sealed_memory_rust_proto::{
     oak::private_memory::EncryptedMetadataBlob, prelude::v1::SyncDatabaseResponse,
 };
-use tokio::{sync::mpsc, task::JoinSet, time::Instant};
+use tokio::{
+    sync::{OwnedSemaphorePermit, Semaphore, mpsc},
+    task::JoinSet,
+    time::Instant,
+};
 
 /// Maximum number of attempts to persist the database when its write hits a
-/// version conflict. Retries of host `RESOURCE_EXHAUSTED` rejections don't
-/// count towards this; each database call's retries are bounded by a
-/// [`ResourceExhaustedRetryPolicy`] instead.
+/// version conflict. Retries of host `RESOURCE_EXHAUSTED` rejections and of
+/// writes refused by another writer's row lock don't count towards this: each
+/// database call's `RESOURCE_EXHAUSTED` retries are bounded by a
+/// [`ResourceExhaustedRetryPolicy`], and row lock waits by a
+/// [`LockWaitPolicy`], instead.
 static MAX_RETRY_ATTEMPTS: u64 = 25;
 
 /// Maximum number of user sessions persisted concurrently by the background
@@ -163,6 +173,198 @@ fn is_resource_exhausted(error: &anyhow::Error) -> bool {
     error
         .downcast_ref::<tonic::Status>()
         .is_some_and(|status| status.code() == tonic::Code::ResourceExhausted)
+}
+
+/// How long a background persist waits out a row locked by another writer
+/// before it gives up and drops the session's writes.
+///
+/// A DEK rotation holds the row for at most 10 minutes and leaves at most one
+/// 90s lease behind when it stops renewing; 15 minutes covers that with margin.
+pub(crate) const BACKGROUND_LOCK_WAIT: Duration = Duration::from_secs(15 * 60);
+
+/// Wait budget and retry schedule when persisting a row locked by another
+/// writer.
+///
+/// Storage only refuses a write to a locked row after receiving all of it, so
+/// every retry re-exports, re-encrypts and re-uploads the whole database. The
+/// delay between retries therefore doubles from `first_delay` up to
+/// `max_delay`: a short lock is picked up within seconds, while a lock held for
+/// the whole budget costs a few dozen uploads instead of hundreds. Each delay
+/// is jittered down by up to half, so sessions waiting on the same row don't
+/// retry in lockstep.
+#[derive(Clone, Debug)]
+struct LockWaitPolicy {
+    /// Wall-clock budget, counted from the first refused write. It includes any
+    /// time the retries in between spend riding out host `RESOURCE_EXHAUSTED`
+    /// rejections.
+    max_wait: Duration,
+    /// Ceiling of the delay after the first refused write; the actual delay is
+    /// between half of it and all of it.
+    first_delay: Duration,
+    /// Cap on the doubling ceiling.
+    max_delay: Duration,
+}
+
+impl LockWaitPolicy {
+    /// Policy for `run_persistence_service`: waits up to
+    /// [`BACKGROUND_LOCK_WAIT`]. A row locked for the whole budget is retried
+    /// about 25 times.
+    fn for_background_persist() -> Self {
+        Self {
+            max_wait: BACKGROUND_LOCK_WAIT,
+            first_delay: Duration::from_secs(2),
+            max_delay: Duration::from_secs(60),
+        }
+    }
+
+    /// Policy for `SyncDatabase`, which blocks the caller's RPC and fails with
+    /// [`RowLocked`] after 10s.
+    fn for_sync() -> Self {
+        Self {
+            max_wait: Duration::from_secs(10),
+            first_delay: Duration::from_millis(500),
+            max_delay: Duration::from_secs(2),
+        }
+    }
+
+    /// Returns the delay before retrying after the `conflicts`-th refused write
+    /// (counting from 1), before capping it at the remaining budget.
+    fn retry_delay(&self, conflicts: u32) -> Duration {
+        let doublings = conflicts.saturating_sub(1).min(31);
+        let ceiling = self.first_delay.saturating_mul(1 << doublings).min(self.max_delay);
+        rand::rng().random_range(ceiling / 2..=ceiling)
+    }
+}
+
+/// The background worker's `MAX_CONCURRENT_PERSISTS` slots and the state its
+/// persist tasks share.
+#[derive(Clone)]
+struct PersistSlots {
+    semaphore: Arc<Semaphore>,
+    /// Number of sessions taken off the worker's queue that are waiting for a
+    /// slot or waiting out a row lock. They count as queued in
+    /// `db_persist_queue_size`; the lock serializes updating the count with
+    /// recording the gauge.
+    waiting: Arc<Mutex<u64>>,
+}
+
+impl PersistSlots {
+    fn new() -> Self {
+        Self {
+            semaphore: Arc::new(Semaphore::new(MAX_CONCURRENT_PERSISTS)),
+            waiting: Arc::new(Mutex::new(0)),
+        }
+    }
+
+    /// Claims a slot for a session, reusing `permit` if the coordinator already
+    /// claimed one for it. The session counts as queued until it has a slot.
+    async fn claim(&self, permit: Option<OwnedSemaphorePermit>, metrics: &Metrics) -> PersistSlot {
+        let mut slot = PersistSlot { slots: self.clone(), permit };
+        if slot.permit.is_none() {
+            let _counted = Waiting::start(&self.waiting, metrics);
+            slot.reacquire().await;
+        }
+        slot
+    }
+
+    /// Records `queued` sessions still in the worker's queue, plus the
+    /// [`Self::waiting`] ones, as `db_persist_queue_size`.
+    fn record_queue_size(&self, queued: usize, metrics: &Metrics) {
+        let waiting = self.waiting.lock().unwrap_or_else(PoisonError::into_inner);
+        metrics.record_db_persist_queue_size(queued as u64 + *waiting);
+    }
+}
+
+/// A background persist's claim on one of the worker's
+/// `MAX_CONCURRENT_PERSISTS` slots. The persist gives the slot up while it
+/// waits out a row lock, so that other queued sessions can persist.
+struct PersistSlot {
+    slots: PersistSlots,
+    permit: Option<OwnedSemaphorePermit>,
+}
+
+impl PersistSlot {
+    async fn reacquire(&mut self) {
+        if self.permit.is_none() {
+            let permit = self
+                .slots
+                .semaphore
+                .clone()
+                .acquire_owned()
+                .await
+                .expect("persist slots are never closed");
+            self.permit = Some(permit);
+        }
+    }
+
+    /// Waits `delay` without holding a slot, then takes a slot again, counted
+    /// as queued in `db_persist_queue_size` throughout.
+    async fn wait_without_slot(&mut self, delay: Duration, metrics: &Metrics) {
+        self.permit = None;
+        let waiting = self.slots.waiting.clone();
+        let _counted = Waiting::start(&waiting, metrics);
+        tokio::time::sleep(delay).await;
+        self.reacquire().await;
+    }
+}
+
+/// Counts a session in [`PersistSlots::waiting`] and `db_persist_queue_size`
+/// until dropped.
+struct Waiting<'a> {
+    waiting: &'a Mutex<u64>,
+    metrics: &'a Metrics,
+}
+
+impl<'a> Waiting<'a> {
+    fn start(waiting: &'a Mutex<u64>, metrics: &'a Metrics) -> Self {
+        let mut count = waiting.lock().unwrap_or_else(PoisonError::into_inner);
+        *count += 1;
+        metrics.inc_db_persist_queue_size();
+        drop(count);
+        Self { waiting, metrics }
+    }
+}
+
+impl Drop for Waiting<'_> {
+    fn drop(&mut self) {
+        let mut count = self.waiting.lock().unwrap_or_else(PoisonError::into_inner);
+        *count -= 1;
+        self.metrics.dec_db_persist_queue_size();
+    }
+}
+
+#[derive(Debug, Default)]
+struct LockWaits {
+    conflicts: u32,
+    first_conflict: Option<Instant>,
+    waited: Duration,
+}
+
+/// Returned when a persist gives up because another writer held the user's row
+/// past [`LockWaitPolicy::max_wait`].
+#[derive(Debug)]
+pub(crate) struct RowLocked {
+    waited: Duration,
+    rejected_attempts: u32,
+}
+
+impl std::fmt::Display for RowLocked {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "the user's row stayed locked by another writer for {:?} ({} rejected attempts)",
+            self.waited, self.rejected_attempts
+        )
+    }
+}
+
+impl std::error::Error for RowLocked {}
+
+#[cfg(test)]
+impl RowLocked {
+    pub(crate) fn for_test() -> Self {
+        Self { waited: Duration::ZERO, rejected_attempts: 1 }
+    }
 }
 
 /// Minimum number of optimizable (deleted/expired) documents before calling
@@ -335,18 +537,26 @@ fn maybe_optimize(
 /// local database, optimizes if needed, then pushes any local changes.
 ///
 /// Database calls that the host rejects with `RESOURCE_EXHAUSTED` are retried
-/// according to [`SYNC_DATABASE_RETRY_POLICY`].
+/// according to [`SYNC_DATABASE_RETRY_POLICY`]. Fails with [`RowLocked`] if the
+/// user's row stays locked past [`LockWaitPolicy::for_sync`].
 pub async fn sync_persist_database(
     user_context: &mut UserSessionContext,
     metrics: &Metrics,
 ) -> anyhow::Result<SyncDatabaseResponse> {
-    sync_persist_database_with_policy(user_context, metrics, SYNC_DATABASE_RETRY_POLICY).await
+    sync_persist_database_with_policy(
+        user_context,
+        metrics,
+        SYNC_DATABASE_RETRY_POLICY,
+        LockWaitPolicy::for_sync(),
+    )
+    .await
 }
 
 async fn sync_persist_database_with_policy(
     user_context: &mut UserSessionContext,
     metrics: &Metrics,
     policy: ResourceExhaustedRetryPolicy,
+    lock_wait: LockWaitPolicy,
 ) -> anyhow::Result<SyncDatabaseResponse> {
     // Pull: fetch the latest remote blob and rebase so that remote changes
     // become visible in this session's local database.
@@ -359,12 +569,16 @@ async fn sync_persist_database_with_policy(
 
     // Push: persist any local changes (now rebased on top of the latest remote
     // state).
-    persist_database(user_context, metrics, policy).await?;
+    persist_database_with_policy(user_context, metrics, policy, lock_wait, None).await?;
 
     Ok(SyncDatabaseResponse {})
 }
 
-async fn persist_one_session(mut user_context: UserSessionContext, metrics: Arc<Metrics>) {
+async fn persist_one_session(
+    mut user_context: UserSessionContext,
+    metrics: Arc<Metrics>,
+    mut slot: PersistSlot,
+) {
     // Optimize is expensive (~1s for a 30MB database) and always rebuilds
     // the entire index. Use GetOptimizeInfo (~0.16ms) to check whether
     // there are enough deleted/expired documents to warrant optimization.
@@ -372,23 +586,50 @@ async fn persist_one_session(mut user_context: UserSessionContext, metrics: Arc<
         error!("optimizing database: {e:?}");
     }
 
-    if let Err(e) =
-        persist_database(&mut user_context, &metrics, PERSISTENCE_WORKER_RETRY_POLICY).await
+    if let Err(e) = persist_database_with_policy(
+        &mut user_context,
+        &metrics,
+        PERSISTENCE_WORKER_RETRY_POLICY,
+        LockWaitPolicy::for_background_persist(),
+        Some(&mut slot),
+    )
+    .await
     {
         metrics.inc_db_persist_failures();
         error!("Failed to persist database: {:?}", e);
     }
 }
 
-// Attempt to persist the database up to MAX_RETRY_ATTEMPTS times.
-// Retries only occur when the write is rejected for a version conflict.
-//
-// Independently, database calls that the host rejects with RESOURCE_EXHAUSTED
-// are retried as far as `policy` allows, without counting as attempts.
-async fn persist_database(
+/// Persists the session, retrying version conflicts up to
+/// `MAX_RETRY_ATTEMPTS` times.
+///
+/// Independently, database calls that the host rejects with
+/// `RESOURCE_EXHAUSTED` are retried as far as `policy` allows, and row locks
+/// are waited out per `lock_wait`; neither counts as an attempt. If `slot` is
+/// given, it is released while waiting out a row lock.
+async fn persist_database_with_policy(
     user_context: &mut UserSessionContext,
     metrics: &Metrics,
     policy: ResourceExhaustedRetryPolicy,
+    lock_wait: LockWaitPolicy,
+    slot: Option<&mut PersistSlot>,
+) -> anyhow::Result<()> {
+    let mut lock_waits = LockWaits::default();
+    let result =
+        persist_with_retries(user_context, metrics, policy, lock_wait, &mut lock_waits, slot).await;
+    if lock_waits.conflicts > 0 {
+        metrics.record_db_persist_lock_wait_latency(lock_waits.waited.as_millis() as u64);
+    }
+    result
+}
+
+async fn persist_with_retries(
+    user_context: &mut UserSessionContext,
+    metrics: &Metrics,
+    policy: ResourceExhaustedRetryPolicy,
+    lock_wait: LockWaitPolicy,
+    lock_waits: &mut LockWaits,
+    mut slot: Option<&mut PersistSlot>,
 ) -> anyhow::Result<()> {
     // `try_persist_database` skips writing a database without changes, so
     // that isn't a persist for the metrics below.
@@ -405,7 +646,8 @@ async fn persist_database(
                     user_context.database_version = committed_version;
                 }
                 if has_changes {
-                    // This includes any RESOURCE_EXHAUSTED backoff.
+                    // This includes any RESOURCE_EXHAUSTED backoff and row
+                    // lock waits.
                     let elapsed = now.elapsed();
                     metrics.record_db_persist_latency_with_retries(elapsed.as_millis() as u64);
                     metrics.record_db_persist_attempts(attempt);
@@ -426,6 +668,36 @@ async fn persist_database(
                 info!("Retrying db save (attempt {attempt})");
                 pull_and_rebase(user_context, /* require_blob= */ true, metrics, policy).await?;
             }
+            MetadataPersistResult::LockConflict => {
+                metrics.inc_db_persist_lock_conflicts();
+                lock_waits.conflicts += 1;
+                let first_conflict = *lock_waits.first_conflict.get_or_insert_with(Instant::now);
+
+                let waited = first_conflict.elapsed();
+                lock_waits.waited = waited;
+                if waited >= lock_wait.max_wait {
+                    return Err(
+                        RowLocked { waited, rejected_attempts: lock_waits.conflicts }.into()
+                    );
+                }
+
+                let delay =
+                    lock_wait.retry_delay(lock_waits.conflicts).min(lock_wait.max_wait - waited);
+                warn!(
+                    "database row locked by another writer (conflict {conflicts}); waited \
+                     {waited:?} of {max_wait:?} so far, retrying in {delay:?} without using the \
+                     rebase budget",
+                    conflicts = lock_waits.conflicts,
+                    max_wait = lock_wait.max_wait,
+                );
+                match slot.as_deref_mut() {
+                    Some(slot) => slot.wait_without_slot(delay, metrics).await,
+                    None => tokio::time::sleep(delay).await,
+                }
+                lock_waits.waited = first_conflict.elapsed();
+                // Skip pull_and_rebase: the write was refused before changing
+                // remote state.
+            }
         }
     }
     anyhow::bail!("Failed to persist after {} attempts", MAX_RETRY_ATTEMPTS);
@@ -435,20 +707,31 @@ async fn persist_database(
 /// `MAX_CONCURRENT_PERSISTS` persisting at once.
 ///
 /// A session is only taken off `rx` when a worker slot is free, so sessions
-/// waiting for a slot stay in `rx` and `rx.len()` is the number of queued
-/// sessions.
+/// waiting for a slot stay in `rx`. A session waiting out another writer's row
+/// lock gives up its slot until it retries, so locked rows can't stall other
+/// users' sessions. `db_persist_queue_size` counts the sessions in `rx` plus
+/// the ones taken off it that are waiting for a slot or out a row lock.
+///
+/// Once `rx` is closed and empty (all senders are gone, e.g. because the gRPC
+/// server exited), the service finishes the persists in progress and returns.
+/// Each persist may wait up to [`BACKGROUND_LOCK_WAIT`] for a row lock or up to
+/// the `PERSISTENCE_WORKER_RETRY_POLICY` budget per database call for host
+/// `RESOURCE_EXHAUSTED` rejections before returning, rather than dropping
+/// buffered writes early.
 ///
 /// Sessions are not ordered per `uid`. Sessions for the same `uid` may persist
 /// concurrently: the versioned metadata write rejects a stale version, and
-/// `persist_database` then rebases onto the latest blob and retries, as it
-/// already must for writes from other enclaves and from `SyncDatabase`. As a
-/// result, the mutations of the session whose write commits last are applied
-/// last, regardless of the order in which the sessions closed.
+/// `persist_database_with_policy` then rebases onto the latest blob and
+/// retries, as it already must for writes from other enclaves and from
+/// `SyncDatabase`. As a result, the mutations of the session whose write
+/// commits last are applied last, regardless of the order in which the sessions
+/// closed.
 pub async fn run_persistence_service(
     mut rx: mpsc::UnboundedReceiver<UserSessionContext>,
     metrics: Arc<Metrics>,
 ) {
     info!("Persistence service started");
+    let slots = PersistSlots::new();
     let mut persisting_tasks: JoinSet<()> = JoinSet::new();
     let mut rx_open = true;
 
@@ -458,25 +741,22 @@ pub async fn run_persistence_service(
     // 2. `!persisting_tasks.is_empty()`: save tasks are still running and must not
     //    be aborted.
     // Exits only when the channel closes AND all saves have drained.
-    //
-    // At least one branch is always enabled inside the loop: when all
-    // `MAX_CONCURRENT_PERSISTS` slots are busy the `rx` branch is disabled, but
-    // `persisting_tasks` is then non-empty.
     while rx_open || !persisting_tasks.is_empty() {
         tokio::select! {
             biased;
-            maybe_ctx = rx.recv(),
-                if rx_open && persisting_tasks.len() < MAX_CONCURRENT_PERSISTS =>
-            {
+            (maybe_ctx, permit) = recv_when_slot_free(&mut rx, &slots.semaphore), if rx_open => {
                 match maybe_ctx {
                     Some(user_context) => {
                         info!("Persistence service received a session to save");
-                        metrics.record_db_persist_queue_size(rx.len() as u64);
-                        persisting_tasks.spawn(persist_one_session(user_context, metrics.clone()));
+                        slots.record_queue_size(rx.len(), &metrics);
+                        let metrics = metrics.clone();
+                        let slots = slots.clone();
+                        persisting_tasks.spawn(async move {
+                            let slot = slots.claim(permit, &metrics).await;
+                            persist_one_session(user_context, metrics, slot).await;
+                        });
                     }
-                    None => {
-                        rx_open = false;
-                    }
+                    None => rx_open = false,
                 }
             }
             Some(join_result) = persisting_tasks.join_next(), if !persisting_tasks.is_empty() => {
@@ -490,34 +770,42 @@ pub async fn run_persistence_service(
     info!("Persistence service finished");
 }
 
+/// Waits for a free worker slot, then receives the next session and claims the
+/// slot for it.
+///
+/// The slot isn't held while waiting on `rx`, so an idle coordinator never
+/// keeps a session that is resuming after a lock wait from its slot. If that
+/// session takes the slot first, the returned permit is `None` and the new
+/// session's task waits for the next free slot. Cancel-safe.
+async fn recv_when_slot_free(
+    rx: &mut mpsc::UnboundedReceiver<UserSessionContext>,
+    slots: &Arc<Semaphore>,
+) -> (Option<UserSessionContext>, Option<OwnedSemaphorePermit>) {
+    drop(slots.acquire().await.expect("persist slots are never closed"));
+    let maybe_ctx = rx.recv().await;
+    (maybe_ctx, slots.clone().try_acquire_owned().ok())
+}
+
 #[cfg(test)]
 mod tests {
-    use std::{
-        net::{IpAddr, Ipv4Addr, SocketAddr},
-        sync::atomic::Ordering,
-        time::SystemTime,
-    };
+    use std::{net::SocketAddr, sync::atomic::Ordering};
 
-    use oak_private_memory_database::{
-        clock::{SystemClock, system_time_to_timestamp},
-        database::{MAX_DATABASE_SIZE, MAX_GRPC_DECODE_SIZE},
+    use private_memory_test_database_server_lib::service::{
+        LockState, SealedMemoryDatabaseServiceTestImpl,
     };
-    use private_memory_test_database_server_lib::service::SealedMemoryDatabaseServiceTestImpl;
-    use sealed_memory_rust_proto::prelude::v1::{
-        AddMemoryRequest, KeySyncRequest, Memory, UserRegistrationRequest,
-    };
-    use tokio::net::TcpListener;
+    use sealed_memory_rust_proto::oak::private_memory::{AddMemoryRequest, GetMemoryByIdRequest};
     use tonic::Code;
 
     use super::*;
-    use crate::{
-        MAX_MEMORY_TTL_SECONDS, METADATA_BLANKET_TTL_SECONDS, db_client::SharedDbClient,
-        handler::SealedMemorySessionHandler,
+    use crate::test_util::{
+        connect_handler, connect_handler_with_metrics, key_sync_request, memory_with_tag,
+        registration_request, start_test_db_with_lock_state, start_test_db_with_service,
     };
 
     type TestMetrics = metrics_testing::TestMetrics<Metrics>;
 
-    /// A policy that retries quickly, so that tests don't wait for long.
+    /// A `RESOURCE_EXHAUSTED` retry policy that retries quickly, so that tests
+    /// don't wait for long.
     const FAST_RETRY_POLICY: ResourceExhaustedRetryPolicy = ResourceExhaustedRetryPolicy {
         initial_backoff: Duration::from_millis(2),
         max_backoff: Duration::from_millis(10),
@@ -532,16 +820,21 @@ mod tests {
         harness.collect().counter("db_resource_exhausted_retries", &[])
     }
 
-    /// Starts an in-process test database service backed by `service`.
-    async fn start_test_db(service: Arc<SealedMemoryDatabaseServiceTestImpl>) -> SocketAddr {
-        let listener =
-            TcpListener::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0)).await.unwrap();
-        let db_addr = listener.local_addr().unwrap();
-        tokio::spawn(async move {
-            let _ =
-                private_memory_test_database_server_lib::service::serve(listener, service).await;
-        });
-        db_addr
+    /// Persists like the background worker, but with `policy` for
+    /// `RESOURCE_EXHAUSTED` rejections, and without holding a worker slot.
+    async fn persist_database(
+        user_context: &mut UserSessionContext,
+        metrics: &Metrics,
+        policy: ResourceExhaustedRetryPolicy,
+    ) -> anyhow::Result<()> {
+        persist_database_with_policy(
+            user_context,
+            metrics,
+            policy,
+            LockWaitPolicy::for_background_persist(),
+            None,
+        )
+        .await
     }
 
     /// Registers and key-syncs `pm_uid` against the test database at
@@ -554,45 +847,451 @@ mod tests {
     ) -> UserSessionContext {
         // The handler hands its session to the persistence worker when it is
         // dropped, unless the session has been taken from it, as below.
-        let (persistence_tx, _persistence_rx) = mpsc::unbounded_channel();
-        let handler = SealedMemorySessionHandler::new(
-            metrics.clone(),
-            persistence_tx,
-            Arc::new(SharedDbClient::new(db_addr, MAX_GRPC_DECODE_SIZE, metrics)),
-            Arc::new(SystemClock),
-            MAX_DATABASE_SIZE,
-            METADATA_BLANKET_TTL_SECONDS,
-            MAX_MEMORY_TTL_SECONDS,
-            false,
-            vec![],
-        );
-        let key_encryption_key = b"aaaabbbbccccddddeeeeffffgggghhhh".to_vec();
+        let (handler, _persistence_rx) = connect_handler_with_metrics(db_addr, metrics);
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
         handler
-            .user_registration_handler(UserRegistrationRequest {
-                pm_uid: pm_uid.to_string(),
-                key_encryption_key: key_encryption_key.clone(),
-                boot_strap_info: Some(Default::default()),
-            })
+            .add_memory_handler(AddMemoryRequest { memory: Some(memory_with_tag("tag")) })
             .await
             .unwrap();
-        handler
-            .key_sync_handler(KeySyncRequest {
-                pm_uid: pm_uid.to_string(),
-                key_encryption_key,
-                session_config: None,
-            })
-            .await
-            .unwrap();
-        let memory = Memory {
-            expiration_timestamp: Some(system_time_to_timestamp(
-                SystemTime::now() + Duration::from_secs(3600),
-            )),
-            ..Default::default()
-        };
-        handler.add_memory_handler(AddMemoryRequest { memory: Some(memory) }).await.unwrap();
         let session = handler.session_context().await.take().unwrap();
         assert!(session.database.changed());
         session
+    }
+
+    fn histogram_count_and_sum(harness: &TestMetrics, name: &str) -> (u64, u64) {
+        let snapshot = harness.collect();
+        if !snapshot.names().contains(name) {
+            return (0, 0);
+        }
+        let point = snapshot.histogram(name, &[]);
+        (point.count, point.sum)
+    }
+
+    fn fast_policy(max_wait: Duration) -> LockWaitPolicy {
+        LockWaitPolicy {
+            max_wait,
+            first_delay: Duration::from_millis(1),
+            max_delay: Duration::from_millis(4),
+        }
+    }
+
+    #[test]
+    fn retry_delay_doubles_up_to_the_cap() {
+        let policy = LockWaitPolicy::for_background_persist();
+        let ceilings_secs = [2, 4, 8, 16, 32, 60, 60, 60];
+        for (conflicts, ceiling_secs) in (1..).zip(ceilings_secs) {
+            let ceiling = Duration::from_secs(ceiling_secs);
+            for _ in 0..20 {
+                let delay = policy.retry_delay(conflicts);
+                assert!(
+                    (ceiling / 2..=ceiling).contains(&delay),
+                    "delay {delay:?} after conflict {conflicts} is outside [{:?}, {ceiling:?}]",
+                    ceiling / 2
+                );
+            }
+        }
+        assert!(policy.retry_delay(u32::MAX) <= policy.max_delay);
+        assert!(policy.retry_delay(0) <= policy.first_delay);
+    }
+
+    #[test]
+    fn background_wait_budget_is_spent_on_few_retries() {
+        let policy = LockWaitPolicy::for_background_persist();
+        let mut waited = Duration::ZERO;
+        let mut retries = 0;
+        while waited < policy.max_wait {
+            retries += 1;
+            waited += policy.retry_delay(retries).min(policy.max_wait - waited);
+        }
+        assert!(retries <= 35, "a row locked for {waited:?} was retried {retries} times");
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn lock_conflict_does_not_consume_the_rebase_budget() {
+        let lock_state = LockState::new();
+        let db_addr = start_test_db_with_lock_state(lock_state.clone()).await;
+        let pm_uid = "lock_wait_survivor_user";
+
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        let memory_id = handler
+            .add_memory_handler(AddMemoryRequest { memory: Some(memory_with_tag("survivor")) })
+            .await
+            .unwrap()
+            .id;
+
+        lock_state.lock(pm_uid).await;
+        let releaser = {
+            let lock_state = lock_state.clone();
+            let pm_uid = pm_uid.to_string();
+            tokio::spawn(async move {
+                while lock_state.rejections() <= MAX_RETRY_ATTEMPTS {
+                    tokio::time::sleep(Duration::from_millis(1)).await;
+                }
+                lock_state.unlock(&pm_uid).await;
+            })
+        };
+
+        {
+            let mut guard = handler.session_context().await;
+            let user_context = guard.as_mut().unwrap();
+            persist_database_with_policy(
+                user_context,
+                &harness.metrics,
+                FAST_RETRY_POLICY,
+                fast_policy(Duration::from_secs(60)),
+                None,
+            )
+            .await
+            .expect("persist should outlast the lock, not burn the rebase budget");
+        }
+        releaser.await.unwrap();
+        assert!(
+            lock_state.rejections() > MAX_RETRY_ATTEMPTS,
+            "test did not actually exceed the rebase budget: only {} refusals",
+            lock_state.rejections(),
+        );
+
+        assert_eq!(
+            harness.collect().counter("db_persist_lock_conflict_count", &[]),
+            lock_state.rejections()
+        );
+        assert_eq!(histogram_count_and_sum(&harness, "db_persist_attempts"), (1, 1));
+        assert_eq!(histogram_count_and_sum(&harness, "db_persist_lock_wait_latency").0, 1);
+
+        let (reader, _persistence_rx) = connect_handler(db_addr);
+        reader.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        let fetched = reader
+            .get_memory_by_id_handler(GetMemoryByIdRequest {
+                id: memory_id.clone(),
+                result_mask: None,
+            })
+            .await
+            .unwrap();
+        assert!(fetched.success, "memory {memory_id} was lost across the lock wait");
+        let fetched = fetched.memory.unwrap();
+        assert_eq!(fetched.id, memory_id);
+        assert_eq!(fetched.tags, vec!["survivor".to_string()]);
+    }
+
+    /// Background sessions waiting out a locked row give up their worker slots,
+    /// so they don't stall another user's session.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn sessions_waiting_on_a_lock_free_their_slots() {
+        let lock_state = LockState::new();
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl {
+            lock_state: lock_state.clone(),
+            ..Default::default()
+        });
+        let db_addr = start_test_db_with_service(service.clone()).await;
+        let harness = test_metrics();
+        let locked_uid = "slot_locked_user";
+        let free_uid = "slot_free_user";
+
+        let mut locked_memories = Vec::new();
+        let mut locked_contexts = Vec::new();
+        for i in 0..MAX_CONCURRENT_PERSISTS {
+            let (handler, _persistence_rx) =
+                connect_handler_with_metrics(db_addr, harness.metrics.clone());
+            if i == 0 {
+                handler.user_registration_handler(registration_request(locked_uid)).await.unwrap();
+            }
+            handler.key_sync_handler(key_sync_request(locked_uid, None)).await.unwrap();
+            let tag = format!("locked_{i}");
+            let id = handler
+                .add_memory_handler(AddMemoryRequest { memory: Some(memory_with_tag(&tag)) })
+                .await
+                .unwrap()
+                .id;
+            locked_memories.push((id, tag));
+            locked_contexts.push(handler.session_context().await.take().unwrap());
+        }
+        let (free_handler, _persistence_rx) =
+            connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        free_handler.user_registration_handler(registration_request(free_uid)).await.unwrap();
+        free_handler.key_sync_handler(key_sync_request(free_uid, None)).await.unwrap();
+        free_handler
+            .add_memory_handler(AddMemoryRequest { memory: Some(memory_with_tag("free")) })
+            .await
+            .unwrap();
+        let free_context = free_handler.session_context().await.take().unwrap();
+
+        lock_state.lock(locked_uid).await;
+        let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
+        let worker = tokio::spawn(run_persistence_service(persistence_rx, harness.metrics.clone()));
+        for context in locked_contexts {
+            persistence_tx.send(context).unwrap();
+        }
+        let deadline = Instant::now() + Duration::from_secs(30);
+        while lock_state.rejections() < MAX_CONCURRENT_PERSISTS as u64 {
+            assert!(Instant::now() < deadline, "locked sessions never tried to write");
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+
+        persistence_tx.send(free_context).unwrap();
+        while service.get_metdata_blob_inner(free_uid).await.is_none() {
+            assert!(Instant::now() < deadline, "locked sessions stalled another user's persist");
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+        assert!(service.get_metdata_blob_inner(locked_uid).await.is_none());
+        // The sessions waiting out the lock still count as queued.
+        let queue_size = || harness.collect().gauge("db_persist_queue_size", &[]);
+        while queue_size() != MAX_CONCURRENT_PERSISTS as u64 {
+            assert!(Instant::now() < deadline, "queue size {} while sessions wait", queue_size());
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+
+        lock_state.unlock(locked_uid).await;
+        // Keep the queue open until every session persisted: closing it while
+        // a write is still in flight against the locked row would cut that
+        // session's wait short.
+        let all_sessions = MAX_CONCURRENT_PERSISTS as u64 + 1;
+        while histogram_count_and_sum(&harness, "db_persist_attempts").0 < all_sessions {
+            assert!(
+                Instant::now() < deadline + Duration::from_secs(60),
+                "locked sessions never persisted after the lock was released"
+            );
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+        drop(persistence_tx);
+        tokio::time::timeout(Duration::from_secs(60), worker)
+            .await
+            .expect("locked sessions never persisted after the lock was released")
+            .unwrap();
+        assert_eq!(harness.collect().counter("db_persist_failures", &[]), 0);
+        assert_eq!(queue_size(), 0);
+        let (reader, _persistence_rx) = connect_handler(db_addr);
+        reader.key_sync_handler(key_sync_request(locked_uid, None)).await.unwrap();
+        for (id, tag) in locked_memories {
+            let fetched = reader
+                .get_memory_by_id_handler(GetMemoryByIdRequest { id, result_mask: None })
+                .await
+                .unwrap();
+            assert!(fetched.success, "memory {tag} was lost");
+            assert_eq!(fetched.memory.unwrap().tags, vec![tag]);
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn lock_held_forever_fails_after_the_wait_budget() {
+        let lock_state = LockState::new();
+        let db_addr = start_test_db_with_lock_state(lock_state.clone()).await;
+        let pm_uid = "lock_wait_timeout_user";
+
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        handler
+            .add_memory_handler(AddMemoryRequest { memory: Some(memory_with_tag("doomed")) })
+            .await
+            .unwrap();
+
+        lock_state.lock(pm_uid).await;
+
+        let max_wait = Duration::from_millis(200);
+        let started = Instant::now();
+        let error = {
+            let mut guard = handler.session_context().await;
+            let user_context = guard.as_mut().unwrap();
+            persist_database_with_policy(
+                user_context,
+                &harness.metrics,
+                FAST_RETRY_POLICY,
+                fast_policy(max_wait),
+                None,
+            )
+            .await
+            .expect_err("a permanently locked row must not persist")
+        };
+        let elapsed = started.elapsed();
+
+        assert!(elapsed >= max_wait, "gave up after only {elapsed:?}, budget was {max_wait:?}");
+        let error = format!("{error}");
+        assert!(error.contains("locked"), "unhelpful lock-wait error: {error}");
+        assert!(lock_state.rejections() > 0);
+
+        assert_eq!(
+            harness.collect().counter("db_persist_lock_conflict_count", &[]),
+            lock_state.rejections()
+        );
+        let (count, waited_ms) = histogram_count_and_sum(&harness, "db_persist_lock_wait_latency");
+        assert_eq!(count, 1);
+        assert!(waited_ms >= max_wait.as_millis() as u64, "recorded wait {waited_ms}ms");
+        assert_eq!(histogram_count_and_sum(&harness, "db_persist_attempts"), (0, 0));
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn lock_wait_budget_counts_write_rpc_time() {
+        let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
+        let db_addr = start_test_db_with_service(service.clone()).await;
+        let pm_uid = "lock_wait_wall_clock_user";
+
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        handler
+            .add_memory_handler(AddMemoryRequest { memory: Some(memory_with_tag("slow")) })
+            .await
+            .unwrap();
+
+        service.lock_state.lock(pm_uid).await;
+        let max_wait = Duration::from_millis(300);
+        let retry_delay = Duration::from_millis(100);
+        let policy = LockWaitPolicy { max_wait, first_delay: retry_delay, max_delay: retry_delay };
+        let stall_second_write = async {
+            let (first, release_first) = service.hold_next_metadata_write().await;
+            first.await.unwrap();
+            let (second, release_second) = service.hold_next_metadata_write().await;
+            release_first.send(()).unwrap();
+            second.await.unwrap();
+            tokio::time::sleep(max_wait).await;
+            release_second.send(()).unwrap();
+        };
+        let persist = async {
+            let mut guard = handler.session_context().await;
+            let user_context = guard.as_mut().unwrap();
+            persist_database_with_policy(
+                user_context,
+                &harness.metrics,
+                FAST_RETRY_POLICY,
+                policy,
+                None,
+            )
+            .await
+        };
+        let (result, ()) = tokio::time::timeout(Duration::from_secs(10), async {
+            tokio::join!(persist, stall_second_write)
+        })
+        .await
+        .expect("a held write never arrived");
+
+        let error = result.expect_err("a locked row must not persist");
+        assert!(error.is::<RowLocked>(), "expected RowLocked, got {error:?}");
+        assert_eq!(service.lock_state.rejections(), 2, "the stalled write should end the wait");
+        let (count, waited_ms) = histogram_count_and_sum(&harness, "db_persist_lock_wait_latency");
+        assert_eq!(count, 1);
+        assert!(waited_ms >= max_wait.as_millis() as u64, "recorded wait {waited_ms}ms");
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn persist_without_contention_never_waits() {
+        let lock_state = LockState::new();
+        let db_addr = start_test_db_with_lock_state(lock_state.clone()).await;
+        let pm_uid = "lock_wait_uncontended_user";
+
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        handler
+            .add_memory_handler(AddMemoryRequest { memory: Some(memory_with_tag("uncontended")) })
+            .await
+            .unwrap();
+
+        {
+            let mut guard = handler.session_context().await;
+            let user_context = guard.as_mut().unwrap();
+            persist_database_with_policy(
+                user_context,
+                &harness.metrics,
+                FAST_RETRY_POLICY,
+                fast_policy(Duration::from_secs(60)),
+                None,
+            )
+            .await
+            .unwrap();
+        }
+        assert_eq!(lock_state.rejections(), 0);
+        assert_eq!(harness.collect().counter("db_persist_lock_conflict_count", &[]), 0);
+        assert_eq!(histogram_count_and_sum(&harness, "db_persist_lock_wait_latency"), (0, 0));
+        assert_eq!(histogram_count_and_sum(&harness, "db_persist_attempts"), (1, 1));
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn sync_on_locked_row_gives_up_with_row_locked() {
+        let lock_state = LockState::new();
+        let db_addr = start_test_db_with_lock_state(lock_state.clone()).await;
+        let pm_uid = "sync_locked_user";
+
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        handler
+            .add_memory_handler(AddMemoryRequest { memory: Some(memory_with_tag("sync")) })
+            .await
+            .unwrap();
+
+        lock_state.lock(pm_uid).await;
+        let error = {
+            let mut guard = handler.session_context().await;
+            let user_context = guard.as_mut().unwrap();
+            sync_persist_database_with_policy(
+                user_context,
+                &harness.metrics,
+                FAST_RETRY_POLICY,
+                fast_policy(Duration::from_millis(50)),
+            )
+            .await
+            .expect_err("a locked row must not persist")
+        };
+        assert!(error.is::<RowLocked>(), "expected RowLocked, got {error:?}");
+        assert_eq!(
+            harness.collect().counter("db_persist_lock_conflict_count", &[]),
+            lock_state.rejections()
+        );
+        assert_eq!(histogram_count_and_sum(&harness, "db_persist_lock_wait_latency").0, 1);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn persistence_service_waits_for_row_lock_and_records_metrics() {
+        let lock_state = LockState::new();
+        let db_addr = start_test_db_with_lock_state(lock_state.clone()).await;
+        let pm_uid = "service_lock_wait_user";
+
+        let harness = test_metrics();
+        let (handler, persistence_rx) =
+            connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+        handler
+            .add_memory_handler(AddMemoryRequest { memory: Some(memory_with_tag("queued")) })
+            .await
+            .unwrap();
+
+        lock_state.lock(pm_uid).await;
+        let releaser = {
+            let lock_state = lock_state.clone();
+            let pm_uid = pm_uid.to_string();
+            tokio::spawn(async move {
+                while lock_state.rejections() == 0 {
+                    tokio::time::sleep(Duration::from_millis(1)).await;
+                }
+                lock_state.unlock(&pm_uid).await;
+            })
+        };
+
+        drop(handler);
+        run_persistence_service(persistence_rx, harness.metrics.clone()).await;
+        releaser.await.unwrap();
+
+        assert_eq!(harness.collect().counter("db_persist_lock_conflict_count", &[]), 1);
+        let (count, waited_ms) = histogram_count_and_sum(&harness, "db_persist_lock_wait_latency");
+        assert_eq!(count, 1);
+        // The first retry comes after half to all of the 2s first delay.
+        assert!(waited_ms >= 1_000, "recorded wait {waited_ms}ms");
+        assert_eq!(histogram_count_and_sum(&harness, "db_persist_attempts"), (1, 1));
+        assert_eq!(harness.collect().gauge("db_persist_queue_size", &[]), 0);
     }
 
     /// Only a `RESOURCE_EXHAUSTED` status is a host rejection.
@@ -613,7 +1312,7 @@ mod tests {
         let harness = test_metrics();
         let pm_uid = "resource_exhausted_write_user";
         let mut session = session_with_changes(
-            start_test_db(service.clone()).await,
+            start_test_db_with_service(service.clone()).await,
             harness.metrics.clone(),
             pm_uid,
         )
@@ -642,7 +1341,7 @@ mod tests {
         let harness = test_metrics();
         let pm_uid = "resource_exhausted_budget_user";
         let mut session = session_with_changes(
-            start_test_db(service.clone()).await,
+            start_test_db_with_service(service.clone()).await,
             harness.metrics.clone(),
             pm_uid,
         )
@@ -672,7 +1371,7 @@ mod tests {
         let service = Arc::new(SealedMemoryDatabaseServiceTestImpl::default());
         let harness = test_metrics();
         let mut session = session_with_changes(
-            start_test_db(service.clone()).await,
+            start_test_db_with_service(service.clone()).await,
             harness.metrics.clone(),
             "unavailable_write_user",
         )
@@ -696,7 +1395,7 @@ mod tests {
         let harness = test_metrics();
         let pm_uid = "resource_exhausted_sync_user";
         let mut session = session_with_changes(
-            start_test_db(service.clone()).await,
+            start_test_db_with_service(service.clone()).await,
             harness.metrics.clone(),
             pm_uid,
         )
@@ -706,9 +1405,14 @@ mod tests {
         service.fail_next_metadata_reads(Code::ResourceExhausted, 2).await;
         service.fail_next_metadata_writes(Code::ResourceExhausted, 2).await;
 
-        sync_persist_database_with_policy(&mut session, &harness.metrics, FAST_RETRY_POLICY)
-            .await
-            .unwrap();
+        sync_persist_database_with_policy(
+            &mut session,
+            &harness.metrics,
+            FAST_RETRY_POLICY,
+            LockWaitPolicy::for_sync(),
+        )
+        .await
+        .unwrap();
 
         assert_eq!(service.metadata_read_calls.load(Ordering::SeqCst) - reads_before, 3);
         assert_eq!(service.metadata_write_calls.load(Ordering::SeqCst) - writes_before, 3);
@@ -725,7 +1429,7 @@ mod tests {
         let harness = test_metrics();
         let pm_uid = "resource_exhausted_per_call_user";
         let mut session = session_with_changes(
-            start_test_db(service.clone()).await,
+            start_test_db_with_service(service.clone()).await,
             harness.metrics.clone(),
             pm_uid,
         )
@@ -742,9 +1446,14 @@ mod tests {
             max_backoff: Duration::from_millis(100),
             total_budget: Duration::from_millis(101),
         };
-        sync_persist_database_with_policy(&mut session, &harness.metrics, one_retry_per_call)
-            .await
-            .unwrap();
+        sync_persist_database_with_policy(
+            &mut session,
+            &harness.metrics,
+            one_retry_per_call,
+            LockWaitPolicy::for_sync(),
+        )
+        .await
+        .unwrap();
 
         assert_eq!(resource_exhausted_retries(&harness), 2);
         assert!(service.get_metdata_blob_inner(pm_uid).await.is_some());
@@ -758,7 +1467,7 @@ mod tests {
         let harness = test_metrics();
         let pm_uid = "resource_exhausted_worker_user";
         let session = session_with_changes(
-            start_test_db(service.clone()).await,
+            start_test_db_with_service(service.clone()).await,
             harness.metrics.clone(),
             pm_uid,
         )

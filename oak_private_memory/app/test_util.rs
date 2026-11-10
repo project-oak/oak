@@ -19,11 +19,15 @@
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::Arc,
+    time::{Duration, SystemTime},
 };
 
 use oak_private_memory_database::{
-    clock::SystemClock,
+    clock::{SystemClock, system_time_to_timestamp},
     database::{MAX_DATABASE_SIZE, MAX_GRPC_DECODE_SIZE},
+};
+use private_memory_test_database_server_lib::service::{
+    LockState, SealedMemoryDatabaseServiceTestImpl,
 };
 use sealed_memory_rust_proto::{oak::private_memory::SessionConfig, prelude::v1::*};
 use tokio::{net::TcpListener, sync::mpsc};
@@ -50,6 +54,14 @@ pub(crate) async fn start_test_db() -> SocketAddr {
         let _ = private_memory_test_database_server_lib::service::create(listener).await;
     });
     db_addr
+}
+
+pub(crate) async fn start_test_db_with_lock_state(lock_state: Arc<LockState>) -> SocketAddr {
+    start_test_db_with_service(Arc::new(SealedMemoryDatabaseServiceTestImpl {
+        lock_state,
+        ..Default::default()
+    }))
+    .await
 }
 
 pub(crate) async fn start_test_db_with_service(
@@ -134,5 +146,16 @@ pub(crate) fn key_sync_request(
         pm_uid: pm_uid.to_string(),
         key_encryption_key: TEST_KEK.to_vec(),
         session_config,
+    }
+}
+
+/// A memory tagged `tag` that expires in an hour.
+pub(crate) fn memory_with_tag(tag: &str) -> Memory {
+    Memory {
+        tags: vec![tag.to_string()],
+        expiration_timestamp: Some(system_time_to_timestamp(
+            SystemTime::now() + Duration::from_secs(3600),
+        )),
+        ..Default::default()
     }
 }

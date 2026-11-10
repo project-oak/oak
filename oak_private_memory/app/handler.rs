@@ -844,8 +844,17 @@ impl SealedMemorySessionHandler {
 
         persistence_worker::sync_persist_database(context, &self.metrics)
             .await
-            .into_internal_error("failed to sync all memories with the persistent database")
+            .map_err(sync_error_to_status)
     }
+}
+
+fn sync_error_to_status(error: anyhow::Error) -> tonic::Status {
+    if error.is::<persistence_worker::RowLocked>() {
+        return tonic::Status::aborted(format!("syncing database: {error}"));
+    }
+    tonic::Status::internal(format!(
+        "failed to sync all memories with the persistent database: {error:?}"
+    ))
 }
 
 impl SealedMemorySessionHandler {
@@ -1105,6 +1114,47 @@ mod tests {
 
     use super::*;
     use crate::test_util::*;
+
+    #[test]
+    fn sync_error_to_status_maps_row_locked_to_aborted() {
+        let locked = persistence_worker::RowLocked::for_test();
+        assert_eq!(sync_error_to_status(locked.into()).code(), tonic::Code::Aborted);
+        assert_eq!(sync_error_to_status(anyhow::anyhow!("boom")).code(), tonic::Code::Internal);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn sync_database_waits_for_row_lock_and_records_metrics() {
+        let lock_state = private_memory_test_database_server_lib::service::LockState::new();
+        let db_addr = start_test_db_with_lock_state(lock_state.clone()).await;
+        let harness = test_metrics();
+        let (handler, _persistence_rx) =
+            connect_handler_with_metrics(db_addr, harness.metrics.clone());
+        let pm_uid = "sync_lock_wait_metrics_user";
+        start_session_with_changes(&handler, pm_uid).await;
+
+        lock_state.lock(pm_uid).await;
+        let releaser = {
+            let lock_state = lock_state.clone();
+            let pm_uid = pm_uid.to_string();
+            tokio::spawn(async move {
+                while lock_state.rejections() == 0 {
+                    tokio::time::sleep(Duration::from_millis(1)).await;
+                }
+                lock_state.unlock(&pm_uid).await;
+            })
+        };
+
+        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        releaser.await.unwrap();
+
+        assert_eq!(unlabeled_counter(&harness, "db_persist_lock_conflict_count"), 1);
+        let (count, waited_ms) =
+            histogram_count_and_sum(&harness, "db_persist_lock_wait_latency", &[]);
+        assert_eq!(count, 1);
+        // The first retry comes after half to all of SyncDatabase's 500ms first
+        // delay.
+        assert!(waited_ms >= 250, "recorded wait {waited_ms}ms");
+    }
 
     /// Registering the same `pm_uid` (with the same KEK) twice returns
     /// `UserAlreadyExists` on the second call, echoing back the stored key

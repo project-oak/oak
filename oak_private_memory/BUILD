@@ -27,6 +27,7 @@ rust_library(
     name = "private_memory_test_database_server_lib",
     srcs = [
         "test/database/lib.rs",
+        "test/database/lock_state.rs",
         "test/database/service.rs",
     ],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
@@ -46,6 +47,12 @@ rust_library(
         "@oak_crates_index//:tonic",
         "@pm_crates//:rand",
     ],
+)
+
+rust_test(
+    name = "private_memory_test_database_server_lib_test",
+    crate = ":private_memory_test_database_server_lib",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 rust_test(
