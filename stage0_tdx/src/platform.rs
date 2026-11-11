@@ -211,40 +211,40 @@ fn accept_tdx_memory(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
     );
 }
 
-fn handle_legacy_smbios(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
-    // The legacy SMBIOS range [0xF_0000, 0x10_0000) is the tail of the reserved
-    // E820 entry [0xC_0000, 0x10_0000). Panic if that entry is not in the table.
-    let legacy_smbios_range_entry = BootE820Entry::new(0xF_0000, 0x1_0000, E820EntryType::RESERVED);
-    assert!(
-        e820_table.iter().any(|entry| {
-            entry.addr() <= legacy_smbios_range_entry.addr()
-                && entry.end() >= legacy_smbios_range_entry.end()
+fn handle_legacy_memory(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
+    // Locate the legacy range [0xC_0000, 0x10_0000) (option ROM area and SMBIOS
+    // range) in the E820 table.
+    // Unwrap() will panic if entry not found with expected start, size, and type.
+    let legacy_range_entry = e820_table
+        .iter()
+        .find(|entry| {
+            entry.addr() == 0xC_0000
+                && entry.size() == 0x4_0000
                 && entry.entry_type() == Some(E820EntryType::RESERVED)
-        }),
-        "couldn't find legacy SMBIOS memory range"
-    );
+        })
+        .expect("couldn't find legacy memory range");
 
-    // Accept the legacy SMBIOS range since legacy code may scan this range for
-    // the SMBIOS entry point table, even if the range is marked as reserved.
+    // Accept the legacy range since legacy code may scan it even if the range is
+    // marked as reserved: the SMBIOS entry point table search, and Linux's iBFT
+    // search, which reads 0xC0000 onwards.
     let range = PhysFrame::<Size4KiB>::range(
-        PhysFrame::from_start_address(PhysAddr::new(legacy_smbios_range_entry.addr() as u64))
-            .unwrap(),
+        PhysFrame::from_start_address(PhysAddr::new(legacy_range_entry.addr() as u64)).unwrap(),
         PhysFrame::from_start_address(PhysAddr::new(
-            (legacy_smbios_range_entry.addr() + legacy_smbios_range_entry.size()) as u64,
+            (legacy_range_entry.addr() + legacy_range_entry.size()) as u64,
         ))
         .unwrap(),
     );
-    range.accept_page().expect("failed to accept SMBIOS memory");
+    range.accept_page().expect("failed to accept legacy memory");
 
     // Safety: the E820 table indicates that this is the correct memory segment.
-    let legacy_smbios_range_bytes = unsafe {
+    let legacy_range_bytes = unsafe {
         core::slice::from_raw_parts_mut::<u8>(
-            legacy_smbios_range_entry.addr() as *mut u8,
-            legacy_smbios_range_entry.size(),
+            legacy_range_entry.addr() as *mut u8,
+            legacy_range_entry.size(),
         )
     };
-    // Zeroize the legacy SMBIOS range bytes to avoid legacy code reading garbage.
-    legacy_smbios_range_bytes.zeroize();
+    // Zeroize the legacy range bytes to avoid legacy code reading garbage.
+    legacy_range_bytes.zeroize();
 }
 
 /// If a MultiprocessorWakeupStructure exsists in this MADT, updates its
@@ -342,7 +342,7 @@ impl FirmwarePlatform for Tdx {
 
         setup_mailbox();
         accept_tdx_memory(e820_table);
-        handle_legacy_smbios(e820_table);
+        handle_legacy_memory(e820_table);
 
         info!("initialize platform completed");
     }
