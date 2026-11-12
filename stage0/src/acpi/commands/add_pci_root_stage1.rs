@@ -16,7 +16,7 @@
 
 use core::{ffi::CStr, fmt::Debug, iter::zip};
 
-use sha2::Sha256;
+use sha2::{Digest, Sha256};
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 use crate::{
@@ -81,7 +81,7 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciRootStage1 {
         files: &mut F,
         fwcfg: &mut FW,
         pci_windows: Option<&PciWindows>,
-        _acpi_digest: &mut Sha256,
+        acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
         log::warn!("AddPciRootStage1 untested; command: {:?}", self);
         let file = files.get_file_mut(self.file()?)?;
@@ -141,6 +141,13 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciRootStage1 {
 
         let crs_allowlist = read_pci_crs_allowlist(fwcfg)?.unwrap_or_default();
         log::debug!("PCI CRS allowlist: {:?}", crs_allowlist);
+
+        // The allowlist comes from the hypervisor and is written into the tables
+        // below, so mix it into the digest.
+        for entry in &crs_allowlist {
+            acpi_digest.update(entry.address.as_bytes());
+            acpi_digest.update(entry.length.as_bytes());
+        }
 
         // This command contains the first 4 offsets (8 entries in total)
         for (allowlist_offset, crs_allowlist) in zip(self.allowlist_offsets, crs_allowlist) {

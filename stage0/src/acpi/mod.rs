@@ -280,7 +280,10 @@ mod tests {
     use zeroize::Zeroize;
 
     use super::{commands::*, *};
-    use crate::fw_cfg::{DirEntry, Firmware};
+    use crate::{
+        fw_cfg::{DirEntry, Firmware},
+        pci::PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT,
+    };
 
     struct TestFirmware;
 
@@ -472,6 +475,57 @@ mod tests {
             ),
             err(anything())
         );
+    }
+
+    /// Runs `command` on a zeroed 64-byte `test` file, with `allowlist` served
+    /// as the host's `etc/pci-crs-whitelist`, and returns the resulting file
+    /// contents and ACPI digest.
+    fn invoke_with_crs_allowlist(
+        command: &dyn Invoke<crate::fw_cfg::TestFirmware, TestFiles>,
+        allowlist: &[(u32, u32); PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT],
+    ) -> (Vec<u8>, [u8; 32]) {
+        let mut firmware = crate::fw_cfg::TestFirmware::default();
+        firmware.files.insert(
+            c"etc/pci-crs-whitelist".to_owned(),
+            allowlist
+                .iter()
+                .flat_map(|(address, length)| [address.to_le_bytes(), length.to_le_bytes()])
+                .flatten()
+                .collect(),
+        );
+        let mut files = TestFiles::default();
+        files.new_file(c"test", &[0u8; 64]);
+        let pci_windows = PciWindows {
+            pci_window_16: 0xc000..0xffff,
+            pci_window_32: 0x8000_0000..0xfc00_0000,
+            pci_window_64: 0..0,
+        };
+        let mut digest = Sha256::default();
+
+        command
+            .invoke(&mut files, &mut firmware, Some(&pci_windows), &mut digest)
+            .expect("failed to invoke command");
+
+        (files.get_file(c"test").unwrap().to_vec(), digest.finalize().into())
+    }
+
+    #[gtest]
+    pub fn test_add_pci_root_stages_measure_crs_allowlist() {
+        // The allowlist is read from fw_cfg, so the VMM can serve a different
+        // one for the same `etc/table-loader`.
+        let allowlist = [(0xfec0_0000, 0x1000); PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT];
+        let other_allowlist = [(0x0000_0000, 0x8000_0000); PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT];
+        let commands: [&dyn Invoke<_, _>; 2] =
+            [&AddPciRootStage1::new("test", 0), &AddPciRootStage2::new("test", 8)];
+
+        for command in commands {
+            let (file, digest) = invoke_with_crs_allowlist(command, &allowlist);
+            let (other_file, other_digest) = invoke_with_crs_allowlist(command, &other_allowlist);
+
+            // The allowlist changes the tables, so it must change the digest too.
+            expect_that!(other_file, not(eq(&file[..])));
+            expect_that!(other_digest, not(eq(digest)));
+        }
     }
 
     #[gtest]
