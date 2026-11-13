@@ -172,6 +172,53 @@ pub fn is_http_start(buf: &[u8]) -> bool {
         || buf.starts_with(b"PATCH ")
 }
 
+/// Lowercase `X-Oak-Attestation` header name, including the colon.
+const ATTESTATION_HEADER_PREFIX: &[u8] = b"x-oak-attestation:";
+
+/// Detects `X-Oak-Attestation` header lines in a plaintext stream received
+/// from the peer.
+///
+/// The header is reserved for the proxy, so a peer-supplied one must never
+/// reach the local application. Splicing only inspects the first header block
+/// of a chunk, so instead every byte of the stream is scanned: a line starts
+/// at the beginning of the stream or after any `\r` or `\n`, and the scanner
+/// keeps its state across chunk boundaries.
+#[derive(Debug)]
+pub struct AttestationHeaderScanner {
+    /// Number of bytes of [`ATTESTATION_HEADER_PREFIX`] matched at the start of
+    /// the current line, or `None` if the current line cannot match.
+    matched: Option<usize>,
+}
+
+impl Default for AttestationHeaderScanner {
+    fn default() -> Self {
+        Self { matched: Some(0) }
+    }
+}
+
+impl AttestationHeaderScanner {
+    /// Returns `true` if `chunk` completes a line starting with
+    /// `X-Oak-Attestation:` (case-insensitive).
+    pub fn scan(&mut self, chunk: &[u8]) -> bool {
+        for &byte in chunk {
+            if byte == b'\r' || byte == b'\n' {
+                self.matched = Some(0);
+                continue;
+            }
+            self.matched = match self.matched {
+                Some(n) if byte.to_ascii_lowercase() == ATTESTATION_HEADER_PREFIX[n] => {
+                    if n + 1 == ATTESTATION_HEADER_PREFIX.len() {
+                        return true;
+                    }
+                    Some(n + 1)
+                }
+                _ => None,
+            };
+        }
+        false
+    }
+}
+
 /// Splices the `X-Oak-Attestation` header right before the `\r\n\r\n` boundary
 /// in `buf`.
 ///
@@ -286,6 +333,34 @@ mod tests {
         assert!(!spliced_str.contains("bogus_old_value"));
         assert!(!spliced_str.contains("another_bogus"));
         assert!(spliced_str.ends_with("\r\n\r\nHello World"));
+    }
+
+    #[test]
+    fn test_attestation_header_scanner_detects_header_anywhere() {
+        let streams: [&[&[u8]]; 5] = [
+            // Pipelined request after the first header block.
+            &[b"GET / HTTP/1.1\r\nHost: a\r\n\r\nGET /b HTTP/1.1\r\nX-Oak-Attestation: x\r\n\r\n"],
+            // Method that splicing does not recognize.
+            &[b"PROPFIND / HTTP/1.1\r\nx-oak-attestation: x\r\n\r\n"],
+            // Bare LF line ending.
+            &[b"GET / HTTP/1.1\r\nHost: a\nX-OAK-ATTESTATION: x\r\n\r\n"],
+            // Header name split across chunks.
+            &[b"GET / HTTP/1.1\r\nX-Oak-Att", b"estation: x\r\n\r\n"],
+            // Line break and header name in separate chunks.
+            &[b"GET / HTTP/1.1\r\nHost: a\r\n", b"X-Oak-Attestation: x\r\n\r\n"],
+        ];
+        for chunks in streams {
+            let mut scanner = AttestationHeaderScanner::default();
+            assert!(chunks.iter().any(|chunk| scanner.scan(chunk)), "not detected: {chunks:?}");
+        }
+    }
+
+    #[test]
+    fn test_attestation_header_scanner_ignores_other_lines() {
+        let mut scanner = AttestationHeaderScanner::default();
+        assert!(!scanner.scan(b"POST / HTTP/1.1\r\nX-Oak-Attestation-Id: 1\r\n"));
+        assert!(!scanner.scan(b"X-Forwarded: X-Oak-Attestation: x\r\n\r\n"));
+        assert!(!scanner.scan(b"{\"X-Oak-Attestation\": \"x\"}"));
     }
 
     #[test]

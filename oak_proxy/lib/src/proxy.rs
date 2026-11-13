@@ -334,6 +334,10 @@ pub async fn proxy<S: ProxySession>(
     };
     // Reassembly buffer for HTTP headers split across TLS chunks (H2).
     let mut http_header_buf = Vec::new();
+    // Rejects peer-supplied attestation headers in HTTP mode, also when this proxy
+    // has no header of its own to splice.
+    let mut attestation_header_scanner = (mode == crate::config::ProxyMode::Http)
+        .then(crate::http::AttestationHeaderScanner::default);
 
     loop {
         if application_done && peer_done {
@@ -359,6 +363,12 @@ pub async fn proxy<S: ProxySession>(
                             // let mut session = session.lock().await;
                             session.put_incoming(&data)?;
                             while let Some(plaintext) = session.get_plaintext()? {
+                                if let Some(scanner) = attestation_header_scanner.as_mut() {
+                                    anyhow::ensure!(
+                                        !scanner.scan(&plaintext),
+                                        "[{role}] Peer sent an X-Oak-Attestation header"
+                                    );
+                                }
                                 if let Some(header_val) = &cached_attestation_header {
                                     if http_header_buf.is_empty() && !crate::http::is_http_start(&plaintext) {
                                         plaintext_writer.write_all(&plaintext).await?;
