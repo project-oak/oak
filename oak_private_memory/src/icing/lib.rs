@@ -162,16 +162,22 @@ fn ground_truth_paths() -> HashSet<&'static str> {
     ])
 }
 
-/// Creates a tar archive of all files in `base_dir` except the ground truth
-/// files (which are stored in dedicated proto fields).
+/// Creates a tar archive of all regular files in `base_dir` except the ground
+/// truth files (which are stored in dedicated proto fields).
+///
+/// Symlinks are never followed, so the archive cannot pick up files from
+/// outside `base_dir`.
 fn create_directory_snapshot(base_dir: &Path) -> Result<Vec<u8>> {
     let excluded = ground_truth_paths();
     let mut builder = tar::Builder::new(Vec::new());
+    builder.follow_symlinks(false);
 
     for entry in WalkDir::new(base_dir).into_iter() {
         let entry = entry.context("walking directory")?;
         let path = entry.path();
-        if !path.is_file() {
+        // `DirEntry::file_type` describes the entry itself, not a symlink
+        // target, unlike `Path::is_file`.
+        if !entry.file_type().is_file() {
             continue;
         }
         let relative = path.strip_prefix(base_dir).context("stripping base dir prefix")?;
@@ -190,10 +196,33 @@ fn create_directory_snapshot(base_dir: &Path) -> Result<Vec<u8>> {
 
 /// Extracts a tar archive into `target_dir`, creating parent directories as
 /// needed.
+///
+/// The snapshot comes from untrusted storage, and `create_directory_snapshot`
+/// only writes regular files, so only regular files inside `target_dir` are
+/// accepted. Any other entry type (such as a symlink, hard link, or device
+/// node) fails the whole extraction, because Icing or a later export could
+/// otherwise read or write through it to files outside `target_dir`.
 fn extract_directory_snapshot(target_dir: &Path, snapshot: &[u8]) -> Result<()> {
-    let cursor = Cursor::new(snapshot);
-    let mut archive = tar::Archive::new(cursor);
-    archive.unpack(target_dir).context("unpacking directory snapshot")
+    let mut archive = tar::Archive::new(Cursor::new(snapshot));
+    for entry in archive.entries().context("reading directory snapshot entries")? {
+        let mut entry = entry.context("reading directory snapshot entry")?;
+        let entry_type = entry.header().entry_type();
+        let path = entry.path().context("reading directory snapshot entry path")?.into_owned();
+        if !entry_type.is_file() {
+            bail!(
+                "directory snapshot entry {} has unsupported type {:?}",
+                path.display(),
+                entry_type
+            );
+        }
+        let was_unpacked = entry
+            .unpack_in(target_dir)
+            .with_context(|| format!("unpacking directory snapshot entry {}", path.display()))?;
+        if !was_unpacked {
+            bail!("directory snapshot entry {} is outside the target directory", path.display());
+        }
+    }
+    Ok(())
 }
 
 /// The maximum length, in bytes, of a single indexed term.

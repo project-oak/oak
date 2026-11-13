@@ -29,6 +29,7 @@ rust_test(
         ":icing",
         "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
+        "@oak_crates_index//:tar",
         "@oak_crates_index//:tempfile",
     ],
 )

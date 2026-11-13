@@ -571,6 +571,45 @@ mod tests {
         search_result.results.len()
     }
 
+    /// Returns a tar archive holding one header-only entry of `entry_type`
+    /// named `exfil`, with `link_target` as its link name.
+    fn snapshot_with_special_entry(entry_type: tar::EntryType, link_target: &str) -> Vec<u8> {
+        let mut header = tar::Header::new_gnu();
+        header.set_entry_type(entry_type);
+        header.set_path("exfil").unwrap();
+        header.set_link_name(link_target).unwrap();
+        header.set_size(0);
+        header.set_mode(0o644);
+        header.set_cksum();
+        let mut builder = tar::Builder::new(Vec::new());
+        builder.append(&header, std::io::empty()).unwrap();
+        builder.into_inner().unwrap()
+    }
+
+    /// Returns a tar archive holding one regular file at the raw path `path`.
+    /// `Header::set_path` rejects `..`, so the name bytes are written directly.
+    fn snapshot_with_raw_path(path: &[u8]) -> Vec<u8> {
+        let mut header = tar::Header::new_old();
+        header.as_old_mut().name[..path.len()].copy_from_slice(path);
+        header.set_entry_type(tar::EntryType::Regular);
+        header.set_size(0);
+        header.set_mode(0o644);
+        header.set_cksum();
+        let mut builder = tar::Builder::new(Vec::new());
+        builder.append(&header, std::io::empty()).unwrap();
+        builder.into_inner().unwrap()
+    }
+
+    fn ground_truth_with_snapshot(directory_snapshot: Vec<u8>) -> icing::IcingGroundTruthFiles {
+        icing::IcingGroundTruthFiles {
+            schema_pb: b"schema".to_vec(),
+            schema_store_header: b"header".to_vec(),
+            document_log: b"log".to_vec(),
+            directory_snapshot,
+            ..Default::default()
+        }
+    }
+
     // ========================================================================
     // Directory snapshot tests
     // ========================================================================
@@ -731,6 +770,76 @@ mod tests {
         // All 6 documents (5 v1 + 1 v2) should be searchable.
         assert_eq!(text_search(&engine, "document"), 6);
 
+        Ok(())
+    }
+
+    /// A stored snapshot must not be able to plant links or special files in
+    /// the database directory, because a later export would read through them.
+    #[test]
+    fn migrate_rejects_non_regular_snapshot_entries_test() {
+        for entry_type in [
+            tar::EntryType::Symlink,
+            tar::EntryType::Link,
+            tar::EntryType::Fifo,
+            tar::EntryType::Directory,
+        ] {
+            let ground_truth = ground_truth_with_snapshot(snapshot_with_special_entry(
+                entry_type,
+                "/etc/hostname",
+            ));
+            let migrated_dir = tempdir().unwrap();
+            let migrated_path = migrated_dir.path().join("db");
+
+            let result = ground_truth.migrate(migrated_path.to_str().unwrap());
+
+            assert!(result.is_err(), "migrate accepted a {entry_type:?} snapshot entry");
+            assert!(
+                migrated_path.join("exfil").symlink_metadata().is_err(),
+                "migrate left a {entry_type:?} entry in the database directory"
+            );
+        }
+    }
+
+    /// A stored snapshot must not be able to write outside the database
+    /// directory.
+    #[test]
+    fn migrate_rejects_snapshot_path_traversal_test() {
+        let ground_truth = ground_truth_with_snapshot(snapshot_with_raw_path(b"../escaped"));
+        let migrated_dir = tempdir().unwrap();
+        let migrated_path = migrated_dir.path().join("db");
+
+        let result = ground_truth.migrate(migrated_path.to_str().unwrap());
+
+        assert!(result.is_err(), "migrate accepted a snapshot entry outside the target dir");
+        assert!(migrated_dir.path().join("escaped").symlink_metadata().is_err());
+    }
+
+    /// Exporting a database directory must not follow symlinks, so files
+    /// outside the directory never end up in the snapshot.
+    #[test]
+    fn directory_snapshot_skips_symlinks_test() -> Result<(), Box<dyn std::error::Error>> {
+        let outside_dir = tempdir()?;
+        let secret_path = outside_dir.path().join("secret");
+        std::fs::write(&secret_path, b"outside-secret")?;
+
+        let db_dir = tempdir()?;
+        let db_path = db_dir.path();
+        std::fs::create_dir_all(db_path.join("schema_dir"))?;
+        std::fs::create_dir_all(db_path.join("document_dir"))?;
+        std::fs::write(db_path.join("schema_dir/schema.pb"), b"schema")?;
+        std::fs::write(db_path.join("schema_dir/schema_store_header"), b"header")?;
+        std::fs::write(db_path.join("document_dir/document_log_v1"), b"log")?;
+        std::fs::write(db_path.join("index_file"), b"index")?;
+        std::os::unix::fs::symlink(&secret_path, db_path.join("exfil"))?;
+
+        let ground_truth = icing::IcingGroundTruthFiles::new(db_path.to_str().unwrap())?;
+
+        let mut archive = tar::Archive::new(ground_truth.directory_snapshot.as_slice());
+        let mut names = Vec::new();
+        for entry in archive.entries()? {
+            names.push(entry?.path()?.to_string_lossy().into_owned());
+        }
+        assert_eq!(names, vec!["index_file".to_string()]);
         Ok(())
     }
 }
