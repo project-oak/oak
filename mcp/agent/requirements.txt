@@ -121,7 +121,7 @@ jinja2==3.1.6
     # via litellm
 jiter==0.15.0
     # via openai
-joserfc==1.7.1
+joserfc==1.7.6
     # via authlib
 json-rpc==1.15.0
     # via a2a-sdk
