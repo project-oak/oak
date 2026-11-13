@@ -55,6 +55,71 @@ const OAK_SESSION_TLS_SERVER_NAME: &str = "oak-session-tls";
 /// same protocol over the TLS connection.
 const OAK_SESSION_TLS_ALPN_PROTOCOL: &[u8] = b"oak-session-tls";
 
+/// Returns `Some(err)` if `verified_res` failed for a reason a
+/// [`CustomCertVerifier`] must never be allowed to override: the identity
+/// asserted by the certificate not matching the peer being connected to
+/// (`NotValidForName`), or the certificate itself being invalid on its face
+/// (expired, not yet valid, or a broken cryptographic signature over the
+/// chain). `CustomCertVerifier` exists to relax *trust-anchor* decisions
+/// (`UnknownIssuer` and similar, where the chain and dates check out but the
+/// root is not one standard WebPKI validation recognizes) -- not to launder a
+/// certificate that fails verification for one of these structural reasons.
+/// Returning `Ok` from a custom verifier must not be able to override any of
+/// these, regardless of what the custom verifier itself decides.
+fn critical_verification_failure<T>(
+    verified_res: &Result<T, rustls::Error>,
+) -> Option<rustls::Error> {
+    if let Err(rustls::Error::InvalidCertificate(cert_err)) = verified_res {
+        if matches!(
+            cert_err,
+            rustls::CertificateError::NotValidForName
+                | rustls::CertificateError::Expired
+                | rustls::CertificateError::ExpiredContext { .. }
+                | rustls::CertificateError::NotValidYet
+                | rustls::CertificateError::NotValidYetContext { .. }
+                | rustls::CertificateError::BadSignature
+        ) {
+            return Some(rustls::Error::InvalidCertificate(cert_err.clone()));
+        }
+    }
+    None
+}
+
+/// The [`critical_verification_failure`] check, narrowed for
+/// [`CustomOnlyServerCertVerifier`] specifically.
+///
+/// That verifier's `inner` is always built against a `RootCertStore`
+/// containing an arbitrary, unrelated dummy self-signed certificate (see
+/// `build_verifier`'s `(None, Some(custom))` arm) -- there is no real trust
+/// anchor to check against by design, since the custom verifier is meant to
+/// be the entire trust decision. Confirmed empirically: `rustls-webpki`'s
+/// path-building finds that dummy certificate as a chain-building candidate
+/// and attempts to verify the presented certificate's signature against it,
+/// which fails -- reported as `BadSignature` -- for *any* certificate not
+/// actually signed by that arbitrary dummy key, including a completely
+/// valid, non-expired one. This failure mode also masks a genuinely expired
+/// certificate behind the same `BadSignature` result rather than `Expired`,
+/// so blocking `BadSignature` here cannot reliably distinguish a forged or
+/// expired certificate from a routine, valid one -- it only breaks the
+/// verifier's intended purpose. `NotValidYet` is unaffected by this and
+/// still reported correctly, since `rustls-webpki` checks the validity
+/// window before attempting chain-building signature verification.
+fn critical_verification_failure_no_real_trust_anchor<T>(
+    verified_res: &Result<T, rustls::Error>,
+) -> Option<rustls::Error> {
+    if let Err(rustls::Error::InvalidCertificate(cert_err)) = verified_res {
+        if matches!(
+            cert_err,
+            rustls::CertificateError::NotValidForName
+                | rustls::CertificateError::NotValidYet
+                | rustls::CertificateError::NotValidYetContext { .. }
+        ) {
+            return Some(rustls::Error::InvalidCertificate(cert_err.clone()));
+        }
+    }
+    None
+}
+
 /// Errors that can occur during the creation of an Oak Session TLS Context.
 #[derive(Error, Debug)]
 pub enum ContextError {
@@ -234,12 +299,8 @@ impl ServerCertVerifier for DelegatingServerCertVerifier {
             now,
         );
 
-        if let Err(rustls::Error::InvalidCertificate(rustls::CertificateError::NotValidForName)) =
-            verified_res
-        {
-            return Err(rustls::Error::InvalidCertificate(
-                rustls::CertificateError::NotValidForName,
-            ));
+        if let Some(err) = critical_verification_failure(&verified_res) {
+            return Err(err);
         }
 
         let verify_result = verified_res.as_ref().map(|_| ());
@@ -308,6 +369,10 @@ impl ClientCertVerifier for DelegatingClientCertVerifier {
     ) -> Result<ClientCertVerified, rustls::Error> {
         let verified_res = self.inner.verify_client_cert(end_entity, intermediates, now);
 
+        if let Some(err) = critical_verification_failure(&verified_res) {
+            return Err(err);
+        }
+
         let verify_result = verified_res.as_ref().map(|_| ());
 
         let custom_result = self.custom.verify(end_entity, intermediates, verify_result);
@@ -375,12 +440,8 @@ impl ServerCertVerifier for CustomOnlyServerCertVerifier {
             now,
         );
 
-        if let Err(rustls::Error::InvalidCertificate(rustls::CertificateError::NotValidForName)) =
-            verified_res
-        {
-            return Err(rustls::Error::InvalidCertificate(
-                rustls::CertificateError::NotValidForName,
-            ));
+        if let Some(err) = critical_verification_failure_no_real_trust_anchor(&verified_res) {
+            return Err(err);
         }
 
         let verify_result = verified_res.as_ref().map(|_| ());
@@ -1107,3 +1168,4 @@ pub mod utils {
         }))
     }
 }
+
