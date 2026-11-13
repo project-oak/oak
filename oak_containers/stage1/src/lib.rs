@@ -23,9 +23,10 @@ mod image;
 
 use std::{
     error::Error,
-    fs::{self, create_dir},
-    io::ErrorKind,
+    fs::{self, DirBuilder, OpenOptions, create_dir},
+    io::{ErrorKind, Write},
     net::IpAddr,
+    os::unix::fs::{DirBuilderExt, OpenOptionsExt},
     path::Path,
     str::FromStr,
     time::Instant,
@@ -197,8 +198,7 @@ pub async fn main<A: Attester + Serializable + 'static>(args: &Args) -> Result<(
 
     // Write the DICE data to a well-known location as a length-delimited protobuf
     // file.
-    create_dir("/oak").context("error creating `oak` directory")?;
-    fs::write("/oak/dice", dice_data).context("error writing DICE data")?;
+    write_dice_data(Path::new("/oak"), &dice_data)?;
 
     // Configure eth0 down, as systemd will want to manage it itself and gets
     // confused if it already has an IP address.
@@ -220,6 +220,22 @@ pub async fn main<A: Attester + Serializable + 'static>(args: &Args) -> Result<(
     .context("error switching to the system image")?
 }
 
+/// Writes the DICE data for the next layer to a file named `dice` in a newly
+/// created directory `dir`.
+///
+/// The DICE data contains the private key of the next layer's ECA, so the
+/// directory and the file are only accessible by their owner.
+fn write_dice_data(dir: &Path, dice_data: &[u8]) -> anyhow::Result<()> {
+    DirBuilder::new().mode(0o700).create(dir).context("error creating `oak` directory")?;
+    OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(dir.join("dice"))
+        .and_then(|mut file| file.write_all(dice_data))
+        .context("error writing DICE data")
+}
+
 /// Tries to parse a string slice as an address.
 ///
 /// Assumes that the address is a hexadecimal representation if it starts with
@@ -232,4 +248,27 @@ fn try_parse_phys_addr(arg: &str) -> anyhow::Result<PhysAddr> {
         u64::from_str(arg).context("couldn't parse address as a decimal number")?
     };
     PhysAddr::try_new(address).map_err(|err| anyhow::anyhow!("invalid physical address: {}", err.0))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::os::unix::fs::PermissionsExt;
+
+    use super::*;
+
+    #[test]
+    fn test_write_dice_data_is_owner_only() {
+        let dir = std::env::temp_dir().join("oak_stage1_dice_test");
+        let _ = fs::remove_dir_all(&dir);
+
+        write_dice_data(&dir, b"dice data").unwrap();
+
+        let dir_mode = fs::metadata(&dir).unwrap().permissions().mode();
+        let file_mode = fs::metadata(dir.join("dice")).unwrap().permissions().mode();
+        assert_eq!(dir_mode & 0o777, 0o700);
+        assert_eq!(file_mode & 0o777, 0o600);
+        assert_eq!(fs::read(dir.join("dice")).unwrap(), b"dice data");
+
+        fs::remove_dir_all(&dir).unwrap();
+    }
 }
