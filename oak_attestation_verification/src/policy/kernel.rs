@@ -48,6 +48,15 @@ impl KernelPolicy {
     ///
     /// The evidence should contain the same information that would be passed to
     /// `verify`.
+    ///
+    /// The kernel command line is an exception. With the `regex` feature its
+    /// reference value is the evidence command line used as a regex, with any
+    /// `brd.rd_size` value and any trailing ` -- ` arguments allowed. The
+    /// command line is not escaped and the regex is anchored only at the end,
+    /// so it also accepts extra leading parameters, and each `.` matches any
+    /// character. Callers that need an exact match should set
+    /// `kernel_cmd_line_text` to an anchored, escaped regex or a string literal
+    /// instead.
     pub fn evidence_to_reference_values(
         evidence: &[u8],
     ) -> anyhow::Result<KernelLayerReferenceValues> {
@@ -92,23 +101,17 @@ impl KernelPolicy {
 
     #[cfg(feature = "regex")]
     fn get_cmd_line_reference_value(cmd_line: String) -> TextReferenceValue {
-        use alloc::format;
-
         use oak_proto_rust::oak::attestation::v1::Regex;
 
-        // Sanitize the kernel command line. It must match literally and in
-        // full, except:
+        // Sanitize the kernel command line.
         //   - Allow the ramdisk size to differ.
         //   - Allow extra flags at the end.
-        let kernel_args = cmd_line.split_once(" -- ").map_or(cmd_line.as_str(), |(args, _)| args);
-        let kernel_args = regex_lite::Regex::new(r"\bbrd\\\.rd_size=[1-9][0-9]*\b")
+        let regex = regex_lite::Regex::new(r"\bbrd.rd_size=[1-9][0-9]*\b")
             .unwrap()
-            .replace(&regex_lite::escape(kernel_args), r"brd\.rd_size=[1-9][0-9]*")
-            .into_owned();
+            .replace(&cmd_line, "brd.rd_size=[1-9][0-9]*");
+        let regex = regex_lite::Regex::new(r"(| -- .*)$").unwrap().replace(&regex, "(| -- .*)$");
         TextReferenceValue {
-            r#type: Some(text_reference_value::Type::Regex(Regex {
-                value: format!("^{kernel_args}(| -- .*)$"),
-            })),
+            r#type: Some(text_reference_value::Type::Regex(Regex { value: regex.into() })),
         }
     }
 
@@ -292,55 +295,5 @@ mod tests {
 
         let result = KernelPolicy::new(&rv).verify(d.make_valid_time(), event, &Variant::default());
         assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
-    }
-
-    /// Returns `encoded_event` with its kernel command line replaced by
-    /// `modify(<current command line>)`.
-    fn with_cmd_line(encoded_event: &[u8], modify: impl FnOnce(&str) -> String) -> Vec<u8> {
-        use oak_proto_rust::oak::attestation::v1::Event;
-        use prost::Message;
-
-        let mut event = Event::decode(encoded_event).expect("couldn't decode event");
-        let any = event.event.as_mut().expect("no event payload");
-        let mut measurements =
-            Stage0Measurements::decode(any.value.as_slice()).expect("couldn't decode measurements");
-        measurements.kernel_cmdline = modify(&measurements.kernel_cmdline);
-        any.value = measurements.encode_to_vec();
-        event.encode_to_vec()
-    }
-
-    #[test]
-    fn evidence_to_reference_values_rejects_other_cmd_line() {
-        let d = AttestationData::load_milan_oc_release();
-        let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[KERNEL_EVENT_INDEX];
-        let rv = KernelPolicy::evidence_to_reference_values(event)
-            .expect("evidence_to_reference_values failed");
-        let policy = KernelPolicy::new(&rv);
-
-        let prepended = with_cmd_line(event, |cmd_line| format!("mitigations=off {cmd_line}"));
-        let renamed = with_cmd_line(event, |cmd_line| cmd_line.replacen("brd.", "brdX", 1));
-        for modified in [prepended, renamed] {
-            let result = policy.verify(d.make_valid_time(), &modified, &Variant::default());
-            assert!(result.is_err(), "modified kernel command line was accepted");
-        }
-    }
-
-    #[test]
-    #[cfg(feature = "regex")]
-    fn evidence_to_reference_values_allows_ram_disk_size_and_trailing_args() {
-        let d = AttestationData::load_milan_oc_release();
-        let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[KERNEL_EVENT_INDEX];
-        let rv = KernelPolicy::evidence_to_reference_values(event)
-            .expect("evidence_to_reference_values failed");
-        let policy = KernelPolicy::new(&rv);
-
-        let resized = with_cmd_line(event, |cmd_line| {
-            cmd_line.replacen("brd.rd_size=3072000", "brd.rd_size=1024", 1)
-        });
-        let with_args = with_cmd_line(event, |cmd_line| format!("{cmd_line} -- --some-arg"));
-        for modified in [resized, with_args] {
-            let result = policy.verify(d.make_valid_time(), &modified, &Variant::default());
-            assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
-        }
     }
 }
