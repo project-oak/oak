@@ -38,7 +38,8 @@ use x86_64::{
     PhysAddr, VirtAddr,
     registers::{
         control::Efer,
-        model_specific::{EferFlags, GsBase, KernelGsBase, LStar},
+        model_specific::{EferFlags, GsBase, KernelGsBase, LStar, SFMask},
+        rflags::RFlags,
     },
     structures::paging::PhysFrame,
 };
@@ -66,6 +67,18 @@ pub fn enable_syscalls(
     GsData::setup();
 
     LStar::write(VirtAddr::new(syscall_entrypoint as *const () as usize as u64));
+    // SYSCALL clears the RFLAGS bits set in IA32_FMASK on entry; the register
+    // resets to zero, which would leave the user's DF, TF, AC, NT, IF and IOPL
+    // in effect while the kernel runs. Mask the same bits Linux does.
+    SFMask::write(
+        RFlags::TRAP_FLAG
+            | RFlags::INTERRUPT_FLAG
+            | RFlags::DIRECTION_FLAG
+            | RFlags::IOPL_LOW
+            | RFlags::IOPL_HIGH
+            | RFlags::NESTED_TASK
+            | RFlags::ALIGNMENT_CHECK,
+    );
     unsafe {
         Efer::update(|flags| flags.set(EferFlags::SYSTEM_CALL_EXTENSIONS, true));
     }
@@ -225,7 +238,8 @@ static USERSPACE_VIRT_END: u64 = mm::USERSPACE_VIRT_END;
 extern "C" fn syscall_entrypoint() {
     // When user code uses `SYSCALL`, the following happens (abridged):
     //  - RIP of the instruction following the SYSCALL will be in RCX
-    //  - RFLAGS will be saved in R11
+    //  - RFLAGS will be saved in R11, and the bits set in SFMASK will be cleared
+    //    (see `enable_syscalls()`)
     //  - new RIP will be loaded from LSTAR (see `enable_syscalls()`)
     //  - CS and SS selectors will be loaded from STAR (see `init_gdt()` in
     //    `descriptors.rs`)
