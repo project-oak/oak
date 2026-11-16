@@ -68,6 +68,33 @@ rust_test(
     ],
 )
 
+rust_test(
+    name = "oak_session_wire_tests",
+    size = "small",
+    srcs = ["tests/wire_format_tests.rs"],
+    data = [
+        "//oak_session/testdata:wire_format_testdata",
+    ],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        ":oak_session",
+        "//oak_attestation_types",
+        "//oak_attestation_verification",
+        "//oak_attestation_verification:oak_attestation_verification_results",
+        "//oak_attestation_verification_types",
+        "//oak_crypto",
+        "//oak_file_utils",
+        "//oak_proto_rust",
+        "//oak_session/endorsed_evidence:oak_session_endorsed_evidence",
+        "//oak_time",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:googletest",
+        "@oak_crates_index//:p256",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:sha2",
+    ],
+)
+
 rust_library(
     name = "oak_session_testing",
     testonly = True,
