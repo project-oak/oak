@@ -34,7 +34,8 @@ use rmcp::{
         tool::ToolCallContext,
     },
     model::{
-        CallToolResult, ContentBlock, InitializeRequestParams, InitializeResult, JsonObject, Tool,
+        CallToolResponse, CallToolResult, ContentBlock, InitializeRequestParams, InitializeResult,
+        JsonObject, Tool,
     },
     service::RequestContext,
     tool_handler,
@@ -110,7 +111,7 @@ where
         let route = ToolRoute::<Self>::new_dyn(tool, move |ctx: ToolCallContext<'_, Self>| {
             let instance = Arc::clone(&instance);
             Box::pin(async move { Self::handle_invoke(ctx, instance).await })
-                as BoxFuture<'_, result::Result<CallToolResult, ErrorData>>
+                as BoxFuture<'_, result::Result<CallToolResponse, ErrorData>>
         });
 
         let mut router = ToolRouter::new();
@@ -122,7 +123,7 @@ where
     async fn handle_invoke(
         ctx: ToolCallContext<'_, Self>,
         instance: Arc<OnceLock<OakFunctionsInstance<H>>>,
-    ) -> result::Result<CallToolResult, ErrorData> {
+    ) -> result::Result<CallToolResponse, ErrorData> {
         info!("Invoking Oak Functions");
 
         // Extract the key from the request arguments
@@ -151,7 +152,7 @@ where
             let content = ContentBlock::json(result).map_err(|e| {
                 ErrorData::internal_error(format!("JSON serialization failed: {e}"), None)
             })?;
-            Ok(CallToolResult::success(vec![content]))
+            Ok(CallToolResult::success(vec![content]).into())
         } else {
             Err(ErrorData::internal_error("instance is not initialized".to_string(), None))
         }

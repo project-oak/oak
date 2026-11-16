@@ -1651,14 +1651,14 @@ crate.spec(
     ],
     package = "rmcp",
     repositories = ALL_STD,
-    version = "2.2.0",
+    version = "3.9.0",
 )
 crate.spec(
     default_features = False,
     features = [],
     package = "rmcp-macros",
     repositories = ALL_STD,
-    version = "2.2.0",
+    version = "3.9.0",
 )
 crate.spec(
     default_features = True,
