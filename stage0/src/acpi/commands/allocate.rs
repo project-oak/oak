@@ -19,14 +19,13 @@ use core::{
     fmt::{Debug, Formatter, Result as FmtResult},
 };
 
-use sha2::{Digest, Sha256};
+use sha2::Digest;
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
-use super::{Invoke, Pad, RomfileName};
+use super::{Invoke, LoaderContext, Pad, RomfileName};
 use crate::{
     acpi::{Zone, files::Files},
     fw_cfg::Firmware,
-    pci::PciWindows,
 };
 
 /// COMMAND_ALLOCATE - allocate a table from `file` subject to `align` alignment
@@ -70,14 +69,9 @@ impl Allocate {
 }
 
 impl<FW: Firmware, F: Files> Invoke<FW, F> for Allocate {
-    fn invoke(
-        &self,
-        files: &mut F,
-        fwcfg: &mut FW,
-        _pci_windows: Option<&PciWindows>,
-        acpi_digest: &mut Sha256,
-    ) -> Result<(), &'static str> {
-        let file = fwcfg.find(self.file()?).ok_or("COMMAND_ALLOCATE references an unknown file")?;
+    fn invoke(&self, files: &mut F, ctx: &mut LoaderContext<'_, FW>) -> Result<(), &'static str> {
+        let file =
+            ctx.fwcfg.find(self.file()?).ok_or("COMMAND_ALLOCATE references an unknown file")?;
 
         let layout = core::alloc::Layout::from_size_align(file.size(), self.align as usize)
             .map_err(|_| "invalid file layout requested")?;
@@ -88,8 +82,8 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for Allocate {
             self.zone().ok_or("Invalid file allocation zone")?,
         )?;
 
-        fwcfg.read_file(&file, buf)?;
-        acpi_digest.update(buf);
+        ctx.fwcfg.read_file(&file, buf)?;
+        ctx.acpi_digest.update(buf);
         Ok(())
     }
 }

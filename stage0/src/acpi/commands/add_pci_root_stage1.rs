@@ -16,16 +16,14 @@
 
 use core::{ffi::CStr, fmt::Debug, iter::zip};
 
-use sha2::Sha256;
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 use crate::{
     acpi::{
-        commands::{Invoke, Pad, RomfileName},
+        commands::{Invoke, LoaderContext, Pad, RomfileName},
         files::Files,
     },
     fw_cfg::Firmware,
-    pci::{PciWindows, read_pci_crs_allowlist},
 };
 
 pub const PCI_ROOT_STAGE1_ALLOWLIST_OFFSET_COUNT: usize = 4;
@@ -76,13 +74,7 @@ impl AddPciRootStage1 {
 }
 
 impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciRootStage1 {
-    fn invoke(
-        &self,
-        files: &mut F,
-        fwcfg: &mut FW,
-        pci_windows: Option<&PciWindows>,
-        _acpi_digest: &mut Sha256,
-    ) -> Result<(), &'static str> {
+    fn invoke(&self, files: &mut F, ctx: &mut LoaderContext<'_, FW>) -> Result<(), &'static str> {
         log::warn!("AddPciRootStage1 untested; command: {:?}", self);
         let file = files.get_file_mut(self.file()?)?;
 
@@ -107,7 +99,7 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciRootStage1 {
             return Err("AddPciRootStage1 invalid; offsets would overflow file");
         }
 
-        let data = pci_windows.ok_or("no PCI holes for AddPciRootStage1 to add")?;
+        let data = ctx.pci_windows.as_ref().ok_or("no PCI holes for AddPciRootStage1 to add")?;
 
         file[self.pci32_start_offset as usize
             ..(self.pci32_start_offset as usize + size_of_val(&data.pci_window_32.start))]
@@ -139,8 +131,7 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciRootStage1 {
             ..(self.pci16_io_end_offset as usize + size_of::<u16>())]
             .copy_from_slice(&data.pci_window_16.end.to_le_bytes());
 
-        let crs_allowlist = read_pci_crs_allowlist(fwcfg)?.unwrap_or_default();
-        log::debug!("PCI CRS allowlist: {:?}", crs_allowlist);
+        let crs_allowlist = ctx.crs_allowlist.unwrap_or_default();
 
         // This command contains the first 4 offsets (8 entries in total)
         for (allowlist_offset, crs_allowlist) in zip(self.allowlist_offsets, crs_allowlist) {

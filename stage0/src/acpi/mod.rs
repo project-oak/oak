@@ -34,7 +34,7 @@ use crate::{ZeroPage, fw_cfg::FwCfg, pci::PciWindows};
 mod commands;
 mod files;
 pub mod tables;
-use commands::{Invoke, RomfileCommand};
+use commands::{Invoke, LoaderContext, RomfileCommand};
 use files::{Files, MemFiles};
 use tables::{
     AcpiTable, AcpiTables, Fadt, Madt, Rsdp,
@@ -146,22 +146,13 @@ pub fn build_acpi_tables<P: crate::Platform + crate::FirmwarePlatform>(
     let buf = fwcfg.read_file_vec(&file)?;
     acpi_digest.update(&buf);
 
-    // If we have `pci_windows`, mix them into the digest as well as they may come
-    // from the hypervisor under some circumstances.
-    if let Some(ref pci_windows) = pci_windows {
-        acpi_digest.update(pci_windows.pci_window_16.start.as_bytes());
-        acpi_digest.update(pci_windows.pci_window_16.end.as_bytes());
-        acpi_digest.update(pci_windows.pci_window_32.start.as_bytes());
-        acpi_digest.update(pci_windows.pci_window_32.end.as_bytes());
-        acpi_digest.update(pci_windows.pci_window_64.start.as_bytes());
-        acpi_digest.update(pci_windows.pci_window_64.end.as_bytes());
-    }
+    let mut ctx = LoaderContext::new(fwcfg, pci_windows, acpi_digest)?;
 
     let commands = <[RomfileCommand]>::try_ref_from_bytes(&buf[..])
         .map_err(|_| "invalid 'etc/table-loader'")?;
 
     for command in commands {
-        command.invoke(&mut files, fwcfg, pci_windows.as_ref(), acpi_digest)?;
+        command.invoke(&mut files, &mut ctx)?;
     }
 
     // Up until this point, we've dealt with fw_cfg files. Now we need to deal with
@@ -280,7 +271,10 @@ mod tests {
     use zeroize::Zeroize;
 
     use super::{commands::*, *};
-    use crate::fw_cfg::{DirEntry, Firmware};
+    use crate::{
+        fw_cfg::{DirEntry, Firmware},
+        pci::PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT,
+    };
 
     struct TestFirmware;
 
@@ -299,6 +293,14 @@ mod tests {
     }
 
     type TestFiles = MemFiles<std::alloc::Global, std::alloc::Global>;
+
+    /// Context with no PCI windows and no CRS allowlist.
+    fn context<'a>(
+        fwcfg: &'a mut TestFirmware,
+        acpi_digest: &'a mut Sha256,
+    ) -> LoaderContext<'a, TestFirmware> {
+        LoaderContext { fwcfg, pci_windows: None, crs_allowlist: None, acpi_digest }
+    }
 
     #[test]
     pub fn test_table_loader_interpretation() {
@@ -336,7 +338,8 @@ mod tests {
     #[test]
     pub fn test_add_checksum() {
         let mut files = TestFiles::default();
-        let mut digest = Sha256::default();
+        let (mut fwcfg, mut digest) = (TestFirmware, Sha256::default());
+        let mut ctx = context(&mut fwcfg, &mut digest);
 
         files.new_file(
             c"test",
@@ -344,7 +347,7 @@ mod tests {
         );
 
         AddChecksum::new("test", 12, 0, 12)
-            .invoke(&mut files, &mut TestFirmware, None, &mut digest)
+            .invoke(&mut files, &mut ctx)
             .expect("failed to compute checksum");
 
         assert_that!(
@@ -356,16 +359,12 @@ mod tests {
     #[gtest]
     pub fn test_add_checksum_simple() {
         let mut files = TestFiles::default();
-        let mut digest = Sha256::default();
+        let (mut fwcfg, mut digest) = (TestFirmware, Sha256::default());
+        let mut ctx = context(&mut fwcfg, &mut digest);
 
         // File does not exist.
         expect_that!(
-            AddChecksum::new("test", 12, 0, 12).invoke(
-                &mut files,
-                &mut TestFirmware,
-                None,
-                &mut digest
-            ),
+            AddChecksum::new("test", 12, 0, 12).invoke(&mut files, &mut ctx),
             err(anything())
         );
 
@@ -373,86 +372,46 @@ mod tests {
 
         // Offset past the end of file.
         expect_that!(
-            AddChecksum::new("test", 4, 0, 3).invoke(
-                &mut files,
-                &mut TestFirmware,
-                None,
-                &mut digest
-            ),
+            AddChecksum::new("test", 4, 0, 3).invoke(&mut files, &mut ctx),
             err(anything())
         );
 
         // Start past the end of file.
         expect_that!(
-            AddChecksum::new("test", 3, 4, 1).invoke(
-                &mut files,
-                &mut TestFirmware,
-                None,
-                &mut digest
-            ),
+            AddChecksum::new("test", 3, 4, 1).invoke(&mut files, &mut ctx),
             err(anything())
         );
 
         // Offset would read beyond the file.
         expect_that!(
-            AddChecksum::new("test", 0, 3, 2).invoke(
-                &mut files,
-                &mut TestFirmware,
-                None,
-                &mut digest
-            ),
+            AddChecksum::new("test", 0, 3, 2).invoke(&mut files, &mut ctx),
             err(anything())
         );
 
         // `start + length` overflows u32 but wraps below the file length, so a
         // naive bounds check would pass and then read out of range.
         expect_that!(
-            AddChecksum::new("test", 0, 1, u32::MAX).invoke(
-                &mut files,
-                &mut TestFirmware,
-                None,
-                &mut digest
-            ),
+            AddChecksum::new("test", 0, 1, u32::MAX).invoke(&mut files, &mut ctx),
             err(anything())
         );
 
         // Finally, a basic success test (although we don't check the result)
-        expect_that!(
-            AddChecksum::new("test", 0, 1, 3).invoke(
-                &mut files,
-                &mut TestFirmware,
-                None,
-                &mut digest
-            ),
-            ok(())
-        );
+        expect_that!(AddChecksum::new("test", 0, 1, 3).invoke(&mut files, &mut ctx), ok(()));
 
-        expect_that!(
-            AddChecksum::new("test", 3, 0, 3).invoke(
-                &mut files,
-                &mut TestFirmware,
-                None,
-                &mut digest
-            ),
-            ok(())
-        );
+        expect_that!(AddChecksum::new("test", 3, 0, 3).invoke(&mut files, &mut ctx), ok(()));
     }
 
     #[gtest]
     pub fn test_add_pci_root_stage1_rejects_out_of_range_offset() {
         let mut files = TestFiles::default();
-        let mut digest = Sha256::default();
+        let (mut fwcfg, mut digest) = (TestFirmware, Sha256::default());
+        let mut ctx = context(&mut fwcfg, &mut digest);
         files.new_file(c"test", &[0u8; 64]);
 
         // A host-controlled offset past the end of the file must be rejected
         // instead of panicking on an out-of-range slice write.
         expect_that!(
-            AddPciRootStage1::new("test", 0xFFFF_FFF0).invoke(
-                &mut files,
-                &mut TestFirmware,
-                None,
-                &mut digest
-            ),
+            AddPciRootStage1::new("test", 0xFFFF_FFF0).invoke(&mut files, &mut ctx),
             err(anything())
         );
     }
@@ -460,24 +419,83 @@ mod tests {
     #[gtest]
     pub fn test_add_pci_root_stage2_rejects_out_of_range_offset() {
         let mut files = TestFiles::default();
-        let mut digest = Sha256::default();
+        let (mut fwcfg, mut digest) = (TestFirmware, Sha256::default());
+        let mut ctx = context(&mut fwcfg, &mut digest);
         files.new_file(c"test", &[0u8; 64]);
 
         expect_that!(
-            AddPciRootStage2::new("test", 0xFFFF_FFF0).invoke(
-                &mut files,
-                &mut TestFirmware,
-                None,
-                &mut digest
-            ),
+            AddPciRootStage2::new("test", 0xFFFF_FFF0).invoke(&mut files, &mut ctx),
             err(anything())
         );
+    }
+
+    /// Serves `allowlist`, if any, as the host's `etc/pci-crs-whitelist`, runs
+    /// `commands` on a zeroed 64-byte `test` file, and returns the resulting
+    /// file contents and ACPI digest.
+    fn build_with_crs_allowlist(
+        commands: &[&dyn Invoke<crate::fw_cfg::TestFirmware, TestFiles>],
+        allowlist: Option<&[(u32, u32)]>,
+    ) -> (Vec<u8>, [u8; 32]) {
+        let mut fwcfg = crate::fw_cfg::TestFirmware::default();
+        if let Some(allowlist) = allowlist {
+            fwcfg.files.insert(
+                c"etc/pci-crs-whitelist".to_owned(),
+                allowlist
+                    .iter()
+                    .flat_map(|(address, length)| [address.to_le_bytes(), length.to_le_bytes()])
+                    .flatten()
+                    .collect(),
+            );
+        }
+        let mut files = TestFiles::default();
+        files.new_file(c"test", &[0u8; 64]);
+        let pci_windows = PciWindows {
+            pci_window_16: 0xc000..0xffff,
+            pci_window_32: 0x8000_0000..0xfc00_0000,
+            pci_window_64: 0..0,
+        };
+        let mut digest = Sha256::default();
+
+        let mut ctx = LoaderContext::new(&mut fwcfg, Some(pci_windows), &mut digest)
+            .expect("failed to read host inputs");
+        for command in commands {
+            command.invoke(&mut files, &mut ctx).expect("failed to invoke command");
+        }
+
+        (files.get_file(c"test").unwrap().to_vec(), digest.finalize().into())
+    }
+
+    #[gtest]
+    pub fn test_add_pci_root_stages_measure_crs_allowlist() {
+        // The allowlist is read from fw_cfg, so the VMM can serve a different
+        // one for the same `etc/table-loader`.
+        let allowlist = [(0xfec0_0000, 0x1000); PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT];
+        let other_allowlist = [(0x0000_0000, 0x8000_0000); PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT];
+        let commands: [&dyn Invoke<_, _>; 2] =
+            [&AddPciRootStage1::new("test", 0), &AddPciRootStage2::new("test", 8)];
+
+        let (file, digest) = build_with_crs_allowlist(&commands, Some(&allowlist));
+        let (other_file, other_digest) =
+            build_with_crs_allowlist(&commands, Some(&other_allowlist));
+
+        // The allowlist changes the tables, so it must change the digest too.
+        expect_that!(other_file, not(eq(&file[..])));
+        expect_that!(other_digest, not(eq(digest)));
+    }
+
+    #[gtest]
+    pub fn test_crs_allowlist_absent_and_zeroed_measure_differently() {
+        let (_, absent) = build_with_crs_allowlist(&[], None);
+        let (_, zeroed) = build_with_crs_allowlist(&[], Some(&[(0, 0)]));
+
+        expect_that!(zeroed, not(eq(absent)));
     }
 
     #[gtest]
     pub fn test_add_pointer() {
         let mut files = TestFiles::default();
-        let mut digest = Sha256::default();
+        let (mut fwcfg, mut digest) = (TestFirmware, Sha256::default());
+        let mut ctx = context(&mut fwcfg, &mut digest);
 
         // Obviously we have no idea where exactly that file lands so we need to
         // dynamically determine its location.
@@ -487,7 +505,7 @@ mod tests {
 
         // Check 1: can we just write our own address?
         AddPointer::new("test", "test", 0, 8)
-            .invoke(&mut files, &mut TestFirmware, None, &mut digest)
+            .invoke(&mut files, &mut ctx)
             .expect("failed to add pointer");
 
         let expected = address.to_le_bytes();
@@ -499,7 +517,7 @@ mod tests {
 
         let expected = (address + offset).to_le_bytes();
         AddPointer::new("test", "test", 0, 8)
-            .invoke(&mut files, &mut TestFirmware, None, &mut digest)
+            .invoke(&mut files, &mut ctx)
             .expect("failed to add pointer");
         expect_that!(files.get_file(c"test"), ok(eq(&expected[..])));
 
@@ -509,7 +527,7 @@ mod tests {
         // Check 3: store a most definitely 32-bit address and see that it works.
         files.get_file_mut(c"test").unwrap().zeroize();
         AddPointer::new("test", "32bit", 0, 8)
-            .invoke(&mut files, &mut TestFirmware, None, &mut digest)
+            .invoke(&mut files, &mut ctx)
             .expect("failed to add pointer");
         expect_that!(files.get_file(c"test"), ok(eq(&address.to_le_bytes()[..])));
 
@@ -518,7 +536,7 @@ mod tests {
         files.get_file_mut(c"test").unwrap().zeroize();
         let expected: [u8; 8] = [0x00, 0x00, 0x00, 0x00, 0xDD, 0xCC, 0xBB, 0xAA];
         AddPointer::new("test", "32bit", 4, 4)
-            .invoke(&mut files, &mut TestFirmware, None, &mut digest)
+            .invoke(&mut files, &mut ctx)
             .expect("failed to add pointer");
         expect_that!(files.get_file(c"test"), ok(eq(&expected[..])));
     }
@@ -526,7 +544,8 @@ mod tests {
     #[gtest]
     pub fn test_command_rejects_file_name_without_nul_terminator() {
         let mut files = TestFiles::default();
-        let mut digest = Sha256::default();
+        let (mut fwcfg, mut digest) = (TestFirmware, Sha256::default());
+        let mut ctx = context(&mut fwcfg, &mut digest);
 
         // A malicious VMM can fill the entire fixed-size name field of a
         // table-loader command with no NUL terminator. Interpreting the name
@@ -537,10 +556,7 @@ mod tests {
         raw[4..4 + ROMFILE_LOADER_FILESZ].fill(0xFF);
         let commands = <[RomfileCommand]>::try_ref_from_bytes(&raw[..]).unwrap();
 
-        expect_that!(
-            commands[0].invoke(&mut files, &mut TestFirmware, None, &mut digest),
-            err(anything())
-        );
+        expect_that!(commands[0].invoke(&mut files, &mut ctx), err(anything()));
     }
 
     #[gtest]

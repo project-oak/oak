@@ -19,11 +19,10 @@ use core::{
     fmt::{Debug, Formatter, Result as FmtResult},
 };
 
-use sha2::Sha256;
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
-use super::{Invoke, Pad, RomfileName};
-use crate::{acpi::files::Files, fw_cfg::Firmware, pci::PciWindows};
+use super::{Invoke, LoaderContext, Pad, RomfileName};
+use crate::{acpi::files::Files, fw_cfg::Firmware};
 
 /// COMMAND_ADD_CHECKSUM - calculate checksum of the range specified by `start`
 /// and `length` fields, and then add the value at `offset`.
@@ -81,13 +80,7 @@ impl AddChecksum {
 }
 
 impl<FW: Firmware, F: Files> Invoke<FW, F> for AddChecksum {
-    fn invoke(
-        &self,
-        files: &mut F,
-        _fwcfg: &mut FW,
-        _pci_windows: Option<&PciWindows>,
-        _acpi_digest: &mut Sha256,
-    ) -> Result<(), &'static str> {
+    fn invoke(&self, files: &mut F, _ctx: &mut LoaderContext<'_, FW>) -> Result<(), &'static str> {
         let file = files.get_file_mut(self.file()?)?;
 
         let start = self.start as usize;

@@ -16,19 +16,18 @@
 
 use core::{ffi::CStr, fmt::Debug, iter::zip};
 
-use sha2::Sha256;
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 use crate::{
     acpi::{
         commands::{
-            Invoke, Pad, RomfileName,
+            Invoke, LoaderContext, Pad, RomfileName,
             add_pci_root_stage1::{AllowlistOffset, PCI_ROOT_STAGE1_ALLOWLIST_OFFSET_COUNT},
         },
         files::Files,
     },
     fw_cfg::Firmware,
-    pci::{PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT, PciWindows, read_pci_crs_allowlist},
+    pci::PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT,
 };
 
 const PCI_ROOT_STAGE2_ALLOWLIST_OFFSET_COUNT: usize =
@@ -64,13 +63,7 @@ impl AddPciRootStage2 {
 }
 
 impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciRootStage2 {
-    fn invoke(
-        &self,
-        files: &mut F,
-        fwcfg: &mut FW,
-        _pci_windows: Option<&PciWindows>,
-        _acpi_digest: &mut Sha256,
-    ) -> Result<(), &'static str> {
+    fn invoke(&self, files: &mut F, ctx: &mut LoaderContext<'_, FW>) -> Result<(), &'static str> {
         log::warn!("AddPciRootStage2 not tested; ACPI tables may be broken! Command: {:?}", self);
         let file = files.get_file_mut(self.file()?)?;
 
@@ -88,8 +81,7 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciRootStage2 {
             return Err("AddPciRootStage2 invalid; offsets would overflow file");
         }
 
-        let crs_allowlist = read_pci_crs_allowlist(fwcfg)?.unwrap_or_default();
-        log::debug!("PCI CRS allowlist: {:?}", crs_allowlist);
+        let crs_allowlist = ctx.crs_allowlist.unwrap_or_default();
 
         // The first 4 entries (8 offsets) are consumed in ADD_PCI_ROOT_STAGE1.
         for (allowlist_offset, crs_allowlist) in
