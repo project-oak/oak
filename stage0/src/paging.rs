@@ -396,7 +396,7 @@ pub fn share_page<P: Platform>(page: Page<Size4KiB>) {
     let page_start = page.start_address().as_u64();
     // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that
     // range.
-    assert!(page_start < Size2MiB::SIZE);
+    assert!((Size4KiB::SIZE..Size2MiB::SIZE).contains(&page_start));
 
     // We have to invalidate the page in the RMP before sharing it.
     P::invalidate_page(page);
@@ -425,7 +425,7 @@ pub fn unshare_page<P: Platform>(page: Page<Size4KiB>) {
     let page_start = page.start_address().as_u64();
     // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that
     // range.
-    assert!(page_start < Size2MiB::SIZE);
+    assert!((Size4KiB::SIZE..Size2MiB::SIZE).contains(&page_start));
     // In stage0 we use identity mapping, so the page's virtual start address
     // corresponds directly to a physical frame at the same address.
     let frame = PhysFrame::<Size4KiB>::from_start_address(PhysAddr::new(page_start)).unwrap();
