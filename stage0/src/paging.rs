@@ -444,4 +444,13 @@ pub fn unshare_page<P: Platform>(page: Page<Size4KiB>) {
 
     // We have to revalidate the page again after un-sharing it.
     P::revalidate_page(page);
+
+    // Zero out the memory after we've marked it as private, as the contents are
+    // untrusted.
+    //
+    // SAFETY: we know the pointer is valid as we've just modified the page table
+    // pointing to that address, so the address is valid.
+    unsafe {
+        core::ptr::write_bytes(page.start_address().as_mut_ptr::<u8>(), 0, Size4KiB::SIZE as usize);
+    }
 }
