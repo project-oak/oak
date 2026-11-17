@@ -14,11 +14,17 @@
 // limitations under the License.
 //
 
-use sha2::Sha256;
+use sha2::{Digest, Sha256};
 use strum::FromRepr;
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
-use crate::{acpi::files::Files, fw_cfg::Firmware, pci::PciWindows};
+use crate::{
+    acpi::files::Files,
+    fw_cfg::Firmware,
+    pci::{
+        PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT, PciCrsAllowlistEntry, PciWindows, read_pci_crs_allowlist,
+    },
+};
 
 mod add_checksum;
 mod add_pci_holes;
@@ -61,14 +67,47 @@ impl CommandTag {
     pub const VMM_SPECIFIC: u32 = 0x80000000;
 }
 
+/// State shared by all table-loader commands. The host-provided inputs are
+/// read once, and measured into `acpi_digest`, before any command runs.
+pub struct LoaderContext<'a, FW: Firmware> {
+    pub fwcfg: &'a mut FW,
+    pub pci_windows: Option<PciWindows>,
+    pub crs_allowlist: Option<[PciCrsAllowlistEntry; PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT]>,
+    pub acpi_digest: &'a mut Sha256,
+}
+
+impl<'a, FW: Firmware> LoaderContext<'a, FW> {
+    pub fn new(
+        fwcfg: &'a mut FW,
+        pci_windows: Option<PciWindows>,
+        acpi_digest: &'a mut Sha256,
+    ) -> Result<Self, &'static str> {
+        // If we have `pci_windows`, mix them into the digest as well as they may
+        // come from the hypervisor under some circumstances.
+        if let Some(ref pci_windows) = pci_windows {
+            acpi_digest.update(pci_windows.pci_window_16.start.as_bytes());
+            acpi_digest.update(pci_windows.pci_window_16.end.as_bytes());
+            acpi_digest.update(pci_windows.pci_window_32.start.as_bytes());
+            acpi_digest.update(pci_windows.pci_window_32.end.as_bytes());
+            acpi_digest.update(pci_windows.pci_window_64.start.as_bytes());
+            acpi_digest.update(pci_windows.pci_window_64.end.as_bytes());
+        }
+
+        // The CRS allowlist comes from the hypervisor. Nothing is mixed in when
+        // the file is absent, so that stays distinct from an all-zero allowlist.
+        let crs_allowlist = read_pci_crs_allowlist(fwcfg)?;
+        log::debug!("PCI CRS allowlist: {:?}", crs_allowlist);
+        for entry in crs_allowlist.iter().flatten() {
+            acpi_digest.update(entry.address.as_bytes());
+            acpi_digest.update(entry.length.as_bytes());
+        }
+
+        Ok(Self { fwcfg, pci_windows, crs_allowlist, acpi_digest })
+    }
+}
+
 pub trait Invoke<FW: Firmware, F: Files> {
-    fn invoke(
-        &self,
-        files: &mut F,
-        fwcfg: &mut FW,
-        pci_windows: Option<&PciWindows>,
-        acpi_digest: &mut Sha256,
-    ) -> Result<(), &'static str>;
+    fn invoke(&self, files: &mut F, ctx: &mut LoaderContext<'_, FW>) -> Result<(), &'static str>;
 }
 
 type Pad = [u8; 124];
@@ -155,13 +194,7 @@ impl RomfileCommand {
 }
 
 impl<FW: Firmware, F: Files> Invoke<FW, F> for RomfileCommand {
-    fn invoke(
-        &self,
-        files: &mut F,
-        fwcfg: &mut FW,
-        pci_windows: Option<&PciWindows>,
-        acpi_digest: &mut Sha256,
-    ) -> Result<(), &'static str> {
+    fn invoke(&self, files: &mut F, ctx: &mut LoaderContext<'_, FW>) -> Result<(), &'static str> {
         if self.tag > CommandTag::VMM_SPECIFIC && self.tag().is_none() {
             log::warn!("ignoring proprietary ACPI linker command with tag {:#x}", self.tag);
             return Ok(());
@@ -187,6 +220,6 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for RomfileCommand {
             Some(CommandTag::AddPciRootStage2) => unsafe { &self.body.pci_root_stage2 },
             _ => return Err("Invalid command tag in table-loader"),
         };
-        command.invoke(files, fwcfg, pci_windows, acpi_digest)
+        command.invoke(files, ctx)
     }
 }
