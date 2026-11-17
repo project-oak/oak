@@ -30,7 +30,7 @@ use oak_private_memory_database::{
 };
 use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
-use sealed_memory_rust_proto::prelude::v1::*;
+use sealed_memory_rust_proto::{oak::private_memory::sync_database_request, prelude::v1::*};
 use tokio::{
     sync::{RwLockReadGuard, RwLockWriteGuard},
     time::Instant,
@@ -869,10 +869,27 @@ impl SealedMemorySessionHandler {
 
     pub async fn sync_database_handler(
         &self,
-        _request: SyncDatabaseRequest,
+        request: SyncDatabaseRequest,
     ) -> tonic::Result<SyncDatabaseResponse> {
         let mut mutex_guard = self.session_context().await;
         let context = mutex_guard.as_mut().into_failed_precondition("call key sync first")?;
+        match sync_database_request::ConflictHandling::try_from(request.conflict_handling) {
+            Ok(
+                sync_database_request::ConflictHandling::Unspecified
+                | sync_database_request::ConflictHandling::Rebase,
+            ) => {}
+            Ok(sync_database_request::ConflictHandling::FailOnWriteConflict) => {
+                return Err(tonic::Status::unimplemented(
+                    "fail_on_write_conflict is not yet implemented",
+                ));
+            }
+            Err(_) => {
+                return Err(tonic::Status::invalid_argument(format!(
+                    "unknown conflict_handling: {}",
+                    request.conflict_handling
+                )));
+            }
+        }
 
         persistence_worker::sync_persist_database(context, &self.metrics)
             .await
@@ -1180,7 +1197,7 @@ mod tests {
             })
         };
 
-        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        handler.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
         releaser.await.unwrap();
 
         assert_eq!(unlabeled_counter(&harness, "db_persist_lock_conflict_count"), 1);
@@ -1286,7 +1303,7 @@ mod tests {
         winner.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
         let winner_dek = winner.session_context().await.as_ref().unwrap().dek.clone();
         let memory_id = add_memory(&winner).await;
-        winner.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        winner.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
 
         release.send(()).unwrap();
         let racing = racing.await.unwrap();
@@ -1307,6 +1324,63 @@ mod tests {
         let racing = racing.expect("concurrent registration failed");
         assert_eq!(racing.status(), user_registration_response::Status::UserAlreadyExists);
         assert_eq!(racing.key_derivation_info, Some(boot_strap_info()));
+    }
+
+    fn rebase_request() -> SyncDatabaseRequest {
+        SyncDatabaseRequest {
+            conflict_handling: sync_database_request::ConflictHandling::Rebase.into(),
+        }
+    }
+
+    async fn add_named_memory(handler: &SealedMemorySessionHandler, name: &str) -> String {
+        let mut memory = memory_expiring_in_an_hour();
+        memory.name = name.to_string();
+        handler.add_memory_handler(AddMemoryRequest { memory: Some(memory) }).await.unwrap().id
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn sync_database_rebase_modes_merge_conflicting_named_memory() {
+        for (pm_uid, request) in [
+            ("default_unset_rebase_user", SyncDatabaseRequest::default()),
+            ("explicit_rebase_user", rebase_request()),
+        ] {
+            let db_addr = start_test_db().await;
+            let (session_a, _rx_a) = connect_handler(db_addr);
+            session_a.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+            session_a.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+
+            let (session_b, _rx_b) = connect_handler(db_addr);
+            session_b.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+
+            let convo_a = add_memory(&session_a).await;
+            let meta_a = add_named_memory(&session_a, "shared.metadata").await;
+            session_a.sync_database_handler(request).await.unwrap();
+
+            let convo_b = add_memory(&session_b).await;
+            let meta_b = add_named_memory(&session_b, "shared.metadata").await;
+            session_b.sync_database_handler(request).await.unwrap();
+
+            let (verify, _rx_v) = connect_handler(db_addr);
+            verify.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+            assert!(memory_is_readable(&verify, &convo_a).await);
+            assert!(memory_is_readable(&verify, &convo_b).await);
+            assert!(!memory_is_readable(&verify, &meta_a).await);
+            assert!(memory_is_readable(&verify, &meta_b).await);
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn sync_database_fail_on_write_conflict_returns_unimplemented() {
+        let (handler, _persistence_rx) = setup_handler().await;
+        let pm_uid = "fail_on_conflict_unimplemented_user";
+        handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
+        handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
+
+        let request = SyncDatabaseRequest {
+            conflict_handling: sync_database_request::ConflictHandling::FailOnWriteConflict.into(),
+        };
+        let err = handler.sync_database_handler(request).await.unwrap_err();
+        assert_eq!(err.code(), tonic::Code::Unimplemented);
     }
 
     type TestMetrics = metrics_testing::TestMetrics<metrics::Metrics>;
@@ -1382,7 +1456,7 @@ mod tests {
             ]
         );
 
-        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        handler.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
 
         // The sync persisted the database on the first attempt, recording its
         // size and save speed once. There was nothing to load.
@@ -1398,7 +1472,7 @@ mod tests {
         // A second sync with no changes sees that the stored database is the
         // one this session wrote, so it skips loading it. The write is skipped
         // too, so it isn't recorded as a persist.
-        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        handler.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
         assert!(!harness.collect().names().contains("db_load_speed"));
         assert_eq!(unlabeled_counter(&harness, "db_pull_skipped_count"), 1);
         assert_eq!(histogram_count(&harness, "db_size"), 1);
@@ -1450,19 +1524,19 @@ mod tests {
 
         // Nothing is stored yet, so there is nothing to pull. The push commits
         // version "1", which the session now tracks.
-        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        handler.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
         assert_eq!(session_version(&handler).await, "1");
 
         // Without remote changes, a sync skips the download.
-        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        handler.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
         assert_eq!(unlabeled_counter(&harness, "db_pull_skipped_count"), 1);
 
         // A sync with local changes skips the download and pushes on the first
         // attempt; the sync after it skips the download again.
         add_memory(&handler).await;
-        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        handler.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
         assert_eq!(session_version(&handler).await, "11");
-        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        handler.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
 
         assert_eq!(unlabeled_counter(&harness, "db_pull_skipped_count"), 3);
         assert_eq!(not_modified_replies(&service), 3);
@@ -1486,18 +1560,18 @@ mod tests {
         let (reader, _reader_rx) = connect_handler_with_metrics(db_addr, harness.metrics.clone());
         let writer_memory = start_session_with_changes(&writer, pm_uid).await;
         reader.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
-        writer.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        writer.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
 
-        reader.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        reader.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
         assert!(memory_is_readable(&reader, &writer_memory).await);
         assert_eq!(session_version(&reader).await, "1");
         assert_eq!(downloads(&service), 1);
 
         let reader_memory = add_memory(&reader).await;
         // The reader is now up to date, so its sync skips the download.
-        reader.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        reader.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
         assert_eq!(unlabeled_counter(&harness, "db_pull_skipped_count"), 1);
-        writer.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        writer.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
         assert!(memory_is_readable(&writer, &reader_memory).await);
         assert_eq!(session_version(&writer).await, "11");
         assert_eq!(downloads(&service), 2);
@@ -1518,11 +1592,11 @@ mod tests {
         let memory_id = start_session_with_changes(&writer, pm_uid).await;
         reader.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
 
-        writer.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
-        writer.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        writer.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
+        writer.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
         assert_eq!(session_version(&writer).await, "1");
         assert_eq!(downloads(&service), 1);
-        reader.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        reader.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
 
         assert!(memory_is_readable(&reader, &memory_id).await);
         assert_eq!(downloads(&service), 2);
@@ -1544,15 +1618,15 @@ mod tests {
         );
         start_session_with_changes(&handler, "no_committed_version_user").await;
 
-        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        handler.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
         assert_eq!(session_version(&handler).await, "");
 
-        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        handler.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
         assert_eq!(session_version(&handler).await, "1");
         assert_eq!(downloads(&service), 1);
         assert_eq!(histogram_count(&harness, "db_load_speed"), 1);
 
-        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        handler.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
         assert_eq!(downloads(&service), 1);
         assert_eq!(unlabeled_counter(&harness, "db_pull_skipped_count"), 1);
     }
@@ -1568,7 +1642,7 @@ mod tests {
         let (handler, _persistence_rx) =
             connect_handler_with_metrics(db_addr, harness.metrics.clone());
         let synced_memory = start_session_with_changes(&handler, pm_uid).await;
-        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        handler.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
         let unsynced_memory = add_memory(&handler).await;
 
         let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
@@ -1607,7 +1681,8 @@ mod tests {
         *service.next_metadata_stream_reply.lock().await =
             Some(vec![ReadMetadataBlobStreamResponse { response: Some(not_modified) }]);
 
-        let error = handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap_err();
+        let error =
+            handler.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap_err();
         assert_eq!(error.code(), tonic::Code::Internal);
         assert_eq!(unlabeled_counter(&harness, "db_pull_skipped_count"), 0);
         assert!(service.get_metdata_blob_inner(pm_uid).await.is_none());
@@ -1628,7 +1703,7 @@ mod tests {
         let first_memory = start_session_with_changes(&first, pm_uid).await;
         second.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
         let second_memory = add_memory(&second).await;
-        first.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        first.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
         let reads_before = known_versions(&service).await.len();
 
         // The session-close persist of `second` still holds the version from
@@ -1660,7 +1735,7 @@ mod tests {
         let (writer, _writer_rx) =
             connect_handler_with_metrics(db_addr, writer_harness.metrics.clone());
         let memory_id = start_session_with_changes(&writer, pm_uid).await;
-        writer.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        writer.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
         let (_, persisted_size) = histogram_count_and_sum(&writer_harness, "db_size", &[]);
 
         let harness = test_metrics();
@@ -2212,7 +2287,7 @@ mod tests {
             })
             .collect();
         handler.delete_memory_handler(DeleteMemoryRequest { ids }).await.unwrap();
-        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        handler.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
 
         assert_eq!(histogram_count(&harness, "db_optimize_latency"), 1);
     }
@@ -2231,12 +2306,12 @@ mod tests {
         handler.user_registration_handler(registration_request(pm_uid)).await.unwrap();
         handler.key_sync_handler(key_sync_request(pm_uid, None)).await.unwrap();
         let id = add_memory(&handler).await;
-        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        handler.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
 
         handler.delete_memory_handler(DeleteMemoryRequest { ids: vec![id] }).await.unwrap();
         // Lose the memory's blob, so that the deferred blob delete fails.
         service.database.lock().await.clear();
-        handler.sync_database_handler(SyncDatabaseRequest {}).await.unwrap();
+        handler.sync_database_handler(SyncDatabaseRequest::default()).await.unwrap();
 
         assert_eq!(unlabeled_counter(&harness, "orphaned_blob_deletes"), 1);
     }
@@ -2292,7 +2367,7 @@ mod tests {
         let before = harness.collect();
         let sync = SealedMemoryRequest {
             request: Some(sealed_memory_request::Request::SyncDatabaseRequest(
-                SyncDatabaseRequest {},
+                SyncDatabaseRequest::default(),
             )),
             request_id: 7,
         };

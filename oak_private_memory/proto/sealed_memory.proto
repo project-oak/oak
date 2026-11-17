@@ -565,7 +565,30 @@ message GetDatabaseMetricsResponse {
 // durable storage snapshot, and persist it back to durable
 // storage. The connection remains open after the sync completes, allowing
 // subsequent requests in the same session.
-message SyncDatabaseRequest {}
+message SyncDatabaseRequest {
+  enum ConflictHandling {
+    // Default value; REBASE will be used when unspecified.
+    CONFLICT_HANDLING_UNSPECIFIED = 0;
+
+    // Rebase uncommitted changes onto the latest persisted version, overwriting
+    // memories with the same ID or name (default behavior).
+    REBASE = 1;
+
+    // Fail with ABORTED instead of rebasing if another session concurrently
+    // modified, deleted, or created a memory touched by this session's
+    // uncommitted changes. On ABORTED due to a write conflict, all uncommitted
+    // changes in this session are discarded and the session's database is
+    // reloaded from the latest persisted version. The session remains open.
+    //
+    // Applies only to explicit SyncDatabase requests; background
+    // persist-on-close always uses REBASE. Callers that must avoid silent
+    // rebases across stream disconnects or non-conflict sync failures should
+    // set `SessionConfig.disable_persistence_on_close = true`.
+    FAIL_ON_WRITE_CONFLICT = 2;
+  }
+
+  ConflictHandling conflict_handling = 1;
+}
 
 message SyncDatabaseResponse {}
 
