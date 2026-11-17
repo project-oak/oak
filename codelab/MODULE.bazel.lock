@@ -1013,7 +1013,7 @@
     },
     "@@oak+//bazel:extensions.bzl%oak_toolchains": {
       "general": {
-        "bzlTransitiveDigest": "evHBJ5GlyDwnkdh57UOyUd9Tgo/2K4r9am2XF8bp4h8=",
+        "bzlTransitiveDigest": "Hrl4WLat8ez07gn2BRKqGKH2iSjgMAnUZO250N5QQo8=",
         "usagesDigest": "zysa/FzJODkwvk5gNb+IWyj7LXJUy2ETiTVMrxyp7k4=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -1026,8 +1026,8 @@
           "oak_cc_toolchain_sysroot": {
             "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
-              "sha256": "5b06aac7338d68f9795948b0fd5918acaa45e5d5add1755fd454dcb05cc84cc8",
-              "url": "https://storage.googleapis.com/oak-bins/sysroot/5b06aac7338d68f9795948b0fd5918acaa45e5d5add1755fd454dcb05cc84cc8.tar.xz"
+              "sha256": "a0ee27427057a3d8f42820b745bbaa71da2628f9021582ebbe1ebdf756ad5da4",
+              "url": "https://storage.googleapis.com/oak-bins/sysroot/a0ee27427057a3d8f42820b745bbaa71da2628f9021582ebbe1ebdf756ad5da4.tar.xz"
             }
           }
         },
@@ -1045,7 +1045,7 @@
         "bzlTransitiveDigest": "IIspOFb2zj/H+Hcij9i5MHLFU9VOavZTaA+///L/76w=",
         "usagesDigest": "WqFS+erRQO0FnSIuWY/4A0BgxztdEULNjavEWxi0j0c=",
         "recordedFileInputs": {
-          "@@oak+//MODULE.bazel": "5aced7a0f8c0376be45ee42dd36f7a622033fa6cef43eca577d6ffb77978c1e8"
+          "@@oak+//MODULE.bazel": "5f5334f25e05790982965b73debc799daf32c664dd171a9c7a801ab46ced502b"
         },
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -2411,7 +2411,7 @@
     "@@rules_distroless+//apt:extensions.bzl%apt": {
       "general": {
         "bzlTransitiveDigest": "K6oYkrZMn2MBEBCvypFmMYbmSIQqHz8HepJQPYodGFA=",
-        "usagesDigest": "a7TYO1NsHtrjyuEtMH7XhGDS+SLWau946gGR5eYlB+k=",
+        "usagesDigest": "Szw8JMqnZUdtMUuoVP1JFh8MlW8YMBCfuMCmCFYiTlA=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -2420,7 +2420,7 @@
             "repoRuleId": "@@rules_distroless+//apt/private:translate_dependency_set.bzl%translate_dependency_set",
             "attributes": {
               "depset_name": "oak_containers_app_base",
-              "lock_content": "{\n\t\"dependency_sets\": {\n\t\t\"oak_containers_app_base\": {\n\t\t\t\"sets\": {\n\t\t\t\t\"amd64\": {\n\t\t\t\t\t\"/trixie/base-files:amd64\": \"13.8+deb13u7\"\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t},\n\t\"facts\": {\n\t\t\"trixie-security/main/amd64/Contents/https://snapshot-cloudflare.debian.org/archive/debian-security/20261020T000000Z|https://snapshot.debian.org/archive/debian-security/20261020T000000Z\": \"sha256-9h8nvRfeVGJkqlj0DzqvqscCHg72nBf2sbTNdmSgN+w=\",\n\t\t\"trixie-security/main/amd64/Packages/https://snapshot-cloudflare.debian.org/archive/debian-security/20261020T000000Z|https://snapshot.debian.org/archive/debian-security/20261020T000000Z\": \"sha256-c/VrVw8a0tEb7kOxI9DMBlZOJJKh8iQKBXrDA2oSbW4=\",\n\t\t\"trixie/main/amd64/Contents/https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z|https://snapshot.debian.org/archive/debian/20261020T000000Z\": \"sha256-PT5pMJCNsLU/eA3XOXuVieJ9uItZIFwzGnbXbWcm5Bk=\",\n\t\t\"trixie/main/amd64/Packages/https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z|https://snapshot.debian.org/archive/debian/20261020T000000Z\": \"sha256-d3jT4/MDt924zg/nyNV0c6B2xr8ujyQfdUIdI5Y1JJg=\"\n\t},\n\t\"packages\": {\n\t\t\"/trixie/base-files:amd64=13.8+deb13u7\": {\n\t\t\t\"architecture\": \"amd64\",\n\t\t\t\"depends_on\": [\n\t\t\t\t\"/trixie/mawk:amd64=1.3.4.20250131-1\",\n\t\t\t\t\"/trixie/libc6:amd64=2.41-12+deb13u4\",\n\t\t\t\t\"/trixie/libgcc-s1:amd64=14.2.0-19\",\n\t\t\t\t\"/trixie/gcc-14-base:amd64=14.2.0-19\"\n\t\t\t],\n\t\t\t\"filename\": \"pool/main/b/base-files/base-files_13.8+deb13u7_amd64.deb\",\n\t\t\t\"name\": \"base-files\",\n\t\t\t\"section\": \"admin\",\n\t\t\t\"sha256\": \"fcd42bb5cb63f7bfc4326a92541247872206d60a192fdff65ca14eb83ed408b9\",\n\t\t\t\"size\": 88296,\n\t\t\t\"suite\": \"trixie\",\n\t\t\t\"version\": \"13.8+deb13u7\"\n\t\t},\n\t\t\"/trixie/gcc-14-base:amd64=14.2.0-19\": {\n\t\t\t\"architecture\": \"amd64\",\n\t\t\t\"depends_on\": [],\n\t\t\t\"filename\": \"pool/main/g/gcc-14/gcc-14-base_14.2.0-19_amd64.deb\",\n\t\t\t\"name\": \"gcc-14-base\",\n\t\t\t\"section\": \"libs\",\n\t\t\t\"sha256\": \"5b6825de4263824b78c4c51f6476414f3b4e89c2ab63e81dc8b9b5501e867cf6\",\n\t\t\t\"size\": 49432,\n\t\t\t\"suite\": \"trixie\",\n\t\t\t\"version\": \"14.2.0-19\"\n\t\t},\n\t\t\"/trixie/libc6:amd64=2.41-12+deb13u4\": {\n\t\t\t\"architecture\": \"amd64\",\n\t\t\t\"depends_on\": [\n\t\t\t\t\"/trixie/libgcc-s1:amd64=14.2.0-19\",\n\t\t\t\t\"/trixie/gcc-14-base:amd64=14.2.0-19\"\n\t\t\t],\n\t\t\t\"filename\": \"pool/main/g/glibc/libc6_2.41-12+deb13u4_amd64.deb\",\n\t\t\t\"name\": \"libc6\",\n\t\t\t\"section\": \"libs\",\n\t\t\t\"sha256\": \"967aa62605721081c3eb2a17650611a792aa802d76a6511d1840242623d204c9\",\n\t\t\t\"size\": 2846580,\n\t\t\t\"suite\": \"trixie\",\n\t\t\t\"version\": \"2.41-12+deb13u4\"\n\t\t},\n\t\t\"/trixie/libgcc-s1:amd64=14.2.0-19\": {\n\t\t\t\"architecture\": \"amd64\",\n\t\t\t\"depends_on\": [\n\t\t\t\t\"/trixie/libc6:amd64=2.41-12+deb13u4\",\n\t\t\t\t\"/trixie/gcc-14-base:amd64=14.2.0-19\"\n\t\t\t],\n\t\t\t\"filename\": \"pool/main/g/gcc-14/libgcc-s1_14.2.0-19_amd64.deb\",\n\t\t\t\"name\": \"libgcc-s1\",\n\t\t\t\"section\": \"libs\",\n\t\t\t\"sha256\": \"3c71917b490d1a17aed43196a2787a256ecf060526cdb20216a74bedc061b150\",\n\t\t\t\"size\": 72772,\n\t\t\t\"suite\": \"trixie\",\n\t\t\t\"version\": \"14.2.0-19\"\n\t\t},\n\t\t\"/trixie/mawk:amd64=1.3.4.20250131-1\": {\n\t\t\t\"architecture\": \"amd64\",\n\t\t\t\"depends_on\": [\n\t\t\t\t\"/trixie/libc6:amd64=2.41-12+deb13u4\",\n\t\t\t\t\"/trixie/libgcc-s1:amd64=14.2.0-19\",\n\t\t\t\t\"/trixie/gcc-14-base:amd64=14.2.0-19\"\n\t\t\t],\n\t\t\t\"filename\": \"pool/main/m/mawk/mawk_1.3.4.20250131-1_amd64.deb\",\n\t\t\t\"name\": \"mawk\",\n\t\t\t\"section\": \"interpreters\",\n\t\t\t\"sha256\": \"ade14470c4dff8921bca6ca8b1ea20eadc0f2178b48caff3c74534b17a633292\",\n\t\t\t\"size\": 140808,\n\t\t\t\"suite\": \"trixie\",\n\t\t\t\"version\": \"1.3.4.20250131-1\"\n\t\t}\n\t},\n\t\"sources\": {\n\t\t\"trixie\": {\n\t\t\t\"architectures\": [\n\t\t\t\t\"amd64\"\n\t\t\t],\n\t\t\t\"components\": [\n\t\t\t\t\"main\"\n\t\t\t],\n\t\t\t\"types\": [\n\t\t\t\t\"deb\"\n\t\t\t],\n\t\t\t\"uris\": [\n\t\t\t\t\"https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z\",\n\t\t\t\t\"https://snapshot.debian.org/archive/debian/20261020T000000Z\"\n\t\t\t]\n\t\t},\n\t\t\"trixie-security\": {\n\t\t\t\"architectures\": [\n\t\t\t\t\"amd64\"\n\t\t\t],\n\t\t\t\"components\": [\n\t\t\t\t\"main\"\n\t\t\t],\n\t\t\t\"types\": [\n\t\t\t\t\"deb\"\n\t\t\t],\n\t\t\t\"uris\": [\n\t\t\t\t\"https://snapshot-cloudflare.debian.org/archive/debian-security/20261020T000000Z\",\n\t\t\t\t\"https://snapshot.debian.org/archive/debian-security/20261020T000000Z\"\n\t\t\t]\n\t\t}\n\t},\n\t\"version\": 2\n}"
+              "lock_content": "{\n\t\"dependency_sets\": {\n\t\t\"oak_containers_app_base\": {\n\t\t\t\"sets\": {\n\t\t\t\t\"amd64\": {\n\t\t\t\t\t\"/trixie/base-files:amd64\": \"13.8+deb13u7\"\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t},\n\t\"facts\": {\n\t\t\"trixie-security/main/amd64/Contents/https://snapshot-cloudflare.debian.org/archive/debian-security/20261020T000000Z|https://snapshot.debian.org/archive/debian-security/20261020T000000Z\": \"sha256-9h8nvRfeVGJkqlj0DzqvqscCHg72nBf2sbTNdmSgN+w=\",\n\t\t\"trixie-security/main/amd64/Contents/https://snapshot-cloudflare.debian.org/archive/debian-security/20261104T000000Z|https://snapshot.debian.org/archive/debian-security/20261104T000000Z\": \"sha256-9h8nvRfeVGJkqlj0DzqvqscCHg72nBf2sbTNdmSgN+w=\",\n\t\t\"trixie-security/main/amd64/Packages/https://snapshot-cloudflare.debian.org/archive/debian-security/20261020T000000Z|https://snapshot.debian.org/archive/debian-security/20261020T000000Z\": \"sha256-c/VrVw8a0tEb7kOxI9DMBlZOJJKh8iQKBXrDA2oSbW4=\",\n\t\t\"trixie-security/main/amd64/Packages/https://snapshot-cloudflare.debian.org/archive/debian-security/20261104T000000Z|https://snapshot.debian.org/archive/debian-security/20261104T000000Z\": \"sha256-eicXDClfaoJVSjIjIFpjr2gXfGK14vrKdM9/ji8JaGg=\",\n\t\t\"trixie/main/amd64/Contents/https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z|https://snapshot.debian.org/archive/debian/20261020T000000Z\": \"sha256-PT5pMJCNsLU/eA3XOXuVieJ9uItZIFwzGnbXbWcm5Bk=\",\n\t\t\"trixie/main/amd64/Contents/https://snapshot-cloudflare.debian.org/archive/debian/20261104T000000Z|https://snapshot.debian.org/archive/debian/20261104T000000Z\": \"sha256-PT5pMJCNsLU/eA3XOXuVieJ9uItZIFwzGnbXbWcm5Bk=\",\n\t\t\"trixie/main/amd64/Packages/https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z|https://snapshot.debian.org/archive/debian/20261020T000000Z\": \"sha256-d3jT4/MDt924zg/nyNV0c6B2xr8ujyQfdUIdI5Y1JJg=\",\n\t\t\"trixie/main/amd64/Packages/https://snapshot-cloudflare.debian.org/archive/debian/20261104T000000Z|https://snapshot.debian.org/archive/debian/20261104T000000Z\": \"sha256-d3jT4/MDt924zg/nyNV0c6B2xr8ujyQfdUIdI5Y1JJg=\"\n\t},\n\t\"packages\": {\n\t\t\"/trixie/base-files:amd64=13.8+deb13u7\": {\n\t\t\t\"architecture\": \"amd64\",\n\t\t\t\"depends_on\": [\n\t\t\t\t\"/trixie/mawk:amd64=1.3.4.20250131-1\",\n\t\t\t\t\"/trixie/libc6:amd64=2.41-12+deb13u4\",\n\t\t\t\t\"/trixie/libgcc-s1:amd64=14.2.0-19\",\n\t\t\t\t\"/trixie/gcc-14-base:amd64=14.2.0-19\"\n\t\t\t],\n\t\t\t\"filename\": \"pool/main/b/base-files/base-files_13.8+deb13u7_amd64.deb\",\n\t\t\t\"name\": \"base-files\",\n\t\t\t\"section\": \"admin\",\n\t\t\t\"sha256\": \"fcd42bb5cb63f7bfc4326a92541247872206d60a192fdff65ca14eb83ed408b9\",\n\t\t\t\"size\": 88296,\n\t\t\t\"suite\": \"trixie\",\n\t\t\t\"version\": \"13.8+deb13u7\"\n\t\t},\n\t\t\"/trixie/gcc-14-base:amd64=14.2.0-19\": {\n\t\t\t\"architecture\": \"amd64\",\n\t\t\t\"depends_on\": [],\n\t\t\t\"filename\": \"pool/main/g/gcc-14/gcc-14-base_14.2.0-19_amd64.deb\",\n\t\t\t\"name\": \"gcc-14-base\",\n\t\t\t\"section\": \"libs\",\n\t\t\t\"sha256\": \"5b6825de4263824b78c4c51f6476414f3b4e89c2ab63e81dc8b9b5501e867cf6\",\n\t\t\t\"size\": 49432,\n\t\t\t\"suite\": \"trixie\",\n\t\t\t\"version\": \"14.2.0-19\"\n\t\t},\n\t\t\"/trixie/libc6:amd64=2.41-12+deb13u4\": {\n\t\t\t\"architecture\": \"amd64\",\n\t\t\t\"depends_on\": [\n\t\t\t\t\"/trixie/libgcc-s1:amd64=14.2.0-19\",\n\t\t\t\t\"/trixie/gcc-14-base:amd64=14.2.0-19\"\n\t\t\t],\n\t\t\t\"filename\": \"pool/main/g/glibc/libc6_2.41-12+deb13u4_amd64.deb\",\n\t\t\t\"name\": \"libc6\",\n\t\t\t\"section\": \"libs\",\n\t\t\t\"sha256\": \"967aa62605721081c3eb2a17650611a792aa802d76a6511d1840242623d204c9\",\n\t\t\t\"size\": 2846580,\n\t\t\t\"suite\": \"trixie\",\n\t\t\t\"version\": \"2.41-12+deb13u4\"\n\t\t},\n\t\t\"/trixie/libgcc-s1:amd64=14.2.0-19\": {\n\t\t\t\"architecture\": \"amd64\",\n\t\t\t\"depends_on\": [\n\t\t\t\t\"/trixie/libc6:amd64=2.41-12+deb13u4\",\n\t\t\t\t\"/trixie/gcc-14-base:amd64=14.2.0-19\"\n\t\t\t],\n\t\t\t\"filename\": \"pool/main/g/gcc-14/libgcc-s1_14.2.0-19_amd64.deb\",\n\t\t\t\"name\": \"libgcc-s1\",\n\t\t\t\"section\": \"libs\",\n\t\t\t\"sha256\": \"3c71917b490d1a17aed43196a2787a256ecf060526cdb20216a74bedc061b150\",\n\t\t\t\"size\": 72772,\n\t\t\t\"suite\": \"trixie\",\n\t\t\t\"version\": \"14.2.0-19\"\n\t\t},\n\t\t\"/trixie/mawk:amd64=1.3.4.20250131-1\": {\n\t\t\t\"architecture\": \"amd64\",\n\t\t\t\"depends_on\": [\n\t\t\t\t\"/trixie/libc6:amd64=2.41-12+deb13u4\",\n\t\t\t\t\"/trixie/libgcc-s1:amd64=14.2.0-19\",\n\t\t\t\t\"/trixie/gcc-14-base:amd64=14.2.0-19\"\n\t\t\t],\n\t\t\t\"filename\": \"pool/main/m/mawk/mawk_1.3.4.20250131-1_amd64.deb\",\n\t\t\t\"name\": \"mawk\",\n\t\t\t\"section\": \"interpreters\",\n\t\t\t\"sha256\": \"ade14470c4dff8921bca6ca8b1ea20eadc0f2178b48caff3c74534b17a633292\",\n\t\t\t\"size\": 140808,\n\t\t\t\"suite\": \"trixie\",\n\t\t\t\"version\": \"1.3.4.20250131-1\"\n\t\t}\n\t},\n\t\"sources\": {\n\t\t\"trixie\": {\n\t\t\t\"architectures\": [\n\t\t\t\t\"amd64\"\n\t\t\t],\n\t\t\t\"components\": [\n\t\t\t\t\"main\"\n\t\t\t],\n\t\t\t\"types\": [\n\t\t\t\t\"deb\"\n\t\t\t],\n\t\t\t\"uris\": [\n\t\t\t\t\"https://snapshot-cloudflare.debian.org/archive/debian/20261104T000000Z\",\n\t\t\t\t\"https://snapshot.debian.org/archive/debian/20261104T000000Z\"\n\t\t\t]\n\t\t},\n\t\t\"trixie-security\": {\n\t\t\t\"architectures\": [\n\t\t\t\t\"amd64\"\n\t\t\t],\n\t\t\t\"components\": [\n\t\t\t\t\"main\"\n\t\t\t],\n\t\t\t\"types\": [\n\t\t\t\t\"deb\"\n\t\t\t],\n\t\t\t\"uris\": [\n\t\t\t\t\"https://snapshot-cloudflare.debian.org/archive/debian-security/20261104T000000Z\",\n\t\t\t\t\"https://snapshot.debian.org/archive/debian-security/20261104T000000Z\"\n\t\t\t]\n\t\t}\n\t},\n\t\"version\": 2\n}"
             }
           },
           "trixie_base-files-amd64_13.8-deb13u7_filemap": {
@@ -2434,8 +2434,8 @@
             "attributes": {
               "target_name": "trixie_base-files-amd64_13.8-deb13u7",
               "urls": [
-                "https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z/pool/main/b/base-files/base-files_13.8+deb13u7_amd64.deb",
-                "https://snapshot.debian.org/archive/debian/20261020T000000Z/pool/main/b/base-files/base-files_13.8+deb13u7_amd64.deb"
+                "https://snapshot-cloudflare.debian.org/archive/debian/20261104T000000Z/pool/main/b/base-files/base-files_13.8+deb13u7_amd64.deb",
+                "https://snapshot.debian.org/archive/debian/20261104T000000Z/pool/main/b/base-files/base-files_13.8+deb13u7_amd64.deb"
               ],
               "sha256": "fcd42bb5cb63f7bfc4326a92541247872206d60a192fdff65ca14eb83ed408b9",
               "mergedusr": false,
@@ -2465,8 +2465,8 @@
             "attributes": {
               "target_name": "trixie_mawk-amd64_1.3.4.20250131-1",
               "urls": [
-                "https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z/pool/main/m/mawk/mawk_1.3.4.20250131-1_amd64.deb",
-                "https://snapshot.debian.org/archive/debian/20261020T000000Z/pool/main/m/mawk/mawk_1.3.4.20250131-1_amd64.deb"
+                "https://snapshot-cloudflare.debian.org/archive/debian/20261104T000000Z/pool/main/m/mawk/mawk_1.3.4.20250131-1_amd64.deb",
+                "https://snapshot.debian.org/archive/debian/20261104T000000Z/pool/main/m/mawk/mawk_1.3.4.20250131-1_amd64.deb"
               ],
               "sha256": "ade14470c4dff8921bca6ca8b1ea20eadc0f2178b48caff3c74534b17a633292",
               "mergedusr": false,
@@ -2494,8 +2494,8 @@
             "attributes": {
               "target_name": "trixie_libc6-amd64_2.41-12-deb13u4",
               "urls": [
-                "https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z/pool/main/g/glibc/libc6_2.41-12+deb13u4_amd64.deb",
-                "https://snapshot.debian.org/archive/debian/20261020T000000Z/pool/main/g/glibc/libc6_2.41-12+deb13u4_amd64.deb"
+                "https://snapshot-cloudflare.debian.org/archive/debian/20261104T000000Z/pool/main/g/glibc/libc6_2.41-12+deb13u4_amd64.deb",
+                "https://snapshot.debian.org/archive/debian/20261104T000000Z/pool/main/g/glibc/libc6_2.41-12+deb13u4_amd64.deb"
               ],
               "sha256": "967aa62605721081c3eb2a17650611a792aa802d76a6511d1840242623d204c9",
               "mergedusr": false,
@@ -2521,8 +2521,8 @@
             "attributes": {
               "target_name": "trixie_libgcc-s1-amd64_14.2.0-19",
               "urls": [
-                "https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z/pool/main/g/gcc-14/libgcc-s1_14.2.0-19_amd64.deb",
-                "https://snapshot.debian.org/archive/debian/20261020T000000Z/pool/main/g/gcc-14/libgcc-s1_14.2.0-19_amd64.deb"
+                "https://snapshot-cloudflare.debian.org/archive/debian/20261104T000000Z/pool/main/g/gcc-14/libgcc-s1_14.2.0-19_amd64.deb",
+                "https://snapshot.debian.org/archive/debian/20261104T000000Z/pool/main/g/gcc-14/libgcc-s1_14.2.0-19_amd64.deb"
               ],
               "sha256": "3c71917b490d1a17aed43196a2787a256ecf060526cdb20216a74bedc061b150",
               "mergedusr": false,
@@ -2548,8 +2548,8 @@
             "attributes": {
               "target_name": "trixie_gcc-14-base-amd64_14.2.0-19",
               "urls": [
-                "https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z/pool/main/g/gcc-14/gcc-14-base_14.2.0-19_amd64.deb",
-                "https://snapshot.debian.org/archive/debian/20261020T000000Z/pool/main/g/gcc-14/gcc-14-base_14.2.0-19_amd64.deb"
+                "https://snapshot-cloudflare.debian.org/archive/debian/20261104T000000Z/pool/main/g/gcc-14/gcc-14-base_14.2.0-19_amd64.deb",
+                "https://snapshot.debian.org/archive/debian/20261104T000000Z/pool/main/g/gcc-14/gcc-14-base_14.2.0-19_amd64.deb"
               ],
               "sha256": "5b6825de4263824b78c4c51f6476414f3b4e89c2ab63e81dc8b9b5501e867cf6",
               "mergedusr": false,
@@ -23006,16 +23006,16 @@
     },
     "@@rules_distroless+//apt:extensions.bzl%apt": {
       "formats": {
-        "trixie-security/main/amd64/Contents/https://snapshot-cloudflare.debian.org/archive/debian-security/20261020T000000Z|https://snapshot.debian.org/archive/debian-security/20261020T000000Z": ".gz",
-        "trixie-security/main/amd64/Packages/https://snapshot-cloudflare.debian.org/archive/debian-security/20261020T000000Z|https://snapshot.debian.org/archive/debian-security/20261020T000000Z": ".xz",
-        "trixie/main/amd64/Contents/https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z|https://snapshot.debian.org/archive/debian/20261020T000000Z": ".gz",
-        "trixie/main/amd64/Packages/https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z|https://snapshot.debian.org/archive/debian/20261020T000000Z": ".xz"
+        "trixie-security/main/amd64/Contents/https://snapshot-cloudflare.debian.org/archive/debian-security/20261104T000000Z|https://snapshot.debian.org/archive/debian-security/20261104T000000Z": ".gz",
+        "trixie-security/main/amd64/Packages/https://snapshot-cloudflare.debian.org/archive/debian-security/20261104T000000Z|https://snapshot.debian.org/archive/debian-security/20261104T000000Z": ".xz",
+        "trixie/main/amd64/Contents/https://snapshot-cloudflare.debian.org/archive/debian/20261104T000000Z|https://snapshot.debian.org/archive/debian/20261104T000000Z": ".gz",
+        "trixie/main/amd64/Packages/https://snapshot-cloudflare.debian.org/archive/debian/20261104T000000Z|https://snapshot.debian.org/archive/debian/20261104T000000Z": ".xz"
       },
       "indices": {
-        "trixie-security/main/amd64/Contents/https://snapshot-cloudflare.debian.org/archive/debian-security/20261020T000000Z|https://snapshot.debian.org/archive/debian-security/20261020T000000Z": "sha256-9h8nvRfeVGJkqlj0DzqvqscCHg72nBf2sbTNdmSgN+w=",
-        "trixie-security/main/amd64/Packages/https://snapshot-cloudflare.debian.org/archive/debian-security/20261020T000000Z|https://snapshot.debian.org/archive/debian-security/20261020T000000Z": "sha256-c/VrVw8a0tEb7kOxI9DMBlZOJJKh8iQKBXrDA2oSbW4=",
-        "trixie/main/amd64/Contents/https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z|https://snapshot.debian.org/archive/debian/20261020T000000Z": "sha256-PT5pMJCNsLU/eA3XOXuVieJ9uItZIFwzGnbXbWcm5Bk=",
-        "trixie/main/amd64/Packages/https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z|https://snapshot.debian.org/archive/debian/20261020T000000Z": "sha256-d3jT4/MDt924zg/nyNV0c6B2xr8ujyQfdUIdI5Y1JJg="
+        "trixie-security/main/amd64/Contents/https://snapshot-cloudflare.debian.org/archive/debian-security/20261104T000000Z|https://snapshot.debian.org/archive/debian-security/20261104T000000Z": "sha256-9h8nvRfeVGJkqlj0DzqvqscCHg72nBf2sbTNdmSgN+w=",
+        "trixie-security/main/amd64/Packages/https://snapshot-cloudflare.debian.org/archive/debian-security/20261104T000000Z|https://snapshot.debian.org/archive/debian-security/20261104T000000Z": "sha256-eicXDClfaoJVSjIjIFpjr2gXfGK14vrKdM9/ji8JaGg=",
+        "trixie/main/amd64/Contents/https://snapshot-cloudflare.debian.org/archive/debian/20261104T000000Z|https://snapshot.debian.org/archive/debian/20261104T000000Z": "sha256-PT5pMJCNsLU/eA3XOXuVieJ9uItZIFwzGnbXbWcm5Bk=",
+        "trixie/main/amd64/Packages/https://snapshot-cloudflare.debian.org/archive/debian/20261104T000000Z|https://snapshot.debian.org/archive/debian/20261104T000000Z": "sha256-d3jT4/MDt924zg/nyNV0c6B2xr8ujyQfdUIdI5Y1JJg="
       }
     }
   }

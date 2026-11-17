@@ -296,15 +296,15 @@ apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
 
 # Corresponding to the debian_snapshot version in
 # oak_containers/system_image/base/base_image.Dockerfile.
-# SHA256: a717a33469731894e77e912ea7d714e27c2dc38ee6554fd1a3102e92999cfc66
+# SHA256: fbfb4059d2127120aa05b6e6064523d2102552f0cf0026ddf0701c12f1f8f3e0
 apt.sources_list(
     architectures = ["amd64"],
     components = ["main"],
     suites = ["trixie"],
     types = ["deb"],
     uris = [
-        "https://snapshot-cloudflare.debian.org/archive/debian/20261020T000000Z",
-        "https://snapshot.debian.org/archive/debian/20261020T000000Z",
+        "https://snapshot-cloudflare.debian.org/archive/debian/20261104T000000Z",
+        "https://snapshot.debian.org/archive/debian/20261104T000000Z",
     ],
 )
 apt.sources_list(
@@ -313,8 +313,8 @@ apt.sources_list(
     suites = ["trixie-security"],
     types = ["deb"],
     uris = [
-        "https://snapshot-cloudflare.debian.org/archive/debian-security/20261020T000000Z",
-        "https://snapshot.debian.org/archive/debian-security/20261020T000000Z",
+        "https://snapshot-cloudflare.debian.org/archive/debian-security/20261104T000000Z",
+        "https://snapshot.debian.org/archive/debian-security/20261104T000000Z",
     ],
 )
 apt.install(
@@ -610,7 +610,7 @@ http_file(
     url = "https://storage.googleapis.com/oak-bins/binary/{}/stage0_bin_tdx/binary".format(STAGE0_BIN_TDX_COMMIT),
 )
 
-BASE_IMAGE_SHA256 = "53fa72f6bb189d26f5c469982a10d6cac4e45d215624759986392f1fa759ddce"
+BASE_IMAGE_SHA256 = "f80a29b221a249f8d76a4386148c308e3e058d94d8992e2fe180b3a91f407f7a"
 
 http_file(
     name = "oak_containers_system_image_base",

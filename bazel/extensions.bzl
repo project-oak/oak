@@ -19,7 +19,7 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("//bazel/tools/umoci:umoci_toolchain.bzl", "umoci_toolchain_repo")
 
-SYSROOT_SHA256 = "5b06aac7338d68f9795948b0fd5918acaa45e5d5add1755fd454dcb05cc84cc8"
+SYSROOT_SHA256 = "a0ee27427057a3d8f42820b745bbaa71da2628f9021582ebbe1ebdf756ad5da4"
 
 def _oak_toolchains_impl(_ctx):
     umoci_toolchain_repo(name = "umoci")
