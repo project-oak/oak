@@ -305,3 +305,82 @@ fn test_container_policy_verify_with_pes_endorsement() {
     let result = policy.verify(d.make_valid_time(), &event_bytes, &variant);
     assert!(result.is_ok(), "{:?}", result);
 }
+
+#[test]
+fn test_verify_pes_endorsement_enforces_tsa_reference_values() {
+    use oak_proto_rust::oak::attestation::v1::{
+        TimeStampTokenReferenceValue, TimeStampTokenReferenceValueSet, TsaReferenceValue,
+        tsa_reference_value,
+    };
+
+    let d = EndorsementData::load_for_pes_verification();
+    let endorsement = d.signed_endorsement.endorsement.as_ref().unwrap();
+    let pes_confirmation = d.signed_endorsement.pes_confirmation.as_slice();
+    let mut ref_value = d.pes_ref_value();
+
+    ref_value.tsa = Some(TsaReferenceValue {
+        r#type: Some(tsa_reference_value::Type::Skip(SkipVerification {})),
+    });
+    let skip_res = verify_pes_endorsement(
+        d.make_valid_time().into_unix_millis(),
+        endorsement,
+        pes_confirmation,
+        &ref_value,
+    );
+    assert!(skip_res.is_ok(), "expected success with tsa.skip: {skip_res:?}");
+
+    ref_value.tsa = Some(TsaReferenceValue { r#type: None });
+    let empty_tsa_err = verify_pes_endorsement(
+        d.make_valid_time().into_unix_millis(),
+        endorsement,
+        pes_confirmation,
+        &ref_value,
+    )
+    .expect_err("expected failure with empty TsaReferenceValue");
+    assert!(
+        format!("{empty_tsa_err:#}").contains("empty TSA reference value"),
+        "unexpected error: {empty_tsa_err:#}"
+    );
+
+    let valid_cert_der = std::fs::read(oak_file_utils::data_path(
+        "oak_attestation_verification/testdata/pes/pes_root_cert.der",
+    ))
+    .expect("couldn't read test X.509 DER cert");
+    ref_value.tsa = Some(TsaReferenceValue {
+        r#type: Some(tsa_reference_value::Type::TimeStampToken(TimeStampTokenReferenceValueSet {
+            reference_values: vec![TimeStampTokenReferenceValue {
+                trusted_certificate_der: valid_cert_der,
+            }],
+        })),
+    });
+    let missing_token_err = verify_pes_endorsement(
+        d.make_valid_time().into_unix_millis(),
+        endorsement,
+        pes_confirmation,
+        &ref_value,
+    )
+    .expect_err("expected failure when TimeStampToken is missing");
+    assert!(
+        format!("{missing_token_err:#}").contains("missing TimeStampToken in PES signature"),
+        "unexpected error: {missing_token_err:#}"
+    );
+
+    ref_value.tsa = Some(TsaReferenceValue {
+        r#type: Some(tsa_reference_value::Type::TimeStampToken(TimeStampTokenReferenceValueSet {
+            reference_values: vec![TimeStampTokenReferenceValue {
+                trusted_certificate_der: b"invalid der".to_vec(),
+            }],
+        })),
+    });
+    let invalid_der_err = verify_pes_endorsement(
+        d.make_valid_time().into_unix_millis(),
+        endorsement,
+        pes_confirmation,
+        &ref_value,
+    )
+    .expect_err("expected failure with invalid TSA root cert DER");
+    assert!(
+        format!("{invalid_der_err:#}").contains("parsing trusted TSA root certificates"),
+        "unexpected error: {invalid_der_err:#}"
+    );
+}

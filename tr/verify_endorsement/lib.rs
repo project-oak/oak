@@ -329,7 +329,7 @@ fn verify_tlog(
                 pes.key_set.as_ref().context("missing PES key set")?,
                 &endorsement.serialized,
                 Some(trusted_endorser_key),
-                None,
+                pes.tsa.as_ref(),
             )
             .context("verifying PES confirmation"),
         ),
@@ -1614,5 +1614,121 @@ mod tests {
         assert!(ref_value.claims[0].annotations.is_empty());
         assert_eq!(ref_value.claims[1].r#type, "claim_type_2");
         assert!(ref_value.claims[1].annotations.is_empty());
+    }
+
+    #[test]
+    fn verify_endorsement_enforces_pes_tsa_reference_values() {
+        use oak_proto_rust::oak::attestation::v1::{
+            TimeStampTokenReferenceValue, TimeStampTokenReferenceValueSet, TsaReferenceValue,
+            tsa_reference_value,
+        };
+
+        let mut d = EndorsementData::load_for_pes_verification();
+
+        // With omitted `tsa` (`None`), TSA verification is skipped and PES
+        // verification succeeds.
+        let res_without_tsa = verify_endorsement(
+            d.make_valid_time().into_unix_millis(),
+            &d.signed_endorsement,
+            &d.ref_value,
+        );
+        assert!(res_without_tsa.is_ok(), "unexpected error: {:?}", res_without_tsa.err());
+
+        // With `tsa { skip {} }`, TSA verification is explicitly skipped.
+        d.ref_value.tlog.as_mut().unwrap().pes.as_mut().unwrap().tsa = Some(TsaReferenceValue {
+            r#type: Some(tsa_reference_value::Type::Skip(SkipVerification {})),
+        });
+        let res_with_skip = verify_endorsement(
+            d.make_valid_time().into_unix_millis(),
+            &d.signed_endorsement,
+            &d.ref_value,
+        );
+        assert!(res_with_skip.is_ok(), "unexpected error: {:?}", res_with_skip.err());
+
+        // With `tsa {}` (`type: None`), verification fails.
+        d.ref_value.tlog.as_mut().unwrap().pes.as_mut().unwrap().tsa =
+            Some(TsaReferenceValue { r#type: None });
+        let err = verify_endorsement(
+            d.make_valid_time().into_unix_millis(),
+            &d.signed_endorsement,
+            &d.ref_value,
+        )
+        .expect_err("expected failure when tsa.type is None");
+        assert!(
+            format!("{err:#}").contains("empty TSA reference value"),
+            "unexpected error: {err:#}"
+        );
+
+        // With `tsa { time_stamp_token { ... } }` carrying a valid X.509 DER
+        // root certificate, TSA verification is enforced end-to-end: a PES
+        // confirmation without a timestamp token is rejected with
+        // MissingTimeStampToken, and one with an invalid timestamp token is
+        // rejected during RFC 3161 token verification.
+        let mut pes_confirmation_json: serde_json::Value =
+            serde_json::from_slice(&d.signed_endorsement.pes_confirmation).unwrap();
+        let valid_cert_der = B64
+            .decode(
+                pes_confirmation_json["endorsementSignatures"][0]["verificationMaterial"]
+                    ["x509Certificate"]["derBytes"]
+                    .as_str()
+                    .unwrap(),
+            )
+            .unwrap();
+        d.ref_value.tlog.as_mut().unwrap().pes.as_mut().unwrap().tsa = Some(TsaReferenceValue {
+            r#type: Some(tsa_reference_value::Type::TimeStampToken(
+                TimeStampTokenReferenceValueSet {
+                    reference_values: vec![TimeStampTokenReferenceValue {
+                        trusted_certificate_der: valid_cert_der,
+                    }],
+                },
+            )),
+        });
+        let missing_token_err = verify_endorsement(
+            d.make_valid_time().into_unix_millis(),
+            &d.signed_endorsement,
+            &d.ref_value,
+        )
+        .expect_err("expected failure when TimeStampToken is missing");
+        assert!(
+            format!("{missing_token_err:#}").contains("missing TimeStampToken in PES signature"),
+            "unexpected error: {missing_token_err:#}"
+        );
+
+        pes_confirmation_json["endorsementSignatures"][0]["timeStampToken"] =
+            serde_json::json!([{ "derBytes": B64.encode(b"not valid tst der") }]);
+        let mut signed_with_invalid_token = d.signed_endorsement.clone();
+        signed_with_invalid_token.pes_confirmation =
+            serde_json::to_vec(&pes_confirmation_json).unwrap();
+        let invalid_token_err = verify_endorsement(
+            d.make_valid_time().into_unix_millis(),
+            &signed_with_invalid_token,
+            &d.ref_value,
+        )
+        .expect_err("expected failure when TimeStampToken is invalid");
+        assert!(
+            format!("{invalid_token_err:#}").contains("verifying RFC 3161 timestamp tokens"),
+            "unexpected error: {invalid_token_err:#}"
+        );
+
+        // With malformed TSA root cert DER, root certificate parsing fails.
+        d.ref_value.tlog.as_mut().unwrap().pes.as_mut().unwrap().tsa = Some(TsaReferenceValue {
+            r#type: Some(tsa_reference_value::Type::TimeStampToken(
+                TimeStampTokenReferenceValueSet {
+                    reference_values: vec![TimeStampTokenReferenceValue {
+                        trusted_certificate_der: b"not valid der".to_vec(),
+                    }],
+                },
+            )),
+        });
+        let malformed_tsa_err = verify_endorsement(
+            d.make_valid_time().into_unix_millis(),
+            &d.signed_endorsement,
+            &d.ref_value,
+        )
+        .expect_err("expected failure when TSA root cert DER is malformed");
+        assert!(
+            format!("{malformed_tsa_err:#}").contains("parsing trusted TSA root certificates"),
+            "unexpected error: {malformed_tsa_err:#}"
+        );
     }
 }
