@@ -71,7 +71,8 @@ pub use util::decode_event_proto;
 pub use verifiers::{
     AmdSevSnpDiceAttestationVerifier, AmdSevSnpTransparentDiceAttestationVerifier,
     EventLogVerifier, InsecureAttestationVerifier, IntelTdxAttestationVerifier,
-    RestrictedKernelVerificationReport, create_amd_verifier, create_insecure_verifier,
+    IntelTdxTransparentDiceAttestationVerifier, RestrictedKernelVerificationReport,
+    create_amd_verifier, create_insecure_verifier, create_intel_tdx_transparent_dice_verifier,
     create_intel_tdx_verifier,
 };
 
