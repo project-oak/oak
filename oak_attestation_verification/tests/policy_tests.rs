@@ -21,8 +21,10 @@ use std::{fs, sync::Arc};
 
 use oak_attestation_verification::{
     AmdSevSnpDiceAttestationVerifier, AmdSevSnpPolicy, ContainerPolicy, FirmwarePolicy,
-    IntelTdxAttestationVerifier, IntelTdxPolicy, KernelPolicy, SystemPolicy, create_amd_verifier,
-    create_insecure_verifier, create_intel_tdx_verifier,
+    IntelTdxAttestationVerifier, IntelTdxPolicy, IntelTdxTransparentDiceAttestationVerifier,
+    KernelPolicy, SystemPolicy, TdxRootTransparentPolicy, create_amd_verifier,
+    create_insecure_verifier, create_intel_tdx_transparent_dice_verifier,
+    create_intel_tdx_verifier,
     verifier::{SoftwareRootedDiceAttestationVerifier, verify_dice_chain_and_extract_evidence},
 };
 use oak_attestation_verification_types::{policy::EventPolicy, verifier::AttestationVerifier};
@@ -30,8 +32,14 @@ use oak_file_utils::data_path;
 use oak_proto_rust::oak::{
     Variant,
     attestation::v1::{
-        AmdSevSnpEndorsement, AttestationResults, Endorsements, Evidence, ReferenceValues,
-        SkipVerification, attestation_results, binary_reference_value, endorsements,
+        AmdSevSnpEndorsement, AttestationResults, BinaryReferenceValue,
+        CbLayer1TransparentReferenceValues, CbLayer2TransparentReferenceValues,
+        CbTransparentReferenceValues, Endorsements, Event, Evidence, IntelTdxReferenceValues,
+        KernelBinaryReferenceValue, KernelLayerReferenceValues, ReferenceValues,
+        RootLayerReferenceValues, SkipVerification, TdxTcbSvnReferenceValue, TeePlatform,
+        TextReferenceValue, attestation_results, binary_reference_value, endorsements,
+        kernel_binary_reference_value, reference_values, tdx_tcb_svn_reference_value,
+        text_reference_value,
     },
 };
 use oak_time::{Instant, clock::FixedClock};
@@ -187,6 +195,105 @@ fn tdx_oc_generated_reference_values_verify_succeeds() {
     let verifier =
         IntelTdxAttestationVerifier::new(platform_policy, firmware_policy, event_policies, clock);
     assert_success(verifier.verify(&evidence, &d.endorsements));
+}
+
+fn all_skip_kernel_layer_reference_values() -> KernelLayerReferenceValues {
+    let skip_brv = BinaryReferenceValue {
+        r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
+    };
+    KernelLayerReferenceValues {
+        kernel: Some(KernelBinaryReferenceValue {
+            r#type: Some(kernel_binary_reference_value::Type::Skip(SkipVerification {})),
+        }),
+        kernel_cmd_line_text: Some(TextReferenceValue {
+            r#type: Some(text_reference_value::Type::Skip(SkipVerification {})),
+        }),
+        init_ram_fs: Some(skip_brv.clone()),
+        memory_map: Some(skip_brv.clone()),
+        acpi: Some(skip_brv),
+    }
+}
+
+#[test]
+fn tdx_root_transparent_policy_public_api_succeeds_and_fails_closed() {
+    let valid_event = Event {
+        tag: "tdxRootTransparent".to_string(),
+        event: Some(prost_types::Any {
+            type_url: "type.googleapis.com/google.protobuf.Empty".to_string(),
+            value: vec![],
+        }),
+    }
+    .encode_to_vec();
+
+    let policy = TdxRootTransparentPolicy::new(&all_skip_kernel_layer_reference_values());
+    assert!(policy.verify(TEST_TIME, &valid_event, &Variant::default()).is_ok());
+
+    let incomplete_rvs = KernelLayerReferenceValues::default();
+    let strict_policy = TdxRootTransparentPolicy::new(&incomplete_rvs);
+    let err = strict_policy.verify(TEST_TIME, &valid_event, &Variant::default()).unwrap_err();
+    assert!(
+        format!("{err:#}").contains("SkipVerification for kernel"),
+        "unexpected error: {err:#}"
+    );
+}
+
+#[test]
+fn tdx_transparent_dice_verifier_public_api_enforces_root_eca_key() {
+    use coset::{CborSerializable, CoseKey, KeyType, iana};
+
+    let d = AttestationData::load_tdx_oc();
+    let skip_brv = BinaryReferenceValue {
+        r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
+    };
+    let cbt_rvs = ReferenceValues {
+        r#type: Some(reference_values::Type::Cbt(CbTransparentReferenceValues {
+            root_layer: Some(RootLayerReferenceValues {
+                intel_tdx: Some(IntelTdxReferenceValues {
+                    tee_tcb_svn: Some(TdxTcbSvnReferenceValue {
+                        r#type: Some(tdx_tcb_svn_reference_value::Type::Skip(SkipVerification {})),
+                    }),
+                    allow_debug: false,
+                    stage0: Some(skip_brv),
+                }),
+                ..Default::default()
+            }),
+            kernel_layer: Some(all_skip_kernel_layer_reference_values()),
+            layer1: Some(CbLayer1TransparentReferenceValues::default()),
+            layer2: Some(CbLayer2TransparentReferenceValues::default()),
+        })),
+    };
+
+    let verifier: IntelTdxTransparentDiceAttestationVerifier =
+        create_intel_tdx_transparent_dice_verifier(
+            FixedClock::at_instant(d.make_valid_time()),
+            &cbt_rvs,
+        )
+        .expect("factory should build transparent TDX verifier");
+
+    // Empty eca_public_key must be rejected.
+    let err = verifier.verify(&d.evidence, &Endorsements::default()).unwrap_err();
+    assert!(format!("{err:#}").contains("empty root ECA public key"), "unexpected error: {err:#}");
+
+    // Mismatched non-empty COSE_Key must fail root-key binding even with platform =
+    // None.
+    let mut evidence_with_key = d.evidence.clone();
+    let dummy_cose_key =
+        CoseKey { kty: KeyType::Assigned(iana::KeyType::EC2), ..Default::default() };
+    evidence_with_key.root_layer.as_mut().unwrap().eca_public_key =
+        dummy_cose_key.to_vec().unwrap();
+    let err = verifier.verify(&evidence_with_key, &Endorsements::default()).unwrap_err();
+    assert!(
+        format!("{err:#}").contains("not bound to the Intel TDX attestation quote"),
+        "unexpected error: {err:#}"
+    );
+
+    // Non-TDX platform must be rejected cleanly.
+    evidence_with_key.root_layer.as_mut().unwrap().platform = TeePlatform::AmdSevSnp.into();
+    let err = verifier.verify(&evidence_with_key, &Endorsements::default()).unwrap_err();
+    assert!(
+        format!("{err:#}").contains("unsupported TEE platform value"),
+        "unexpected error: {err:#}"
+    );
 }
 
 fn verify_amd(

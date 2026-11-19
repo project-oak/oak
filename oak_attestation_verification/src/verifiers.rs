@@ -1129,6 +1129,7 @@ mod tests {
         layer2_event: Vec<u8>,
         ccel_event: Vec<u8>,
         ccel_table_event: Vec<u8>,
+        final_layer_key: SigningKey,
     }
 
     fn build_tdx_transparent_fixture() -> TdxTransparentFixture {
@@ -1249,6 +1250,7 @@ mod tests {
             layer2_event,
             ccel_event,
             ccel_table_event,
+            final_layer_key: final_priv,
         }
     }
 
@@ -1339,5 +1341,257 @@ mod tests {
         )
         .expect("verification without application keys should succeed");
         assert_eq!(results.event_attestation_results.len(), 5);
+    }
+
+    fn expect_synthetic_err(
+        verifier: &IntelTdxTransparentDiceAttestationVerifier,
+        platform_results: &EventAttestationResults,
+        evidence: &Evidence,
+        endorsements: &Endorsements,
+        expected: &str,
+    ) {
+        assert_err_contains(
+            verify_synthetic(verifier, platform_results, evidence, endorsements).unwrap_err(),
+            expected,
+        );
+    }
+
+    #[test]
+    fn tdx_transparent_verify_after_platform_swapped_dice_chain_fails() {
+        let mut fixture = build_tdx_transparent_fixture();
+        let verifier = make_verifier(&fixture.reference_values);
+
+        // Regression for b/576709814: mismatched root_layer.eca_public_key fails DICE
+        // chain verification.
+        let (_, other_root_pub) = generate_ecdsa_key_pair();
+        fixture.evidence.root_layer.as_mut().unwrap().eca_public_key =
+            verifying_key_to_cose_key(&other_root_pub).to_vec().unwrap();
+        expect_synthetic_err(
+            &verifier,
+            &fixture.platform_results,
+            &fixture.evidence,
+            &fixture.endorsements,
+            "verifying DICE chain",
+        );
+    }
+
+    #[test]
+    fn tdx_transparent_verify_after_platform_rejects_tampered_inner_layers_and_app_keys() {
+        let fixture = build_tdx_transparent_fixture();
+        let verifier = make_verifier(&fixture.reference_values);
+
+        for layer_idx in [1usize, 2usize] {
+            let mut bad_layer = fixture.evidence.clone();
+            let cert = &mut bad_layer.layers[layer_idx].eca_certificate;
+            let last = cert.len() - 1;
+            cert[last] ^= 0x01;
+            expect_synthetic_err(
+                &verifier,
+                &fixture.platform_results,
+                &bad_layer,
+                &fixture.endorsements,
+                "verifying DICE chain",
+            );
+        }
+
+        let (other_priv, other_pub) = generate_ecdsa_key_pair();
+        let wrong_app_keys = build_application_keys(&other_priv, &other_pub);
+        let mut bad_enc_key = fixture.evidence.clone();
+        bad_enc_key.application_keys.as_mut().unwrap().encryption_public_key_certificate =
+            wrong_app_keys.encryption_public_key_certificate;
+        expect_synthetic_err(
+            &verifier,
+            &fixture.platform_results,
+            &bad_enc_key,
+            &fixture.endorsements,
+            "verifying application keys",
+        );
+
+        let mut bad_sig_key = fixture.evidence.clone();
+        bad_sig_key.application_keys.as_mut().unwrap().signing_public_key_certificate =
+            wrong_app_keys.signing_public_key_certificate;
+        expect_synthetic_err(
+            &verifier,
+            &fixture.platform_results,
+            &bad_sig_key,
+            &fixture.endorsements,
+            "verifying application keys",
+        );
+    }
+
+    #[test]
+    fn tdx_transparent_verify_after_platform_rejects_unrecognized_spoofed_or_duplicate_events() {
+        let fixture = build_tdx_transparent_fixture();
+        let verifier = make_verifier(&fixture.reference_values);
+
+        let pushed_cases = [
+            (
+                encode_event("KernelCmdline", BYTES_VALUE_TYPE_URL, vec![0x0a, 0x01, 0x01]),
+                "verifying DICE chain",
+            ),
+            (vec![0xff, 0xff, 0xff], "verifying DICE chain"),
+            (
+                encode_event(
+                    "CCEL",
+                    "type.googleapis.com/oak.attestation.v1.CbLayer1TransparentEvent",
+                    CbLayer1TransparentEvent::default().encode_to_vec(),
+                ),
+                "verifying DICE chain",
+            ),
+            (
+                Event { tag: "CCEL".to_string(), event: None }.encode_to_vec(),
+                "verifying DICE chain",
+            ),
+            (encode_event("CCEL", BYTES_VALUE_TYPE_URL, vec![0x08, 0x01]), "verifying DICE chain"),
+            (fixture.ccel_event.clone(), "duplicate non-layer transparent event: CCEL"),
+            (fixture.ccel_table_event.clone(), "duplicate non-layer transparent event: CCELTable"),
+        ];
+        for (extra_event, expected) in pushed_cases {
+            let mut bad = fixture.evidence.clone();
+            bad.transparent_event_log.as_mut().unwrap().encoded_events.push(extra_event);
+            expect_synthetic_err(
+                &verifier,
+                &fixture.platform_results,
+                &bad,
+                &fixture.endorsements,
+                expected,
+            );
+        }
+
+        let mut missing_log = fixture.evidence.clone();
+        missing_log.transparent_event_log = None;
+        expect_synthetic_err(
+            &verifier,
+            &fixture.platform_results,
+            &missing_log,
+            &fixture.endorsements,
+            "no transparent event log",
+        );
+    }
+
+    #[test]
+    fn tdx_transparent_verify_after_platform_enforces_dice_hashes_and_all_layer_policies() {
+        let fixture = build_tdx_transparent_fixture();
+        let verifier = make_verifier(&fixture.reference_values);
+
+        let mut bad_l1 = fixture.evidence.clone();
+        bad_l1.transparent_event_log.as_mut().unwrap().encoded_events[1] = encode_event(
+            "layer1Transparent",
+            "type.googleapis.com/oak.attestation.v1.CbLayer1TransparentEvent",
+            CbLayer1TransparentEvent {
+                runtime_agent_binary_measurement: vec![0x99u8; 32],
+                userspace_measurement: vec![0x22u8; 32],
+                ..Default::default()
+            }
+            .encode_to_vec(),
+        );
+        expect_synthetic_err(
+            &verifier,
+            &fixture.platform_results,
+            &bad_l1,
+            &fixture.endorsements,
+            "event log hash mismatch",
+        );
+
+        let mut bad_l2 = fixture.evidence.clone();
+        bad_l2.transparent_event_log.as_mut().unwrap().encoded_events[4] = encode_event(
+            "layer2Transparent",
+            "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
+            CbLayer2TransparentEvent {
+                packages: vec![MpmPackage {
+                    mpm_version_id: "tampered/9.9".to_string(),
+                    ..Default::default()
+                }],
+            }
+            .encode_to_vec(),
+        );
+        expect_synthetic_err(
+            &verifier,
+            &fixture.platform_results,
+            &bad_l2,
+            &fixture.endorsements,
+            "event log hash mismatch",
+        );
+
+        let layer_cases: &[(&str, CbtMutator)] = &[
+            ("verifying event log", |cbt| {
+                cbt.kernel_layer.as_mut().unwrap().acpi = None;
+            }),
+            ("comparing runtime agent binary measurement", |cbt| {
+                cbt.layer1.as_mut().unwrap().runtime_agent_binary =
+                    Some(digest_brv(vec![0x99u8; 32], vec![]));
+            }),
+            ("could not be verified", |cbt| {
+                cbt.layer2.as_mut().unwrap().binary_mpms = vec![MpmReferenceValue {
+                    r#type: Some(mpm_reference_value::Type::Versions(MpmVersionIds {
+                        versions: vec!["other/2.0".to_string()],
+                    })),
+                }];
+            }),
+        ];
+        for (expected, mutate) in layer_cases {
+            let mut rvs = fixture.reference_values.clone();
+            if let Some(reference_values::Type::Cbt(cbt)) = rvs.r#type.as_mut() {
+                mutate(cbt);
+            }
+            expect_synthetic_err(
+                &make_verifier(&rvs),
+                &fixture.platform_results,
+                &fixture.evidence,
+                &fixture.endorsements,
+                expected,
+            );
+        }
+    }
+
+    #[test]
+    fn tdx_transparent_verify_after_platform_rejects_user_data_firmware_and_missing_initial() {
+        let fixture = build_tdx_transparent_fixture();
+        let verifier = make_verifier(&fixture.reference_values);
+
+        let mut missing_initial = fixture.endorsements.clone();
+        missing_initial.initial = None;
+        expect_synthetic_err(
+            &verifier,
+            &fixture.platform_results,
+            &fixture.evidence,
+            &missing_initial,
+            "no firmware endorsement",
+        );
+
+        let (other_priv, _) = generate_ecdsa_key_pair();
+        let mut wrong_signer = fixture.evidence.clone();
+        wrong_signer.signed_user_data_certificate =
+            build_signed_user_data_cert(&other_priv, b"tdx-user-data");
+        expect_synthetic_err(
+            &verifier,
+            &fixture.platform_results,
+            &wrong_signer,
+            &fixture.endorsements,
+            "verifying signed user data certificate",
+        );
+
+        let mut flipped = fixture.evidence.clone();
+        let valid_cert = build_signed_user_data_cert(&fixture.final_layer_key, b"tdx-user-data");
+        let last = valid_cert.len() - 1;
+        flipped.signed_user_data_certificate = valid_cert;
+        flipped.signed_user_data_certificate[last] ^= 0x01;
+        expect_synthetic_err(
+            &verifier,
+            &fixture.platform_results,
+            &flipped,
+            &fixture.endorsements,
+            "verifying signed user data certificate",
+        );
+
+        let mut bad_platform_results = EventAttestationResults::default();
+        set_initial_measurement(&mut bad_platform_results, &[0x99u8; 48]);
+        expect_synthetic_err(
+            &verifier,
+            &bad_platform_results,
+            &fixture.evidence,
+            &fixture.endorsements,
+            "verifying firmware policy",
+        );
     }
 }
