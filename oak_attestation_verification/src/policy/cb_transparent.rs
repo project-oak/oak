@@ -20,11 +20,12 @@ use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
     RawDigest, Validity, Variant,
     attestation::v1::{
-        CbLayer1TransparentEndorsement, CbLayer1TransparentEvent,
+        BinaryReferenceValue, CbLayer1TransparentEndorsement, CbLayer1TransparentEvent,
         CbLayer1TransparentReferenceValues, CbLayer2TransparentEndorsement,
-        CbLayer2TransparentEvent, CbLayer2TransparentReferenceValues, EventAttestationResults,
-        KernelEndorsement, KernelLayerReferenceValues, MpmAttachment, SignedEndorsement,
-        Stage0TransparentMeasurements, TLogVerificationResults,
+        CbLayer2TransparentEvent, CbLayer2TransparentReferenceValues, Event,
+        EventAttestationResults, KernelEndorsement, KernelLayerReferenceValues, MpmAttachment,
+        SignedEndorsement, Stage0TransparentMeasurements, TLogVerificationResults,
+        binary_reference_value, kernel_binary_reference_value, text_reference_value,
     },
 };
 use oak_time::Instant;
@@ -39,9 +40,12 @@ use crate::{
         acquire_mpm_expected_values, expected_digests_validity,
     },
     extract::stage0_transparent_measurements_to_kernel_layer_data,
-    util::decode_event_proto,
+    util::{decode_event_proto, decode_protobuf_any},
     validity::intersect_all_validity,
 };
+
+const TDX_ROOT_TRANSPARENT_EVENT_TAG: &str = "tdxRootTransparent";
+const EMPTY_TYPE_URL: &str = "type.googleapis.com/google.protobuf.Empty";
 
 /// Event policy for transparent stage 0.
 ///
@@ -106,6 +110,87 @@ impl Policy<[u8]> for TransparentStage0Policy {
             set_validity(&mut result, v);
         }
         Ok(result)
+    }
+}
+
+/// Event policy for TDX layer 0 transparent events.
+///
+/// Expects an [`Event`] tagged `"tdxRootTransparent"` carrying an empty
+/// `google.protobuf.Empty` payload, and requires all fields of
+/// [`KernelLayerReferenceValues`] to explicitly specify `SkipVerification`.
+pub struct TdxRootTransparentPolicy {
+    reference_values: KernelLayerReferenceValues,
+}
+
+impl TdxRootTransparentPolicy {
+    pub fn new(reference_values: &KernelLayerReferenceValues) -> Self {
+        Self { reference_values: reference_values.clone() }
+    }
+}
+
+fn ensure_skip_kernel_layer(reference_values: &KernelLayerReferenceValues) -> anyhow::Result<()> {
+    let KernelLayerReferenceValues { kernel, kernel_cmd_line_text, init_ram_fs, memory_map, acpi } =
+        reference_values;
+
+    anyhow::ensure!(
+        matches!(
+            kernel.as_ref().and_then(|v| v.r#type.as_ref()),
+            Some(kernel_binary_reference_value::Type::Skip(_))
+        ),
+        "TDX root transparent policy requires SkipVerification for kernel"
+    );
+    anyhow::ensure!(
+        matches!(
+            kernel_cmd_line_text.as_ref().and_then(|v| v.r#type.as_ref()),
+            Some(text_reference_value::Type::Skip(_))
+        ),
+        "TDX root transparent policy requires SkipVerification for kernel_cmd_line_text"
+    );
+    let ensure_skip_binary = |rv: &Option<BinaryReferenceValue>, field: &str| {
+        anyhow::ensure!(
+            matches!(
+                rv.as_ref().and_then(|v| v.r#type.as_ref()),
+                Some(binary_reference_value::Type::Skip(_))
+            ),
+            "TDX root transparent policy requires SkipVerification for {field}"
+        );
+        Ok(())
+    };
+    ensure_skip_binary(init_ram_fs, "init_ram_fs")?;
+    ensure_skip_binary(memory_map, "memory_map")?;
+    ensure_skip_binary(acpi, "acpi")?;
+    Ok(())
+}
+
+impl Policy<[u8]> for TdxRootTransparentPolicy {
+    fn verify(
+        &self,
+        _verification_time: Instant,
+        evidence: &[u8],
+        endorsement: &Variant,
+    ) -> anyhow::Result<EventAttestationResults> {
+        ensure_skip_kernel_layer(&self.reference_values)?;
+        let _endorsement: Option<KernelEndorsement> =
+            endorsement.try_into().map_err(anyhow::Error::msg)?;
+
+        let event = Event::decode(evidence)
+            .map_err(|error| anyhow::anyhow!("failed to decode event: {}", error))?;
+        anyhow::ensure!(
+            event.tag == TDX_ROOT_TRANSPARENT_EVENT_TAG,
+            "unexpected event tag {:?}, expected {:?}",
+            event.tag,
+            TDX_ROOT_TRANSPARENT_EVENT_TAG
+        );
+        let any = event.event.as_ref().context("no event found in the `event` field")?;
+        decode_protobuf_any::<()>(EMPTY_TYPE_URL, any)?;
+        anyhow::ensure!(
+            any.value.is_empty(),
+            "expected empty payload for {}, found {} bytes",
+            EMPTY_TYPE_URL,
+            any.value.len()
+        );
+
+        Ok(EventAttestationResults::default())
     }
 }
 
@@ -1493,5 +1578,177 @@ mod tests {
         let result = result.expect("verification should succeed");
         let expected_validity = make_expected_validity(not_before, not_after);
         assert_eq!(get_validity(&result), Some(&expected_validity));
+    }
+
+    fn all_skip_kernel_layer_reference_values() -> KernelLayerReferenceValues {
+        use oak_proto_rust::oak::attestation::v1::{
+            KernelBinaryReferenceValue, SkipVerification, TextReferenceValue,
+            binary_reference_value::Type as BrvType,
+            kernel_binary_reference_value::Type as KbrvType, text_reference_value::Type as TrvType,
+        };
+
+        let skip_brv = BinaryReferenceValue { r#type: Some(BrvType::Skip(SkipVerification {})) };
+        let skip_kbrv =
+            KernelBinaryReferenceValue { r#type: Some(KbrvType::Skip(SkipVerification {})) };
+        let skip_trv = TextReferenceValue { r#type: Some(TrvType::Skip(SkipVerification {})) };
+        KernelLayerReferenceValues {
+            kernel: Some(skip_kbrv),
+            kernel_cmd_line_text: Some(skip_trv),
+            init_ram_fs: Some(skip_brv.clone()),
+            memory_map: Some(skip_brv.clone()),
+            acpi: Some(skip_brv),
+        }
+    }
+
+    fn make_tdx_root_transparent_event(tag: &str, type_url: &str, value: Vec<u8>) -> Vec<u8> {
+        Event { tag: tag.to_string(), event: Some(Any { type_url: type_url.to_string(), value }) }
+            .encode_to_vec()
+    }
+
+    #[test]
+    fn tdx_root_transparent_verify_all_skip_succeeds() {
+        let reference_values = all_skip_kernel_layer_reference_values();
+        let policy = TdxRootTransparentPolicy::new(&reference_values);
+        let evidence =
+            make_tdx_root_transparent_event("tdxRootTransparent", EMPTY_TYPE_URL, vec![]);
+
+        let empty_result = policy
+            .verify(TEST_TIME, &evidence, &Variant::default())
+            .expect("empty endorsement should succeed");
+        assert!(get_validity(&empty_result).is_none());
+
+        let kernel_endorsement: Variant = KernelEndorsement::default().into();
+        let kernel_result = policy
+            .verify(TEST_TIME, &evidence, &kernel_endorsement)
+            .expect("KernelEndorsement should succeed");
+        assert!(get_validity(&kernel_result).is_none());
+    }
+
+    #[test]
+    fn tdx_root_transparent_wrong_tag_fails() {
+        let policy = TdxRootTransparentPolicy::new(&all_skip_kernel_layer_reference_values());
+        let evidence = make_tdx_root_transparent_event("Stage0", EMPTY_TYPE_URL, vec![]);
+
+        let err = policy.verify(TEST_TIME, &evidence, &Variant::default()).unwrap_err();
+        assert!(format!("{err:#}").contains("unexpected event tag"), "unexpected error: {err:#}");
+    }
+
+    #[test]
+    fn tdx_root_transparent_missing_inner_event_fails() {
+        let policy = TdxRootTransparentPolicy::new(&all_skip_kernel_layer_reference_values());
+        let evidence = Event { tag: "tdxRootTransparent".to_string(), event: None }.encode_to_vec();
+
+        let err = policy.verify(TEST_TIME, &evidence, &Variant::default()).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("no event found in the `event` field"),
+            "unexpected error: {err:#}"
+        );
+    }
+
+    #[test]
+    fn tdx_root_transparent_wrong_type_url_fails() {
+        let policy = TdxRootTransparentPolicy::new(&all_skip_kernel_layer_reference_values());
+        let evidence = encode_event_proto(
+            "type.googleapis.com/oak.attestation.v1.Stage0TransparentMeasurements",
+            &Stage0TransparentMeasurements::default(),
+        );
+        // Set tag to tdxRootTransparent while keeping Stage0TransparentMeasurements.
+        let mut event = Event::decode(evidence.as_slice()).unwrap();
+        event.tag = "tdxRootTransparent".to_string();
+
+        let err =
+            policy.verify(TEST_TIME, &event.encode_to_vec(), &Variant::default()).unwrap_err();
+        assert!(
+            format!("{err:#}").contains(
+                "expected message with type url: type.googleapis.com/google.protobuf.Empty"
+            ),
+            "unexpected error: {err:#}"
+        );
+    }
+
+    #[test]
+    fn tdx_root_transparent_non_empty_or_corrupt_payload_fails() {
+        let policy = TdxRootTransparentPolicy::new(&all_skip_kernel_layer_reference_values());
+
+        // Valid protobuf unknown field bytes in Empty must still be rejected.
+        let proto_bytes_evidence =
+            make_tdx_root_transparent_event("tdxRootTransparent", EMPTY_TYPE_URL, vec![0x08, 0x01]);
+        let err = policy.verify(TEST_TIME, &proto_bytes_evidence, &Variant::default()).unwrap_err();
+        assert!(format!("{err:#}").contains("expected empty payload"), "unexpected error: {err:#}");
+
+        // Trailing garbage inside Any.value must be rejected by protobuf decoding.
+        let garbage_evidence =
+            make_tdx_root_transparent_event("tdxRootTransparent", EMPTY_TYPE_URL, vec![0xff]);
+        let err = policy.verify(TEST_TIME, &garbage_evidence, &Variant::default()).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("couldn't decode `google.protobuf.Any`"),
+            "unexpected error: {err:#}"
+        );
+
+        // Corrupt outer Event bytes must fail decoding.
+        let err = policy.verify(TEST_TIME, &[0xff, 0xff], &Variant::default()).unwrap_err();
+        assert!(format!("{err:#}").contains("failed to decode event"), "unexpected error: {err:#}");
+    }
+
+    #[test]
+    fn tdx_root_transparent_wrong_endorsement_type_fails() {
+        use oak_proto_rust::oak::attestation::v1::SystemEndorsement;
+
+        let policy = TdxRootTransparentPolicy::new(&all_skip_kernel_layer_reference_values());
+        let evidence =
+            make_tdx_root_transparent_event("tdxRootTransparent", EMPTY_TYPE_URL, vec![]);
+        let wrong_endorsement: Variant = SystemEndorsement::default().into();
+
+        let err = policy.verify(TEST_TIME, &evidence, &wrong_endorsement).unwrap_err();
+        assert!(format!("{err:#}").contains("unexpected variant ID"), "unexpected error: {err:#}");
+    }
+
+    #[test]
+    fn tdx_root_transparent_missing_or_non_skip_fields_fail() {
+        use oak_proto_rust::oak::attestation::v1::{
+            Digests, KernelBinaryReferenceValue, KernelDigests, StringLiterals, TextReferenceValue,
+            binary_reference_value::Type as BrvType,
+            kernel_binary_reference_value::Type as KbrvType, text_reference_value::Type as TrvType,
+        };
+
+        let evidence =
+            make_tdx_root_transparent_event("tdxRootTransparent", EMPTY_TYPE_URL, vec![]);
+        let non_skip_brv = BinaryReferenceValue {
+            r#type: Some(BrvType::Digests(Digests { digests: vec![RawDigest::default()] })),
+        };
+        let non_skip_kbrv = KernelBinaryReferenceValue {
+            r#type: Some(KbrvType::Digests(KernelDigests::default())),
+        };
+        let non_skip_trv = TextReferenceValue {
+            r#type: Some(TrvType::StringLiterals(StringLiterals {
+                value: vec!["console=ttyS0".to_string()],
+            })),
+        };
+        let assert_fails = |field: &str, rvs: KernelLayerReferenceValues| {
+            let err = TdxRootTransparentPolicy::new(&rvs)
+                .verify(TEST_TIME, &evidence, &Variant::default())
+                .unwrap_err();
+            assert!(
+                format!("{err:#}").contains(&format!("for {field}")),
+                "{field} unexpected error: {err:#}"
+            );
+        };
+        let with_rvs = |mutate: &dyn Fn(&mut KernelLayerReferenceValues)| {
+            let mut r = all_skip_kernel_layer_reference_values();
+            mutate(&mut r);
+            r
+        };
+
+        for k in [None, Some(KernelBinaryReferenceValue::default()), Some(non_skip_kbrv)] {
+            assert_fails("kernel", with_rvs(&|r| r.kernel = k.clone()));
+        }
+        for t in [None, Some(TextReferenceValue::default()), Some(non_skip_trv)] {
+            assert_fails("kernel_cmd_line_text", with_rvs(&|r| r.kernel_cmd_line_text = t.clone()));
+        }
+        for v in [None, Some(BinaryReferenceValue::default()), Some(non_skip_brv)] {
+            assert_fails("init_ram_fs", with_rvs(&|r| r.init_ram_fs = v.clone()));
+            assert_fails("memory_map", with_rvs(&|r| r.memory_map = v.clone()));
+            assert_fails("acpi", with_rvs(&|r| r.acpi = v.clone()));
+        }
     }
 }

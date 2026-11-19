@@ -52,7 +52,10 @@ pub use policy::{
     application::ApplicationPolicy,
     application_keys::ApplicationKeysPolicy,
     binary::BinaryPolicy,
-    cb_transparent::{TransparentLayer1Policy, TransparentLayer2Policy, TransparentStage0Policy},
+    cb_transparent::{
+        TdxRootTransparentPolicy, TransparentLayer1Policy, TransparentLayer2Policy,
+        TransparentStage0Policy,
+    },
     container::ContainerPolicy,
     firmware::FirmwarePolicy,
     kernel::KernelPolicy,
