@@ -19,7 +19,7 @@
 use alloc::format;
 
 use anyhow::Context;
-use oak_digest::Sha256;
+use oak_digest::{Sha256, Sha512};
 use oak_proto_rust::oak::{
     RawDigest,
     attestation::v1::{
@@ -39,7 +39,10 @@ use zerocopy::FromBytes;
 
 use crate::{
     amd::{get_product, verify_attestation_report_signature},
-    intel::{extract_pck_extension_data_from_quote, extract_qe_report_data_from_quote},
+    intel::{
+        extract_pck_extension_data_from_quote, extract_qe_report_data_from_quote,
+        verify_intel_tdx_quote_validity,
+    },
     x509::{check_certificate_validity, verify_cert_signature},
 };
 
@@ -65,8 +68,32 @@ pub fn verify_dice_root_eca_key(
     Ok(())
 }
 
+/// Checks that the root ECA public key for the DICE chain is bound to the
+/// Intel TDX attestation quote via its SHA-512 digest in `report_data`.
+pub fn verify_tdx_dice_root_eca_key(
+    quote_values: &IntelTdxAttestationReport,
+    eca_public_key: &[u8],
+) -> anyhow::Result<()> {
+    anyhow::ensure!(!eca_public_key.is_empty(), "empty root ECA public key");
+    let expected = Sha512::from_contents(eca_public_key);
+    anyhow::ensure!(
+        quote_values.report_data.len() == expected.as_ref().len(),
+        "unexpected Intel TDX report data length: got {}, expected {}",
+        quote_values.report_data.len(),
+        expected.as_ref().len()
+    );
+    anyhow::ensure!(
+        expected.as_ref() == quote_values.report_data.as_slice(),
+        "the root ECA public key is not bound to the Intel TDX attestation quote"
+    );
+    Ok(())
+}
+
 /// Verifies the signature chain for the attestation report included in the
 /// root.
+///
+/// For `TeePlatform::IntelTdx`, `check_cert_expiry` and `tee_certificate` are
+/// ignored because quote validity checks embedded PCK certificate expiry.
 pub fn verify_root_attestation_signature(
     current_time: Instant,
     check_cert_expiry: bool,
@@ -95,7 +122,13 @@ pub fn verify_root_attestation_signature(
             .context("verifying AMD SEV-SNP attestation report validity")?;
             verify_dice_root_eca_key(attestation_report, &root_layer.eca_public_key)
         }
-        TeePlatform::IntelTdx => anyhow::bail!("not supported"),
+        TeePlatform::IntelTdx => {
+            let wrapper = TdxQuoteWrapper::new(root_layer.remote_attestation_report.as_slice());
+            verify_intel_tdx_quote_validity(current_time, &wrapper)
+                .context("verifying Intel TDX quote validity")?;
+            let quote_values = convert_intel_tdx_attestation_quote(&wrapper)?;
+            verify_tdx_dice_root_eca_key(&quote_values, &root_layer.eca_public_key)
+        }
 
         // For non-AMD-SEV-SNP and non-Intel-TDX we just verify that the
         // attestation report contains the expected public key.
@@ -382,4 +415,125 @@ pub fn verify_intel_tdx_attestation_quote(
 /// Verifies insecure attestation.
 pub fn verify_insecure(_expected_values: &InsecureExpectedValues) -> anyhow::Result<()> {
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use oak_time::make_instant;
+    use test_util::AttestationData;
+
+    use super::*;
+
+    #[test]
+    fn verify_tdx_dice_root_eca_key_succeeds() {
+        let eca_public_key = b"test-root-eca-public-key";
+        let quote_values = IntelTdxAttestationReport {
+            report_data: Sha512::from_contents(eca_public_key).as_ref().to_vec(),
+            ..Default::default()
+        };
+
+        assert!(verify_tdx_dice_root_eca_key(&quote_values, eca_public_key).is_ok());
+    }
+
+    #[test]
+    fn verify_tdx_dice_root_eca_key_bit_flip_in_key_fails() {
+        let mut eca_public_key = b"test-root-eca-public-key".to_vec();
+        let quote_values = IntelTdxAttestationReport {
+            report_data: Sha512::from_contents(&eca_public_key).as_ref().to_vec(),
+            ..Default::default()
+        };
+        eca_public_key[0] ^= 0x01;
+
+        let err = verify_tdx_dice_root_eca_key(&quote_values, &eca_public_key).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("not bound to the Intel TDX attestation quote"),
+            "unexpected error: {err:#}"
+        );
+    }
+
+    #[test]
+    fn verify_tdx_dice_root_eca_key_bit_flip_in_report_data_fails() {
+        let eca_public_key = b"test-root-eca-public-key";
+        let mut report_data = Sha512::from_contents(eca_public_key).as_ref().to_vec();
+        report_data[0] ^= 0x01;
+        let quote_values = IntelTdxAttestationReport { report_data, ..Default::default() };
+
+        let err = verify_tdx_dice_root_eca_key(&quote_values, eca_public_key).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("not bound to the Intel TDX attestation quote"),
+            "unexpected error: {err:#}"
+        );
+    }
+
+    #[test]
+    fn verify_tdx_dice_root_eca_key_empty_key_fails() {
+        let quote_values = IntelTdxAttestationReport {
+            report_data: Sha512::from_contents(&[]).as_ref().to_vec(),
+            ..Default::default()
+        };
+
+        let err = verify_tdx_dice_root_eca_key(&quote_values, &[]).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("empty root ECA public key"),
+            "unexpected error: {err:#}"
+        );
+    }
+
+    #[test]
+    fn verify_tdx_dice_root_eca_key_wrong_report_data_length_fails() {
+        let eca_public_key = b"test-root-eca-public-key";
+        let full_digest = Sha512::from_contents(eca_public_key);
+        let quote_values = IntelTdxAttestationReport {
+            report_data: full_digest.as_ref()[..32].to_vec(),
+            ..Default::default()
+        };
+
+        let err = verify_tdx_dice_root_eca_key(&quote_values, eca_public_key).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("unexpected Intel TDX report data length"),
+            "unexpected error: {err:#}"
+        );
+    }
+
+    #[test]
+    fn verify_root_attestation_signature_tdx_empty_eca_public_key_fails() {
+        let d = AttestationData::load_tdx_oc();
+        let root_layer = d.evidence.root_layer.as_ref().unwrap();
+
+        let err = verify_root_attestation_signature(d.make_valid_time(), true, root_layer, &[])
+            .unwrap_err();
+        assert!(
+            format!("{err:#}").contains("empty root ECA public key"),
+            "unexpected error: {err:#}"
+        );
+    }
+
+    #[test]
+    fn verify_root_attestation_signature_tdx_mismatched_eca_public_key_fails() {
+        let mut d = AttestationData::load_tdx_oc();
+        let valid_time = d.make_valid_time();
+        let root_layer = d.evidence.root_layer.as_mut().unwrap();
+        root_layer.eca_public_key = b"mismatched-eca-public-key".to_vec();
+
+        let err = verify_root_attestation_signature(valid_time, true, root_layer, &[]).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("not bound to the Intel TDX attestation quote"),
+            "unexpected error: {err:#}"
+        );
+    }
+
+    #[test]
+    fn verify_root_attestation_signature_tdx_expired_time_fails() {
+        let mut d = AttestationData::load_tdx_oc();
+        let root_layer = d.evidence.root_layer.as_mut().unwrap();
+        root_layer.eca_public_key = b"mismatched-eca-public-key".to_vec();
+        let expired_time = make_instant!("2040-01-01T00:00:00Z");
+
+        let err =
+            verify_root_attestation_signature(expired_time, true, root_layer, &[]).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("verifying Intel TDX quote validity"),
+            "unexpected error: {err:#}"
+        );
+    }
 }

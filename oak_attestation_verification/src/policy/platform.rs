@@ -40,6 +40,7 @@ use crate::{
         convert_amd_sev_snp_attestation_report, convert_intel_tdx_attestation_quote,
         new_tdx_tcb_svn, verify_amd_sev_attestation_report_values,
         verify_intel_tdx_attestation_quote, verify_root_attestation_signature,
+        verify_tdx_dice_root_eca_key,
     },
     results::set_initial_measurement,
 };
@@ -202,10 +203,11 @@ impl IntelTdxPolicy {
     }
 }
 
-// Policy which verifies the AMD SEV-SNP hardware root.
+// Policy which verifies the Intel TDX hardware root.
 //
-// On success, returns the (unverified) initial measurement which will be
-// verified by the firmware policy.
+// Checks root ECA key binding only when `eca_public_key` is non-empty; DICE
+// verifiers must enforce a non-empty key separately. On success, returns the
+// initial measurement (`mr_td`) to be verified by the firmware policy.
 impl Policy<RootLayerEvidence> for IntelTdxPolicy {
     fn verify(
         &self,
@@ -228,6 +230,9 @@ impl Policy<RootLayerEvidence> for IntelTdxPolicy {
             .context("getting Intel TDX expected values")?;
         verify_intel_tdx_attestation_quote(&quote_values, &expected_values)
             .context("verifying Intel TDX attestation quote values")?;
+        if !evidence.eca_public_key.is_empty() {
+            verify_tdx_dice_root_eca_key(&quote_values, &evidence.eca_public_key)?;
+        }
 
         let mut results = EventAttestationResults { ..Default::default() };
         set_initial_measurement(&mut results, quote_values.mr_td.as_slice());
@@ -272,6 +277,7 @@ mod tests {
 
     use oak_attestation_verification_results::get_initial_measurement;
     use oak_proto_rust::oak::attestation::v1::endorsements;
+    use oak_time::make_instant;
     use test_util::{AttestationData, get_oc_reference_values};
 
     use super::*;
@@ -419,5 +425,84 @@ mod tests {
             &Variant::default(),
         );
         assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+
+    fn tdx_oc_policy(d: &AttestationData) -> IntelTdxPolicy {
+        let ref_values = get_oc_reference_values(&d.reference_values);
+        let platform_ref_values =
+            ref_values.root_layer.as_ref().unwrap().intel_tdx.as_ref().unwrap();
+        IntelTdxPolicy::new(platform_ref_values)
+    }
+
+    #[test]
+    fn verify_tdx_non_empty_mismatched_eca_public_key_fails() {
+        let mut d = AttestationData::load_tdx_oc();
+        let valid_time = d.make_valid_time();
+        let endorsement = Variant::default();
+        let policy = tdx_oc_policy(&d);
+        let root_layer = d.evidence.root_layer.as_mut().unwrap();
+        root_layer.eca_public_key = vec![1, 2, 3, 4];
+
+        let err = policy.verify(valid_time, root_layer, &endorsement).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("not bound to the Intel TDX attestation quote"),
+            "unexpected error: {err:#}"
+        );
+    }
+
+    #[test]
+    fn verify_tdx_expired_time_fails() {
+        let d = AttestationData::load_tdx_oc();
+        let endorsement = Variant::default();
+        let policy = tdx_oc_policy(&d);
+        let expired_time = make_instant!("2040-01-01T00:00:00Z");
+
+        let err = policy
+            .verify(expired_time, d.evidence.root_layer.as_ref().unwrap(), &endorsement)
+            .unwrap_err();
+        assert!(
+            format!("{err:#}").contains("verifying TDX quote validity"),
+            "unexpected error: {err:#}"
+        );
+    }
+
+    #[test]
+    fn verify_tdx_tampered_quote_fails() {
+        let mut d = AttestationData::load_tdx_oc();
+        let valid_time = d.make_valid_time();
+        let endorsement = Variant::default();
+        let policy = tdx_oc_policy(&d);
+        let root_layer = d.evidence.root_layer.as_mut().unwrap();
+        // Flip a byte inside report_data of the signed TD quote body.
+        root_layer.remote_attestation_report[580] ^= 0x01;
+
+        let err = policy.verify(valid_time, root_layer, &endorsement).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("verifying TDX quote validity"),
+            "unexpected error: {err:#}"
+        );
+    }
+
+    #[test]
+    fn verify_tdx_non_tdx_platforms_fail() {
+        use oak_proto_rust::oak::attestation::v1::TeePlatform as ProtoTeePlatform;
+
+        let d = AttestationData::load_tdx_oc();
+        let valid_time = d.make_valid_time();
+        let endorsement = Variant::default();
+        let policy = tdx_oc_policy(&d);
+        let base_root_layer = d.evidence.root_layer.unwrap();
+
+        for platform in
+            [ProtoTeePlatform::None, ProtoTeePlatform::AmdSevSnp, ProtoTeePlatform::Unspecified]
+        {
+            let mut root_layer = base_root_layer.clone();
+            root_layer.platform = platform.into();
+            let err = policy.verify(valid_time, &root_layer, &endorsement).unwrap_err();
+            assert!(
+                format!("{err:#}").contains("unsupported TEE platform value"),
+                "unexpected error for {platform:?}: {err:#}"
+            );
+        }
     }
 }
