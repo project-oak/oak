@@ -1756,6 +1756,68 @@ fn test_verify_pes_confirmation_multiple_time_stamp_tokens_first_valid_second_in
 }
 
 #[test]
+fn test_verify_pes_confirmation_multiple_time_stamp_tokens_all_invalid_fails() {
+    use oak_time::make_instant;
+
+    let endorsement_bytes = b"{\"artifact\":\"test\"}";
+    let (pes_confirmation_bytes, pes_key_set, trusted_endorser_key) =
+        create_test_pes_confirmation_bytes(endorsement_bytes);
+    let pki = build_test_tsa_pki();
+    let tsa_ref_value = make_tsa_ref_value(pki.root_cert.to_der().unwrap());
+
+    let pes_sig_bytes = extract_pes_signature_bytes(&pes_confirmation_bytes);
+    // Token 0 is valid against the TSA chain (2026-01-01..2028-01-01) and covers
+    // the PES signature, but its genTime precedes the PES certificate's
+    // notBefore (2026-05-07T15:52:37Z), so it fails with
+    // IssuanceTimeOutsidePesCertValidity.
+    let invalid_token_1 = build_test_time_stamp_token_der(
+        &pes_sig_bytes,
+        make_instant!("2026-02-01T00:00:00Z"),
+        &[&pki.signer_cert, &pki.intermediate_cert],
+        "Test TSA Intermediate CA",
+        3,
+        None,
+        &pki.signer_key,
+    );
+    // Token 1 is within the PES certificate's validity window but stamps the
+    // wrong bytes, so it fails with MessageImprintMismatch.
+    let invalid_token_2 = build_test_time_stamp_token_der(
+        b"wrong signature bytes",
+        make_instant!("2026-06-15T12:00:00Z"),
+        &[&pki.signer_cert, &pki.intermediate_cert],
+        "Test TSA Intermediate CA",
+        3,
+        None,
+        &pki.signer_key,
+    );
+    let updated_confirmation_bytes =
+        attach_time_stamp_tokens(&pes_confirmation_bytes, &[&invalid_token_1, &invalid_token_2]);
+
+    let err = verify_pes_confirmation(
+        &updated_confirmation_bytes,
+        &pes_key_set,
+        endorsement_bytes,
+        Some(&trusted_endorser_key),
+        Some(&tsa_ref_value),
+    )
+    .expect_err("expected failure when all timestamp tokens are invalid");
+    let err_msg = format!("{err:#}");
+    let expected_token_0 = format!(
+        "time_stamp_token[0]: {}",
+        time_stamp_token::TimeStampTokenError::IssuanceTimeOutsidePesCertValidity
+    );
+    assert!(
+        err_msg.contains(&expected_token_0) && err_msg.contains("time_stamp_token[1]"),
+        "expected error details for all attempted timestamp tokens, got: {err_msg}"
+    );
+    assert_eq!(
+        err.downcast_ref::<time_stamp_token::TimeStampTokenError>(),
+        Some(&time_stamp_token::TimeStampTokenError::MessageImprintMismatch),
+        "unexpected error chain: {err:#}"
+    );
+}
+
+#[test]
 fn test_verify_pes_confirmation_tsa_verification() {
     use oak_time::make_instant;
     use x509_cert::Version;
@@ -2138,4 +2200,115 @@ fn test_verify_pes_confirmation_multiple_signatures_tsa_fallback() {
             result.err()
         );
     }
+}
+
+#[test]
+fn test_verify_pes_endorsement_with_globalsign_token_fails_mismatched_signatures() {
+    use crate::time_stamp_token::verification_tests::{
+        encode_signed_data, load_globalsign_token_der,
+    };
+
+    let globalsign_token_der = load_globalsign_token_der();
+    let content_info = time_stamp_token::ContentInfo::from_der(&globalsign_token_der).unwrap();
+    let signed_data = content_info.content.decode_as::<time_stamp_token::SignedData<'_>>().unwrap();
+    let certs = signed_data.certificates.as_ref().unwrap();
+    assert_eq!(certs.len(), 4);
+    assert_eq!(certs[3].tbs_certificate.subject, certs[3].tbs_certificate.issuer);
+    // Extract GlobalSign Root CA - R6 (`certs[3]`) from the fixture to use as the
+    // trusted root anchor in `TsaReferenceValue`.
+    let tsa_ref_value = make_tsa_ref_value(certs[3].to_der().unwrap());
+
+    // Also construct a variant of the GlobalSign token with the root CA removed
+    // from `SignedData.certificates` so root resolution must come exclusively from
+    // `tsa_ref_value`.
+    let mut sd_without_bundled_root = signed_data.clone();
+    sd_without_bundled_root.certificates = Some(certs[..3].to_vec());
+    let token_without_bundled_root_der = encode_signed_data(&sd_without_bundled_root);
+
+    let endorsement_bytes = make_test_endorsement_statement();
+    let (pes_confirmation_bytes, pes_key_set, trusted_endorser_key) =
+        create_test_pes_confirmation_bytes(&endorsement_bytes);
+    let endorsement = Endorsement {
+        format: EndorsementFormat::EndorsementFormatJsonIntoto.into(),
+        serialized: endorsement_bytes.clone(),
+        subject: vec![],
+    };
+    let ref_value_with_tsa = PesEndorsementReferenceValue {
+        key_set: Some(pes_key_set.clone()),
+        publisher_id: "test-publisher@google.com".to_string(),
+        tsa: Some(tsa_ref_value.clone()),
+        ..Default::default()
+    };
+
+    for token_der in [&globalsign_token_der[..], &token_without_bundled_root_der[..]] {
+        let confirmation_with_token =
+            attach_time_stamp_tokens(&pes_confirmation_bytes, &[token_der]);
+
+        // Verify via both `verify_pes_confirmation` and `verify_pes_endorsement`:
+        // all GlobalSign CMS signature, EKU, certificate chain (against GlobalSign
+        // Root CA - R6), and PES certificate validity window checks pass, and
+        // validation fails at the final step due to mismatched signature imprint.
+        let confirmation_err = verify_pes_confirmation(
+            &confirmation_with_token,
+            &pes_key_set,
+            &endorsement_bytes,
+            Some(&trusted_endorser_key),
+            Some(&tsa_ref_value),
+        )
+        .expect_err("expected validation to fail due to mismatched signatures");
+        assert_eq!(
+            confirmation_err.downcast_ref::<time_stamp_token::TimeStampTokenError>(),
+            Some(&time_stamp_token::TimeStampTokenError::MessageImprintMismatch),
+            "unexpected error chain: {confirmation_err:#}"
+        );
+
+        let endorsement_err = verify_pes_endorsement(
+            Instant::from_unix_millis(1000),
+            &endorsement,
+            &confirmation_with_token,
+            &ref_value_with_tsa,
+        )
+        .expect_err("expected endorsement verification to fail due to mismatched signatures");
+        assert_eq!(
+            endorsement_err.downcast_ref::<time_stamp_token::TimeStampTokenError>(),
+            Some(&time_stamp_token::TimeStampTokenError::MessageImprintMismatch),
+            "unexpected error chain: {endorsement_err:#}"
+        );
+    }
+
+    // Even though `globalsign_token_der` bundles the self-signed GlobalSign Root
+    // CA - R6 in `SignedData.certificates`, trusting a different root CA rejects
+    // the token with UntrustedCertificateChain rather than implicitly trusting
+    // the bundled root.
+    let untrusted_pki = build_test_tsa_pki();
+    let untrusted_tsa_ref = make_tsa_ref_value(untrusted_pki.root_cert.to_der().unwrap());
+    let untrusted_ref_value =
+        PesEndorsementReferenceValue { tsa: Some(untrusted_tsa_ref.clone()), ..ref_value_with_tsa };
+    let confirmation_with_bundled_root =
+        attach_time_stamp_tokens(&pes_confirmation_bytes, &[&globalsign_token_der]);
+    let untrusted_confirmation_err = verify_pes_confirmation(
+        &confirmation_with_bundled_root,
+        &pes_key_set,
+        &endorsement_bytes,
+        Some(&trusted_endorser_key),
+        Some(&untrusted_tsa_ref),
+    )
+    .expect_err("expected failure when GlobalSign root is not in trusted TSA roots");
+    assert_eq!(
+        untrusted_confirmation_err.downcast_ref::<time_stamp_token::TimeStampTokenError>(),
+        Some(&time_stamp_token::TimeStampTokenError::UntrustedCertificateChain),
+        "unexpected error chain: {untrusted_confirmation_err:#}"
+    );
+    let untrusted_endorsement_err = verify_pes_endorsement(
+        Instant::from_unix_millis(1000),
+        &endorsement,
+        &confirmation_with_bundled_root,
+        &untrusted_ref_value,
+    )
+    .expect_err("expected endorsement failure when GlobalSign root is not in trusted TSA roots");
+    assert_eq!(
+        untrusted_endorsement_err.downcast_ref::<time_stamp_token::TimeStampTokenError>(),
+        Some(&time_stamp_token::TimeStampTokenError::UntrustedCertificateChain),
+        "unexpected error chain: {untrusted_endorsement_err:#}"
+    );
 }
