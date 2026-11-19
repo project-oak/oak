@@ -29,8 +29,8 @@ use oak_stage0::{
     paging::{self, PageTableRefs},
 };
 use oak_tdx_guest::{
-    tdcall::get_td_info,
-    vmcall::{call_cpuid, msr_read, msr_write, tdvmcall_wbinvd},
+    tdcall::{accept_memory, get_td_info},
+    vmcall::{call_cpuid, map_gpa, msr_read, msr_write, tdvmcall_wbinvd},
 };
 use serial::Debug;
 use x86_64::{
@@ -38,7 +38,7 @@ use x86_64::{
     instructions::tlb,
     structures::{
         mem_encrypt::{MemoryEncryptionConfiguration, enable_memory_encryption},
-        paging::{PageSize, PageTableFlags, PhysFrame, Size4KiB},
+        paging::{Page, PageSize, PageTableFlags, PhysFrame, Size4KiB},
     },
 };
 use zerocopy::{FromBytes, IntoBytes};
@@ -321,16 +321,28 @@ impl Platform for Tdx {
         serial::debug!("early_initialize_platform completed");
     }
 
-    fn change_frame_state(_: PhysFrame<Size4KiB>, _: PageAssignment) {}
+    fn change_frame_state(frame: PhysFrame<Size4KiB>, state: PageAssignment) {
+        let range = PhysFrame::range(frame, frame + 1);
+        // Safety: mapping a GPA is safe if the caller maps it correctly in the page
+        // tables.
+        unsafe {
+            map_gpa(range, state).expect("mapping GPA");
+        }
+    }
 
-    fn invalidate_page(_: x86_64::structures::paging::Page) {
+    fn invalidate_page(_: Page<Size4KiB>) {
         // TDX does not have an RMP or page invalidation instruction. Memory
         // transitions to shared are handled entirely by the hypervisor via the
         // MapGPA hypercall (TDG.VP.VMCALL<MapGPA>).
     }
 
-    fn revalidate_page(_: x86_64::structures::paging::Page) {
-        // TODO: b/360488924 - impl revalidate_page
+    fn revalidate_page(page: Page<Size4KiB>) {
+        // In stage0 we use identity mapping, so the page's virtual start address
+        // corresponds directly to a physical frame at the same address.
+        let frame =
+            PhysFrame::<Size4KiB>::from_start_address(PhysAddr::new(page.start_address().as_u64()))
+                .unwrap();
+        accept_memory(frame).expect("accepting memory");
     }
 
     fn wbvind() {
