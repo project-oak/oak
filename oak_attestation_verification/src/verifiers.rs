@@ -842,19 +842,39 @@ fn verify_event_log(
 mod tests {
     use alloc::{string::ToString, vec};
 
-    use coset::CborSerializable;
-    use oak_dice::cert::{generate_ecdsa_key_pair, verifying_key_to_cose_key};
-    use oak_proto_rust::oak::attestation::v1::{
-        BinaryReferenceValue, CbLayer1TransparentReferenceValues,
-        CbLayer2TransparentReferenceValues, CbTransparentReferenceValues, IntelTdxReferenceValues,
-        KernelLayerReferenceValues, RootLayerReferenceValues, SkipVerification,
-        TdxTcbSvnReferenceValue, TeePlatform, binary_reference_value, tdx_tcb_svn_reference_value,
+    use coset::{
+        CborSerializable, CoseSign1Builder, HeaderBuilder, cbor::value::Value, cwt::ClaimName, iana,
+    };
+    use ecdsa::signature::Signer;
+    use oak_dice::cert::{
+        APPLICATION_KEYS_ADDITIONAL_DATA, DICE_LAYER_ADDITIONAL_DATA, SHA2_256_ID,
+        TRANSPARENT_EVENT_ID, USER_DATA_ADDITIONAL_DATA, derive_verifying_key_id,
+        generate_ecdsa_key_pair, generate_kem_certificate_with_aad,
+        generate_signing_certificate_with_aad, verifying_key_to_cose_key,
+    };
+    use oak_digest::Sha256;
+    use oak_proto_rust::oak::{
+        RawDigest,
+        attestation::v1::{
+            ApplicationKeys, BinaryReferenceValue, CbLayer1TransparentEndorsement,
+            CbLayer1TransparentEvent, CbLayer1TransparentReferenceValues,
+            CbLayer2TransparentEndorsement, CbLayer2TransparentEvent,
+            CbLayer2TransparentReferenceValues, CbTransparentReferenceValues, Digests,
+            IntelTdxReferenceValues, KernelBinaryReferenceValue, KernelEndorsement,
+            KernelLayerReferenceValues, LayerEvidence, MpmPackage, MpmReferenceValue,
+            MpmVersionIds, RootLayerEvidence, RootLayerReferenceValues, SkipVerification,
+            TdxTcbSvnReferenceValue, TeePlatform, TextReferenceValue, binary_reference_value,
+            kernel_binary_reference_value, mpm_reference_value, tdx_tcb_svn_reference_value,
+            text_reference_value,
+        },
     };
     use oak_time::{clock::FixedClock, make_instant};
+    use p256::ecdsa::{Signature, SigningKey, VerifyingKey};
     use prost_types::Any;
     use test_util::AttestationData;
 
     use super::*;
+    use crate::results::{get_user_data_payload, set_initial_measurement};
 
     fn valid_time() -> Instant {
         make_instant!("2025-10-15T00:00:00Z")
@@ -1014,5 +1034,310 @@ mod tests {
                 expected,
             );
         }
+    }
+
+    fn digest_brv(sha2_256: Vec<u8>, sha2_384: Vec<u8>) -> BinaryReferenceValue {
+        BinaryReferenceValue {
+            r#type: Some(binary_reference_value::Type::Digests(Digests {
+                digests: vec![RawDigest { sha2_256, sha2_384, ..Default::default() }],
+            })),
+        }
+    }
+
+    fn build_transparent_dice_layer(
+        issuer_key: &SigningKey,
+        issuer_verifying_key: &VerifyingKey,
+        subject_verifying_key: &VerifyingKey,
+        encoded_event: &[u8],
+    ) -> LayerEvidence {
+        let issuer_id = hex::encode(derive_verifying_key_id(issuer_verifying_key));
+        let digest = Sha256::from_contents(encoded_event);
+        let claim = (
+            ClaimName::PrivateUse(TRANSPARENT_EVENT_ID),
+            Value::Map(vec![(
+                Value::Integer(SHA2_256_ID.into()),
+                Value::Bytes(digest.as_ref().to_vec()),
+            )]),
+        );
+        let cert = generate_signing_certificate_with_aad(
+            issuer_key,
+            issuer_id,
+            subject_verifying_key,
+            vec![claim],
+            DICE_LAYER_ADDITIONAL_DATA,
+        )
+        .expect("failed to generate layer cert")
+        .to_vec()
+        .expect("failed to serialize layer cert");
+        LayerEvidence { eca_certificate: cert }
+    }
+
+    fn build_signed_user_data_cert(signing_key: &SigningKey, payload: &[u8]) -> Vec<u8> {
+        let protected = HeaderBuilder::new().algorithm(iana::Algorithm::ES256).build();
+        CoseSign1Builder::new()
+            .protected(protected)
+            .payload(payload.to_vec())
+            .create_signature(USER_DATA_ADDITIONAL_DATA, |data| {
+                let signature: Signature = signing_key.sign(data);
+                signature.to_bytes().as_slice().into()
+            })
+            .build()
+            .to_vec()
+            .expect("failed to serialize user data cert")
+    }
+
+    fn build_application_keys(
+        issuer_key: &SigningKey,
+        issuer_verifying_key: &VerifyingKey,
+    ) -> ApplicationKeys {
+        let issuer_id = hex::encode(derive_verifying_key_id(issuer_verifying_key));
+        let (_, app_verifying_key) = generate_ecdsa_key_pair();
+        let signing_cert = generate_signing_certificate_with_aad(
+            issuer_key,
+            issuer_id.clone(),
+            &app_verifying_key,
+            vec![],
+            APPLICATION_KEYS_ADDITIONAL_DATA,
+        )
+        .expect("failed to generate app signing cert")
+        .to_vec()
+        .expect("failed to serialize app signing cert");
+        let encryption_cert = generate_kem_certificate_with_aad(
+            issuer_key,
+            issuer_id,
+            &[0x33u8; 32],
+            vec![],
+            APPLICATION_KEYS_ADDITIONAL_DATA,
+        )
+        .expect("failed to generate app encryption cert")
+        .to_vec()
+        .expect("failed to serialize app encryption cert");
+        ApplicationKeys {
+            encryption_public_key_certificate: encryption_cert,
+            signing_public_key_certificate: signing_cert,
+            ..Default::default()
+        }
+    }
+
+    struct TdxTransparentFixture {
+        evidence: Evidence,
+        endorsements: Endorsements,
+        reference_values: ReferenceValues,
+        platform_results: EventAttestationResults,
+        layer0_event: Vec<u8>,
+        layer1_event: Vec<u8>,
+        layer2_event: Vec<u8>,
+        ccel_event: Vec<u8>,
+        ccel_table_event: Vec<u8>,
+    }
+
+    fn build_tdx_transparent_fixture() -> TdxTransparentFixture {
+        let (root_priv, root_pub) = generate_ecdsa_key_pair();
+        let (l1_priv, l1_pub) = generate_ecdsa_key_pair();
+        let (l2_priv, l2_pub) = generate_ecdsa_key_pair();
+        let (final_priv, final_pub) = generate_ecdsa_key_pair();
+        let runtime_digest = vec![0x11u8; 32];
+        let userspace_digest = vec![0x22u8; 32];
+        let mr_td = vec![0x42u8; 48];
+        let mpm_version = "workload/1.0".to_string();
+
+        let layer0_event =
+            encode_event("tdxRootTransparent", "type.googleapis.com/google.protobuf.Empty", vec![]);
+        let layer1_event = encode_event(
+            "layer1Transparent",
+            "type.googleapis.com/oak.attestation.v1.CbLayer1TransparentEvent",
+            CbLayer1TransparentEvent {
+                runtime_agent_binary_measurement: runtime_digest.clone(),
+                userspace_measurement: userspace_digest.clone(),
+                ..Default::default()
+            }
+            .encode_to_vec(),
+        );
+        let layer2_event = encode_event(
+            "layer2Transparent",
+            "type.googleapis.com/oak.attestation.v1.CbLayer2TransparentEvent",
+            CbLayer2TransparentEvent {
+                packages: vec![MpmPackage {
+                    mpm_version_id: mpm_version.clone(),
+                    ..Default::default()
+                }],
+            }
+            .encode_to_vec(),
+        );
+        let ccel_event = encode_event("CCEL", BYTES_VALUE_TYPE_URL, vec![0x0a, 0x02, 0x01, 0x02]);
+        let ccel_table_event =
+            encode_event("CCELTable", BYTES_VALUE_TYPE_URL, vec![0x0a, 0x02, 0x03, 0x04]);
+
+        let evidence = Evidence {
+            root_layer: Some(RootLayerEvidence {
+                platform: TeePlatform::IntelTdx.into(),
+                remote_attestation_report: vec![],
+                eca_public_key: verifying_key_to_cose_key(&root_pub).to_vec().unwrap(),
+            }),
+            layers: vec![
+                build_transparent_dice_layer(&root_priv, &root_pub, &l1_pub, &layer0_event),
+                build_transparent_dice_layer(&l1_priv, &l1_pub, &l2_pub, &layer1_event),
+                build_transparent_dice_layer(&l2_priv, &l2_pub, &final_pub, &layer2_event),
+            ],
+            application_keys: Some(build_application_keys(&final_priv, &final_pub)),
+            transparent_event_log: Some(EventLog {
+                encoded_events: vec![
+                    layer0_event.clone(),
+                    layer1_event.clone(),
+                    ccel_event.clone(),
+                    ccel_table_event.clone(),
+                    layer2_event.clone(),
+                ],
+            }),
+            signed_user_data_certificate: build_signed_user_data_cert(
+                &final_priv,
+                b"tdx-user-data",
+            ),
+            ..Default::default()
+        };
+        let endorsements = Endorsements {
+            platform: None,
+            initial: Some(Variant::default()),
+            events: vec![
+                KernelEndorsement::default().into(),
+                CbLayer1TransparentEndorsement::default().into(),
+                CbLayer2TransparentEndorsement::default().into(),
+            ],
+            ..Default::default()
+        };
+        let skip = BinaryReferenceValue {
+            r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
+        };
+        let mut cbt = make_minimal_cbt();
+        cbt.root_layer.as_mut().unwrap().intel_tdx.as_mut().unwrap().stage0 =
+            Some(digest_brv(vec![], mr_td.clone()));
+        cbt.kernel_layer = Some(KernelLayerReferenceValues {
+            kernel: Some(KernelBinaryReferenceValue {
+                r#type: Some(kernel_binary_reference_value::Type::Skip(SkipVerification {})),
+            }),
+            kernel_cmd_line_text: Some(TextReferenceValue {
+                r#type: Some(text_reference_value::Type::Skip(SkipVerification {})),
+            }),
+            init_ram_fs: Some(skip.clone()),
+            memory_map: Some(skip.clone()),
+            acpi: Some(skip),
+        });
+        cbt.layer1 = Some(CbLayer1TransparentReferenceValues {
+            runtime_agent_binary: Some(digest_brv(runtime_digest, vec![])),
+            userspace: Some(digest_brv(userspace_digest, vec![])),
+            ..Default::default()
+        });
+        cbt.layer2 = Some(CbLayer2TransparentReferenceValues {
+            binary_mpms: vec![MpmReferenceValue {
+                r#type: Some(mpm_reference_value::Type::Versions(MpmVersionIds {
+                    versions: vec![mpm_version],
+                })),
+            }],
+            ..Default::default()
+        });
+        let reference_values = ReferenceValues { r#type: Some(reference_values::Type::Cbt(cbt)) };
+        let mut platform_results = EventAttestationResults::default();
+        set_initial_measurement(&mut platform_results, &mr_td);
+
+        TdxTransparentFixture {
+            evidence,
+            endorsements,
+            reference_values,
+            platform_results,
+            layer0_event,
+            layer1_event,
+            layer2_event,
+            ccel_event,
+            ccel_table_event,
+        }
+    }
+
+    fn make_verifier(rvs: &ReferenceValues) -> IntelTdxTransparentDiceAttestationVerifier {
+        create_intel_tdx_transparent_dice_verifier(FixedClock::at_instant(valid_time()), rvs)
+            .expect("factory should succeed")
+    }
+
+    fn verify_synthetic(
+        verifier: &IntelTdxTransparentDiceAttestationVerifier,
+        platform_results: &EventAttestationResults,
+        evidence: &Evidence,
+        endorsements: &Endorsements,
+    ) -> anyhow::Result<AttestationResults> {
+        verifier.verify_after_platform(
+            valid_time(),
+            platform_results.clone(),
+            evidence,
+            endorsements,
+        )
+    }
+
+    #[test]
+    fn tdx_transparent_verify_after_platform_ccel_interleaved_and_leading_succeeds() {
+        let mut fixture = build_tdx_transparent_fixture();
+        let verifier = make_verifier(&fixture.reference_values);
+
+        // Interleaved: [tdxRootTransparent, layer1, CCEL, CCELTable, layer2]
+        let results = verify_synthetic(
+            &verifier,
+            &fixture.platform_results,
+            &fixture.evidence,
+            &fixture.endorsements,
+        )
+        .expect("interleaved CCEL transparent verification should succeed");
+        assert_eq!(results.status, Status::Success as i32);
+        assert_eq!(
+            results.event_attestation_results.len(),
+            6,
+            "expected [platform, firmware, layer0, layer1, layer2, user_data]"
+        );
+        assert_eq!(
+            get_user_data_payload(&results.event_attestation_results[5]).map(|v| v.as_slice()),
+            Some(b"tdx-user-data".as_slice())
+        );
+
+        // Leading: [CCEL, CCELTable, tdxRootTransparent, layer1, layer2]
+        fixture.evidence.transparent_event_log = Some(EventLog {
+            encoded_events: vec![
+                fixture.ccel_event.clone(),
+                fixture.ccel_table_event.clone(),
+                fixture.layer0_event.clone(),
+                fixture.layer1_event.clone(),
+                fixture.layer2_event.clone(),
+            ],
+        });
+        let results_leading = verify_synthetic(
+            &verifier,
+            &fixture.platform_results,
+            &fixture.evidence,
+            &fixture.endorsements,
+        )
+        .expect("leading CCEL transparent verification should succeed");
+        assert_eq!(results_leading.event_attestation_results.len(), 6);
+    }
+
+    #[test]
+    fn tdx_transparent_verify_after_platform_without_user_data_or_app_keys_succeeds() {
+        let mut fixture = build_tdx_transparent_fixture();
+        fixture.evidence.signed_user_data_certificate.clear();
+        let verifier = make_verifier(&fixture.reference_values);
+
+        let results = verify_synthetic(
+            &verifier,
+            &fixture.platform_results,
+            &fixture.evidence,
+            &fixture.endorsements,
+        )
+        .expect("verification without user data cert should succeed");
+        assert_eq!(results.event_attestation_results.len(), 5);
+
+        fixture.evidence.application_keys = None;
+        let results = verify_synthetic(
+            &verifier,
+            &fixture.platform_results,
+            &fixture.evidence,
+            &fixture.endorsements,
+        )
+        .expect("verification without application keys should succeed");
+        assert_eq!(results.event_attestation_results.len(), 5);
     }
 }
