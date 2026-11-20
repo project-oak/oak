@@ -120,7 +120,10 @@ pub fn cosign_sign_blob(blob_bytes: &[u8], fulcio_auth_flow: FulcioAuthFlow) -> 
     let mut blob_file = NamedTempFile::new().context("creating temp blob file")?;
     std::io::Write::write_all(&mut blob_file, blob_bytes).context("writing blob to temp file")?;
 
-    let temp_bundle_path = std::env::temp_dir().join(format!("bundle-{}.json", std::process::id()));
+    // cosign creates the bundle file itself, so give it a path inside a fresh
+    // private directory rather than a predictable name in the shared temp dir.
+    let bundle_dir = tempfile::tempdir().context("creating temp bundle directory")?;
+    let temp_bundle_path = bundle_dir.path().join("bundle.json");
 
     let mut command = Command::new("cosign");
     command
