@@ -168,6 +168,22 @@ pub(crate) fn verify_endorsement_wrapper(
     }
 }
 
+/// Returns whether `image_reference` starts with `prefix` at a reference
+/// component boundary.
+///
+/// A plain string prefix would let `gcr.io/project` match images in
+/// `gcr.io/project-other`, or `repo/app` match `repo/app-other`, so the prefix
+/// must either end with a separator or be followed by one in `image_reference`.
+pub(crate) fn image_reference_has_prefix(image_reference: &str, prefix: &str) -> bool {
+    const SEPARATORS: [char; 3] = ['/', ':', '@'];
+    image_reference.strip_prefix(prefix).is_some_and(|rest| {
+        prefix.is_empty()
+            || prefix.ends_with(SEPARATORS)
+            || rest.is_empty()
+            || rest.starts_with(SEPARATORS)
+    })
+}
+
 // Workload reference values can either be `EndorsementReferenceValue` protos or
 // a string pointing to the referenced container image.
 pub enum WorkloadReferenceValues {
@@ -231,7 +247,7 @@ impl ConfidentialSpacePolicy {
                     ref_value,
                 ),
                 WorkloadReferenceValues::ContainerImageReferencePrefix(container_image_reference_prefix) => {
-                    if image_reference.whole().starts_with(container_image_reference_prefix) {
+                    if image_reference_has_prefix(&image_reference.whole(), container_image_reference_prefix) {
                       Ok(())
                     } else {
                         Err(ConfidentialSpaceVerificationError::EndorsementContainerImageVerifyError{
@@ -629,6 +645,63 @@ mod tests {
         let result = policy.verify(current_time, &event.encode_to_vec(), &endorsement.into());
 
         assert!(result.is_err(), "Expected failure but got success");
+    }
+
+    #[test]
+    fn confidential_space_policy_verify_rejects_partial_component_prefix() {
+        // The time has been set inside the validity interval of the test
+        // token and the root certificate.
+        let current_time = make_instant!("2025-07-01T17:31:32Z");
+
+        // The token's image is in project `oak-ci`, repository
+        // `example-enclave-apps`, image `echo_enclave_app`.
+        for container_image_reference_prefix in [
+            "europe-west2-docker.pkg.dev/oak",
+            "europe-west2-docker.pkg.dev/oak-ci/example",
+            "europe-west2-docker.pkg.dev/oak-ci/example-enclave-apps/echo_enclave",
+        ] {
+            let event = create_public_key_event(&BINDING_KEY_BYTES);
+            let endorsement = ConfidentialSpaceEndorsement {
+                jwt_token: read_testdata_string!("valid_token.jwt"),
+                workload_endorsement: None,
+            };
+            let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
+            let root_certificate = Certificate::from_pem(&root_certificate_pem).unwrap();
+            let workload_ref_value = WorkloadReferenceValues::ContainerImageReferencePrefix(
+                container_image_reference_prefix.to_string(),
+            );
+            let policy = ConfidentialSpacePolicy::new(root_certificate, workload_ref_value);
+
+            let result = policy.verify(current_time, &event.encode_to_vec(), &endorsement.into());
+
+            assert!(result.is_err(), "prefix {container_image_reference_prefix} was accepted");
+        }
+    }
+
+    #[test]
+    fn image_reference_has_prefix_matches_on_component_boundaries() {
+        let image = "europe-west2-docker.pkg.dev/oak-ci/apps/echo@sha256:313b";
+        for prefix in [
+            "",
+            "europe-west2-docker.pkg.dev",
+            "europe-west2-docker.pkg.dev/",
+            "europe-west2-docker.pkg.dev/oak-ci",
+            "europe-west2-docker.pkg.dev/oak-ci/apps/echo",
+            "europe-west2-docker.pkg.dev/oak-ci/apps/echo@",
+            "europe-west2-docker.pkg.dev/oak-ci/apps/echo@sha256:",
+            image,
+        ] {
+            assert!(image_reference_has_prefix(image, prefix), "{prefix} should match");
+        }
+        for prefix in [
+            "europe-west2",
+            "europe-west2-docker.pkg.dev/oak",
+            "europe-west2-docker.pkg.dev/oak-ci/apps/ech",
+            "europe-west2-docker.pkg.dev/oak-ci/apps/echo@sha256:31",
+            "europe-west2-docker.pkg.dev/oak-ci/other",
+        ] {
+            assert!(!image_reference_has_prefix(image, prefix), "{prefix} should not match");
+        }
     }
 
     #[test]
