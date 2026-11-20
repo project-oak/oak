@@ -48,6 +48,15 @@ impl KernelPolicy {
     ///
     /// The evidence should contain the same information that would be passed to
     /// `verify`.
+    ///
+    /// The kernel command line is an exception. With the `regex` feature its
+    /// reference value is the evidence command line used as a regex, with any
+    /// `brd.rd_size` value and any trailing ` -- ` arguments allowed. The
+    /// command line is not escaped and the regex is anchored only at the end,
+    /// so it also accepts extra leading parameters, and each `.` matches any
+    /// character. Callers that need an exact match should set
+    /// `kernel_cmd_line_text` to an anchored, escaped regex or a string literal
+    /// instead.
     pub fn evidence_to_reference_values(
         evidence: &[u8],
     ) -> anyhow::Result<KernelLayerReferenceValues> {
