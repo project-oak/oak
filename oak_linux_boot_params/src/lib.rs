@@ -14,7 +14,9 @@
 // limitations under the License.
 //
 
-#![no_std]
+#![cfg_attr(not(test), no_std)]
+
+pub mod efi;
 
 use core::{
     ffi::{CStr, c_char},
@@ -22,6 +24,7 @@ use core::{
 };
 
 use bitflags::bitflags;
+pub use efi::*;
 use strum::{Display, FromRepr};
 use zerocopy::{FromBytes, Immutable, IntoBytes};
 
@@ -667,19 +670,6 @@ pub struct OLPCOfwHeader {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct EFIInfo {
-    pub efi_loader_signature: u32,
-    pub efi_systab: u32,
-    pub efi_memdesc_size: u32,
-    pub efi_memdesc_version: u32,
-    pub efi_memmap: u32,
-    pub efi_memmap_size: u32,
-    pub efi_systab_hi: u32,
-    pub efi_memmap_hi: u32,
-}
-
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
 pub struct EDIDInfo {
     pub dummy: [u8; 128usize],
 }
@@ -687,6 +677,23 @@ pub struct EDIDInfo {
 pub struct Ramdisk {
     pub addr: u32,
     pub size: u32,
+}
+
+/// Linux-specific UEFI Secure Boot state recorded in
+/// [`BootParams::secure_boot`].
+///
+/// See `enum efi_secureboot_mode` in Linux `include/linux/efi.h`:
+/// <https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/linux/efi.h>
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Display, FromRepr)]
+#[repr(u8)]
+pub enum EfiSecureBootMode {
+    /// Not populated by the boot stub.
+    #[default]
+    Unset = 0,
+    /// Firmware could not determine Secure Boot state.
+    Unknown = 1,
+    Disabled = 2,
+    Enabled = 3,
 }
 
 #[repr(C, align(4096))]
@@ -787,6 +794,12 @@ impl BootParams {
 
     pub fn ramdisk(&self) -> Option<Ramdisk> {
         self.hdr.ramdisk()
+    }
+
+    /// Decodes [`Self::secure_boot`] into [`EfiSecureBootMode`], returning
+    /// `None` for unrecognized byte values.
+    pub fn secure_boot(&self) -> Option<EfiSecureBootMode> {
+        EfiSecureBootMode::from_repr(self.secure_boot)
     }
 }
 
