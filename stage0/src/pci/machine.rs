@@ -16,6 +16,7 @@
 
 use core::{ffi::CStr, ops::Range};
 
+use oak_linux_boot_params::E820EntryType;
 use x86_64::align_down;
 use zerocopy::IntoBytes;
 
@@ -229,6 +230,36 @@ impl Machine for I440fx {
     }
 }
 
+/// Verifies that a fixed 32-bit PCI MMIO hole does not overlap any non-RESERVED
+/// E820 entry.
+///
+/// Unlike dynamically placed windows, fixed holes may legitimately appear as
+/// `E820EntryType::RESERVED` in the VMM-supplied E820 map (for example Cloud
+/// Hypervisor `<= v54.1` reserves `[0xC000_0000, 0xE800_0000)`).
+fn validate_fixed_mmio32_hole(
+    hole: Range<u32>,
+    zero_page: &ZeroPage,
+) -> Result<Range<u32>, &'static str> {
+    let start = hole.start as usize;
+    let end = hole.end as usize;
+    if let Some(entry) = zero_page.e820_table().iter().find(|entry| {
+        entry.addr() < end
+            && entry.end() > start
+            && entry.entry_type() != Some(E820EntryType::RESERVED)
+    }) {
+        log::error!(
+            "32-bit PCI MMIO hole [{:#x}, {:#x}) overlaps non-reserved E820 entry [{:#x}, {:#x}) ({:?})",
+            start,
+            end,
+            entry.addr(),
+            entry.end(),
+            entry.entry_type()
+        );
+        return Err("32-bit PCI MMIO hole overlaps non-reserved E820 entry");
+    }
+    Ok(hole)
+}
+
 pub struct Q35 {}
 
 impl Machine for Q35 {
@@ -237,7 +268,7 @@ impl Machine for Q35 {
 
     fn mmio32_hole(
         _firmware: &mut dyn Firmware,
-        _zero_page: &ZeroPage,
+        zero_page: &ZeroPage,
     ) -> Result<Range<u32>, &'static str> {
         // SeaBIOS: PCI EXBAR start is hardcoded to 0xB000_0000 and size is 256 MiB:
         // https://github.com/coreboot/seabios/blob/b686f4600792c504f01929f761be473e298de33d/src/fw/dev-q35.h#L11
@@ -271,7 +302,7 @@ impl Machine for Q35 {
         // that, similar to EDK2. This leaves 768 MiB for the PCI MMIO memory.
         let mmio32_hole_end = 0xE000_0000;
 
-        Ok(mmio32_hole_start..mmio32_hole_end)
+        validate_fixed_mmio32_hole(mmio32_hole_start..mmio32_hole_end, zero_page)
     }
 
     fn mmio64_hole<P: Platform>(
@@ -318,11 +349,11 @@ impl Machine for IntelVirtPcieHost {
 
     fn mmio32_hole(
         _firmware: &mut dyn Firmware,
-        _zero_page: &ZeroPage,
+        zero_page: &ZeroPage,
     ) -> Result<Range<u32>, &'static str> {
         // https://github.com/cloud-hypervisor/cloud-hypervisor/blob/main/arch/src/x86_64/layout.rs#L86-L87
         // Cloud Hypervisor reserves 0xC000_0000..0xE800_0000 for 32-bit PCI MMIO
-        Ok(0xC000_0000..0xE800_0000)
+        validate_fixed_mmio32_hole(0xC000_0000..0xE800_0000, zero_page)
     }
 
     fn mmio64_hole<P: Platform>(
@@ -545,5 +576,54 @@ mod tests {
         ));
 
         assert_that!(I440fx::mmio32_hole(&mut firmware, &zero_page), err(anything()));
+    }
+
+    #[googletest::test]
+    fn q35_hole_allows_adjacent_and_reserved_but_rejects_ram() {
+        let mut firmware = TestFirmware::default();
+        let mut zero_page = ZeroPage::new();
+        zero_page.insert_e820_entry(BootE820Entry::new(0, 0xB000_0000, E820EntryType::RAM));
+        zero_page.insert_e820_entry(BootE820Entry::new(
+            0xB000_0000,
+            0x3000_0000,
+            E820EntryType::RESERVED,
+        ));
+        expect_that!(
+            Q35::mmio32_hole(&mut firmware, &zero_page),
+            ok(eq(&(0xB000_0000u32..0xE000_0000u32)))
+        );
+
+        let mut overlapping = ZeroPage::new();
+        overlapping.insert_e820_entry(BootE820Entry::new(
+            0xB800_0000,
+            0x0100_0000,
+            E820EntryType::RAM,
+        ));
+        expect_that!(Q35::mmio32_hole(&mut firmware, &overlapping), err(anything()));
+    }
+
+    #[googletest::test]
+    fn intel_virt_pcie_host_hole_allows_reserved_and_rejects_ram() {
+        let mut firmware = TestFirmware::default();
+        // Cloud Hypervisor <= v54.1 publishes [0xC000_0000, 0xE800_0000) as RESERVED.
+        let mut ch_zero_page = ZeroPage::new();
+        ch_zero_page.insert_e820_entry(BootE820Entry::new(0, 0xC000_0000, E820EntryType::RAM));
+        ch_zero_page.insert_e820_entry(BootE820Entry::new(
+            0xC000_0000,
+            0x2800_0000,
+            E820EntryType::RESERVED,
+        ));
+        expect_that!(
+            IntelVirtPcieHost::mmio32_hole(&mut firmware, &ch_zero_page),
+            ok(eq(&(0xC000_0000u32..0xE800_0000u32)))
+        );
+
+        let mut overlapping = ZeroPage::new();
+        overlapping.insert_e820_entry(BootE820Entry::new(
+            0xD000_0000,
+            0x0100_0000,
+            E820EntryType::RAM,
+        ));
+        expect_that!(IntelVirtPcieHost::mmio32_hole(&mut firmware, &overlapping), err(anything()));
     }
 }
