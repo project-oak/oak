@@ -26,12 +26,24 @@ static mut TD_HOB_START: MaybeUninit<HandoffInfoTable> = MaybeUninit::uninit(); 
 // See Section 5.2 of the UEFI Platform Initialization Specification v1.8 (Vol.
 // 3): <https://uefi.org/specs/PI/1.8/V3_HOB_Code_Definitions.html>
 const EFI_HOB_TYPE_HANDOFF: u16 = 0x0001;
+const EFI_HOB_TYPE_MEMORY_ALLOCATION: u16 = 0x0002;
 const EFI_HOB_TYPE_RESOURCE_DESCRIPTOR: u16 = 0x0003;
+const EFI_HOB_TYPE_GUID_EXTENSION: u16 = 0x0004;
 const EFI_HOB_TYPE_END_OF_HOB_LIST: u16 = 0xFFFF;
 
-/// Size in bytes of the fixed TD HOB region in `stage0_bin_tdx/layout.ld`.
-/// Keep in sync with `layout.ld`.
+// Resource types in `EFI_HOB_RESOURCE_DESCRIPTOR`.
+// See Section 5.5 of the UEFI Platform Initialization Specification v1.8 (Vol.
+// 3): <https://uefi.org/specs/PI/1.8/V3_HOB_Code_Definitions.html>
+const EFI_RESOURCE_SYSTEM_MEMORY: u32 = 0x0000_0000;
+const EFI_RESOURCE_MEMORY_RESERVED: u32 = 0x0000_0005;
+const EFI_RESOURCE_MEMORY_UNACCEPTED: u32 = 0x0000_0007;
+const EFI_RESOURCE_MAX_MEMORY_TYPE: u32 = 0x0000_0008;
+
+/// Size in bytes of the fixed TD HOB, TD mailbox, and low RAM regions in
+/// `stage0_bin_tdx/layout.ld`. Keep in sync with `layout.ld`.
 const TD_HOB_SIZE: u64 = 0x2000;
+const TD_MAILBOX_SIZE: u64 = 0x1000;
+const RAM_LOW_SIZE: u64 = 0xA_0000;
 
 /// UEFI PI generic HOB header (`EFI_HOB_GENERIC_HEADER`).
 ///
@@ -97,7 +109,6 @@ pub fn get_hob_region() -> &'static [u8] {
 /// on `HandoffInfoTable::end_of_hob_list`, matching EDK2's TD-HOB consumer
 /// (`OvmfPkg/IntelTdx/TdxHelperLib/SecTdxHelper.c`) because VMMs disagree on
 /// whether `end_of_hob_list` points at or past the terminating HOB.
-#[allow(clippy::if_same_then_else)]
 pub fn parse_hob_e820_entries(
     hob_region: &[u8],
     hob_base: u64,
@@ -139,28 +150,44 @@ pub fn parse_hob_e820_entries(
                 if desc.physical_start.checked_add(desc.resource_length).is_none() {
                     return Err("resource descriptor address overflow in TD HOB");
                 }
+                if desc.resource_length == 0 {
+                    continue;
+                }
 
-                let slot = dest.get_mut(count).ok_or("too many resource descriptors in TD HOB")?;
-
-                let entry_type = if desc.physical_start == hob_base {
-                    E820EntryType::NVS
-                } else if desc.physical_start == mailbox_base {
-                    E820EntryType::NVS
-                } else if desc.physical_start == 0 {
-                    E820EntryType::RAM
-                } else if desc.resource_type == 0 {
-                    E820EntryType::RESERVED
-                } else {
-                    E820EntryType::RAM
+                let entry_type = match desc.resource_type {
+                    EFI_RESOURCE_SYSTEM_MEMORY => {
+                        if (desc.physical_start == hob_base && desc.resource_length == TD_HOB_SIZE)
+                            || (desc.physical_start == mailbox_base
+                                && desc.resource_length == TD_MAILBOX_SIZE)
+                        {
+                            Some(E820EntryType::NVS)
+                        } else if desc.physical_start == 0 && desc.resource_length <= RAM_LOW_SIZE {
+                            Some(E820EntryType::RAM)
+                        } else {
+                            // Other VMM pre-added regions are already MAPPED in Secure EPT and
+                            // unmeasured outside BFV; keep them RESERVED so they are never
+                            // re-accepted or handed out as usable RAM.
+                            Some(E820EntryType::RESERVED)
+                        }
+                    }
+                    EFI_RESOURCE_MEMORY_UNACCEPTED => Some(E820EntryType::RAM),
+                    EFI_RESOURCE_MEMORY_RESERVED => Some(E820EntryType::RESERVED),
+                    t if t < EFI_RESOURCE_MAX_MEMORY_TYPE => None,
+                    _ => return Err("unknown resource type in TD HOB"),
                 };
 
-                *slot = BootE820Entry::new(
-                    desc.physical_start as usize,
-                    desc.resource_length as usize,
-                    entry_type,
-                );
-                count += 1;
+                if let Some(entry_type) = entry_type {
+                    let slot =
+                        dest.get_mut(count).ok_or("too many resource descriptors in TD HOB")?;
+                    *slot = BootE820Entry::new(
+                        desc.physical_start as usize,
+                        desc.resource_length as usize,
+                        entry_type,
+                    );
+                    count += 1;
+                }
             }
+            EFI_HOB_TYPE_MEMORY_ALLOCATION | EFI_HOB_TYPE_GUID_EXTENSION => continue,
             _ => return Err("unknown HOB type in TD HOB"),
         }
     }
@@ -226,35 +253,61 @@ mod tests {
     }
 
     #[gtest]
-    fn parses_valid_hob_list_ignoring_zero_end_of_hob_list() {
+    fn classifies_system_unaccepted_reserved_mmio_and_non_resource_hobs() {
         // Leave `end_of_hob_list == 0` and include trailing zero padding to
         // verify parsing walks to END_OF_HOB_LIST across the fixed window.
         let mut buf = new_hob_region(0);
-        push_resource(&mut buf, 0, 0x0, 0xA_0000);
-        push_resource(&mut buf, 0, 0xF_0000, 0x1_0000);
-        push_resource(&mut buf, 0, TEST_HOB_BASE, TD_HOB_SIZE);
-        push_resource(&mut buf, 0, TEST_MAILBOX_BASE, 0x1000);
-        push_resource(&mut buf, 7, 0x10_3000, 0x7FEF_D000);
+        push_raw_hob(&mut buf, EFI_HOB_TYPE_GUID_EXTENSION, 16);
+        push_raw_hob(&mut buf, EFI_HOB_TYPE_MEMORY_ALLOCATION, 24);
+        push_resource(&mut buf, EFI_RESOURCE_SYSTEM_MEMORY, 0x0, RAM_LOW_SIZE);
+        push_resource(&mut buf, EFI_RESOURCE_SYSTEM_MEMORY, 0xF_0000, 0x1_0000);
+        push_resource(&mut buf, EFI_RESOURCE_SYSTEM_MEMORY, TEST_HOB_BASE, TD_HOB_SIZE);
+        push_resource(&mut buf, EFI_RESOURCE_SYSTEM_MEMORY, TEST_MAILBOX_BASE, TD_MAILBOX_SIZE);
+        push_resource(&mut buf, EFI_RESOURCE_MEMORY_UNACCEPTED, 0x10_3000, 0x7FEF_D000);
+        // Zero-length and MMIO descriptors are omitted.
+        push_resource(&mut buf, EFI_RESOURCE_MEMORY_UNACCEPTED, 0x8000_0000, 0);
+        push_resource(&mut buf, 1, 0x8000_0000, 0x4000_0000);
+        push_resource(&mut buf, EFI_RESOURCE_MEMORY_RESERVED, 0xFF00_0000, 0x0100_0000);
         push_end(&mut buf);
         buf.resize(TD_HOB_SIZE as usize, 0);
 
-        let mut out = [BootE820Entry::default(); 8];
+        let mut out = [BootE820Entry::default(); 16];
         let count = parse_hob_e820_entries(&buf, TEST_HOB_BASE, TEST_MAILBOX_BASE, &mut out)
             .expect("valid HOB list");
 
         expect_that!(
             &out[..count],
             eq(&[
-                BootE820Entry::new(0x0, 0xA_0000, E820EntryType::RAM),
+                BootE820Entry::new(0x0, RAM_LOW_SIZE as usize, E820EntryType::RAM),
                 BootE820Entry::new(0xF_0000, 0x1_0000, E820EntryType::RESERVED),
                 BootE820Entry::new(
                     TEST_HOB_BASE as usize,
                     TD_HOB_SIZE as usize,
                     E820EntryType::NVS,
                 ),
-                BootE820Entry::new(TEST_MAILBOX_BASE as usize, 0x1000, E820EntryType::NVS),
+                BootE820Entry::new(
+                    TEST_MAILBOX_BASE as usize,
+                    TD_MAILBOX_SIZE as usize,
+                    E820EntryType::NVS,
+                ),
                 BootE820Entry::new(0x10_3000, 0x7FEF_D000, E820EntryType::RAM),
+                BootE820Entry::new(0xFF00_0000, 0x0100_0000, E820EntryType::RESERVED),
             ][..])
+        );
+    }
+
+    #[gtest]
+    fn oversized_system_memory_at_zero_is_reserved_not_ram() {
+        let mut buf = new_hob_region(0);
+        push_resource(&mut buf, EFI_RESOURCE_SYSTEM_MEMORY, 0x0, 0x4000_0000);
+        push_end(&mut buf);
+
+        let mut out = [BootE820Entry::default(); 4];
+        let count = parse_hob_e820_entries(&buf, TEST_HOB_BASE, TEST_MAILBOX_BASE, &mut out)
+            .expect("valid HOB list");
+        expect_that!(
+            &out[..count],
+            eq(&[BootE820Entry::new(0x0, 0x4000_0000, E820EntryType::RESERVED)][..])
         );
     }
 
@@ -335,6 +388,15 @@ mod tests {
         expect_that!(
             parse_hob_e820_entries(&unknown_hob, TEST_HOB_BASE, TEST_MAILBOX_BASE, &mut out),
             err(eq("unknown HOB type in TD HOB"))
+        );
+
+        // Unknown resource_type (8).
+        let mut unknown_res = new_hob_region(0);
+        push_resource(&mut unknown_res, EFI_RESOURCE_MAX_MEMORY_TYPE, 0x10_3000, 0x10_0000);
+        push_end(&mut unknown_res);
+        expect_that!(
+            parse_hob_e820_entries(&unknown_res, TEST_HOB_BASE, TEST_MAILBOX_BASE, &mut out),
+            err(eq("unknown resource type in TD HOB"))
         );
 
         // Resource descriptor address overflow.
