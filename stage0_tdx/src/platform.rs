@@ -163,12 +163,7 @@ fn accept_tdx_memory(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
     // SECURITY: The stage0 firmware ROM (the BFV) is mapped just below 4 GiB and
     // was added as MAPPED private memory by TDH.MEM.PAGE.ADD during TD build. A
     // malicious hypervisor must not be able to make us "accept" it as RAM via the
-    // unmeasured TD HOB and hand it to the kernel. The PCI hole means no
-    // legitimate RAM lives here; conservatively forbid the top 16 MiB below 4 GiB
-    // (same guard as stage0_sev's accept_memory.rs).
-    const ROM_GUARD_START: usize = 0xFF00_0000; // 4 GiB - 16 MiB
-    const ROM_GUARD_END: usize = 0x1_0000_0000; // 4 GiB
-
+    // unmeasured TD HOB and hand it to the kernel.
     // TODO: b/360256588 - use TD-HoB to replace the e820_table here
     for entry in e820_table {
         if entry.entry_type() != Some(E820EntryType::RAM) || entry.addr() < min_addr {
@@ -190,7 +185,9 @@ fn accept_tdx_memory(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
         // Defense-in-depth: refuse to accept memory that overlaps the firmware ROM
         // window. The ALREADY_ACCEPTED panic in accept_memory.rs is the primary
         // mitigation; this check makes the attack fail before any TDCALL is issued.
-        if entry.addr() < ROM_GUARD_END && end > ROM_GUARD_START {
+        if (entry.addr() as u64) < oak_stage0::FIRMWARE_ROM_GUARD.end
+            && (end as u64) > oak_stage0::FIRMWARE_ROM_GUARD.start
+        {
             panic!(
                 "hypervisor-supplied E820 RAM entry [{:#x}, {:#x}) overlaps firmware ROM \
                  window; refusing to accept",

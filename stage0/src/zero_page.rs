@@ -17,6 +17,7 @@
 use alloc::{ffi::CString, vec::Vec};
 use core::{mem::size_of, ops::Range, slice};
 
+use oak_hal::{MAX_PHYS_ADDR, MAX_PHYS_ADDR_BITS};
 use oak_linux_boot_params::{BootE820Entry, BootParams, E820EntryType};
 use x86_64::PhysAddr;
 use zerocopy::{FromBytes, IntoBytes};
@@ -26,6 +27,13 @@ use crate::{
     cmos::Cmos,
     fw_cfg::{FwCfg, find_suitable_dma_address},
 };
+
+/// Top 16 MiB below 4 GiB reserved for the x86 PC firmware ROM decode window.
+///
+/// The stage0 firmware ROM (BFV) lives at the top of this window and is
+/// pre-mapped at launch (`BIOS_SIZE <= 16M` is enforced in `layout.ld`), so
+/// host-supplied E820 `RAM` must never overlap this range.
+pub const FIRMWARE_ROM_GUARD: Range<u64> = 0xFF00_0000..0x1_0000_0000;
 
 /// Boot metadata for the Linux kernel.
 ///
@@ -159,7 +167,7 @@ impl ZeroPage {
 
         self.inner.e820_table[..e820_entries].sort_unstable_by_key(|x| x.addr());
         self.inner.e820_entries = e820_entries as u8;
-        self.validate_e820_table();
+        self.validate_e820_table(P::guest_phys_addr_size());
         self.apply_legacy_memory_layout();
 
         for entry in self.inner.e820_table() {
@@ -318,17 +326,59 @@ impl ZeroPage {
             .any(|&entry| entry.addr() < range.end && entry.end() > range.start)
     }
 
-    fn validate_e820_table(&self) {
-        // Check that the table is sorted.
-        for i in 0..((self.inner.e820_entries - 1) as usize) {
-            assert!(self.inner.e820_table[i].end() <= self.inner.e820_table[i + 1].addr());
+    fn validate_e820_table(&self, guest_phys_addr_bits: u8) {
+        let entries = self.e820_table();
+        assert!(!entries.is_empty(), "empty E820 table");
+
+        // Non-RAM RESERVED entries such as AMD's 1 TiB HT hole may end at
+        // `1 << phys_bits`, while RAM entries must stay strictly below
+        // `private_gpa_limit` so even the exclusive end address never sets the
+        // encryption/shared bit or fails `PhysAddr::try_new`.
+        let private_gpa_limit = 1u64 << guest_phys_addr_bits.min(MAX_PHYS_ADDR_BITS);
+
+        for entry in entries {
+            let Some(entry_type) = entry.entry_type() else {
+                panic!("unrecognized E820 entry type");
+            };
+            assert!(entry_type != E820EntryType::INVALID, "uninitialized E820 entry");
+            assert!(entry.size() > 0, "zero-length E820 entry at {:#x}", entry.addr());
+            let start = entry.addr() as u64;
+            let end =
+                entry.addr().checked_add(entry.size()).expect("E820 entry address range overflow")
+                    as u64;
+            assert!(
+                end <= MAX_PHYS_ADDR,
+                "E820 entry [{:#x}, {:#x}) exceeds 52-bit physical address limit",
+                start,
+                end
+            );
+            if entry_type == E820EntryType::RAM {
+                assert!(
+                    end < private_gpa_limit,
+                    "E820 RAM entry [{:#x}, {:#x}) reaches or exceeds private GPA limit {:#x}",
+                    start,
+                    end,
+                    private_gpa_limit
+                );
+                assert!(
+                    !(start < FIRMWARE_ROM_GUARD.end && end > FIRMWARE_ROM_GUARD.start),
+                    "E820 RAM entry [{:#x}, {:#x}) overlaps firmware ROM window",
+                    start,
+                    end
+                );
+            }
         }
-        // Check that all of the entry types are valid.
-        assert_eq!(
-            None,
-            (0..(self.inner.e820_entries as usize))
-                .find(|i| self.inner.e820_table[*i].entry_type().is_none())
-        );
+
+        for pair in entries.windows(2) {
+            assert!(
+                pair[0].end() <= pair[1].addr(),
+                "overlapping or unsorted E820 entries: [{:#x}, {:#x}) and [{:#x}, {:#x})",
+                pair[0].addr(),
+                pair[0].end(),
+                pair[1].addr(),
+                pair[1].end()
+            );
+        }
     }
 
     pub fn find_e820_entry(&self, addr: usize) -> Option<&BootE820Entry> {
@@ -678,5 +728,136 @@ mod tests {
         assert!(!zero_page.check_e820_gap(2000..2100));
         assert!(!zero_page.check_e820_gap(2000..4000));
         assert!(!zero_page.check_e820_gap(0..4000));
+    }
+
+    #[test]
+    pub fn validate_e820_accepts_valid_sorted_table() {
+        let addr_bits = 47u8;
+        let limit = 1u64 << addr_bits;
+        let mut zero_page = ZeroPage::new();
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0, 0x8000_0000, E820EntryType::RAM));
+        // RESERVED in the firmware ROM window is allowed.
+        zero_page.inner.append_e820_entry(BootE820Entry::new(
+            0xFFFB_C000,
+            0x4_4000,
+            E820EntryType::RESERVED,
+        ));
+        // RAM ending strictly below `limit` is allowed.
+        zero_page.inner.append_e820_entry(BootE820Entry::new(
+            0x1_0000_0000,
+            (limit as usize) - 0x1_0000_1000,
+            E820EntryType::RAM,
+        ));
+        // RESERVED may reach `limit` (e.g. AMD HT hole at 1 TiB on 40-bit guests).
+        zero_page.inner.append_e820_entry(BootE820Entry::new(
+            (limit as usize) - 0x1000,
+            0x1000,
+            E820EntryType::RESERVED,
+        ));
+
+        zero_page.validate_e820_table(addr_bits);
+    }
+
+    #[test]
+    #[should_panic(expected = "empty E820 table")]
+    pub fn validate_e820_rejects_empty_table() {
+        let zero_page = ZeroPage::new();
+        zero_page.validate_e820_table(47);
+    }
+
+    #[test]
+    #[should_panic(expected = "unrecognized E820 entry type")]
+    pub fn validate_e820_rejects_unrecognized_type() {
+        let mut zero_page = ZeroPage::new();
+        let mut raw = [0u8; size_of::<BootE820Entry>()];
+        raw[8..16].copy_from_slice(&0x1000usize.to_le_bytes());
+        raw[16..20].copy_from_slice(&99u32.to_le_bytes());
+        let entry = BootE820Entry::read_from_bytes(&raw).unwrap();
+        zero_page.inner.append_e820_entry(entry);
+        zero_page.validate_e820_table(47);
+    }
+
+    #[test]
+    #[should_panic(expected = "uninitialized E820 entry")]
+    pub fn validate_e820_rejects_uninitialized_entry() {
+        let mut zero_page = ZeroPage::new();
+        zero_page.inner.append_e820_entry(BootE820Entry::default());
+        zero_page.validate_e820_table(47);
+    }
+
+    #[test]
+    #[should_panic(expected = "zero-length E820 entry")]
+    pub fn validate_e820_rejects_zero_length_entry() {
+        let mut zero_page = ZeroPage::new();
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0x1000, 0, E820EntryType::RAM));
+        zero_page.validate_e820_table(47);
+    }
+
+    #[test]
+    #[should_panic(expected = "E820 entry address range overflow")]
+    pub fn validate_e820_rejects_address_overflow() {
+        let mut zero_page = ZeroPage::new();
+        zero_page.inner.append_e820_entry(BootE820Entry::new(
+            usize::MAX - 0xfff,
+            0x2000,
+            E820EntryType::RAM,
+        ));
+        zero_page.validate_e820_table(52);
+    }
+
+    #[test]
+    #[should_panic(expected = "exceeds 52-bit physical address limit")]
+    pub fn validate_e820_rejects_reserved_above_52_bits() {
+        let mut zero_page = ZeroPage::new();
+        zero_page.inner.append_e820_entry(BootE820Entry::new(
+            MAX_PHYS_ADDR as usize,
+            0x1000,
+            E820EntryType::RESERVED,
+        ));
+        zero_page.validate_e820_table(MAX_PHYS_ADDR_BITS);
+    }
+
+    #[test]
+    #[should_panic(expected = "reaches or exceeds private GPA limit")]
+    pub fn validate_e820_rejects_ram_ending_at_private_gpa_limit() {
+        let addr_bits = 47u8;
+        let limit = 1usize << addr_bits;
+        let mut zero_page = ZeroPage::new();
+        zero_page.inner.append_e820_entry(BootE820Entry::new(
+            limit - 0x1000,
+            0x1000,
+            E820EntryType::RAM,
+        ));
+        zero_page.validate_e820_table(addr_bits);
+    }
+
+    #[test]
+    #[should_panic(expected = "overlaps firmware ROM window")]
+    pub fn validate_e820_rejects_ram_in_rom_window() {
+        let mut zero_page = ZeroPage::new();
+        zero_page.inner.append_e820_entry(BootE820Entry::new(
+            0xFF80_0000,
+            0x10_0000,
+            E820EntryType::RAM,
+        ));
+        zero_page.validate_e820_table(47);
+    }
+
+    #[test]
+    #[should_panic(expected = "overlapping or unsorted E820 entries")]
+    pub fn validate_e820_rejects_overlapping_entries() {
+        let mut zero_page = ZeroPage::new();
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0, 0x2000, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0x1000, 0x2000, E820EntryType::RAM));
+        zero_page.validate_e820_table(47);
+    }
+
+    #[test]
+    #[should_panic(expected = "overlapping or unsorted E820 entries")]
+    pub fn validate_e820_rejects_unsorted_entries() {
+        let mut zero_page = ZeroPage::new();
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0x2000, 0x1000, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0x0, 0x1000, E820EntryType::RAM));
+        zero_page.validate_e820_table(47);
     }
 }

@@ -76,7 +76,7 @@ pub use acpi::{
 pub use apic::Lapic;
 pub use hal::{FirmwarePlatform, Platform};
 pub use pic::disable_pic8259;
-pub use zero_page::ZeroPage;
+pub use zero_page::{FIRMWARE_ROM_GUARD, ZeroPage};
 
 type Measurement = [u8; 32];
 

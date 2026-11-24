@@ -16,6 +16,7 @@
 
 HIDDEN(TOP = 4096M);
 /* We assume BIOS_SIZE will be provided externally. */
+ASSERT(BIOS_SIZE <= 16M, "BIOS_SIZE exceeds 16 MiB firmware ROM guard window")
 
 MEMORY {
     ram_low : ORIGIN = 0, LENGTH = 1M
