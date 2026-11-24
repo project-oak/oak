@@ -343,19 +343,9 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
             continue;
         }
 
-        // addr and size come straight from the hypervisor-supplied E820 table, so
-        // the end of the range can overflow usize and either bound can exceed the
-        // valid physical address width. Reject such an entry here instead of
-        // panicking in the arithmetic below, mirroring the checked_add already used
-        // for the host-supplied length in the TD HOB walk.
-        let Some(end) = entry.addr().checked_add(entry.size()) else {
-            log::error!(
-                "nonsensical entry in E820 table: [{:#x}, +{:#x})",
-                entry.addr(),
-                entry.size()
-            );
-            continue;
-        };
+        let end = entry.addr().checked_add(entry.size()).unwrap_or_else(|| {
+            panic!("invalid E820 RAM entry [{:#x}, +{:#x})", entry.addr(), entry.size())
+        });
 
         // Defense-in-depth: refuse to accept memory that overlaps the firmware ROM
         // window. The CF=1 panic above is the primary mitigation; this check makes
@@ -374,20 +364,17 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
         let (Ok(start), Ok(limit)) =
             (PhysAddr::try_new(entry.addr() as u64), PhysAddr::try_new(end as u64))
         else {
-            log::error!("nonsensical entry in E820 table: [{:#x}, {:#x})", entry.addr(), end);
-            continue;
+            panic!("invalid E820 RAM physical address range [{:#x}, {:#x})", entry.addr(), end);
         };
         let start_address = start.align_up(Size4KiB::SIZE);
         let limit_address = limit.align_down(Size4KiB::SIZE);
 
-        if start_address > limit_address {
-            log::error!(
-                "nonsensical entry in E820 table: [{}, {})",
-                entry.addr(),
-                entry.addr() + entry.size()
-            );
-            continue;
-        }
+        assert!(
+            start_address <= limit_address,
+            "invalid E820 RAM entry [{:#x}, {:#x})",
+            entry.addr(),
+            end
+        );
 
         // Attempt to validate as many pages as possible using 2 MiB pages (aka
         // hugepages).
