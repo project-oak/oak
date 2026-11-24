@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 load("//bazel:defs.bzl", "any_platform")
 
 package(
@@ -33,5 +33,17 @@ rust_library(
     deps = [
         "//oak_linux_boot_params",
         "@oak_crates_index//:x86_64",
+    ],
+)
+
+rust_test(
+    name = "oak_hal_test",
+    size = "small",
+    crate = ":oak_hal",
+    target_compatible_with = [
+        "//:x86_64-linux-setting",
+    ],
+    deps = [
+        "@oak_crates_index//:googletest",
     ],
 )

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
 use core::arch::x86_64::CpuidResult;
 
@@ -107,6 +107,28 @@ pub trait Mmio {
     fn region_size(&self) -> usize;
 }
 
+/// Extracts the guest physical address width (in bits, capped to the 52-bit
+/// x86_64 architectural maximum) from CPUID leaf `0x8000_0008` ("Long Mode
+/// Address Size Identifiers").
+///
+/// See AMD64 Architecture Programmer's Manual Vol. 3, `CPUID Fn8000_0008_EAX`.
+pub fn cpuid_guest_phys_addr_size(cpuid: CpuidResult) -> u8 {
+    // EDK2 treads carefully here as sometimes QEMU can report more physical bits
+    // than the CPU actually supports. We'll just assume these are correct and the
+    // CPUs *have* at least 40 physical address bits. We don't need to support
+    // particularly old machines, after all.
+
+    // First, see if GuestPhysAddrSize is set (bits 23:16).
+    let guest_bits = ((cpuid.eax >> 16) & 0xFF) as u8;
+    let phys_bits = if guest_bits == 0 {
+        // Not specified; fall back to PhysAddrSize (bits 7:0).
+        (cpuid.eax & 0xFF) as u8
+    } else {
+        guest_bits
+    };
+    phys_bits.min(52)
+}
+
 /// Whether a memory page is private to the guest or shared with the hypervisor.
 #[derive(Copy, Clone, Debug)]
 pub enum PageAssignment {
@@ -170,21 +192,7 @@ pub trait Platform: MsrAccess {
     /// This is dependent on both the (real physical) CPU on the machine and the
     /// VMM.
     fn guest_phys_addr_size() -> u8 {
-        let cpuid = Self::cpuid(0x8000_0008); // Long Mode Size Identifiers
-
-        // EDK2 treads carefully here as sometimes QEMU can report more physical bits
-        // than the CPU actually supports. We'll just assume these are correct and the
-        // CPUs *have* at least 40 physical address bits. We don't need to support
-        // particularly old machines, after all.
-
-        // First, see if GuestPhysAddrSize is set (bits 23:16):
-        let addr_size = ((cpuid.eax >> 16) & 0xFF) as u8;
-        if addr_size == 0 {
-            // not specified, it's the same as PhysAddrSize (bits 7:0)
-            (cpuid.eax & 0xFF) as u8
-        } else {
-            addr_size
-        }
+        cpuid_guest_phys_addr_size(Self::cpuid(0x8000_0008))
     }
 
     /// Initializes memory encryption if supported and enabled by the platform.
@@ -335,5 +343,27 @@ impl<T: PortRead + PortWrite> PortReader<T> for Port<T> {
 impl<T: PortRead + PortWrite> PortWriter<T> for Port<T> {
     unsafe fn try_write(&mut self, value: T) -> Result<(), &'static str> {
         unsafe { (self.write)(self.port, value) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use googletest::prelude::*;
+
+    use super::*;
+
+    fn cpuid_eax(eax: u32) -> CpuidResult {
+        CpuidResult { eax, ebx: 0, ecx: 0, edx: 0 }
+    }
+
+    #[googletest::test]
+    fn cpuid_guest_phys_addr_size_prefers_guest_bits_and_caps_at_52() {
+        // GuestPhysAddrSize = 0 falls back to PhysAddrSize (bits 7:0).
+        expect_that!(cpuid_guest_phys_addr_size(cpuid_eax(46)), eq(46));
+        // Non-zero GuestPhysAddrSize (bits 23:16) takes precedence over PhysAddrSize.
+        expect_that!(cpuid_guest_phys_addr_size(cpuid_eax((48 << 16) | 52)), eq(48));
+        // Values above the x86_64 52-bit architectural maximum are clamped.
+        expect_that!(cpuid_guest_phys_addr_size(cpuid_eax(60)), eq(52));
+        expect_that!(cpuid_guest_phys_addr_size(cpuid_eax((60 << 16) | 48)), eq(52));
     }
 }
