@@ -107,9 +107,17 @@ pub trait Mmio {
     fn region_size(&self) -> usize;
 }
 
-/// Extracts the guest physical address width (in bits, capped to the 52-bit
-/// x86_64 architectural maximum) from CPUID leaf `0x8000_0008` ("Long Mode
-/// Address Size Identifiers").
+/// Architectural maximum physical address width in bits on x86_64.
+///
+/// See AMD64 Architecture Programmer's Manual Vol. 2, Section 5.1.
+pub const MAX_PHYS_ADDR_BITS: u8 = 52;
+
+/// Exclusive upper bound of the x86_64 architectural physical address space.
+pub const MAX_PHYS_ADDR: u64 = 1u64 << MAX_PHYS_ADDR_BITS;
+
+/// Extracts the guest physical address width (in bits, capped to
+/// [`MAX_PHYS_ADDR_BITS`]) from CPUID leaf `0x8000_0008` ("Long Mode Address
+/// Size Identifiers").
 ///
 /// See AMD64 Architecture Programmer's Manual Vol. 3, `CPUID Fn8000_0008_EAX`.
 pub fn cpuid_guest_phys_addr_size(cpuid: CpuidResult) -> u8 {
@@ -126,7 +134,7 @@ pub fn cpuid_guest_phys_addr_size(cpuid: CpuidResult) -> u8 {
     } else {
         guest_bits
     };
-    phys_bits.min(52)
+    phys_bits.min(MAX_PHYS_ADDR_BITS)
 }
 
 /// Whether a memory page is private to the guest or shared with the hypervisor.
@@ -187,10 +195,13 @@ pub trait Platform: MsrAccess {
     /// to main memory and invalidates (flushes) the internal caches.
     fn wbvind();
 
-    /// Returns the number of bits in use in guest physical memory addresses.
+    /// Returns the number of bits usable for guest-private physical memory
+    /// addresses (capped at 52 bits and excluding any memory-encryption C-bit
+    /// or TDX shared bit).
     ///
     /// This is dependent on both the (real physical) CPU on the machine and the
-    /// VMM.
+    /// VMM, and on confidential platforms must be called after
+    /// `early_initialize_platform`.
     fn guest_phys_addr_size() -> u8 {
         cpuid_guest_phys_addr_size(Self::cpuid(0x8000_0008))
     }

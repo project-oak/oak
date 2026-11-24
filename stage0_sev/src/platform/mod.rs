@@ -234,6 +234,20 @@ impl Platform for Sev {
         Base::wbvind()
     }
 
+    fn guest_phys_addr_size() -> u8 {
+        let phys_bits = oak_hal::cpuid_guest_phys_addr_size(Self::cpuid(0x8000_0008));
+        if sev_status().contains(SevStatus::SEV_ENABLED) {
+            let c_bit = u8::try_from(encrypted_bit_position()).expect("invalid SEV C-bit position");
+            assert!(
+                (1..=oak_hal::MAX_PHYS_ADDR_BITS).contains(&c_bit),
+                "unexpected SEV C-bit position: {c_bit}"
+            );
+            phys_bits.min(c_bit)
+        } else {
+            phys_bits
+        }
+    }
+
     fn init_memory_encryption() -> bool {
         if sev_status().contains(SevStatus::SEV_ENABLED) {
             // Safety: we use the correct encrypted bit location that was set by the

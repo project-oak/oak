@@ -349,6 +349,14 @@ impl Platform for Tdx {
         tdvmcall_wbinvd().unwrap()
     }
 
+    fn guest_phys_addr_size() -> u8 {
+        // SAFETY: `GPAW` is initialized in `tdx.s` before `rust64_start` and
+        // validated to be 48 or 52 in `early_initialize_platform`.
+        let gpaw = unsafe { GPAW };
+        assert!(gpaw == 48 || gpaw == 52, "unexpected TDX GPAW: {gpaw}");
+        (gpaw - 1) as u8
+    }
+
     fn init_memory_encryption() -> bool {
         // Safety: we use the correct shared bit location that was set by the bootstrap
         // assembly. All the relevant pages tables are updated after this is set.
