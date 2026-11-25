@@ -14,15 +14,10 @@
 // limitations under the License.
 //
 
-use core::{
-    iter::Iterator,
-    mem::{MaybeUninit, size_of},
-};
+use core::mem::{MaybeUninit, size_of};
 
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
-
-#[cfg(not(test))]
-use crate::{serial, serial::Debug};
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 #[unsafe(no_mangle)]
 static mut TD_HOB_START: MaybeUninit<HandoffInfoTable> = MaybeUninit::uninit(); // Keep named as in layout.ld
@@ -43,21 +38,11 @@ const TD_HOB_SIZE: u64 = 0x2000;
 /// See Section 5.2 of the UEFI Platform Initialization Specification v1.8
 /// (Vol. 3): <https://uefi.org/specs/PI/1.8/V3_HOB_Code_Definitions.html>
 #[repr(C)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, FromBytes, IntoBytes, Immutable, KnownLayout)]
 pub struct Header {
     pub hob_type: u16,
     pub hob_length: u16,
     pub reserved: u32,
-}
-
-impl Header {
-    pub fn is_resource_descriptor(&self) -> bool {
-        self.hob_type == EFI_HOB_TYPE_RESOURCE_DESCRIPTOR && self.hob_length == 0x30
-    }
-
-    pub fn is_end_of_hob_list(&self) -> bool {
-        self.hob_type == EFI_HOB_TYPE_END_OF_HOB_LIST
-    }
 }
 
 /// UEFI PI Handoff Info Table (`EFI_HOB_HANDOFF_INFO_TABLE`, PHIT HOB).
@@ -65,7 +50,7 @@ impl Header {
 /// See Section 5.3 of the UEFI Platform Initialization Specification v1.8
 /// (Vol. 3): <https://uefi.org/specs/PI/1.8/V3_HOB_Code_Definitions.html>
 #[repr(C)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, FromBytes, IntoBytes, Immutable, KnownLayout)]
 pub struct HandoffInfoTable {
     pub header: Header,
     pub version: u32,
@@ -82,7 +67,7 @@ pub struct HandoffInfoTable {
 /// See Section 5.5 of the UEFI Platform Initialization Specification v1.8
 /// (Vol. 3): <https://uefi.org/specs/PI/1.8/V3_HOB_Code_Definitions.html>
 #[repr(C)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, FromBytes, IntoBytes, Immutable, KnownLayout)]
 pub struct ResourceDescription {
     pub header: Header,
     pub owner: [u8; 16],
@@ -105,43 +90,6 @@ pub fn get_hob_region() -> &'static [u8] {
     unsafe { core::slice::from_raw_parts(get_hob_start() as *const u8, TD_HOB_SIZE as usize) }
 }
 
-/// Iterator over HOBs in a bounded HOB byte region.
-struct HobIterator {
-    current_hob: *const Header,
-    end_of_hob_list: u64,
-}
-
-impl Iterator for HobIterator {
-    type Item = *const Header;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let current = self.current_hob;
-        let start = current as u64;
-        // `end_of_hob_list` and every `hob_length` come from the untrusted
-        // VMM, so only walk an entry that lies entirely below the bound: the
-        // header dereferenced here, and the full HOB body the callers read (a
-        // 0x30-byte ResourceDescription in `parse_hob_e820_entries`), must fit.
-        if start.checked_add(size_of::<Header>() as u64)? > self.end_of_hob_list {
-            #[cfg(not(test))]
-            serial::debug!("End of HOB list reached", start);
-            return None;
-        }
-        // SAFETY: the header lies fully within the region bounded above.
-        let hob_length = unsafe { core::ptr::read_unaligned(current).hob_length } as u64;
-        // A HOB is at least a header long; a shorter (or zero) length would
-        // never advance the cursor and could loop forever.
-        if hob_length < size_of::<Header>() as u64
-            || start.checked_add(hob_length)? > self.end_of_hob_list
-        {
-            #[cfg(not(test))]
-            serial::debug!("End of HOB list reached", start);
-            return None;
-        }
-        self.current_hob = unsafe { current.byte_offset(hob_length as isize) };
-        Some(current)
-    }
-}
-
 /// Parses a TD HOB list starting with [`HandoffInfoTable`] into `dest`,
 /// returning the number of [`BootE820Entry`] records written.
 #[allow(clippy::if_same_then_else)]
@@ -151,11 +99,8 @@ pub fn parse_hob_e820_entries(
     mailbox_base: u64,
     dest: &mut [BootE820Entry],
 ) -> Result<usize, &'static str> {
-    if hob_region.len() < size_of::<HandoffInfoTable>() {
-        return Err("corrupted TD HOB header");
-    }
-    // SAFETY: `hob_region` is at least `size_of::<HandoffInfoTable>()` bytes long.
-    let hit = unsafe { core::ptr::read_unaligned(hob_region.as_ptr() as *const HandoffInfoTable) };
+    let (hit, _) =
+        HandoffInfoTable::read_from_prefix(hob_region).map_err(|_| "corrupted TD HOB header")?;
     if hit.header.hob_length as usize != size_of::<HandoffInfoTable>()
         || hit.header.hob_type != EFI_HOB_TYPE_HANDOFF
     {
@@ -163,46 +108,46 @@ pub fn parse_hob_e820_entries(
     }
 
     // Clamp `end_of_hob_list` to the provided `hob_region` slice.
-    let bound_len = hit.end_of_hob_list.saturating_sub(hob_base).min(hob_region.len() as u64);
-    let base_ptr = hob_region.as_ptr();
-    let iter = HobIterator {
-        // SAFETY: `size_of::<HandoffInfoTable>() <= hob_region.len()`.
-        current_hob: unsafe { base_ptr.add(size_of::<HandoffInfoTable>()) as *const Header },
-        end_of_hob_list: (base_ptr as u64).saturating_add(bound_len),
-    };
+    let bound_len =
+        hit.end_of_hob_list.saturating_sub(hob_base).min(hob_region.len() as u64) as usize;
+    let mut hob_body = hob_region.get(size_of::<HandoffInfoTable>()..bound_len).unwrap_or(&[]);
 
     let mut count = 0usize;
-    for curr_ptr in iter {
-        // SAFETY: `HobIterator` bounds every yielded header within `hob_region`.
-        let curr_hdr = unsafe { core::ptr::read_unaligned(curr_ptr) };
+    while let Ok((hdr, _)) = Header::read_from_prefix(hob_body) {
+        let hob_len = hdr.hob_length as usize;
+        if hob_len < size_of::<Header>() || hob_len > hob_body.len() {
+            break;
+        }
+        let (hob_bytes, rest) = hob_body.split_at(hob_len);
+        hob_body = rest;
 
-        if curr_hdr.is_resource_descriptor() {
-            // SAFETY: `is_resource_descriptor` ensures `hob_length == 0x30`, which
-            // `HobIterator` verified fits inside `hob_region`.
-            let curr_src =
-                unsafe { core::ptr::read_unaligned(curr_ptr as *const ResourceDescription) };
+        if hdr.hob_type == EFI_HOB_TYPE_RESOURCE_DESCRIPTOR
+            && hob_len == size_of::<ResourceDescription>()
+        {
+            let (desc, _) = ResourceDescription::read_from_prefix(hob_bytes)
+                .map_err(|_| "corrupted resource descriptor in TD HOB")?;
 
             let slot = dest.get_mut(count).ok_or("too many resource descriptors in TD HOB")?;
 
-            let entry_type = if curr_src.physical_start == hob_base {
+            let entry_type = if desc.physical_start == hob_base {
                 E820EntryType::NVS
-            } else if curr_src.physical_start == mailbox_base {
+            } else if desc.physical_start == mailbox_base {
                 E820EntryType::NVS
-            } else if curr_src.physical_start == 0 {
+            } else if desc.physical_start == 0 {
                 E820EntryType::RAM
-            } else if curr_src.resource_type == 0 {
+            } else if desc.resource_type == 0 {
                 E820EntryType::RESERVED
             } else {
                 E820EntryType::RAM
             };
 
             *slot = BootE820Entry::new(
-                curr_src.physical_start as usize,
-                curr_src.resource_length as usize,
+                desc.physical_start as usize,
+                desc.resource_length as usize,
                 entry_type,
             );
             count += 1;
-        } else if curr_hdr.is_end_of_hob_list() {
+        } else if hdr.hob_type == EFI_HOB_TYPE_END_OF_HOB_LIST {
             break;
         } else {
             return Err("unknown HOB type in TD HOB");
