@@ -46,7 +46,7 @@ use zeroize::Zeroize;
 
 use crate::{
     accept_memory::{TdAcceptPage, accept_memory_range, counters},
-    hob::{self, ResourceDescription},
+    hob,
     mmio::Mmio,
     serial,
 };
@@ -380,60 +380,15 @@ impl FirmwarePlatform for Tdx {
         info!("initialize platform completed");
     }
 
-    #[allow(clippy::if_same_then_else)]
     fn prefill_e820_table(dest: &mut [BootE820Entry]) -> Result<Option<usize>, &'static str> {
         serial::debug!("Prefill e820 table from TDHOB");
-
-        let hit = hob::get_hit()?;
-        // The number of resource descriptors comes from the host-provided TD HoB and
-        // is otherwise unbounded, so writes must stay within the destination table.
-        let mut count = 0;
-
-        for curr_ptr in hit.into_iter() {
-            let curr_hdr = unsafe { *curr_ptr };
-            // Every HoB entry starts with a Header struct
-            serial::debug!("==================");
-            serial::debug!("HOB PTR: ", curr_ptr as u32);
-            serial::debug!("HOB TYPE: ", curr_hdr.hob_type as u32);
-            serial::debug!("HOB LENGTH: ", curr_hdr.hob_length as u32);
-
-            // We only care the resource descriptor entries
-            if curr_hdr.is_resource_descriptor() {
-                let curr_src = unsafe { *(curr_ptr as *const ResourceDescription) };
-                serial::debug!("Resource type: ", curr_src.resource_type);
-                serial::debug!("Resource attribute: ", curr_src.resource_attribute);
-                serial::debug!("Physical start: ", curr_src.physical_start);
-                serial::debug!("Resource length: ", curr_src.resource_length);
-
-                let slot = dest.get_mut(count).ok_or("too many resource descriptors in TD HoB")?;
-
-                let entry_type = if curr_src.physical_start == hob::get_hob_start() as u64 {
-                    E820EntryType::NVS // is this correct?
-                } else if curr_src.physical_start == (addr_of!(TD_MAILBOX) as u64) {
-                    E820EntryType::NVS // ditto
-                } else if curr_src.physical_start == 0 {
-                    // [0x0, 512KB) is usable
-                    E820EntryType::RAM
-                } else if curr_src.resource_type == 0 {
-                    // [0xF_0000, 0x10_0000)
-                    E820EntryType::RESERVED
-                } else {
-                    E820EntryType::RAM
-                };
-
-                *slot = BootE820Entry::new(
-                    curr_src.physical_start as usize,
-                    curr_src.resource_length as usize,
-                    entry_type,
-                );
-                count += 1;
-            } else if curr_hdr.is_end_of_hob_list() {
-                // reached at the end
-            } else {
-                return Err("Unknown resource type found in TD HoB");
-            }
-        }
-        if count == 0 { Err("no valid TD HoB found") } else { Ok(Some(count)) }
+        let count = hob::parse_hob_e820_entries(
+            hob::get_hob_region(),
+            hob::get_hob_start() as u64,
+            addr_of!(TD_MAILBOX) as u64,
+            dest,
+        )?;
+        Ok(Some(count))
     }
 
     fn finalize_acpi_tables(tables: &mut AcpiTables) -> Result<(), &'static str> {

@@ -80,5 +80,6 @@ rust_test(
     target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "//stage0_dice",
+        "@oak_crates_index//:googletest",
     ],
 )
