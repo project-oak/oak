@@ -1582,6 +1582,14 @@ pub struct KernelLayerReferenceValues {
     pub kernel: ::core::option::Option<KernelBinaryReferenceValue>,
     /// Verifies the kernel command line, i.e. the parameters passed to the
     /// kernel on boot.
+    ///
+    /// The command line is supplied by the host and measured by stage0.
+    ///
+    /// A `regex` value is matched with an unanchored search: it accepts any
+    /// command line that contains a match, not only one that matches in full.
+    /// To pin a command line, anchor the regex with `^` and `$` and escape regex
+    /// metacharacters such as `.`. Otherwise the host can add kernel or init
+    /// parameters around the expected ones and still pass verification.
     #[prost(message, optional, tag = "9")]
     pub kernel_cmd_line_text: ::core::option::Option<TextReferenceValue>,
     /// Verifies the stage1 binary if running as Oak Containers.
