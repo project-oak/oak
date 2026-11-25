@@ -122,40 +122,42 @@ impl ZeroPage {
     /// Fills the E820 memory map (layout of the physical memory of the machine)
     /// in the zero page.
     ///
-    /// We first try to read "etc/e820" via the QEMU fw_cfg interface, and if
-    /// that is not available, fall back to querying RTC NVRAM.
+    /// Uses [`crate::FirmwarePlatform::prefill_e820_table`] when the platform
+    /// provides a memory map (such as the TDX HOB list); otherwise reads
+    /// `"etc/e820"` from QEMU `fw_cfg` and falls back to querying RTC NVRAM.
     pub fn fill_e820_table<P: crate::Platform + crate::FirmwarePlatform>(
         &mut self,
         fw_cfg: &mut FwCfg<P>,
     ) {
-        // Try to load the E820 table from platform specific functions first
-        let len_bytes = P::prefill_e820_table(&mut self.inner.e820_table).or_else(|_| unsafe {
-            // Try to load the E820 table from fw_cfg.
-            // Safety: BootE820Entry has the same structure as what qemu uses, and we're
-            // limiting ourselves to up to 128 entries.
-            log::debug!("Using fw_cfg to create the E820 table");
-            fw_cfg.read_file_by_name(c"etc/e820", &mut self.inner.e820_table)
-        });
+        // Use the platform-specific memory map if the platform provides one;
+        // abort on malformed input rather than silently falling back to fw_cfg.
+        let e820_entries = match P::prefill_e820_table(&mut self.inner.e820_table)
+            .expect("prefilling E820 table from platform")
+        {
+            Some(e820_entries) => e820_entries,
+            None => {
+                log::debug!("using fw_cfg to create the E820 table");
+                // Safety: BootE820Entry has the same structure as what qemu uses, and we're
+                // limiting ourselves to up to 128 entries.
+                match unsafe { fw_cfg.read_file_by_name(c"etc/e820", &mut self.inner.e820_table) } {
+                    Ok(len_bytes) => len_bytes / size_of::<BootE820Entry>(),
+                    Err(err) => {
+                        log::warn!("failed to read 'etc/e820': {}, falling back to CMOS", err);
 
-        let e820_entries = match len_bytes {
-            Ok(len_bytes) => {
-                let e820_entries = len_bytes / size_of::<BootE820Entry>();
-                self.inner.e820_table[..e820_entries].sort_unstable_by_key(|x| x.addr());
-                e820_entries
-            }
-            Err(err) => {
-                log::warn!("Failed to read 'etc/e820': {}, failing back to CMOS", err);
+                        // We don't support the early reservation entries, so panic if there are
+                        // any.
+                        if fw_cfg.read_e820_reservation_table_size().unwrap_or(0) > 0 {
+                            panic!("QEMU_E820_RESERVATION_TABLE was not empty!");
+                        }
 
-                // We don't support the early reservation entries, so panic if there are any.
-                if fw_cfg.read_e820_reservation_table_size().unwrap_or(0) > 0 {
-                    panic!("QEMU_E820_RESERVATION_TABLE was not empty!");
+                        build_e820_from_nvram::<P>(&mut self.inner.e820_table)
+                            .expect("failed to read from CMOS")
+                    }
                 }
-
-                build_e820_from_nvram::<P>(&mut self.inner.e820_table)
-                    .expect("failed to read from CMOS")
             }
         };
 
+        self.inner.e820_table[..e820_entries].sort_unstable_by_key(|x| x.addr());
         self.inner.e820_entries = e820_entries as u8;
         self.validate_e820_table();
         self.apply_legacy_memory_layout();

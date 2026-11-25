@@ -31,7 +31,6 @@ use x86_64::{
         port::{PortRead, PortWrite},
     },
 };
-use zerocopy::{FromBytes, IntoBytes};
 
 use super::PortFactory;
 use crate::{acpi::tables::AcpiTables, zero_page::ZeroPage};
@@ -103,8 +102,8 @@ impl super::FirmwarePlatform for Base {
     fn initialize_platform(_e820_table: &[BootE820Entry]) {}
     type Attester = DiceAttester;
 
-    fn prefill_e820_table<T: IntoBytes + FromBytes>(_: &mut T) -> Result<usize, &'static str> {
-        Err("not needed")
+    fn prefill_e820_table(_: &mut [BootE820Entry]) -> Result<Option<usize>, &'static str> {
+        Ok(None)
     }
 
     fn finalize_acpi_tables(_rsdp: &mut AcpiTables) -> Result<(), &'static str> {

@@ -17,7 +17,7 @@
 extern crate alloc;
 
 use alloc::{alloc::Allocator, boxed::Box};
-use core::{mem::size_of, pin::pin, ptr::addr_of, sync::atomic::Ordering};
+use core::{pin::pin, ptr::addr_of, sync::atomic::Ordering};
 
 use log::info;
 use oak_hal::{MsrAccess, PageAssignment, Platform};
@@ -41,7 +41,7 @@ use x86_64::{
         paging::{Page, PageSize, PageTableFlags, PhysFrame, Size4KiB},
     },
 };
-use zerocopy::{FromBytes, IntoBytes};
+use zerocopy::IntoBytes;
 use zeroize::Zeroize;
 
 use crate::{
@@ -381,14 +381,13 @@ impl FirmwarePlatform for Tdx {
     }
 
     #[allow(clippy::if_same_then_else)]
-    fn prefill_e820_table<T: IntoBytes + FromBytes>(dest: &mut T) -> Result<usize, &'static str> {
+    fn prefill_e820_table(dest: &mut [BootE820Entry]) -> Result<Option<usize>, &'static str> {
         serial::debug!("Prefill e820 table from TDHOB");
 
         let hit = hob::get_hit()?;
         // The number of resource descriptors comes from the host-provided TD HoB and
         // is otherwise unbounded, so writes must stay within the destination table.
-        let dest_len = dest.as_mut_bytes().len();
-        let mut index = 0;
+        let mut count = 0;
 
         for curr_ptr in hit.into_iter() {
             let curr_hdr = unsafe { *curr_ptr };
@@ -406,14 +405,7 @@ impl FirmwarePlatform for Tdx {
                 serial::debug!("Physical start: ", curr_src.physical_start);
                 serial::debug!("Resource length: ", curr_src.resource_length);
 
-                if index + size_of::<BootE820Entry>() > dest_len {
-                    return Err("too many resource descriptors in TD HoB");
-                }
-
-                // Figure out the location of the next E820 entry
-                let new_entry_ptr: *mut BootE820Entry = unsafe {
-                    dest.as_mut_bytes().as_mut_ptr().byte_add(index) as *mut BootE820Entry
-                };
+                let slot = dest.get_mut(count).ok_or("too many resource descriptors in TD HoB")?;
 
                 let entry_type = if curr_src.physical_start == hob::get_hob_start() as u64 {
                     E820EntryType::NVS // is this correct?
@@ -429,21 +421,19 @@ impl FirmwarePlatform for Tdx {
                     E820EntryType::RAM
                 };
 
-                unsafe {
-                    *new_entry_ptr = BootE820Entry::new(
-                        curr_src.physical_start as usize,
-                        curr_src.resource_length as usize,
-                        entry_type,
-                    );
-                }
-                index += size_of::<BootE820Entry>();
+                *slot = BootE820Entry::new(
+                    curr_src.physical_start as usize,
+                    curr_src.resource_length as usize,
+                    entry_type,
+                );
+                count += 1;
             } else if curr_hdr.is_end_of_hob_list() {
                 // reached at the end
             } else {
                 return Err("Unknown resource type found in TD HoB");
             }
         }
-        if index == 0 { Err("no valid TD HoB found") } else { Ok(index) }
+        if count == 0 { Err("no valid TD HoB found") } else { Ok(Some(count)) }
     }
 
     fn finalize_acpi_tables(tables: &mut AcpiTables) -> Result<(), &'static str> {

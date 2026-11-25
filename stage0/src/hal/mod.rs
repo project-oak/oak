@@ -24,8 +24,8 @@ use oak_attestation_types::{
 };
 use oak_dice::evidence::TeePlatform;
 pub use oak_hal::{Mmio, PageAssignment};
+use oak_linux_boot_params::BootE820Entry;
 use oak_stage0_dice::DerivedKey;
-use zerocopy::{FromBytes, IntoBytes};
 
 use crate::{acpi::tables::AcpiTables, zero_page::ZeroPage};
 
@@ -84,17 +84,15 @@ pub trait FirmwarePlatform {
     ///
     /// This does mean you do not have access to the heap allocator
     /// (BOOT_ALLOCATOR will still work).
-    fn initialize_platform(e820_table: &[oak_linux_boot_params::BootE820Entry]);
+    fn initialize_platform(e820_table: &[BootE820Entry]);
 
-    /// Prefill E820 Table using platform specific features.
+    /// Prefills the E820 table from a platform-specific source (such as the
+    /// TDX HOB list), returning `Ok(Some(num_entries))` when populated or
+    /// `Ok(None)` when the platform relies on `fw_cfg` or CMOS instead.
     ///
-    /// Intel TDX requires the virtual firmware to consume inputs from TD HoB
-    /// and measure them. This gets executed before asking the fw_cfg device
-    /// for E820 table. It should populate the inner E820 table. If this
-    /// function returns Ok, stage0 will not ask fw_cfg for E820 table.
-    fn prefill_e820_table<T: IntoBytes + FromBytes + 'static>(
-        input: &mut T,
-    ) -> Result<usize, &'static str>;
+    /// Returning `Err` indicates that the platform-specific memory map is
+    /// malformed and aborts boot rather than falling back to `fw_cfg`.
+    fn prefill_e820_table(e820_table: &mut [BootE820Entry]) -> Result<Option<usize>, &'static str>;
 
     /// Platform-specific modifications and validations of ACPI tables, starting
     /// from RSDP, including RSDT, XSDT, APIC aka MADT.

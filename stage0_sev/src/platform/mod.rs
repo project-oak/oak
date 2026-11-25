@@ -43,7 +43,6 @@ use x86_64::{
     PhysAddr, VirtAddr,
     structures::mem_encrypt::{MemoryEncryptionConfiguration, enable_memory_encryption},
 };
-use zerocopy::{FromBytes, IntoBytes};
 
 #[unsafe(link_section = ".boot")]
 #[unsafe(no_mangle)]
@@ -299,8 +298,8 @@ impl FirmwarePlatform for Sev {
         }
     }
 
-    fn prefill_e820_table<T: IntoBytes + FromBytes>(_: &mut T) -> Result<usize, &'static str> {
-        Err("SEV does not support E820 prefill")
+    fn prefill_e820_table(_: &mut [BootE820Entry]) -> Result<Option<usize>, &'static str> {
+        Ok(None)
     }
 
     fn finalize_acpi_tables<'a>(tables: &mut AcpiTables) -> Result<(), &'static str> {
