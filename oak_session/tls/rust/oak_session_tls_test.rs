@@ -381,14 +381,10 @@ async fn test_custom_verifier_invalid_cert() -> Result<(), Box<dyn std::error::E
 async fn test_custom_verifier_invalid_self_signed_succeeds_with_custom_ok()
 -> Result<(), Box<dyn std::error::Error>> {
     let ca_cert = load_test_cert("oak_session/tls/testing/test_ca.pem");
-    let untrusted_cert = load_test_cert("oak_session/tls/testing/test_untrusted.pem");
-    let untrusted_key = load_test_key("oak_session/tls/testing/test_untrusted.key");
 
+    // Self-signed cert with SAN "oak-session-tls", not issued by the test CA.
     let server_ctx = OakSessionTlsServerContext::create(ServerContextConfig {
-        tls_identity_provider: utils::create_static_cert_identity_provider(
-            untrusted_key.clone_key(),
-            vec![untrusted_cert.clone()],
-        ),
+        tls_identity_provider: utils::create_self_signed()?,
         client_trust_anchor_provider: None,
         custom_cert_verifier: None,
     })?;
@@ -522,14 +518,7 @@ async fn test_custom_server_name_mismatch_fails() -> Result<(), Box<dyn std::err
         expected_server_name: Some("wrong-name.example.com".to_string()),
     })?;
 
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let mut server = AsyncServer::spawn(server_ctx);
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                do_handshake(&mut server, &client_ctx).await;
-            })
-        });
-    }));
+    let result = check_server_cert(&server_ctx, &client_ctx);
 
     assert!(result.is_err(), "Handshake should have failed due to SAN mismatch");
 
@@ -561,14 +550,7 @@ async fn test_custom_server_name_mismatch_fails_even_when_custom_ok()
         expected_server_name: Some("wrong-name.example.com".to_string()),
     })?;
 
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let mut server = AsyncServer::spawn(server_ctx);
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                do_handshake(&mut server, &client_ctx).await;
-            })
-        });
-    }));
+    let result = check_server_cert(&server_ctx, &client_ctx);
 
     assert!(
         result.is_err(),
@@ -576,6 +558,56 @@ async fn test_custom_server_name_mismatch_fails_even_when_custom_ok()
     );
 
     Ok(())
+}
+
+#[tokio::test]
+async fn test_trusted_server_name_mismatch_fails_even_when_custom_ok()
+-> Result<(), Box<dyn std::error::Error>> {
+    // Server cert chains to the trusted CA and has SAN "oak-session-tls".
+    let ca_cert = load_test_cert("oak_session/tls/testing/test_ca.pem");
+    let server_cert = load_test_cert("oak_session/tls/testing/test_server.pem");
+    let server_key = load_test_key("oak_session/tls/testing/test_server.key");
+
+    let server_ctx = OakSessionTlsServerContext::create(ServerContextConfig {
+        tls_identity_provider: utils::create_static_cert_identity_provider(
+            server_key,
+            vec![server_cert],
+        ),
+        client_trust_anchor_provider: None,
+        custom_cert_verifier: None,
+    })?;
+
+    // Client trusts the CA but expects a different server name.
+    let client_ctx = OakSessionTlsClientContext::create(ClientContextConfig {
+        server_trust_anchor_provider: Some(utils::create_static_trust_anchor_provider(ca_cert)),
+        tls_identity_provider: None,
+        custom_cert_verifier: Some(Box::new(MockVerifier { fail: false, expect_inner_fail: None })),
+        expected_server_name: Some("wrong-name.example.com".to_string()),
+    })?;
+
+    let result = check_server_cert(&server_ctx, &client_ctx);
+
+    assert!(
+        result.is_err(),
+        "Handshake should have failed due to SAN mismatch even when custom verifier returns OK"
+    );
+
+    Ok(())
+}
+
+/// Runs the handshake up to the client's verification of the server
+/// certificate and returns the client's result.
+fn check_server_cert(
+    server_ctx: &OakSessionTlsServerContext,
+    client_ctx: &OakSessionTlsClientContext,
+) -> Result<Vec<u8>, InitializationError> {
+    let mut server = server_ctx.new_session()?;
+    let mut client = client_ctx.new_session()?;
+
+    let frame = client.get_tls_frame()?;
+    server.put_tls_frame(&frame)?;
+    let frame = server.get_tls_frame()?;
+    client.put_tls_frame(&frame)
 }
 
 #[test]
