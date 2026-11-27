@@ -2052,7 +2052,7 @@ crate.spec(
     features = ["serde"],
     package = "url",
     repositories = ALL_STD,
-    version = "2.5.2",
+    version = "2.5.9",
 )
 crate.spec(
     default_features = True,
@@ -2158,6 +2158,9 @@ crate.spec(
     repositories = ALL_REPOSITORIES,
     version = "0.2.5",
 )
+
+# Pin x509-verify to =0.4.8 because 0.4.10 upgraded its public x509-cert
+# dependency to 0.3, conflicting with our x509-cert 0.2.5.
 crate.spec(
     default_features = False,
     features = [
@@ -2169,7 +2172,7 @@ crate.spec(
     ],
     package = "x509-verify",
     repositories = ALL_REPOSITORIES,
-    version = "0.4.8",
+    version = "=0.4.8",
 )
 
 # Pin x86_64 to =0.15.4 because 0.15.5 uses unstable Step trait methods
