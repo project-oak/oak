@@ -36,7 +36,9 @@ use x509_cert::{Certificate, der::DecodePem};
 
 use crate::{
     jwt::{Claims, Header, verification::verify_attestation_token},
-    policy::{ConfidentialSpaceVerificationError, verify_endorsement_wrapper},
+    policy::{
+        ConfidentialSpaceVerificationError, image_reference_has_prefix, verify_endorsement_wrapper,
+    },
 };
 
 #[allow(dead_code)]
@@ -146,7 +148,7 @@ impl AssertionVerifier for GcpAssertionVerifier {
                     )?;
                 }
                 ContainerImage::ContainerImageReferencePrefix(ci_reference_prefix) => {
-                    if !image_reference.whole().starts_with(ci_reference_prefix) {
+                    if !image_reference_has_prefix(&image_reference.whole(), ci_reference_prefix) {
                         return Err(anyhow!(
                         ConfidentialSpaceVerificationError::EndorsementContainerImageVerifyError {
                             actual: image_reference.whole(),
